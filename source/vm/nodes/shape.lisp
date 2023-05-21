@@ -8,6 +8,10 @@
 
 ;; (defstruct NodeState)
 
+(defun symbol-eq (x y)
+  (equal (symbol-name x)
+	 (symbol-name y)))
+
 (defun bnf-parse-variables (exps &aux (pointer 0) (result))
   (flet ((parse-variable (exp)
 	   exp))
@@ -23,11 +27,11 @@
 
       (dolist (exp exps)
 	(cond
-	  ((and (eql bracket-state '[)
-		(eql exp '[))
+	  ((and (symbol-eq bracket-state '[)
+		(symbol-eq exp '[))
 	   (setq bracket-state ']))
-	  ((and (eql bracket-state '[)
-		(eql exp ']))
+	  ((and (symbol-eq bracket-state '[)
+		(symbol-eq exp ']))
 	   (error 'subscripts-content-error
 		  :msg (format nil "The token anticipated to come is: [
 However, got ~a.
@@ -37,8 +41,8 @@ At  : ~ath symbol, ~a"
 			       exps
 			       pointer
 			       (nth pointer exps))))
-	  ((and (eql bracket-state '])
-		(eql exp '[))
+	  ((and (symbol-eq bracket-state '])
+		(symbol-eq exp '[))
 	   (error 'subscripts-content-error
 		  :msg (format nil "The token anticipated to come is: ]
 However, got ~a.
@@ -49,8 +53,8 @@ At  : ~ath symbol, ~a"
 			       exps
 			       pointer
 			       (nth pointer exps))))
-	  ((and (eql bracket-state '])
-		(eql exp ']))
+	  ((and (symbol-eq bracket-state '])
+		(symbol-eq exp ']))
 	   (setq bracket-state '[)
 	   (push (parse-variable (reverse content-tmp)) result)
 	   (setq content-tmp nil))
@@ -66,15 +70,15 @@ At  : ~ath symbol, ~a"
 	(excepted-mode :variable-name)) ;; :symbol := :init-form
     (dolist (exp exps)
       (cond
-	((and (eql excepted-mode :variable-name)
+	((and (symbol-eq excepted-mode :variable-name)
 	      (and (symbolp exp) ;; i.e.: exp is variable name
-		   (not (eql exp '=))))
+		   (not (symbol-eq exp '=))))
 	 (setq var-name-tmp exp)
 	 (setq excepted-mode :=))
-	((and (eql excepted-mode :=)
-	      (eql exp '=))
+	((and (symbol-eq excepted-mode :=)
+	      (symbol-eq exp '=))
 	 (setq excepted-mode :init-form))
-	((eql excepted-mode :init-form)
+	((symbol-eq excepted-mode :init-form)
 	 (setq excepted-mode :variable-name)
 	 (push (list var-name-tmp exp) results))
 	(T
@@ -102,21 +106,23 @@ Return:
 (values forward-state out-state let-binding)"
 
   (macrolet ((with-fundamental-key ((key-place target-key ignorable) &body body)
-	       `(let ((,key-place (position ',target-key subscripts)))
+	       `(let ((,key-place (position ',target-key subscripts :test #'symbol-eq)))
 		  ;; Fundamental Keys: ->, and let can be used at once. (but let can be omitted)
 		  
-		  (when (> (count ',target-key subscripts) 1)
+		  (when (> (count ',target-key subscripts :test #'symbol-eq) 1)
 		    (error 'subscripts-format-Error
 			   :because :too-many
 			   :target ',target-key
-			   :subscript subscripts))
+			   :subscript subscripts
+			   :msg ""))
 
 		  (when (and (not ,ignorable)
-			     (= 0 (count ',target-key subscripts)))
+			     (= 0 (count ',target-key subscripts :test #'symbol-eq)))
 		    (error 'subscripts-format-error
-			   :becuase :not-found
+			   :because :not-found
 			   :target ',target-key
-			   :subscript subscripts))
+			   :subscript subscripts
+			   :msg ""))
 		  ,@body)))
     (with-fundamental-key (arrow -> nil)
       (with-fundamental-key (let-binding let t)
@@ -137,7 +143,7 @@ Return:
 				   below (length subscripts)
 				 collect (nth i subscripts))))
 
-	  (unless (eql (car output-part) '->)
+	  (unless (symbol-eq (car output-part) '->)
 	    (error 'subscripts-format-error
 		   :because :invaild-template-order
 		   :target '->
@@ -148,7 +154,7 @@ Return:
 (Perhaps this is because of: The phase let never comes before -> phase comes.)"))
 
 	  (when (and (not (null let-part))
-		     (not (eql (car let-part) 'let)))
+		     (not (symbol-eq (car let-part) 'let)))
 	    (error 'subscripts-format-error
 		   :because :invaild-template-order
 		   :target 'let
@@ -197,10 +203,6 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 			    (format nil "~a" subscripts)
 			    " [ ")
 			   " ] ")))
-
-    (print first-state)
-    (print out-state)
-    (print let-binding)
-    ))
+    (values first-state out-state let-binding)))
 
 

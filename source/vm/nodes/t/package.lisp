@@ -7,5 +7,4 @@
 (in-package :cl-waffe2/vm.nodes.test)
 
 (def-suite :test-nodes)
-
 (in-suite :test-nodes)
