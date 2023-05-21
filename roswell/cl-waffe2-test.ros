@@ -1,0 +1,19 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  (load #p"./cl-waffe2.asd")
+  #+quicklisp(ql:quickload '(:cl-waffe2) :silent t)
+  )
+
+(defpackage :ros.script.cl-waffe2-test.3893644947
+  (:use :cl))
+(in-package :ros.script.cl-waffe2-test.3893644947)
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (asdf:test-system :cl-waffe2))
+;;; vim: set ft=lisp lisp:

@@ -3,8 +3,6 @@
 
 ;; Shaping Error etc...
 
-(define-condition Parse-Subscript-Error ())
-
 (define-condition subscripts-format-error (simple-error)
   ((error-why :initarg :because)
    (target-symbol :initarg :target)
