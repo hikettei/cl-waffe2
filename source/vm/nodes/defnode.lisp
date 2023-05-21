@@ -27,6 +27,11 @@ Ignore with t.
 	 ,slots
 	 (:documentation ,documentation)
 	 )
+
+     (defmethod test-shape ()
+
+       )
+     
      (defmethod initialize-instance :before (,abstract-name ,@initialize-arguments)
        ,@initialize-instance-body)))
 
@@ -34,3 +39,16 @@ Ignore with t.
 (defnode AddNode (x y) (:where t) ()
     addnode
     )
+
+
+(defnode ReshapeNode (tensor &rest subscripts)
+    (:where ([first-shape] -> [out-shape]
+			   let
+			     x = subscripts
+			     first-shape = (shape tensor)))
+    (:slots ((shape-state :type list))
+     :documentation "Reshapes tensor")
+
+  (setf (slot-value reshapenode 'shape-state) subscripts))
+
+    

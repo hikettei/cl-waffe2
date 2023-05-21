@@ -12,6 +12,7 @@
   :description "Deep Learning Framework"
   :pathname "source"
   :serial t
+  :depends-on (:cl-ppcre)
   :components ((:file "vm/nodes/package")
 	       (:file "vm/nodes/shape"
 	       (:file "vm/nodes/node")
@@ -19,4 +20,4 @@
 	       (:file "vm/nodes/defnode")
 	      
 
-	       ))
+	       )))
