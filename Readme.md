@@ -1,17 +1,22 @@
 
-# Waffe2, Deep Learning Framework with powerful Language, Common Lisp.
+# cl-waffe2, Deep Learning Framework With Powerful Language, Common Lisp.
 
-Since few month ago, I was working on the preceding project (deprecacted): [cl-waffe](https://github.com/hikettei/cl-waffe).
+**The project is still in the concept stage.**
+
+Since few month ago, I was working on the preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe). I'm depcrecated with this project because:
+
+1. It's just an imitation of PyTorch and I don't see the point of doing it on Common Lisp.
+
+2. Define-by-run Style is cetrainly powerful for researching, but with regard to product, this feels unreasonable in my optinion. This is because the shape of the matrix at runtime is undetermined and therefore difficult to optimise.
+
+3. Useful features such as CLOS and Conditional System should have been incorporated to the maximum extent possible, and the annoying (e.g.: Numpy's ShapingError) errors should have been made as clear as possible.
+
+4. Difficult (quite laborious) to port to OpenBLAS CUDA Metal etc...
+
+5. Make macro-based JIT a first priority mechanism. (tbh I'm inspired by CFFI's translating system)
 
 # The Project Structures
 
-1. CLOS, MOP, Conditional Systemを最大限取り入れる
-
-2. Defined-and-runだけど開発がしやすい
-
-3. モデルの実行時は、エラーチェックなどを極力省く (C++/GGMLなどにCompile)
-
-model.compile()前提のPyTorchのようなもの。
 
 前回のプロジェクトから引き継ぎ:
 
@@ -24,25 +29,37 @@ model.compile()前提のPyTorchのようなもの。
 
 欲しい: waffe-viz (3d plotting etc)
 
+```
 The Project is consisted of:
-    `./source/vm/backend.lisp`
-    `./source/vm/tensor/` ... 各backendごとの取り扱うTensorのWrapper？
-    `./source/vm/nodes/package.lisp` ... defnodeのmacro, UI, 形状検査, 形状検査のためのミニ言語 など...
-    `./source/vm/compiler/defnodeから各Backendのためのコードを生成`
-    `./source/apis/nn`
-    `./source/apis/optimizer`
-    `./source/apis/utils` ... torch.nnと同じような感じ, source/vmの上で成立
+    ./source/vm/generic-tensor/ ... 各バックエンドごとのTensorの定義 viewのパーサー 各バックエンドの言語にCompileする
+    ./source/vm/nodes/package.lisp ... defnodeのmacro, UI, 形状検査, 形状検査のためのミニ言語 など...
+    
+    ./source/apis/nn
+    ./source/apis/optimizer
+    ./source/apis/utils ... torch.nnと同じような感じ, source/vmの上で成立
+```
 
 # Naming Rules
 
 ソースコード内では全て`waffe`
 パッケージを呼び出すときは`waffe2`
 
+# Concepts
+
+Shapeの制約をすっごく厳しくする
+
+(compile node)で途中までノードを評価 (print hoge)で演算途中の結果を見れるようにする (e.g.: cl-waffeの(value tensor)と同じことをする)
+
 ```lisp
-(defnode AddNode (x y) (:where x[t] y[t] -> out[t])
-                       (:slots ((dy 0))
-		        :documentation "")
+(defnode (AddNode (myself)
+	  :where `([~] [~] -> [~])
+	  :documentation "The Node Addnode Provides ..."))
 
 
-
+(define-impl (AddNode :device CPUTensor)
+	     :forward ((node x y)
+		       (declare (ignore node))
+		       (+ x y))
+	     :backward ((node dy)
+			))
 ```
