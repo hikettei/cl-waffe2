@@ -244,7 +244,38 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 	  do (setf (nth i result) (nth i shape)))
     result))
 
+(defun build-subscript-error-note (&key
+				     all-subscript
+				     determined-shape
+				     determined-out
+				     symbol
+				     excepted
+				     but-got
+				     nth-argument
+				     target-shape)
+  (format nil "
+The Function is defined as :  ~a
+Determined Shape           :  ~a -> ~a
+Excepted: ~a = ~a
+Butgot  : ~a = ~a
+Because : The ~ath argument's shape is ~a.
+"
+	  all-subscript
+	  determined-shape
+	  determined-out
+	  symbol
+	  excepted
+	  symbol
+	  but-got
+	  nth-argument
+	  target-shape))
+
+;; 二度とこのコード読みたくない
 ;; TODO: Fix: let -> where
+;; TODO 四次元の時out-stateを構築できない
+;; TODO: ~のShapeを判定
+;; TOOD: out-stateのエラーのnote
+;; TODO: 仕様を書く
 (defun create-subscript-p (subscripts
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
@@ -269,6 +300,9 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 
     ;; TODO: Error Builder
     ;; TODO: [x ~ y] (1) <- regard it as error.
+
+    ;; 1.
+    ;; 2. (Other reasons that could be helpful)
 
     (let* ((common-symbols (get-common-symbols first-state))
 	   (body
@@ -312,9 +346,17 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 						     (when (and (numberp ,var)
 								(not
 								 (= ,var (nth ,nth-arg ,shape))))
-						       (print "shape error detected")
-						       (print ',var)
-						       )
+						       (push
+							(build-subscript-error-note
+							 :all-subscript ',subscripts
+							 :determined-shape (list ,@(map 'list #'(lambda (x) `(list ,@x)) first-state))
+							 :determined-out (list ,@(map 'list #'(lambda (x) `(list ,@x)) out-state))
+							 :symbol ',var
+							 :excepted ,var
+							 :but-got (nth ,nth-arg ,shape)
+							 :nth-argument ,nth-arg
+							 :target-shape ,shape)
+							,all-conditions))
 						     (setq ,var (nth ,nth-arg ,shape)))
 						    ((> (- (length ,shape) ,nth-arg) ,pos1)
 						     ;; here, we can detect errors
@@ -323,10 +365,17 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 						       (when (and (numberp ,var)
 								  (not
 								   (= ,var (nth ,pos ,shape))))
-							 (print "shape error detected")
-							 (print ',var)
-							 (print ,var)
-							 )
+							 (push
+							  (build-subscript-error-note
+							   :all-subscript ',subscripts
+							   :determined-shape (list ,@(map 'list #'(lambda (x) `(list ,@x)) first-state))
+							   :determined-out (list ,@(map 'list #'(lambda (x) `(list ,@x)) out-state))
+							   :symbol ',var
+							   :excepted ,var
+							   :but-got (nth ,nth-arg ,shape)
+							   :nth-argument ,nth-arg
+							   :target-shape ,shape)
+							  ,all-conditions))
 						       (setq ,var (nth ,pos ,shape)))))
 				       else
 					 collect `(loop for ,pos fixnum
@@ -354,18 +403,33 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 		    (flet ((merge-and-determine (shapes)
 			     (unless (= (length shapes)
 				        (length ,undetermined-shape-tmp))
-			       (format t "Warning: Couldn't determine ... ... はminimizeをとる In this case, ... is interpeted as ~a" ,undetermined-shape-tmp))
+			       (push
+				(format
+				 nil
+				 "Warning: Couldn't determine ... ... はminimizeをとる In this case, ... is interpeted as ~a"
+				 ,undetermined-shape-tmp)
+				,all-conditions))
 			     
 			     (let ((out
 				     (map
 				      'list
 				      #'(lambda (s d)
+
+					  ;; Priorities:
+					  ;; 1. [a b]
+					  ;; 2. ~
 					  (or
 					   (unless (symbol-eq s '~)
 					     s)
 					   (unless (symbol-eq d '~)
 					     d)
-					   (print "Warning: Couldn't determine ~")))
+					   (and
+					    (push
+					     (format
+					      nil
+					      "couldn't determine ...")
+					     ,all-conditions)
+					    '~)))
 				      shapes
 				      ,undetermined-shape-tmp)))
 
@@ -376,8 +440,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 					      `(merge-and-determine
 						(list ,@arg)))
 				    out-state))
-		       ))
-		    ))))
+		       (reverse ,all-conditions)))))))
       (print body)
       (eval body))))
 
