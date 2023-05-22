@@ -276,6 +276,7 @@ Because : The ~ath argument's shape is ~a.
 ;; TODO: ~のShapeを判定
 ;; TOOD: out-stateのエラーのnote
 ;; TODO: 仕様を書く
+;; TODO: Support it: where a = (1 2 3)
 (defun create-subscript-p (subscripts
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
@@ -324,6 +325,8 @@ Because : The ~ath argument's shape is ~a.
 				       maximize (length p))
 				 collect '~)))
 		    (declare (ignorable ~))
+
+		    ;; TODO: When let-binding includes list, use it directly.
 		    
 		    ;; Identify Non-Determined Symbols
 
@@ -383,8 +386,7 @@ Because : The ~ath argument's shape is ~a.
 							  below (- (length ,shape) ,pos2)
 							;; error check is needed
 							do (progn
-							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,i ,shape))))
-					 )))
+							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 		    
 		    ;; 数値とシンボルで返す
 		    
@@ -393,11 +395,12 @@ Because : The ~ath argument's shape is ~a.
 
 		    ;; a ~ b cの時:
 		    ;; ~ = `(1 2 3 4 5)なら、 ~[-1~-3]を代入
-		    
-		    ,@(map 'list #'(lambda (arg)
-				     `(print (list ,@arg)))
-			   first-state)
 
+		    ;;(print ,undetermined-shape-tmp)
+
+		    ;; 次にやる：ここFix
+
+		    (print ',first-state)
 		    (print ,undetermined-shape-tmp)
 
 		    (flet ((merge-and-determine (shapes)
@@ -432,7 +435,6 @@ Because : The ~ath argument's shape is ~a.
 					    '~)))
 				      shapes
 				      ,undetermined-shape-tmp)))
-
 			       out)))
 		      (values
 		       ;; (list out-shape1 out-shape...n)
@@ -441,6 +443,6 @@ Because : The ~ath argument's shape is ~a.
 						(list ,@arg)))
 				    out-state))
 		       (reverse ,all-conditions)))))))
-      (print body)
+      ;;(print body)
       (eval body))))
 

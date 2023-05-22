@@ -28,7 +28,7 @@ Ignore with t.
 	 (:documentation ,documentation)
 	 )
 
-     (defmethod test-shape ()
+     (defmethod test-and-forward-shape ()
 
        )
      
