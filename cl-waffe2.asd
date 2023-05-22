@@ -15,14 +15,16 @@
   :depends-on (:cl-ppcre :fiveam :alexandria)
   :components ((:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/tensor")
+	       (:file "vm/generic-tensor/default-impls")
+	       (:file "vm/generic-tensor/acceptor")
+	       (:file "vm/generic-tensor/view")
 
 	       (:file "vm/nodes/package")
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
-	      
-
+	       
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 

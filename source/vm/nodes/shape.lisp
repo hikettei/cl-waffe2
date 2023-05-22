@@ -393,6 +393,7 @@ Because : The ~ath argument's shape is ~a.
 					    '~)))
 				      shapes)))
 			       out)))
+		      ;; TODO
 		      (print ,undetermined-shape-tmp)
 		      (print ',first-state) ;; (length arg)した分を消す
 		      (let ((~ (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
@@ -404,6 +405,5 @@ Because : The ~ath argument's shape is ~a.
 						   (list ,@arg))))
 				      out-state))
 			 (reverse ,all-conditions))))))))
-      ;;(print body)
       (eval body))))
 

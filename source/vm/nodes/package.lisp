@@ -3,7 +3,6 @@
 
 (defpackage :cl-waffe2/vm.nodes
   (:use :cl :cl-ppcre :alexandria))
+;; Export: defnode define-impl
 
 (in-package :cl-waffe2/vm.nodes)
-
-;; CFFI Styleの、no-over-head-transcript

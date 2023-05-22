@@ -1,10 +1,9 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-;; Node, Tensorをgenericにする
-
-(defun symb (&rest inputs)
-  (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun symb (&rest inputs)
+    (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
 (defmacro defnode ((abstract-name
 		   (&rest constructor-arguments)
@@ -41,6 +40,7 @@ Ignore with t.
 			       :function-node ,subscript-p)))
 	 (declare (ignorable ,(car constructor-arguments)))
 	 ,@constructor-body
+	 ;; Backendに応じてNodeのsubclassを生成
 	 ,(car constructor-arguments)))))
 
 (defmacro define-impl ((abstract-name
@@ -63,21 +63,19 @@ Ignore with t.
 	 (defclass ,impl-name (,abstract-name)
 	   nil
 	   (:documentation ,(format nil "Automatically defined by cl-waffe")))
-       (defmethod forward ((,forward-self-name ,abstract-name) &rest ,inputs)
+       (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 ;; Error Check
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (let ((,forward-self-name ,forward-self-name))
 	     ,@forward-body)))
-       (defmethod backward ((,backward-self-name ,abstract-name) ,@backward-args)
+       (defmethod backward ((,backward-self-name ,impl-name) ,@backward-args)
 	 ,@backward-body))))
-			
 
+;; Tests
 (define-impl (AddNode :device CPUTensor)
 	     :forward ((node x y)
 		       (declare (ignore node))
-		       (print x)
-		       (print y)
-		       )
+		       (+ x y))
 	     :backward ((node dy)
 			))
 

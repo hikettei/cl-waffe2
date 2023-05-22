@@ -2,6 +2,7 @@
 (in-package :cl-waffe2/vm.nodes)
 
 ;; Shaping Error etc...
+;; Numpy/PyTorchの100倍エラーをわかりやすくする
 
 (define-condition subscripts-format-error (simple-error)
   ((because :initarg :because)

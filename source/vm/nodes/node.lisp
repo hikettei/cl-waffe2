@@ -19,6 +19,7 @@ AbstractNode must possess following:
 backendのforward/backwardはAbstractNodeを継承して、定義する
 "))
 
+;; TODO: Under here.
 (defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape)
   ""
   (funcall (abstractnode-node node) previous-shape))
