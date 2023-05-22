@@ -19,5 +19,9 @@
       (is (test-bnf `([x y] -> [z])
 		    `((X Y))
 		    `((Z))
+		    NIL))
+      (is (test-bnf `([x y z] [x y]->[z])
+		    `((X Y Z) (X Y))
+		    `((Z))
 		    NIL)))
 

@@ -91,7 +91,7 @@ At  : ~ath symbol, ~a"
 	 (push (list var-name-tmp exp) results))
 	(T
 	 (error 'subscripts-content-error
-		:msg (format nil "Couldn't parse let-phase of subscripts.
+		:msg (format nil "Couldn't parse where-phase of subscripts.
 Because the parser anticipated to come: ~a
 But got: ~a.
 
@@ -133,7 +133,7 @@ Return:
 			   :msg ""))
 		  ,@body)))
     (with-fundamental-key (arrow -> nil)
-      (with-fundamental-key (let-binding let t)
+      (with-fundamental-key (let-binding where t)
 	
 	(unless let-binding
 	  (setq let-binding (length subscripts)))
@@ -159,13 +159,13 @@ Return:
 		   :msg "Please follow this template:
  Input-Shape -> Output-Shape where X = 0
 (the where phase is optional.)
-(Perhaps this is because of: The phase let never comes before -> phase comes.)"))
+(Perhaps this is because of: The phase where never comes before -> phase comes.)"))
 
 	  (when (and (not (null let-part))
-		     (not (symbol-eq (car let-part) 'let)))
+		     (not (symbol-eq (car let-part) 'where)))
 	    (error 'subscripts-format-error
 		   :because :invaild-template-order
-		   :target 'let
+		   :target 'where
 		   :subscript subscripts
 		   :msg "Please follow this template:
  Input-Shape -> Output-Shape where X = 0
