@@ -3,6 +3,9 @@
 
 ;; Node, Tensorをgenericにする
 
+(defun symb (&rest inputs)
+  (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
+
 (defmacro defnode ((abstract-name
 		   (&rest constructor-arguments)
 		    &key
@@ -37,20 +40,47 @@ Ignore with t.
 		(make-instance ',abstract-name
 			       :function-node ,subscript-p)))
 	 (declare (ignorable ,(car constructor-arguments)))
-	 ,@constructor-body))))
+	 ,@constructor-body
+	 ,(car constructor-arguments)))))
 
-(defmacro define-impl (abstract-name backend-name))
+(defmacro define-impl ((abstract-name
+			&key
+			  (device))
+		       &key
+			 forward
+			 backward
+			 &aux (inputs (gensym "inputs")))
+  "Adds Backend"
+  (let ((forward-self-name (caar forward))
+	(backward-self-name (caar backward))
+	(forward-args  (cdar forward))
+	(backward-args (cdar backward))
+	(forward-body  (cdr forward))
+	(backward-body (cdr backward))
+	(impl-name (symb abstract-name device)))
+    ;; assert (length backward-args) == 1
+    `(prog1
+	 (defclass ,impl-name (,abstract-name)
+	   nil
+	   (:documentation ,(format nil "Automatically defined by cl-waffe")))
+       (defmethod forward ((,forward-self-name ,abstract-name) &rest ,inputs)
+	 ;; Error Check
+	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
+	   (let ((,forward-self-name ,forward-self-name))
+	     ,@forward-body)))
+       (defmethod backward ((,backward-self-name ,abstract-name) ,@backward-args)
+	 ,@backward-body))))
+			
 
 (define-impl (AddNode :device CPUTensor)
-  :forward ((x)
-	    )
-  :backward ((dy)
-	     ))
+	     :forward ((node x y)
+		       (declare (ignore node))
+		       (print x)
+		       (print y)
+		       )
+	     :backward ((node dy)
+			))
 
-(defnode (AddNode (myself) ;; constructor-argumentを:where句で使えるように
-	  :where `([~] [~] -> [~] where a = 0)
-	  :documentation "The Node Addnode Provides ...")
-  ;; When Initialized...
-  ;; Here Follows Your Task
-  )
-
+(defnode (AddNode (myself)
+	  :where `([~] [~] -> [~])
+	  :documentation "The Node Addnode Provides ..."))

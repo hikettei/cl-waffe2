@@ -22,3 +22,23 @@ backendのforward/backwardはAbstractNodeを継承して、定義する
 (defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape)
   ""
   (funcall (abstractnode-node node) previous-shape))
+
+(defmethod forward :around ((node AbstractNode) &rest inputs)
+  ;; Update Computation Nodes
+
+  ;; Here do we (dolist (tensor inputs) (setf tensor.variables ...))
+  (let ((out (multiple-value-list (call-next-method))))
+    out))
+
+(defmethod forward ((node AbstractNode) &rest inputs)
+  (declare (ignore node inputs))
+  ;; Describe More Errors.
+  (error "Forward isn't implemented yet"))
+
+(defmethod backward :around ((node AbstractNode) dy)
+  (let ((out (multiple-value-list (call-next-method))))
+    ;; update or lazy-evaluate
+    out))
+
+(defmethod backward ((node AbstractNode) dy)
+  (error "Backward isn't implemented yet."))
