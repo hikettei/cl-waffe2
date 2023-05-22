@@ -249,7 +249,8 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
 			     (undetermined-shape-tmp (gensym "UD"))
-			     (all-conditions (gensym "Conds")))
+			     (all-conditions (gensym "Conds"))
+			     (pos (gensym "pos")))
   (multiple-value-bind (first-state
 			out-state
 			let-binding)
@@ -265,6 +266,9 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
     ;; let k = listを許す
     ;; Priority: 1. let-binding, defparameter 2. determined by cl-waffe
     ;; [x y z] let x = 1. In this case, x is 1. and y and z are 2.
+
+    ;; TODO: Error Builder
+    ;; TODO: [x ~ y] (1) <- regard it as error.
 
     (let* ((common-symbols (get-common-symbols first-state))
 	   (body
@@ -315,41 +319,64 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 						    ((> (- (length ,shape) ,nth-arg) ,pos1)
 						     ;; here, we can detect errors
 						     
-						     (let ((pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
+						     (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
 						       (when (and (numberp ,var)
 								  (not
-								   (= ,var (nth pos ,shape))))
+								   (= ,var (nth ,pos ,shape))))
 							 (print "shape error detected")
 							 (print ',var)
 							 (print ,var)
 							 )
-						       (setq ,var (nth pos ,shape))))))))
-		    ;; Determine ~
-		    ,@(loop for i fixnum upfrom 0
-			    for arg in first-state
-			    collect
-			    `(let ((out (padding-subscript (flatten (list ,@arg)) (nth ,i ,previous-subscripts))))
-			       (loop for axis fixnum upfrom 0
-				     for sym in ',arg
-				     for res in out
-				     for n in (nth ,i ,previous-subscripts)
-				     if (symbol-eq res '~)
-				       ;; here could we find shape-error.
-				       do (progn
-					    (if (and
-						 (numberp (nth axis ,undetermined-shape-tmp))
-						 (not (= (nth axis ,undetermined-shape-tmp) n)))
-						
-						(print "error")) ;; wakariyasuku
-					    (setf (nth axis ,undetermined-shape-tmp) n)))))
+						       (setq ,var (nth ,pos ,shape)))))
+				       else
+					 collect `(loop for ,pos fixnum
+							upfrom ,pos1
+							  below (- (length ,shape) ,pos2)
+							;; error check is needed
+							do (progn
+							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,i ,shape))))
+					 )))
+		    
+		    ;; 数値とシンボルで返す
+		    
 		    ;; 数値とシンボルで返す
 		    ;; 最適化のために、なるべくスカラー値としてShapeを特定
 
+		    ;; a ~ b cの時:
+		    ;; ~ = `(1 2 3 4 5)なら、 ~[-1~-3]を代入
+		    
 		    ,@(map 'list #'(lambda (arg)
 				     `(print (list ,@arg)))
 			   first-state)
+
 		    (print ,undetermined-shape-tmp)
-		    
+
+		    (flet ((merge-and-determine (shapes)
+			     (unless (= (length shapes)
+				        (length ,undetermined-shape-tmp))
+			       (format t "Warning: Couldn't determine ... ... はminimizeをとる In this case, ... is interpeted as ~a" ,undetermined-shape-tmp))
+			     
+			     (let ((out
+				     (map
+				      'list
+				      #'(lambda (s d)
+					  (or
+					   (unless (symbol-eq s '~)
+					     s)
+					   (unless (symbol-eq d '~)
+					     d)
+					   (print "Warning: Couldn't determine ~")))
+				      shapes
+				      ,undetermined-shape-tmp)))
+
+			       out)))
+		      (values
+		       ;; (list out-shape1 out-shape...n)
+		       (list ,@(map 'list #'(lambda (arg)
+					      `(merge-and-determine
+						(list ,@arg)))
+				    out-state))
+		       ))
 		    ))))
       (print body)
       (eval body))))
