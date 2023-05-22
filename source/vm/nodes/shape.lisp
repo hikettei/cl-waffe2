@@ -265,7 +265,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
     ;; let k = listを許す
     ;; Priority: 1. let-binding, defparameter 2. determined by cl-waffe
     ;; [x y z] let x = 1. In this case, x is 1. and y and z are 2.
-    
+
     (let* ((common-symbols (get-common-symbols first-state))
 	   (body
 	     `#'(lambda (,previous-subscripts &aux (,all-conditions))
@@ -311,9 +311,10 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 						       (print "shape error detected")
 						       (print ',var)
 						       )
-						     (setf ,var (nth ,nth-arg ,shape)))
-						    ((>= ,nth-arg (- (length ,shape) ,pos2))
+						     (setq ,var (nth ,nth-arg ,shape)))
+						    ((> (- (length ,shape) ,nth-arg) ,pos1)
 						     ;; here, we can detect errors
+						     
 						     (let ((pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
 						       (when (and (numberp ,var)
 								  (not
@@ -322,7 +323,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 							 (print ',var)
 							 (print ,var)
 							 )
-						       (setf ,var (nth pos ,shape))))))))
+						       (setq ,var (nth pos ,shape))))))))
 		    ;; Determine ~
 		    ,@(loop for i fixnum upfrom 0
 			    for arg in first-state
