@@ -226,24 +226,6 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 
   )
 
-(defun padding-subscript (subscript shape)
-  "(a ~ b) (1 2 3 4) -> (a ~ ~ b)"
-  (declare (type list subscript shape))
-  (let* ((result (loop for s in shape collect '~))
-	 (pos1   (or (position '~ subscript :test #'symbol-eq) 0))
-	 (pos2   (or (position '~ (reverse subscript) :test #'symbol-eq) (length result))))
-    ;; [a b ~ c] (3 3 3 3 3) pos1 = 1, pos2 = 0 
-    (loop for i fixnum
-	  upfrom 0
-	    below pos1
-	  do (setf (nth i result) (nth i shape)))
-    
-    (loop for i fixnum
-	  downfrom (1- (length result))
-	    to (- (length result) pos2)
-	  do (setf (nth i result) (nth i shape)))
-    result))
-
 (defun build-subscript-error-note (&key
 				     all-subscript
 				     determined-shape
@@ -271,7 +253,7 @@ Because : The ~ath argument's shape is ~a.
 	  target-shape))
 
 ;; 二度とこのコード読みたくない
-;; TODO: Fix: let -> where
+;; TODO: Fix: let -> where OK
 ;; TODO 四次元の時out-stateを構築できない
 ;; TODO: ~のShapeを判定
 ;; TOOD: out-stateのエラーのnote
@@ -387,45 +369,21 @@ Because : The ~ath argument's shape is ~a.
 							;; error check is needed
 							do (progn
 							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
-		    
-		    ;; 数値とシンボルで返す
-		    
-		    ;; 数値とシンボルで返す
-		    ;; 最適化のために、なるべくスカラー値としてShapeを特定
-
-		    ;; a ~ b cの時:
-		    ;; ~ = `(1 2 3 4 5)なら、 ~[-1~-3]を代入
-
-		    ;;(print ,undetermined-shape-tmp)
-
-		    ;; 次にやる：ここFix
-
-		    (print ',first-state)
-		    (print ,undetermined-shape-tmp)
 
 		    (flet ((merge-and-determine (shapes)
-			     (unless (= (length shapes)
-				        (length ,undetermined-shape-tmp))
-			       (push
-				(format
-				 nil
-				 "Warning: Couldn't determine ... ... はminimizeをとる In this case, ... is interpeted as ~a"
-				 ,undetermined-shape-tmp)
-				,all-conditions))
-			     
 			     (let ((out
 				     (map
 				      'list
-				      #'(lambda (s d)
+				      #'(lambda (s)
 
 					  ;; Priorities:
 					  ;; 1. [a b]
 					  ;; 2. ~
+
+					  ;; TODO: Auto Padding
 					  (or
-					   (unless (symbol-eq s '~)
+					   (unless (symbolp s)
 					     s)
-					   (unless (symbol-eq d '~)
-					     d)
 					   (and
 					    (push
 					     (format
@@ -433,16 +391,19 @@ Because : The ~ath argument's shape is ~a.
 					      "couldn't determine ...")
 					     ,all-conditions)
 					    '~)))
-				      shapes
-				      ,undetermined-shape-tmp)))
+				      shapes)))
 			       out)))
-		      (values
-		       ;; (list out-shape1 out-shape...n)
-		       (list ,@(map 'list #'(lambda (arg)
-					      `(merge-and-determine
-						(list ,@arg)))
-				    out-state))
-		       (reverse ,all-conditions)))))))
+		      (print ,undetermined-shape-tmp)
+		      (print ',first-state) ;; (length arg)した分を消す
+		      (let ((~ (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
+			(values
+			 ;; (list out-shape1 out-shape...n)
+			 (list ,@(map 'list #'(lambda (arg)
+						`(flatten
+						  (merge-and-determine
+						   (list ,@arg))))
+				      out-state))
+			 (reverse ,all-conditions))))))))
       ;;(print body)
       (eval body))))
 
