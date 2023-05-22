@@ -12,8 +12,11 @@
   :description "Deep Learning Framework"
   :pathname "source"
   :serial t
-  :depends-on (:cl-ppcre :fiveam)
-  :components ((:file "vm/nodes/package")
+  :depends-on (:cl-ppcre :fiveam :alexandria)
+  :components ((:file "vm/generic-tensor/package")
+	       (:file "vm/generic-tensor/tensor")
+
+	       (:file "vm/nodes/package")
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
@@ -35,7 +38,9 @@
   :serial t
   :pathname "source"
   :depends-on (:cl-waffe2 :fiveam)
-  :components ((:file "vm/nodes/t/package")
+  :components ((:file "vm/generic-tensor/t/package")
+	       
+	       (:file "vm/nodes/t/package")
 	       (:file "vm/nodes/t/parser"))
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test-nodes)
