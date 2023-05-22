@@ -244,17 +244,16 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 	  do (setf (nth i result) (nth i shape)))
     result))
 
+;; TODO: Fix: let -> where
 (defun create-subscript-p (subscripts
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
-			     (undetermined-shape-tmp (gensym "UD")))
+			     (undetermined-shape-tmp (gensym "UD"))
+			     (all-conditions (gensym "Conds")))
   (multiple-value-bind (first-state
 			out-state
 			let-binding)
       (parse-subscript subscripts)
-    (print first-state)
-    (print out-state)
-    (print let-binding)
 
     ;; TODO: ~ can be used at once
     ;; ~に遭遇: 残りのsubscript or prev-stateがn or 0になるまでpop
@@ -264,13 +263,16 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
     ;; TopLevelNode -> Shape決定
     ;; [a b c] [a b c] -> [a b c] let k = 1
     ;; let k = listを許す
+    ;; Priority: 1. let-binding, defparameter 2. determined by cl-waffe
+    ;; [x y z] let x = 1. In this case, x is 1. and y and z are 2.
     
     (let* ((common-symbols (get-common-symbols first-state))
 	   (body
-	     `#'(lambda (,previous-subscripts)
+	     `#'(lambda (,previous-subscripts &aux (,all-conditions))
 		  ;; previous-suscriptsから次のSubscriptsを作成
 		  ;; If any, return error condition
 		  "Return: (values next-state condition)"
+		  ;; TODO: Judge At-Least dims and return error.
 		  ;; 1. Determine symbols, defined by let-binding
 		  (let* (,@(map 'list #'(lambda (x)
 					  `(,x ',x))
@@ -291,6 +293,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 			    for subscript in first-state
 			    collect
 			    `(progn
+			       ,(format nil "[MacroExpand] For: ~a" (nth i first-state))
 			       ,@(loop with shape = `(nth ,i ,previous-subscripts)
 				       with pos1 = (or (position '~ subscript :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
 				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
@@ -301,6 +304,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 					 collect `(cond
 						    ((< ,nth-arg ,pos1)
 						     ;; here, we can detect errors
+						     ;; ,var is determined and determined shapes doesn't match.
 						     (when (and (numberp ,var)
 								(not
 								 (= ,var (nth ,nth-arg ,shape))))
@@ -308,17 +312,17 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 						       (print ',var)
 						       )
 						     (setf ,var (nth ,nth-arg ,shape)))
-						    ((> ,nth-arg (- (length ,shape) ,pos2))
-						     ;;, here, we can detect errors
-						     (when (and (numberp ,var)
-								(not
-								 (= ,var (nth ,nth-arg ,shape))))
-						       (print "shape error detected")
-						       (print ',var)
-						       (print ,var)
-						       )
-						     (setf ,var (nth ,nth-arg ,shape)))
-						    (T nil)))))
+						    ((>= ,nth-arg (- (length ,shape) ,pos2))
+						     ;; here, we can detect errors
+						     (let ((pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
+						       (when (and (numberp ,var)
+								  (not
+								   (= ,var (nth pos ,shape))))
+							 (print "shape error detected")
+							 (print ',var)
+							 (print ,var)
+							 )
+						       (setf ,var (nth pos ,shape))))))))
 		    ;; Determine ~
 		    ,@(loop for i fixnum upfrom 0
 			    for arg in first-state
@@ -339,8 +343,10 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 					    (setf (nth axis ,undetermined-shape-tmp) n)))))
 		    ;; 数値とシンボルで返す
 		    ;; 最適化のために、なるべくスカラー値としてShapeを特定
-		    
-		    
+
+		    ,@(map 'list #'(lambda (arg)
+				     `(print (list ,@arg)))
+			   first-state)
 		    (print ,undetermined-shape-tmp)
 		    
 		    ))))
