@@ -14,6 +14,7 @@
   :serial t
   :depends-on (:cl-ppcre :fiveam :alexandria)
   :components ((:file "vm/generic-tensor/package")
+	       (:file "vm/generic-tensor/conditions")
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/default-impls")
 	       (:file "vm/generic-tensor/acceptor")

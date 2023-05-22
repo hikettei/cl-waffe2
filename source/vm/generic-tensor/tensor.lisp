@@ -23,3 +23,9 @@
    (trace-state :initform nil)))
 
 
+
+(defmacro assure-dimensions (mat1 mat2)
+  "Do nothing if mat1 and mat2 are the same shape, otherwise throw shaping-error."
+  `(if (equal (the list (shape ,mat1)) (the list (shape ,mat2)))
+	 t
+	 (shaping-error "Two matrices: ~a and ~a couldn't operated together." (shape ,mat1) (shape ,mat2))))
