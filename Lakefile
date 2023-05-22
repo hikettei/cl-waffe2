@@ -1,0 +1,19 @@
+#|-*- mode:lisp -*-|#
+(in-package :cl-user)
+(defpackage :lake.user
+  (:use :cl :lake :cl-syntax)
+  (:shadowing-import-from :lake
+                          :directory))
+(in-package :lake.user)
+
+
+(use-syntax :interpol)
+
+(task "default" ())
+
+;;; here follow your tasks...
+
+
+
+(task "test" ()
+      (sh "ros ./roswell/cl-waffe2-test.ros"))
