@@ -9,8 +9,11 @@
 ;; (defstruct NodeState)
 
 (defun symbol-eq (x y)
-  (equal (symbol-name x)
-	 (symbol-name y)))
+  (and
+   (symbolp x)
+   (symbolp y)
+   (equal (symbol-name x)
+	  (symbol-name y))))
 
 (defun bnf-parse-variables (exps &aux (pointer 0) (result))
   (flet ((parse-variable (exp)
@@ -61,6 +64,11 @@ At  : ~ath symbol, ~a"
 	  (T
 	   (push exp content-tmp)))
 	(incf pointer 1))
+      
+      (when content-tmp
+	(error 'subscripts-content-error
+	       :msg (format nil "The rest tokens doesn't fit in no any syntax rule.: ~a" (reverse content-tmp))))
+      
       (reverse result))))
 
 (defun bnf-parse-let-phase (exps &aux (results))
@@ -188,6 +196,12 @@ BASIC Format:
 
 [Shape] [Shape] ... -> [Shape] [Shape] where x = 0, y = 1, ...
 
+[~ i j] -> [~ j i] let x = 1
+
+[~] -> [~]
+
+x -> [x y] let x = (list 1 2 3)
+
 batch-size <- スコープが上位の変数も参照できるようにしたい。
 
 [batch-size x[0] x[1]]"
@@ -205,4 +219,131 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 			   " ] ")))
     (values first-state out-state let-binding)))
 
+(defun get-common-symbols (symbols)
+  (remove-duplicates (flatten symbols) :test #'symbol-eq))
+
+(defun subscript-compatible-p (subscript-1 shape)
+
+  )
+
+(defun padding-subscript (subscript shape)
+  "(a ~ b) (1 2 3 4) -> (a ~ ~ b)"
+  (declare (type list subscript shape))
+  (let* ((result (loop for s in shape collect '~))
+	 (pos1   (or (position '~ subscript :test #'symbol-eq) 0))
+	 (pos2   (or (position '~ (reverse subscript) :test #'symbol-eq) (length result))))
+    ;; [a b ~ c] (3 3 3 3 3) pos1 = 1, pos2 = 0 
+    (loop for i fixnum
+	  upfrom 0
+	    below pos1
+	  do (setf (nth i result) (nth i shape)))
+    
+    (loop for i fixnum
+	  downfrom (1- (length result))
+	    to (- (length result) pos2)
+	  do (setf (nth i result) (nth i shape)))
+    result))
+
+(defun create-subscript-p (subscripts
+			   &aux
+			     (previous-subscripts (gensym "PreviousShape"))
+			     (undetermined-shape-tmp (gensym "UD")))
+  (multiple-value-bind (first-state
+			out-state
+			let-binding)
+      (parse-subscript subscripts)
+    (print first-state)
+    (print out-state)
+    (print let-binding)
+
+    ;; TODO: ~ can be used at once
+    ;; ~に遭遇: 残りのsubscript or prev-stateがn or 0になるまでpop
+    ;; [~ a b] [a b ~]
+    ;; [~ a b] [~ k b] let k = (/ b 2)
+    ;; boundp
+    ;; TopLevelNode -> Shape決定
+    ;; [a b c] [a b c] -> [a b c] let k = 1
+    ;; let k = listを許す
+    
+    (let* ((common-symbols (get-common-symbols first-state))
+	   (body
+	     `#'(lambda (,previous-subscripts)
+		  ;; previous-suscriptsから次のSubscriptsを作成
+		  ;; If any, return error condition
+		  "Return: (values next-state condition)"
+		  ;; 1. Determine symbols, defined by let-binding
+		  (let* (,@(map 'list #'(lambda (x)
+					  `(,x ',x))
+				common-symbols)
+			 ,@let-binding
+			 (,undetermined-shape-tmp
+			   (loop for s
+				 upfrom 0
+				 below
+				 (loop for p in ,previous-subscripts
+				       maximize (length p))
+				 collect '~)))
+		    (declare (ignorable ~))
+		    
+		    ;; Identify Non-Determined Symbols
+
+		    ,@(loop for i fixnum upfrom 0
+			    for subscript in first-state
+			    collect
+			    `(progn
+			       ,@(loop with shape = `(nth ,i ,previous-subscripts)
+				       with pos1 = (or (position '~ subscript :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
+				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
+				       
+				       for nth-arg fixnum upfrom 0
+				       for var in subscript
+				       unless (symbol-eq var '~)
+					 collect `(cond
+						    ((< ,nth-arg ,pos1)
+						     ;; here, we can detect errors
+						     (when (and (numberp ,var)
+								(not
+								 (= ,var (nth ,nth-arg ,shape))))
+						       (print "shape error detected")
+						       (print ',var)
+						       )
+						     (setf ,var (nth ,nth-arg ,shape)))
+						    ((> ,nth-arg (- (length ,shape) ,pos2))
+						     ;;, here, we can detect errors
+						     (when (and (numberp ,var)
+								(not
+								 (= ,var (nth ,nth-arg ,shape))))
+						       (print "shape error detected")
+						       (print ',var)
+						       (print ,var)
+						       )
+						     (setf ,var (nth ,nth-arg ,shape)))
+						    (T nil)))))
+		    ;; Determine ~
+		    ,@(loop for i fixnum upfrom 0
+			    for arg in first-state
+			    collect
+			    `(let ((out (padding-subscript (flatten (list ,@arg)) (nth ,i ,previous-subscripts))))
+			       (loop for axis fixnum upfrom 0
+				     for sym in ',arg
+				     for res in out
+				     for n in (nth ,i ,previous-subscripts)
+				     if (symbol-eq res '~)
+				       ;; here could we find shape-error.
+				       do (progn
+					    (if (and
+						 (numberp (nth axis ,undetermined-shape-tmp))
+						 (not (= (nth axis ,undetermined-shape-tmp) n)))
+						
+						(print "error")) ;; wakariyasuku
+					    (setf (nth axis ,undetermined-shape-tmp) n)))))
+		    ;; 数値とシンボルで返す
+		    ;; 最適化のために、なるべくスカラー値としてShapeを特定
+		    
+		    
+		    (print ,undetermined-shape-tmp)
+		    
+		    ))))
+      (print body)
+      (eval body))))
 
