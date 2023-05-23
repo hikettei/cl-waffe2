@@ -48,6 +48,7 @@
 	       (:file "vm/nodes/t/package")
 	       (:file "vm/nodes/t/parser")
 	       (:file "vm/nodes/t/shape")
+	       (:file "vm/nodes/t/nodes")
 
 	       )
   :perform (test-op (o s)
