@@ -302,7 +302,7 @@ Because : The ~ath argument's shape is ~a.
 	   (out-omit-p (find '~ (flatten out-state) :test #'symbol-eq))
 	   ;; If ~ syntax inn't used in out-state, Anything is ok as ~.
 	   ;; Unless then, ~ must be used as the same meaning in all args.
-	   (common-symbols (get-common-symbols first-state))
+	   (common-symbols (get-common-symbols `(list ,first-state ,out-state)))
 	   (body
 	     `#'(lambda (,previous-subscripts &aux (,all-conditions))
 		  ;; previous-suscriptsから次のSubscriptsを作成
@@ -438,7 +438,7 @@ Because the function is declared as: ~a -> ~a"
 				      'list
 				      #'(lambda (s)
 
-					  ;; Priorities:
+					  ;; Use-priorities:
 					  ;; 1. [a b]
 					  ;; 2. ~
 
@@ -450,7 +450,7 @@ Because the function is declared as: ~a -> ~a"
 					    (push
 					     (format
 					      nil
-					      "couldn't determine ...")
+					      "Couldn't Determine this symbol: ~a" s)
 					     ,all-conditions)
 					    '~)))
 				      shapes)))
