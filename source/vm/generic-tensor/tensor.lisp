@@ -22,7 +22,7 @@
    ;; (vec)
    (previous-state :initform nil :reader tensor-state)
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
-   (order :initform :column :initarg :order :type (satisfies order-p))
+   (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
    (trace-state :initform nil)))
 
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
@@ -30,7 +30,7 @@
   (with-slots ((stride stride) (order order) (visible-shape visible-shape) (view view)) tensor
     ;; visible area
     (setf stride (calc-strides tensor order))
-    (setf visible-shape view)
+    (setf visible-shape (parse-view-subscripts tensor (or nil `(t))))
     nil))
 
 (defmacro assure-dimensions (mat1 mat2)
@@ -44,7 +44,7 @@
 
 (defmethod calc-strides ((tensor AbstractTensor) (order (eql :column)))
   "Computes column-major-strides"
-  (column-major-calc-strides  (slot-value tensor 'orig-shape)))
+  (column-major-calc-strides (slot-value tensor 'orig-shape)))
 
 (defmethod calc-strides ((tensor AbstractTensor) (order (eql :row)))
   "Computes row-major-strides"
