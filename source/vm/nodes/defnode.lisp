@@ -90,6 +90,16 @@ Ignore with t.
 	 ,@backward-body))))
 
 ;; Tests
+;; 次にやる：Define-impl
+;; Macro-Basedの遅延評価
+;; Backwardの構築
+;; Shape評価
+;; Tensorに計算ノードを構築する
+;; (build tensor)みたいなノードで(works like pytorch's a.backward())計算ノードを受理 逆伝播の関数順伝播の関数を構築
+;; (value tensor)で今までのノードを動的に構築 (cl-waffeと同じ)
+;; どこでvalueしてもok. debug is ez.
+;; (build tensor)で関数構築するとき、Lispのコードも残しておく (i.e.: print debugなどもしやすい)
+
 (define-impl (AddNode :device CPUTensor)
 	     :forward ((node x y) ;; Tensors only, params should be given as constructor.
 		       (declare (ignore node))

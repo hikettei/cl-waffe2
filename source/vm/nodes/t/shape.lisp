@@ -164,7 +164,7 @@
        `([~ x y] [~ y] -> [~ y])
        `((10 5 2) (3 2))))
 
-  ;; BUG
+  ;; BUG. ~ = nil is not allowed.
   (is (error-test-subscript
        `([~ x y] [~ y] -> [~ y])
        `((10 5 2) (2))))
@@ -175,6 +175,10 @@
 
   (is (error-test-subscript
        `([~ x y z] [x y z] -> [~ y])
+       `((10 5 2) (3 2 3))))
+  
+  (is (error-test-subscript
+       `([~] [~] -> [~])
        `((10 5 2) (3 2 3))))
 
   ;; Should be added more... (After deciding specifications)
