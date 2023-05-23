@@ -42,7 +42,7 @@
 
 
 (test test-adjustable-input-subscript-p
-  ;; I don't know how this subscript is intepreted as
+  ;; It is controversial whether we allow it or not.
   (is (test-subscript
        `([~ x] -> [x])
        `((10))
@@ -177,6 +177,6 @@
        `([~ x y z] [x y z] -> [~ y])
        `((10 5 2) (3 2 3))))
 
-  ;; Should be added more...
+  ;; Should be added more... (After deciding specifications)
 
   )
