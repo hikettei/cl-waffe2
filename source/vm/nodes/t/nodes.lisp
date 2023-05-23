@@ -8,3 +8,10 @@
 (defnode (Bijective-Function (myself)
 	  :where `([~] [~] -> [~])
 	  :documentation "Bijective-Function has a one-to-one correspondence."))
+
+
+(define-impl (Bijective-Function :device CPUTensor)
+	     :forward ((self x)
+		       `(print ,x))
+	     :backward ((self dy)
+			`(values ,dy)))
