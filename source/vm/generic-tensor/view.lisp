@@ -1,11 +1,7 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; tensors must support displacement.
-
-;; cl-xmatrixからViewを移植する.
-;; displacementの調整とUnrollだけでBroadcastingなどを実現する
-
+;; These a ton of awful codes are from cl-xmatrix.
 (deftype subscript-t ()
   "An list of types which is allowed to become subscripts of the function view."
   `(or fixnum list null t))
@@ -570,3 +566,9 @@ specifing :- means orig-shape (todo: write docs)"
 	(reverse ext-opes)
 	(reverse ext-dims)
 	(reverse error-list))))))
+
+
+;; (defun with-view
+;; Displacementを調整しながらoffsets, m, nなどを調整したIndexを計算
+
+

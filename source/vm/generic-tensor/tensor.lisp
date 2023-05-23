@@ -34,13 +34,10 @@
     nil))
 
 (defmacro assure-dimensions (mat1 mat2)
-  "Do nothing if mat1 and mat2 are the same shape, otherwise throw shaping-error."
+  "Does nothing if mat1 and mat2 has a completely the same shape, otherwise throws shaping-error."
   `(if (equal (the list (shape ,mat1)) (the list (shape ,mat2)))
        t
        (shaping-error "Assertion Failed because two matrices ~a and ~a couldn't operated together." (shape ,mat1) (shape ,mat2))))
-
-;; Restart FROM HERE
-;; column-orderとrow-major-orderで、viewをUnrollした時のIterの回数が違ったりしたr面白い
 
 (defmethod calc-strides ((tensor AbstractTensor) (order (eql :column)))
   "Computes column-major-strides"
@@ -51,3 +48,6 @@
   (row-major-calc-strides (slot-value tensor 'orig-shape)))
 
 ;; Tensors must support displace-to
+
+;; (defmethod print-object ((tensor AbstractTensor) stream))
+
