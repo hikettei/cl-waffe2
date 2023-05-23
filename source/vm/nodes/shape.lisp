@@ -258,8 +258,8 @@ Because : The ~ath argument's shape is ~a.
 ;; TODO: ~のShapeを判定
 ;; TOOD: out-stateのエラーのnote
 ;; TODO: 仕様を書く
-;; TODO: Support it: where a = (1 2 3)
-;; TODO: Optimize them... (After I've confirmed it works well)
+;; TODO: Support it: where a = (1 2 3) (OK)
+;; TODO: Optimize them... (Enough fast with SBCL)
 (defun create-subscript-p (subscripts
 			   &key
 			     (macroexpand nil)
@@ -268,6 +268,36 @@ Because : The ~ath argument's shape is ~a.
 			     (undetermined-shape-tmp (gensym "UD"))
 			     (all-conditions (gensym "Conds"))
 			     (pos (gensym "pos")))
+  "
+Memo:
+
+Example:
+ (create-subscript-p `([x y] -> [x y]))
+ (funcall * `((1 1))) -> (values `((1 1)) NIL)
+
+In cl-waffe, all subscript is written in this format:
+
+Shape1 Shape2 ... -> Out-Shape1 Out-Shape2 where x = 1 y = 1. (the pharse where is optional.)
+
+ShapeN = [variable1 variable2 ...]
+
+variableN = ~ or symbol-name
+
+where a = fixnum/list is ok.
+
+Rule1:
+Outで~を使う -> 入力で使われる~は全て同一の形状
+また、次元が違うときは、入力の一番長いものを採用
+(let ((f (create-subscript-p `([~ x y] [~ x y] -> [~ x y]))))
+	 (time (funcall f `((1 3 3 2) (1 3 2)))))
+-> ((1 3 3 2))
+
+Rule2: Outで~を使わない -> ~はなんでもおk
+
+Rule3: where x = 1かlocalのスコープで用いられていない添文は自動で割り当てられる
+
+Rule4: ~は一度のみ使える
+"
   (multiple-value-bind (first-state
 			out-state
 			let-binding)
