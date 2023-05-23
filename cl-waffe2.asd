@@ -46,7 +46,10 @@
   :components ((:file "vm/generic-tensor/t/package")
 	       
 	       (:file "vm/nodes/t/package")
-	       (:file "vm/nodes/t/parser"))
+	       (:file "vm/nodes/t/parser")
+	       (:file "vm/nodes/t/shape")
+
+	       )
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test-nodes)
 		    ))

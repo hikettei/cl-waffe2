@@ -330,9 +330,13 @@ Rule4: ~は一度のみ使える
 				    else
 				      collect (length s)))
 	   (out-omit-p (find '~ (flatten out-state) :test #'symbol-eq))
+	   (~symbol (or (find '~
+			      (flatten (list first-state))
+			      :test #'symbol-eq)
+			'~))
 	   ;; If ~ syntax inn't used in out-state, Anything is ok as ~.
 	   ;; Unless then, ~ must be used as the same meaning in all args.
-	   (common-symbols (get-common-symbols `(list ,first-state ,out-state)))
+	   (common-symbols (get-common-symbols (list first-state out-state)))
 	   (body
 	     `#'(lambda (,previous-subscripts &aux (,all-conditions))
 		  ;; previous-suscriptsから次のSubscriptsを作成
@@ -388,7 +392,6 @@ Because the function is declared as: ~a -> ~a"
 				 (loop for p in ,previous-subscripts
 				       maximize (length p))
 				 collect '~)))
-		    (declare (ignorable ~))
 		    
 
 		    ;; TODO: When let-binding includes list, use it directly.
@@ -485,7 +488,8 @@ Because the function is declared as: ~a -> ~a"
 					    '~)))
 				      shapes)))
 			       out)))
-		      (let ((~ (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
+		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
+			(declare (ignorable ,~symbol))
 			(values
 			 ;; (list out-shape1 out-shape...n)
 			 (list ,@(map 'list #'(lambda (arg)
