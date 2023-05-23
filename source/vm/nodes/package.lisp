@@ -4,7 +4,12 @@
 (defpackage :cl-waffe2/vm.nodes
   (:use :cl :cl-ppcre :alexandria)
   (:import-from :cl-waffe2/vm.generic-tensor
-		#:*using-backend*)
+		#:*using-backend*
+		#:shape
+		#:tensor-prev-state
+		#:tensor-prev-form
+		#:tensor-variables
+		#:make-tensor)
   (:export
    #:with-devices
    #:with-single-device

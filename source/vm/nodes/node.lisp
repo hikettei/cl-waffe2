@@ -31,8 +31,22 @@ backendのforward/backwardはAbstractNodeを継承して、定義する
   ;; Update Computation Nodes
 
   ;; Here do we (dolist (tensor inputs) (setf tensor.variables ...))
-  (let ((out (multiple-value-list (call-next-method))))
-    out))
+  (let* ((transition-function (abstractnode-node node)))
+    (multiple-value-bind (result-shape detected-errors) (funcall transition-function (loop for i in inputs collect (shape i)))
+      
+      (when detected-errors
+	(error "Errors detected: ~a" detected-errors))
+
+      (let* ((form-expanded (multiple-value-list (call-next-method)))
+	     (next-tensor
+	       (loop for shape    in result-shape
+		     for out-form in form-expanded
+		     collect (let ((next-tensor (make-tensor shape)))
+			       (setf (tensor-prev-form  next-tensor) out-form)
+			       (setf (tensor-prev-state next-tensor) node)
+			       (setf (tensor-variables  next-tensor) inputs)
+			       next-tensor))))
+	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)
   (declare (ignore node inputs))

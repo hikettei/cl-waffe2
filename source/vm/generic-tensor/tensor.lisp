@@ -23,22 +23,29 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :reader tensor-stride :type list)
    (visible-shape :initform nil :reader shape :type list)
-   (view :initarg :view :initform nil :reader view :type list)
+   (view :initarg :view :initform nil :reader tensor-view :type list)
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
    (scalar-p :initarg :scalar-p :initform nil)
-   ;; (vec)
+   (vec :initarg :vec :initform nil)
    (dtype :initform :float :initarg dtype :reader dtype)
-   (previous-state :initform nil :reader tensor-state)
+
+   ;; Building Computation Nodes
+   (previous-state :initform nil :accessor tensor-prev-state)
+   (previous-form  :initform nil :accessor tensor-prev-form)
+   (variables      :initform nil :accessor tensor-variables)
+   
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
-   (trace-state :initform nil)))
+   (trace-state :initform nil) ;; For Optimizing Computation Node
+
+   ))
 
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (declare (ignore initargs))
   (with-slots ((stride stride) (order order) (visible-shape visible-shape) (view view)) tensor
     ;; visible area
     (setf stride (calc-strides tensor order))
-    (setf visible-shape (parse-view-subscripts tensor (or nil `(t))))
+    (setf view   (parse-view-subscripts tensor (or nil `(t))))
     nil))
 
 (defmacro assure-dimensions (mat1 mat2)
@@ -62,13 +69,23 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
 (defun make-tensor (shape-or-scalar
 		    &key
+		      (requires-grad nil)
 		      (dtype :float)
 		      (view t)
 		      (order :column))
   "The function make-tensor creates a new tensor of first-priority of *using-backend*"
-  (make-instance (car *using-backend*)
-		 :dtype dtype
-		 :order order
-		 :shape shape-or-scalar
-		 :view view))
 
+  (let ((shape (if (typep shape-or-scalar 'list)
+		   shape-or-scalar
+		   `(1))))
+    (make-instance (car *using-backend*)
+		   :dtype dtype
+		   :order order
+		   :requires-grad requires-grad
+		   :shape shape
+		   :projected-p nil
+		   :view view)))
+
+(defun view (tensor &rest subscripts)
+
+  )

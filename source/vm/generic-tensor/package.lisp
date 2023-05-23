@@ -5,7 +5,13 @@
   (:use :cl)
   (:export
    #:AbstractTensor
-   #:CPUTensor)
+   #:CPUTensor
+
+   #:tensor-prev-state
+   #:tensor-prev-form
+   #:tensor-variables
+
+   )
   (:export
    #:shape
    #:make-tensor
