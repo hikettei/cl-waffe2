@@ -572,3 +572,7 @@ specifing :- means orig-shape (todo: write docs)"
 ;; Displacementを調整しながらoffsets, m, nなどを調整したIndexを計算
 
 
+
+;; call-with-visible-areaをColumn/Row-Majorで実装
+;; ForwardはMacroなので、実行時の形状を受け取って、UnrollされたBodyを返すことが可能
+

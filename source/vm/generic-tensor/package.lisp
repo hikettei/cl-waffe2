@@ -4,7 +4,8 @@
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl)
   (:export
-   #:AbstractTensor))
+   #:AbstractTensor
+   #:CPUTensor))
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
