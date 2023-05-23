@@ -3,8 +3,9 @@
 
 (defpackage :cl-waffe2/vm.nodes
   (:use :cl :cl-ppcre :alexandria)
+  (:import-from :cl-waffe2/vm.generic-tensor
+		#:*using-backend*)
   (:export
-   #:*using-tensor*
    #:with-devices
    #:with-single-device
    #:*facet-monopoly-mode*)

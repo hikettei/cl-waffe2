@@ -6,6 +6,12 @@
 ;; CFFI-Style
 ;; Column-Major And Row-Major
 
+(defparameter *using-backend*
+  `(cl-waffe2/vm.generic-tensor:CPUTensor)
+  "cl-waffe searches for computation nodes in the following order and uses the first one it finds. (Priority1 Priority2 ...)
+Default: `(cl-waffe2/vm.generic-tensor:CPUTensor)
+PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
+
 (defun order-p (name)
   (declare (type keyword name))
   (or (eql name :column) (eql name :row)))
@@ -19,7 +25,9 @@
    (visible-shape :initform nil :reader shape :type list)
    (view :initarg :view :initform nil :reader view :type list)
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
+   (scalar-p :initarg :scalar-p :initform nil)
    ;; (vec)
+   (dtype :initform :float :initarg dtype :reader dtype)
    (previous-state :initform nil :reader tensor-state)
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
@@ -50,4 +58,17 @@
 ;; Tensors must support displace-to
 
 ;; (defmethod print-object ((tensor AbstractTensor) stream))
+
+
+(defun make-tensor (shape-or-scalar
+		    &key
+		      (dtype :float)
+		      (view t)
+		      (order :column))
+  "The function make-tensor creates a new tensor of first-priority of *using-backend*"
+  (make-instance (car *using-backend*)
+		 :dtype dtype
+		 :order order
+		 :shape shape-or-scalar
+		 :view view))
 
