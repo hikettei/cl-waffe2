@@ -28,20 +28,38 @@ Ignore with t.
 
 "
 
-  `(prog1
-       (defclass ,abstract-name (AbstractNode)
-	 ,slots
-	 (:documentation ,documentation))
-     
-     (defun ,abstract-name (,@(cdr constructor-arguments))
-       (let* ((,subscript-p (create-subscript-p ,where))
-	      (,(car constructor-arguments)
-		(make-instance ',abstract-name
-			       :function-node ,subscript-p)))
-	 (declare (ignorable ,(car constructor-arguments)))
-	 ,@constructor-body
-	 ;; Backendに応じてNodeのsubclassを生成
-	 ,(car constructor-arguments)))))
+  (let ((initarg-slots (map 'list #'(lambda (slots)
+				      ;; Auto-Generated Constructor is Enabled Only When:
+				      ;; slot has :initarg
+				      ;; slot-name corresponds with any of constructor-arguments
+				      (when
+					  (and
+					   (find (first slots) (flatten constructor-arguments))
+					   (find :initarg slots))
+					slots))
+			    slots)))
+    (flet ((parse-initarg-slot (slot)
+	     (when slot
+	       ;; constraints: slot has :initarg
+	       `(list ,(intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
+		 ,(car slot)))))
+      `(prog1
+	   (defclass ,abstract-name (AbstractNode)
+	     (,@slots)
+	     (:documentation ,documentation))
+
+	 ;; Backends are modular
+	 (defun ,abstract-name (,@(cdr constructor-arguments))
+	   ,documentation
+	   (let* ((,subscript-p (create-subscript-p ,where))
+		  (,(car constructor-arguments)
+		    (apply #'make-instance ',abstract-name
+				   :function-node ,subscript-p
+				   ,@(map 'list #'parse-initarg-slot initarg-slots))))
+	     (declare (ignorable ,(car constructor-arguments)))
+	     ,@constructor-body
+	     ;; Backendに応じてNodeのsubclassを生成
+	     ,(car constructor-arguments)))))))
 
 (defmacro define-impl ((abstract-name
 			&key
@@ -73,12 +91,15 @@ Ignore with t.
 
 ;; Tests
 (define-impl (AddNode :device CPUTensor)
-	     :forward ((node x y)
+	     :forward ((node x y) ;; Tensors only, params should be given as constructor.
 		       (declare (ignore node))
 		       (+ x y))
 	     :backward ((node dy)
 			))
 
-(defnode (AddNode (myself)
-	  :where `([~] [~] -> [~])
+
+(defnode (AddNode (myself &key (state 0))
+	  :where `([~] [~] -> [~] where x = ,state)
+	  :slots ((state :initform 0 :initarg :state))
 	  :documentation "The Node Addnode Provides ..."))
+
