@@ -24,6 +24,9 @@ backendのforward/backwardはAbstractNodeを継承して、定義する
   ""
   (funcall (abstractnode-node node) previous-shape))
 
+(defgeneric forward  (node &rest inputs))
+(defgeneric backward (node dy))
+
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 

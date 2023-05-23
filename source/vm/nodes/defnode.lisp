@@ -1,9 +1,66 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+(defpackage :cl-waffe2/vm.nodes.facets-tmp)
+
+(defparameter *using-backend*
+  `(cl-waffe2/vm.generic-tensor:CPUTensor)
+  "cl-waffe searches for computation nodes in the following order and uses the first one it finds. (Priority1 Priority2 ...)
+Default: `(cl-waffe2/vm.generic-tensor:CPUTensor)
+PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
+
+(defparameter *facet-monopoly-mode* t "If t, only use devices with Priority1, otherwise an error will occur.")
+
+(defun list-of-abstracttensor-p (list)
+  "Return t if LIST is non nil and contains only strings."
+  (and (consp list)
+       (every #'(lambda (x) (subtypep x 'cl-waffe2/vm.generic-tensor:AbstractTensor)) list)))
+
+(deftype list-of-abstracttensor ()
+  `(and list (satisfies list-of-abstracttensor-p)))
+
+(defmacro with-devices ((&rest backend-priority) &body body)
+  "Through the macro with-devices, the facet of nodes are declared.
+backend-priority is described as: (Priority1 Priority2 ...)"
+  `(let ((*using-backend* ',backend-priority))
+     (declare (type list *using-backend*))
+     (mapc
+      #'(lambda (x)
+	  (unless (subtypep x 'cl-waffe2/vm.generic-tensor:AbstractTensor)
+	    (warn "~a is not a subtype of cl-waffe2/vm.generic-tensor:AbstractTensor. If you want to extend device, extend this class first."
+		  x)))
+      *using-backend*)
+     ,@body))
+
+(defmacro with-single-device ((device-name) &body body)
+  "Under this macro, cl-waffe only use devices with device-name, otherwise an error will occur"
+  `(let ((*facet-monopoly-mode* t))
+     (with-backend (,device-name)
+       ,@body)))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun symb (&rest inputs)
-    (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
+    (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
+  (defun subnode-name (abstract-node device)
+    (intern (with-output-to-string (out)
+	      (princ abstract-node out)
+	      (princ '- out)
+	      (princ device out))
+	    'cl-waffe2/vm.nodes.facets-tmp)))
+
+(defun determine-facet-of-nodes (abstract-name devices)
+  (declare (type list devices)
+	   (type symbol abstract-name))
+  (loop for device in devices
+	do (let ((node-name (subnode-name abstract-name device)))
+	     (when (subtypep node-name abstract-name)
+	       (return-from determine-facet-of-nodes
+		 node-name))
+	     
+	     (when *facet-monopoly-mode*
+	       (error "Not Found Case1 (Debug Mode)"))))
+  
+  (error "Couldn't find the node"))
 
 (defmacro defnode ((abstract-name
 		   (&rest constructor-arguments)
@@ -42,24 +99,24 @@ Ignore with t.
 	     (when slot
 	       ;; constraints: slot has :initarg
 	       `(list ,(intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
-		 ,(car slot)))))
+		      ,(car slot)))))
       `(prog1
 	   (defclass ,abstract-name (AbstractNode)
 	     (,@slots)
 	     (:documentation ,documentation))
-
 	 ;; Backends are modular
 	 (defun ,abstract-name (,@(cdr constructor-arguments))
 	   ,documentation
 	   (let* ((,subscript-p (create-subscript-p ,where))
 		  (,(car constructor-arguments)
-		    (apply #'make-instance ',abstract-name
+		    (apply #'make-instance (determine-facet-of-nodes ',abstract-name *using-backend*)
 				   :function-node ,subscript-p
 				   ,@(map 'list #'parse-initarg-slot initarg-slots))))
 	     (declare (ignorable ,(car constructor-arguments)))
 	     ,@constructor-body
 	     ;; Backendに応じてNodeのsubclassを生成
-	     ,(car constructor-arguments)))))))
+	     (the ,abstract-name ,(car constructor-arguments))))))))
+
 
 (defmacro define-impl ((abstract-name
 			&key
@@ -67,26 +124,53 @@ Ignore with t.
 		       &key
 			 forward
 			 backward
-			 &aux (inputs (gensym "inputs")))
-  "Adds Backend"
+		       &aux
+			 (inputs (gensym "inputs")))
+  "Through the macro define-impl, the behaviour of nodes are described.
+
+Follow these constraints:
+
+1. Arguments must be this format:
+   Forward  -> (node input-tensor1 input-tensor2 ...)
+   Backward -> (node dy)
+
+   Other parameters should be given as constructor."
   (let ((forward-self-name (caar forward))
 	(backward-self-name (caar backward))
 	(forward-args  (cdar forward))
 	(backward-args (cdar backward))
 	(forward-body  (cdr forward))
 	(backward-body (cdr backward))
-	(impl-name (symb abstract-name device)))
-    ;; assert (length backward-args) == 1
+	(impl-name (subnode-name abstract-name device)))
+
+    (assert (subtypep device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
+	    nil
+	    "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
+	    abstract-name
+	    device)
+
+    (assert (= (length backward-args) 1)
+	    nil
+	    "Assertion Failed because the arguments of backward, must be: (node dy) but got ~a. At ~a node"
+	    backward-args
+	    abstract-name)
     `(prog1
 	 (defclass ,impl-name (,abstract-name)
 	   nil
-	   (:documentation ,(format nil "Automatically defined by cl-waffe")))
+	   (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
+				    impl-name
+				    abstract-name
+				    device)))
+       ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
-	 ;; Error Check
+	 (declare (type ,impl-name ,forward-self-name))
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
+	   (declare (type ,device ,@forward-args))
 	   (let ((,forward-self-name ,forward-self-name))
 	     ,@forward-body)))
        (defmethod backward ((,backward-self-name ,impl-name) ,@backward-args)
+	 (declare (type ,impl-name ,backward-self-name)
+		  (type ,device ,@backward-args))
 	 ,@backward-body))))
 
 ;; Tests
@@ -100,17 +184,21 @@ Ignore with t.
 ;; どこでvalueしてもok. debug is ez.
 ;; (build tensor)で関数構築するとき、Lispのコードも残しておく (i.e.: print debugなどもしやすい)
 
-(define-impl (AddNode :device CPUTensor)
+;; Constaints 引数は以下の形式でないといけない
+;; Forward: (Node device-tensor1 device-tensor2 ...)
+;; Backward: (Node device-tensor1)
+
+;; TODO: Generic Where
+
+(defnode (AddNodeTest (myself &key (state 0))
+	  :where `([~] [~] -> [~] where x = ,state)
+	  :slots ((state :initform 0 :initarg :state))
+	  :documentation "The Node Addnode Provides ..."))
+
+(define-impl (AddNodeTest :device cl-waffe2/vm.generic-tensor:CPUTensor)
 	     :forward ((node x y) ;; Tensors only, params should be given as constructor.
 		       (declare (ignore node))
 		       ;; Described in macro-form
 		       `(+ ,x ,y))
 	     :backward ((node dy)
 			`(values ,dy)))
-
-
-(defnode (AddNode (myself &key (state 0))
-	  :where `([~] [~] -> [~] where x = ,state)
-	  :slots ((state :initform 0 :initarg :state))
-	  :documentation "The Node Addnode Provides ..."))
-
