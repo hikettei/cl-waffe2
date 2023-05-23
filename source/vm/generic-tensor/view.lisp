@@ -12,8 +12,7 @@
 
 (deftype index () `(or fixnum))
 
-(declaim (ftype (function (fixnum subscript-t fixnum) list) find-subscript-error)
-	 (inline find-subscript-error))
+(declaim (ftype (function (fixnum subscript-t fixnum) list) find-subscript-error))
 (defun find-subscript-error (i sub dim &aux (reports nil))
   "Finding view-indexing-error in advance.
 Args:
@@ -241,4 +240,333 @@ Return: List (Consisted of strings which records error log)"
       (t old-view))))
 
 
+(declaim (ftype (function (fixnum subscript-t AbstractTensor fixnum) (values subscript-t subscript-t)) parse-broadcast))
+(defun parse-broadcast (orig-shape subscript tensor axis)
+  "If subscript is broadcast. Returns the broadcasted shape and new-subscript. do nothing otherwise."
+  (declare (optimize (speed 3) (safety 0)) 
+	   (type fixnum orig-shape axis)
+	   (type subscript-t subscript)
+	   (type AbstractTensor tensor))
+
+  (if (and (typep subscript 'list)
+	   (eql (car subscript) :broadcast))
+      (progn
+	(unless (= (length subscript) 2)
+	  (view-indexing-error "Invaild Operation ~a. :broadcast is given in this format:~% `(:broadcast num) num = t or positive fixnum" subscript))
+	(unless (= orig-shape 1)
+	  (view-indexing-error "Can't Broadcast the matrix~%because the axis to be broadcasted is not 1: ~a at axis=~a" (shape tensor) axis))
+	(values t (second subscript)))
+      (values subscript nil)))
+
+(declaim (ftype (function (fixnum subscript-t) subscript-t) replace-tflist)
+	 (inline replace-tflist))
+(defun replace-tflist (orig-shape subscript)
+  "Replace :tflist into :indices if exists, otherwise do nothing."
+  (declare (optimize (speed 3))
+	   (type fixnum orig-shape)
+	   (type subscript-t subscript)
+	   (ignore orig-shape))
+
+  (if (and (typep subscript 'list)
+	   (eql (car subscript) :tflist))
+      (error "Currently AbstractTensor doesnt suport :tflist (TODO)")
+      subscript))
+
+(declaim (ftype (function (subscript-t) (values subscript-t subscript-t))
+		parse-external-operation)
+	 (inline parse-external-operation))
+(defun parse-external-operation (subscript)
+  "Parses :indices if exists otherwise do nothing."
+  (declare (type subscript-t subscript)
+	   (optimize (speed 3) (safety 0)))
+  (if (and (typep subscript 'list)
+	   (eql (car subscript) :indices))
+      (values subscript subscript)
+      (values subscript nil)))
+
+
+(declaim (ftype (function (fixnum subscript-t) subscript-t)))
+(defun parse-relative-position (orig-shape sub)
+  "Parses relatie-position like: -1, -2...
+specifing :- means orig-shape (todo: write docs)"
+  (declare (optimize (speed 3) (safety 0))
+	   (type fixnum orig-shape)
+	   (type subscript-t sub))
+  (typecase sub
+    (fixnum
+     (if (>= sub 0)
+	 sub
+	 (let ((pos (the fixnum (+ orig-shape sub))))
+	   (if (>= pos 0)
+	       pos
+	       (view-indexing-error "The relative index ~a beyonds the original axis ~a" sub orig-shape)))))
+    (list
+     (map 'list #'(lambda (x) (parse-relative-position orig-shape x)) sub))
+    (T (if (eq sub :~)
+	   orig-shape
+	   sub))))
+
+(declaim (ftype (function (subscript-t subscript-t) fixnum) compute-visible-size))
+(defun compute-visible-size (shape view)
+  (declare (optimize (speed 3) (safety 0)))
+  (the fixnum
+       (- (view-endindex view shape)
+	  (view-startindex view 0))))
+
+(declaim (ftype (function (t fixnum) fixnum) view-startindex view-endindex))
+(defun view-startindex (view _)
+  (declare (optimize (speed 3) (safety 0))
+	   (ignore _))
+  (typecase view
+    (list
+     (typecase (car view)
+       (fixnum (the fixnum (car view)))
+       (keyword
+	(case (car view)
+	  (:indices 0)
+	  (:broadcast 0)
+	  (T
+	   (error "view-startindex: unknown keyword"))))
+       (T (error "view-startindex: invaild view-instruction fell through"))))
+    (fixnum
+     (the fixnum view))
+    (t
+     (the fixnum 0))))
+
+(defun view-endindex (view shape)
+  (declare (optimize (speed 3) (safety 0)))
+  (typecase view
+    (list
+     (typecase (car view)
+       (fixnum (the fixnum (second view)))
+       (keyword
+	(case (car view)
+	  (:indices (1- (length view)))
+	  (:broadcast 1)
+	  (T
+	   (error "view-endindex: unknown keyword"))))
+       (T (error "view-endindex: unknown view-instruction fell through"))))
+    (fixnum
+     (the fixnum (1+ view)))
+    (t
+     (the fixnum shape))))
+
+
+
+(defmacro unroll-maplist ((var iter-num) &body body)
+  (labels ((mkstr (&rest args)
+	     (with-output-to-string (s)
+	       (dolist (a args) (princ a s))))
+	   
+	   (symb (&rest args)
+	     (values (intern (apply #'mkstr args))))
+	   
+	   (retain-objects (name i)
+	     `(list ,@(loop for k fixnum upfrom 0 below i
+			    collect (symb name k))))
+	   (step-iter (i)
+	     (if (>= i 0)
+		 `(multiple-value-bind
+			(,(symb 'subscript i)
+			 ,(symb 'broadcast i)
+			 ,(symb 'visible-shape i)
+			 ,(symb 'external-operation i)
+			 ,(symb 'external-operation-dim i)
+			 ,(symb 'error-str i))
+		      (let ((,var ,i)) ,@body)
+		    ,(step-iter (1- i)))
+		 `(values
+		   ,(retain-objects 'subscript iter-num)
+		   ,(retain-objects 'broadcast iter-num)
+		   ,(retain-objects 'visible-shape iter-num)
+		   ,(retain-objects 'external-operation iter-num)
+		   ,(retain-objects 'external-operation-dim iter-num)
+		   ,(retain-objects 'error-str iter-num)))))
+    (step-iter (1- iter-num))))
+
 ;; TODO: :tflist  etc...
+
+
+(declaim (ftype (function (fixnum
+			   AbstractTensor
+			   fixnum
+			   (or fixnum list null t)
+			   (or fixnum list null t)
+			   boolean)
+			  (values t t t t t t))
+		parse-subscript-by-axis))
+(defun parse-subscript-by-axis (axis
+				tensor
+				orig-shape
+				orig-view
+				subscript
+				padding-subscript)
+  "Returning -> (values parsed-subscript[sub] broadcast[Fixnum] visible-shape[fixnum] external-operation[null or list]) external-operation-dim-num[fixnum] Errors[null or string]"
+  (declare (optimize (speed 3) (safety 0))
+	   (type fixnum orig-shape)
+	   (type boolean padding-subscript)
+	   (type (or fixnum list t) orig-view subscript))
+  ;; Works:
+  ;; Detect View error
+  ;; compute visible-shape
+  ;; compute absolute view
+  ;; Separate Broadcasting
+  ;; compute ext-ops (:indices) (:tflist)
+
+  ;; Here, Make -1 -> 1 (Compute Absolute)
+  ;; If :tflist, convert it into :indices
+  
+  (let* ((subscript (parse-relative-position orig-shape subscript))
+	 (subscript (replace-tflist orig-shape subscript)) ;; :tflist -> :indices
+	 (subscript (if padding-subscript ;; Padding
+			t
+			subscript))
+	 (subscript (if (null subscript)
+			t
+			subscript)))
+    (multiple-value-bind (subscript broadcast) (parse-broadcast orig-shape subscript tensor axis) ;; Find out broadcasts
+      (multiple-value-bind (subscript external-operation) (parse-external-operation subscript) ;; Find out :indices
+	(if (tensor-projected-p tensor)
+	    (let ((subscript (compute-absolute-subscript orig-view subscript)))
+	      (values
+	       subscript
+	       broadcast
+	       (or broadcast
+		   (compute-visible-size orig-shape subscript))
+	       external-operation
+	       (if external-operation
+		   axis)
+	       ;; Error check will be done in: Original-Mat <-> View
+	       (find-subscript-error axis subscript (nth axis (slot-value tensor 'orig-shape)))))
+	    ;; Simply, matrix -> View
+	    (values
+	     subscript
+	     broadcast
+	     (or broadcast
+		 (compute-visible-size orig-shape subscript))
+	     external-operation
+	     (if external-operation
+		 axis)
+	     (find-subscript-error axis subscript orig-shape)))))))
+
+(defun parse-view-subscripts (tensor
+			      subscripts
+			      &aux
+				(orig-shape (slot-value tensor 'orig-shape))
+				(orig-view  (slot-value tensor 'view))
+				(dimensions (length orig-shape))
+				(subscript-len (length subscripts)))
+  (declare (optimize (speed 3) (safety 0))
+	   (type AbstractTensor tensor)
+	   (type list subscripts orig-shape orig-view)
+	   (type fixnum dimensions))
+  ;; Assertion: (100% as long as created by matrix) (length orig-shape) == (length orig-view)
+  
+  (unless (>= dimensions subscript-len)
+    (view-indexing-error
+     "The length of subscripts is too large for the given matrix.~%Matrix:     ~a~%Subscripts: ~a"
+     (shape tensor) subscripts))
+
+  ;; SBCL's IRC Bug: Unsafe concurrent operations on #<HASH-TABLE :TEST EQL :COUNT 14 {100D1E9F03}> detected, the following ugly case clauses below can't be rewritten with more briefly notations/macros ;_;.
+  (case dimensions
+    (1
+     (unroll-maplist (i 1)
+       (parse-subscript-by-axis
+	i
+        tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (2
+     (unroll-maplist (i 2)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (3
+     (unroll-maplist (i 3)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (4
+     (unroll-maplist (i 4)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (5
+     (unroll-maplist (i 5)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (6
+     (unroll-maplist (i 6)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (7
+     (unroll-maplist (i 7)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (8
+     (unroll-maplist (i 8)
+       (parse-subscript-by-axis
+	i
+	tensor
+	(nth i orig-shape)
+	(nth i orig-view)
+	(nth i subscripts)
+	(>= i subscript-len))))
+    (T
+     (let ((subs)
+	   (bcs)
+	   (vshapes)
+	   (ext-opes)
+	   (ext-dims)
+	   (error-list))
+       (dotimes (i dimensions)
+	 (multiple-value-bind
+	       (subscript
+		broadcast
+		visible-shape
+		external-operation
+		ext-ope-num
+		err)
+	     (parse-subscript-by-axis i tensor (nth i orig-shape) (nth i orig-view) (nth i subscripts) (>= i subscript-len))
+	   (push subscript subs)
+	   (push broadcast bcs)
+	   (push visible-shape vshapes)
+	   (push external-operation ext-opes)
+	   (push ext-ope-num ext-dims)
+	   (push err error-list)))
+       (values
+	(reverse subs)
+	(reverse bcs)
+	(reverse vshapes)
+	(reverse ext-opes)
+	(reverse ext-dims)
+	(reverse error-list))))))

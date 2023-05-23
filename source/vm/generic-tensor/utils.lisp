@@ -1,6 +1,10 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun symb (&rest inputs)
+    (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
+
 (declaim (ftype (function (cons fixnum) cons) fill-with-d))
 (defun fill-with-d (shape i)
   (declare (optimize (speed 3))
