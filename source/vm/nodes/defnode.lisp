@@ -93,9 +93,10 @@ Ignore with t.
 (define-impl (AddNode :device CPUTensor)
 	     :forward ((node x y) ;; Tensors only, params should be given as constructor.
 		       (declare (ignore node))
-		       (+ x y))
+		       ;; Described in macro-form
+		       `(+ ,x ,y))
 	     :backward ((node dy)
-			))
+			`(values ,dy)))
 
 
 (defnode (AddNode (myself &key (state 0))

@@ -2,7 +2,10 @@
 (in-package :cl-waffe2/vm.nodes)
 
 ;; Shaping Error etc...
-;; Numpy/PyTorchの100倍エラーをわかりやすくする
+;; NOTE: **Numpy/PyTorchの100倍エラーをわかりやすくする**
+;; できること：
+;; Shaping Errorの優先順位を表示
+;; 現在の計算ノードとともにエラー内容を表示
 
 (define-condition subscripts-format-error (simple-error)
   ((because :initarg :because)

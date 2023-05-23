@@ -259,7 +259,10 @@ Because : The ~ath argument's shape is ~a.
 ;; TOOD: out-stateのエラーのnote
 ;; TODO: 仕様を書く
 ;; TODO: Support it: where a = (1 2 3)
+;; TODO: Optimize them... (After I've confirmed it works well)
 (defun create-subscript-p (subscripts
+			   &key
+			     (macroexpand nil)
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
 			     (undetermined-shape-tmp (gensym "UD"))
@@ -270,8 +273,6 @@ Because : The ~ath argument's shape is ~a.
 			let-binding)
       (parse-subscript subscripts)
 
-    ;; TODO: ~ can be used at once
-    ;; ~に遭遇: 残りのsubscript or prev-stateがn or 0になるまでpop
     ;; [~ a b] [a b ~]
     ;; [~ a b] [~ k b] let k = (/ b 2)
     ;; boundp
@@ -287,7 +288,21 @@ Because : The ~ath argument's shape is ~a.
     ;; 1.
     ;; 2. (Other reasons that could be helpful)
 
-    (let* ((common-symbols (get-common-symbols first-state))
+    ;; [~ x y] [~ x y] -> [x y] with (5 1 2) (1 1 2) is OK
+    ;; [~ x y] [~ x y] -> [~ x y] with (5 1 2) (1 1 2) is NG
+
+    (let* ((least-required-dims (loop for s in first-state
+				      collect (length (remove '~ s :test #'symbol-eq))))
+	   ;; (1 2 3) for [x y] is invaild on the other hand (1 2 3) for [~ x y] is ok.
+	   (max-required-dims (loop for s in first-state
+				    if (find '~ s :test #'symbol-eq)
+				      collect -1
+				    else
+				      collect (length s)))
+	   (out-omit-p (find '~ (flatten out-state) :test #'symbol-eq))
+	   ;; If ~ syntax inn't used in out-state, Anything is ok as ~.
+	   ;; Unless then, ~ must be used as the same meaning in all args.
+	   (common-symbols (get-common-symbols first-state))
 	   (body
 	     `#'(lambda (,previous-subscripts &aux (,all-conditions))
 		  ;; previous-suscriptsから次のSubscriptsを作成
@@ -295,6 +310,43 @@ Because : The ~ath argument's shape is ~a.
 		  "Return: (values next-state condition)"
 		  ;; TODO: Judge At-Least dims and return error.
 		  ;; 1. Determine symbols, defined by let-binding
+
+		  (unless (= (length ,previous-subscripts)
+			     (length ',least-required-dims))
+		    (push
+		     (format nil "The function is declared as: ~a -> ~a but the given arguments was: ~a.~%Please assure that the number of arguments is ok." ',first-state ',out-state ,previous-subscripts)
+		     ,all-conditions))
+
+		  (mapc
+		   #'(lambda (declared act)
+		       (unless (<= declared (length act))
+			 (push
+			  ;; TODO: More infomation!
+			  (format
+			   nil
+			   "The dimension must satisfy: dimensions >= ~a
+Because the function is declared as: ~a -> ~a"
+			   declared
+			   ',first-state
+			   ',out-state)
+			  ,all-conditions)))
+		   ',least-required-dims ,previous-subscripts)
+
+		  (mapc
+		   #'(lambda (declared act)
+		       (unless (or (= declared -1)
+				   (= declared (length act)))
+			 (push
+			  (format
+			   nil
+			   "The dimension must at least satisfy: dimension = ~a
+Because the function is declared as: ~a -> ~a"
+			   declared
+			   ',first-state
+			   ',out-state)
+			  ,all-conditions)))
+		   ',max-required-dims ,previous-subscripts)
+		  
 		  (let* (,@(map 'list #'(lambda (x)
 					  `(,x ',x))
 				common-symbols)
@@ -307,6 +359,7 @@ Because : The ~ath argument's shape is ~a.
 				       maximize (length p))
 				 collect '~)))
 		    (declare (ignorable ~))
+		    
 
 		    ;; TODO: When let-binding includes list, use it directly.
 		    
@@ -318,7 +371,7 @@ Because : The ~ath argument's shape is ~a.
 			    `(progn
 			       ,(format nil "[MacroExpand] For: ~a" (nth i first-state))
 			       ,@(loop with shape = `(nth ,i ,previous-subscripts)
-				       with pos1 = (or (position '~ subscript :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
+				       with pos1 = (or (position '~ subscript :test #'symbol-eq) (length subscript)) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
 				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
 				       
 				       for nth-arg fixnum upfrom 0
@@ -366,8 +419,17 @@ Because : The ~ath argument's shape is ~a.
 					 collect `(loop for ,pos fixnum
 							upfrom ,pos1
 							  below (- (length ,shape) ,pos2)
-							;; error check is needed
+							
 							do (progn
+							     (when (and ,out-omit-p
+									(numberp (nth ,pos ,undetermined-shape-tmp))
+									(not (= (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
+							       ;; More details
+							       (push
+								(format
+								 nil
+								 "Couldn't idenfity ~~ ~~ is determined as ~a butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
+								,all-conditions))
 							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 
 		    (flet ((merge-and-determine (shapes)
@@ -393,9 +455,6 @@ Because : The ~ath argument's shape is ~a.
 					    '~)))
 				      shapes)))
 			       out)))
-		      ;; TODO
-		      (print ,undetermined-shape-tmp)
-		      (print ',first-state) ;; (length arg)した分を消す
 		      (let ((~ (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(values
 			 ;; (list out-shape1 out-shape...n)
@@ -405,5 +464,7 @@ Because : The ~ath argument's shape is ~a.
 						   (list ,@arg))))
 				      out-state))
 			 (reverse ,all-conditions))))))))
+      (when macroexpand
+	(print body))
       (eval body))))
 
