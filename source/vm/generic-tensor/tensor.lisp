@@ -40,12 +40,19 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    ))
 
+(defun compute-visible-shape (orig-shape view)
+  (loop for o in orig-shape
+	for v in view
+	collect (- (view-endindex   v o)
+		   (view-startindex v 0))))
+
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (declare (ignore initargs))
   (with-slots ((stride stride) (order order) (visible-shape visible-shape) (view view)) tensor
     ;; visible area
     (setf stride (calc-strides tensor order))
-    (setf view   (parse-view-subscripts tensor (or nil `(t))))
+    (setf view   (parse-view-subscripts tensor (or view `(t))))
+    (setf visible-shape (compute-visible-shape (original-shape tensor) view))
     nil))
 
 (defmacro assure-dimensions (mat1 mat2)
