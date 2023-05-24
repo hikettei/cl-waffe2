@@ -94,7 +94,7 @@ Ignore with t.
 	       ;; constraints: slot has :initarg
 	       `(list ,(intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
 		      ,(car slot)))))
-      `(prog1
+      `(eval-when (:compile-toplevel :load-toplevel :execute)
 	   (defclass ,abstract-name (AbstractNode)
 	     (,@slots)
 	     (:documentation ,documentation))
@@ -196,10 +196,3 @@ Follow these constraints:
 		       `(values ,x))
 	     :backward ((self dy)
 			`(values ,dy)))
-
-(defclass cl-waffe2/vm.nodes.facets-tmp::HOGEHOGE ()
-  nil)
-
-(defmethod forward ((node cl-waffe2/vm.nodes.facets-tmp::HOGEHOGE) &rest inputs)
-  (print inputs)
-  nil)
