@@ -8,6 +8,9 @@
 
 ;; (defstruct NodeState)
 
+(defun range (start end)
+  (loop for i upfrom start below end collect i))
+
 (defun symbol-eq (x y)
   (and
    (symbolp x)
@@ -348,38 +351,50 @@ Rule4: ~は一度のみ使える
 		  (unless (= (length ,previous-subscripts)
 			     (length ',least-required-dims))
 		    (push
-		     (format nil "The function is declared as: ~a -> ~a but the given arguments was: ~a.~%Please assure that the number of arguments is ok." ',first-state ',out-state ,previous-subscripts)
+		     (format nil "The function is declared as: ~a -> ~a
+but the actual argument given was: ~a.
+=> Check that the number of arguments is correct." ',first-state ',out-state ,previous-subscripts)
 		     ,all-conditions))
 
 		  (mapc
-		   #'(lambda (declared act)
+		   #'(lambda (nth-arg declared act)
 		       (unless (<= declared (length act))
 			 (push
-			  ;; TODO: More infomation!
 			  (format
 			   nil
-			   "The dimension must satisfy: dimensions >= ~a
-Because the function is declared as: ~a -> ~a"
+			   "The number of dimensions must satisfy: dimensions >= ~a
+Because the function is declared as: ~a -> ~a.
+=> However, the actual ~ath argument given was ~a."
 			   declared
 			   ',first-state
-			   ',out-state)
+			   ',out-state
+			   (1+ nth-arg)
+			   act)
 			  ,all-conditions)))
-		   ',least-required-dims ,previous-subscripts)
+		   (range 0 (length ,previous-subscripts))
+		   ',least-required-dims
+		   ,previous-subscripts)
 
 		  (mapc
-		   #'(lambda (declared act)
+		   #'(lambda (nth-arg declared act)
 		       (unless (or (= declared -1)
 				   (= declared (length act)))
 			 (push
 			  (format
 			   nil
-			   "The dimension must at least satisfy: dimension = ~a
-Because the function is declared as: ~a -> ~a"
+			   "The ~ath argument is declared as: ~a
+Accordingly, the argument must satisfy: dimensions = ~a
+=> However, the actual ~ath argument given was ~a"
+			   (1+ nth-arg)
+			   (nth nth-arg ',first-state)
 			   declared
-			   ',first-state
-			   ',out-state)
+			   (1+ nth-arg)
+			   act)
 			  ,all-conditions)))
-		   ',max-required-dims ,previous-subscripts)
+		   
+		   (range 0 (length ,previous-subscripts))
+		   ',max-required-dims
+		   ,previous-subscripts)
 		  
 		  (let* (,@(map 'list #'(lambda (x)
 					  `(,x ',x))
@@ -402,7 +417,7 @@ Because the function is declared as: ~a -> ~a"
 			    for subscript in first-state
 			    collect
 			    `(progn
-			       ,(format nil "[MacroExpand] For: ~a" (nth i first-state))
+			       ,(format nil "[DEBUG] For: ~a" (nth i first-state))
 			       ,@(loop with shape = `(nth ,i ,previous-subscripts)
 				       with pos1 = (or (position '~ subscript :test #'symbol-eq) (length subscript)) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
 				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
@@ -461,7 +476,7 @@ Because the function is declared as: ~a -> ~a"
 							       (push
 								(format
 								 nil
-								 "Couldn't idenfity ~~ ~~ is determined as ~a butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
+								 "Couldn't idenfity ~~ ~~ is determined as ~a ~% butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
 								,all-conditions))
 							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 
@@ -483,7 +498,7 @@ Because the function is declared as: ~a -> ~a"
 					    (push
 					     (format
 					      nil
-					      "Couldn't Determine this symbol: ~a" s)
+					      "Failed to determine this symbol: ~a" s)
 					     ,all-conditions)
 					    '~)))
 				      shapes)))

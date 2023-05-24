@@ -9,7 +9,8 @@
 		#:tensor-prev-state
 		#:tensor-prev-form
 		#:tensor-variables
-		#:make-tensor)
+		#:make-tensor
+		#:shaping-error)
   (:export
    #:with-devices
    #:with-single-device

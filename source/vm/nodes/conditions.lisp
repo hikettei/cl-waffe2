@@ -41,3 +41,4 @@ Content  : ~a"
   (:report
    (lambda (c s)
      (format s "~a" (slot-value c 'msg)))))
+
