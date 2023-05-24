@@ -13,6 +13,7 @@
    #:tensor-variables
    #:tensor-state
    #:tensor-out-n
+   #:tensor-vec
    )
 
   ;; Conditions

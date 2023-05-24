@@ -10,6 +10,7 @@
 		#:tensor-variables
 		#:tensor-state
 		#:tensor-out-n
+		#:tensor-vec
 		#:make-tensor
 		#:shaping-error
 		#:make-statecontainer

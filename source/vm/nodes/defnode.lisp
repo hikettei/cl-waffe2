@@ -202,13 +202,14 @@ Follow these constraints:
 
 (define-impl (AddNode :device cl-waffe2/vm.generic-tensor:CPUTensor)
 	     :forward ((self x y)
-		       `(+ ,x ,y))
+		       `(+ (tensor-vec ,x)
+			   (tensor-vec ,y)))
 	     :backward ((self dy)
 			`(values ,dy ,dy)))
 
 (define-impl (MulNode :device cl-waffe2/vm.generic-tensor:CPUTensor)
 	     :forward ((self x y)
-		       `(* ,x ,y))
+		       `(* (tensor-vec ,x) (tensor-vec ,y)))
 	     :backward ((self dy)
 			`(values ,dy ,dy)))
 
@@ -216,4 +217,8 @@ Follow these constraints:
   (let ((x (make-tensor `(10 10)))
 	(y (make-tensor `(10 10)))
 	(z (make-tensor `(10 10))))
+    (setf (tensor-vec x) 10)
+    (setf (tensor-vec y) 5)
+    (setf (tensor-vec z) 2)
+    
     (forward (AddNode) (forward (MulNode) x y) z)))

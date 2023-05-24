@@ -18,11 +18,10 @@
 
 (defun construct-forward (toplevel &key (macroexpand nil))
   (declare (type AbstractTensor toplevel))
-  (let ((body `(progn
-		 #'(lambda ()
-		     (let ((,(tensor-id toplevel)))
-		       ,(trace-computation-node toplevel :forward)
-		       ,(tensor-id toplevel))))))
+  (let ((body `#'(lambda ()
+		   (let ((,(tensor-id toplevel) ,toplevel))
+		     ,(trace-computation-node toplevel :forward)
+		     ,(tensor-id toplevel)))))
     (when macroexpand
       (print body))
     (eval body)))
@@ -61,9 +60,6 @@
       (let ((next-states (loop for v in variables
 			       if (tensor-state v)
 				 collect (explore v)))
-	    (toplevel-tensors (loop for v in variables
-				    unless (tensor-state v)
-				      collect `(setq ,(tensor-id v) ,v)))
 	    (node-id (gensym (format nil "~a" (class-name (class-of node))))))
 	(case mode
 	  (:forward
@@ -73,16 +69,15 @@
 	   `(flet ((,node-id (,@(dispatch-tensor-variable variables))
 		     ;; use state here, to avoid recomputing node.
 		     ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))
-	      (let (,@(loop for v in variables collect `(,(tensor-id v))))
-		,@toplevel-tensors
+	      (let (,@(loop for v in variables collect `(,(tensor-id v) ,v)))
 		,@next-states
-		;; TODO: when 2nd forward, 3nd forward, ...?
+		;; TODO: when 2nd forward, 3nd forward, ...? <- RESET Container
 		(when (null (statecontainer-forward-result
 			     (tensor-state ,(tensor-id toplevel))))
 		  (setf
 		   (statecontainer-forward-result
 		    (tensor-state ,(tensor-id toplevel)))
-		   (multiple-value-list (funcall ',node-id ,@(dispatch-tensor-variable variables)))))
+		   (multiple-value-list (funcall #',node-id ,@(dispatch-tensor-variable variables)))))
 
 		(setq ,(tensor-id toplevel)
 		      (nth

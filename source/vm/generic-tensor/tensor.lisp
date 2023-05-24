@@ -26,7 +26,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (view :initarg :view :initform nil :reader tensor-view :type list)
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
    (scalar-p :initarg :scalar-p :initform nil)
-   (vec :initarg :vec :initform nil)
+   (vec :initarg :vec :initform nil :accessor tensor-vec)
    (dtype :initform :float :initarg dtype :reader dtype)
    
 

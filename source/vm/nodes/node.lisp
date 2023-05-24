@@ -87,8 +87,8 @@ Here's a list of reports.
 		     for nth-arg upfrom 0
 		     collect (let ((next-tensor (make-tensor shape)))
 			       (setf (tensor-out-n next-tensor) nth-arg)
-			       (setf (tensor-state next-tensor)   state)
-			       (setf (tensor-backward next-tensor) node)
+			       (setf (tensor-state next-tensor) state)
+			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
 			       next-tensor))))
 	(apply #'values next-tensor)))))
