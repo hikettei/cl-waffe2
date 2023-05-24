@@ -184,7 +184,10 @@ Follow these constraints:
 ;; Backward: (Node device-tensor1)
 
 ;; TODO: Generic Where
-
+;; RNNみたいに(values x hs)を返したいときはどうする？
+;; outのコードは一パターンのみ
+;; (nth hoge result)を挟む...
+;; ViewNode
 
 (defnode (Bijective-Function (myself)
 	  :where `([x y] -> [x y])
@@ -192,6 +195,13 @@ Follow these constraints:
 
 
 (define-impl (Bijective-Function :device cl-waffe2/vm.generic-tensor:CPUTensor)
+	     :forward ((self x)
+		       `(values ,x))
+	     :backward ((self dy)
+			`(values ,dy)))
+
+
+(define-impl (Bijective-Function :device cl-waffe2/vm.generic-tensor::DebugTensor)
 	     :forward ((self x)
 		       `(values ,x))
 	     :backward ((self dy)
