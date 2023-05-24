@@ -51,6 +51,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (with-slots ((stride stride) (order order) (visible-shape visible-shape) (view view)) tensor
     ;; visible area
     (setf stride (calc-strides tensor order))
+    ;; parse-view-subscripts <- safety 0...
     (setf view   (parse-view-subscripts tensor (or view `(t))))
     (setf visible-shape (compute-visible-shape (original-shape tensor) view))
     nil))
@@ -78,10 +79,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		    &key
 		      (requires-grad nil)
 		      (dtype :float)
-		      (view t)
+		      (view `(t))
 		      (order :column))
   "The function make-tensor creates a new tensor of first-priority of *using-backend*"
-
+  (declare (type list view))
   (let ((shape (if (typep shape-or-scalar 'list)
 		   shape-or-scalar
 		   `(1))))
