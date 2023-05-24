@@ -12,6 +12,7 @@
    #:tensor-backward
    #:tensor-variables
    #:tensor-state
+   #:tensor-out-n
    )
 
   ;; Conditions

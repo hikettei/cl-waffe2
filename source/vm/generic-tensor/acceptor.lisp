@@ -16,10 +16,16 @@
   (forward-n-out  0 :type fixnum)
   (backward-n-out 0 :type fixnum))
 
-(defun construct-forward (toplevel)
+(defun construct-forward (toplevel &key (macroexpand nil))
   (declare (type AbstractTensor toplevel))
-  
-  )
+  (let ((body `(progn
+		 #'(lambda ()
+		     (let ((,(tensor-id toplevel)))
+		       ,(trace-computation-node toplevel :forward)
+		       ,(tensor-id toplevel))))))
+    (when macroexpand
+      (print body))
+    (eval body)))
 
 (defun construct-backward (out-scalar)
 
@@ -44,7 +50,7 @@
 
 ;; TODO: Use self
 (defun trace-computation-node (toplevel
-			   mode)
+			       mode)
   (declare (type AbstractTensor toplevel)
 	   (type (member :forward :backward) mode))
   (let ((state     (tensor-state toplevel))
@@ -55,9 +61,9 @@
       (let ((next-states (loop for v in variables
 			       if (tensor-state v)
 				 collect (explore v)))
-	    (next-variables (loop for v in variables
-				  if (tensor-state v)
-				    collect (tensor-id v)))
+	    (toplevel-tensors (loop for v in variables
+				    unless (tensor-state v)
+				      collect `(setq ,(tensor-id v) ,v)))
 	    (node-id (gensym (format nil "~a" (class-name (class-of node))))))
 	(case mode
 	  (:forward
@@ -67,11 +73,22 @@
 	   `(flet ((,node-id (,@(dispatch-tensor-variable variables))
 		     ;; use state here, to avoid recomputing node.
 		     ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))
-	      (let ,(if next-variables `(,next-variables) nil)
-
+	      (let (,@(loop for v in variables collect `(,(tensor-id v))))
+		,@toplevel-tensors
 		,@next-states
+		;; TODO: when 2nd forward, 3nd forward, ...?
+		(when (null (statecontainer-forward-result
+			     (tensor-state ,(tensor-id toplevel))))
+		  (setf
+		   (statecontainer-forward-result
+		    (tensor-state ,(tensor-id toplevel)))
+		   (multiple-value-list (funcall ',node-id ,@(dispatch-tensor-variable variables)))))
+
 		(setq ,(tensor-id toplevel)
-		      (funcall ,node-id ,@(dispatch-tensor-variable variables))))))
+		      (nth
+		       ,(tensor-out-n toplevel)
+		       (statecontainer-forward-result
+			(tensor-state ,(tensor-id toplevel))))))))
 	  (:backward
 	   ;; past
 	   ;; current

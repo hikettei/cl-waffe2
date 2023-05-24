@@ -36,6 +36,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (variables :initform nil :accessor tensor-variables)
 
    (tensor-id :initform (gensym "TID") :accessor tensor-id)
+   (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
    
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)

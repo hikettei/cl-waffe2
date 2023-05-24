@@ -9,6 +9,7 @@
 		#:tensor-backward
 		#:tensor-variables
 		#:tensor-state
+		#:tensor-out-n
 		#:make-tensor
 		#:shaping-error
 		#:make-statecontainer

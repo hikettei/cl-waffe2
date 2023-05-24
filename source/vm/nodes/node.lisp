@@ -65,6 +65,9 @@ Here's a list of reports.
       (when detected-errors
 	(describe-problems node detected-errors))
 
+      ;;TODO: When Dynamic-Mode
+      ;; Call (construct-forward) and eval it here.
+      
       ;; Forward:  Input-State  -> Output-State
       ;; Backward: Output-State -> Input-State
 
@@ -83,6 +86,7 @@ Here's a list of reports.
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
 		     collect (let ((next-tensor (make-tensor shape)))
+			       (setf (tensor-out-n next-tensor) nth-arg)
 			       (setf (tensor-state next-tensor)   state)
 			       (setf (tensor-backward next-tensor) node)
 			       (setf (tensor-variables next-tensor) inputs)
