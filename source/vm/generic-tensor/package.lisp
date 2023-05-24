@@ -3,15 +3,28 @@
 
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl)
+
+  ;; Tensor classes
   (:export
    #:AbstractTensor
    #:CPUTensor
 
-   #:tensor-prev-state
-   #:tensor-prev-form
+   #:tensor-backward
    #:tensor-variables
-
+   #:tensor-state
    )
+
+  ;; Conditions
+  (:export
+   #:shaping-error)
+
+  ;; APIs for StateContainer
+  (:export
+   #:statecontainer
+   #:make-statecontainer
+   )
+
+  ;; Backends / Tensor API
   (:export
    #:shape
    #:make-tensor

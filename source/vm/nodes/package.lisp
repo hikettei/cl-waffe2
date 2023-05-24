@@ -6,11 +6,13 @@
   (:import-from :cl-waffe2/vm.generic-tensor
 		#:*using-backend*
 		#:shape
-		#:tensor-prev-state
-		#:tensor-prev-form
+		#:tensor-backward
 		#:tensor-variables
+		#:tensor-state
 		#:make-tensor
-		#:shaping-error)
+		#:shaping-error
+		#:make-statecontainer
+		)
   (:export
    #:with-devices
    #:with-single-device

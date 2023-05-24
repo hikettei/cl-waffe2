@@ -28,11 +28,14 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (scalar-p :initarg :scalar-p :initform nil)
    (vec :initarg :vec :initform nil)
    (dtype :initform :float :initarg dtype :reader dtype)
+   
 
    ;; Building Computation Nodes
-   (previous-state :initform nil :accessor tensor-prev-state)
-   (previous-form  :initform nil :accessor tensor-prev-form)
-   (variables      :initform nil :accessor tensor-variables)
+   (backward  :initform nil :accessor tensor-backward)
+   (state     :initform nil :accessor tensor-state)
+   (variables :initform nil :accessor tensor-variables)
+
+   (tensor-id :initform (gensym "TID") :accessor tensor-id)
    
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)

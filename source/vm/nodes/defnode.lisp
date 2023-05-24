@@ -191,20 +191,29 @@ Follow these constraints:
 ;; (nth hoge result)を挟む...
 ;; ViewNode
 
-(defnode (Bijective-Function (myself)
-	  :where `([x y] -> [x y])
-	  :documentation "Bijective-Function has a one-to-one correspondence."))
+(defnode (AddNode (myself)
+	  :where `([x y] [x y] -> [x y])
+	  :documentation "x + y"))
+
+(defnode (MulNode (myself)
+	  :where `([x y] [x y] -> [x y])
+	  :documentation "x * y"))
 
 
-(define-impl (Bijective-Function :device cl-waffe2/vm.generic-tensor:CPUTensor)
-	     :forward ((self x)
-		       `(values ,x))
+(define-impl (AddNode :device cl-waffe2/vm.generic-tensor:CPUTensor)
+	     :forward ((self x y)
+		       `(+ ,x ,y))
 	     :backward ((self dy)
-			`(values ,dy)))
+			`(values ,dy ,dy)))
 
-
-(define-impl (Bijective-Function :device cl-waffe2/vm.generic-tensor::DebugTensor)
-	     :forward ((self x)
-		       `(values ,x))
+(define-impl (MulNode :device cl-waffe2/vm.generic-tensor:CPUTensor)
+	     :forward ((self x y)
+		       `(* ,x ,y))
 	     :backward ((self dy)
-			`(values ,dy)))
+			`(values ,dy ,dy)))
+
+(defun build-test ()
+  (let ((x (make-tensor `(10 10)))
+	(y (make-tensor `(10 10)))
+	(z (make-tensor `(10 10))))
+    (forward (AddNode) (forward (MulNode) x y) z)))
