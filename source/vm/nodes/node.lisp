@@ -32,7 +32,7 @@ backendのforward/backwardはAbstractNodeを継承して、定義する
 
   ;; Here do we (dolist (tensor inputs) (setf tensor.variables ...))
   (let* ((transition-function (abstractnode-node node)))
-    (multiple-value-bind (result-shape detected-errors) (funcall transition-function (loop for i in inputs collect (shape i)))
+    (multiple-value-bind (result-shape detected-errors) (funcall transition-function (print (loop for i in inputs collect (shape i))))
       
       (when detected-errors
 	(error "Errors detected: ~a" detected-errors))

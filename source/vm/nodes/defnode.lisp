@@ -3,10 +3,10 @@
 
 (defpackage :cl-waffe2/vm.nodes.facets-tmp)
 
-(defparameter *facet-monopoly-mode* t "If t, only use devices with Priority1, otherwise an error will occur.")
+(defparameter *facet-monopoly-mode* nil "If t, only use devices with Priority1, otherwise an error will occur.")
 
 (defun list-of-abstracttensor-p (list)
-  "Return t if LIST is non nil and contains only strings."
+  "Return t if LIST is non nil and contains only AbstractTensor."
   (and (consp list)
        (every #'(lambda (x) (subtypep x 'cl-waffe2/vm.generic-tensor:AbstractTensor)) list)))
 
@@ -104,7 +104,7 @@ Ignore with t.
 	   (let* ((,subscript-p (create-subscript-p ,where))
 		  (,(car constructor-arguments)
 		    (apply #'make-instance (determine-facet-of-nodes ',abstract-name *using-backend*)
-				   :function-node ,subscript-p
+				   (list :function-node ,subscript-p)
 				   ,@(map 'list #'parse-initarg-slot initarg-slots))))
 	     (declare (ignorable ,(car constructor-arguments)))
 	     ,@constructor-body
@@ -137,31 +137,32 @@ Follow these constraints:
 	(backward-body (cdr backward))
 	(impl-name (subnode-name abstract-name device)))
 
-    (assert (subtypep device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
-	    nil
-	    "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
-	    abstract-name
-	    device)
+    (eval-when (:compile-toplevel :load-toplevel :execute)
+      (assert (subtypep device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
+	      nil
+	      "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
+	      abstract-name
+	      device)
 
-    (assert (= (length backward-args) 1)
-	    nil
-	    "Assertion Failed because the arguments of backward, must be: (node dy) but got ~a. At ~a node"
-	    backward-args
-	    abstract-name)
-    `(prog1
-	 (defclass ,impl-name (,abstract-name)
-	   nil
-	   (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
-				    impl-name
-				    abstract-name
-				    device)))
+      (assert (= (length backward-args) 1)
+	      nil
+	      "Assertion Failed because the arguments of backward, must be: (node dy) but got ~a. At ~a node"
+	      backward-args
+	      abstract-name))
+
+    `(progn
+       (defclass ,impl-name (,abstract-name)
+	 nil
+	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
+				  impl-name
+				  abstract-name
+				  device)))
        ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type ,device ,@forward-args))
-	   (let ((,forward-self-name ,forward-self-name))
-	     ,@forward-body)))
+	   ,@forward-body))
        (defmethod backward ((,backward-self-name ,impl-name) ,@backward-args)
 	 (declare (type ,impl-name ,backward-self-name)
 		  (type ,device ,@backward-args))
@@ -184,15 +185,21 @@ Follow these constraints:
 
 ;; TODO: Generic Where
 
-(defnode (AddNodeTest (myself &key (state 0))
-	  :where `([~] [~] -> [~] where x = ,state)
-	  :slots ((state :initform 0 :initarg :state))
-	  :documentation "The Node Addnode Provides ..."))
 
-(define-impl (AddNodeTest :device cl-waffe2/vm.generic-tensor:CPUTensor)
-	     :forward ((node x y) ;; Tensors only, params should be given as constructor.
-		       (declare (ignore node))
-		       ;; Described in macro-form
-		       `(list ,x ,y))
-	     :backward ((node dy)
+(defnode (Bijective-Function (myself)
+	  :where `([x y] -> [x y])
+	  :documentation "Bijective-Function has a one-to-one correspondence."))
+
+
+(define-impl (Bijective-Function :device cl-waffe2/vm.generic-tensor:CPUTensor)
+	     :forward ((self x)
+		       `(values ,x))
+	     :backward ((self dy)
 			`(values ,dy)))
+
+(defclass cl-waffe2/vm.nodes.facets-tmp::HOGEHOGE ()
+  nil)
+
+(defmethod forward ((node cl-waffe2/vm.nodes.facets-tmp::HOGEHOGE) &rest inputs)
+  (print inputs)
+  nil)
