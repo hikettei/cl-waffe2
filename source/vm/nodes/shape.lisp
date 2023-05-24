@@ -238,12 +238,12 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 				     but-got
 				     nth-argument
 				     target-shape)
-  (format nil "
+  (format nil "Inconsistency of subscripts.
 The Function is defined as :  ~a
 Determined Shape           :  ~a -> ~a
 Excepted: ~a = ~a
 Butgot  : ~a = ~a
-Because : The ~ath argument's shape is ~a.
+Because : The actual ~ath argument given has a shape of ~a.
 "
 	  all-subscript
 	  determined-shape
