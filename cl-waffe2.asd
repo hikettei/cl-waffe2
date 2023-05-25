@@ -16,6 +16,7 @@
   :components ((:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
 	       (:file "vm/generic-tensor/utils")
+	       (:file "vm/generic-tensor/dtype")
 	       (:file "vm/generic-tensor/view")
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/default-impls")

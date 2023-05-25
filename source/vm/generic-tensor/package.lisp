@@ -15,6 +15,12 @@
    #:tensor-vec
    )
 
+  ;; Dtype API
+  (:export
+   #:dtype-t
+   #:dtype->lisp-type
+   )
+
   ;; Conditions
   (:export
    #:shaping-error)
