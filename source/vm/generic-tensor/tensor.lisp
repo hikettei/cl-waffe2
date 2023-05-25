@@ -7,7 +7,7 @@
 ;; Column-Major And Row-Major
 
 (defparameter *using-backend*
-  `(cl-waffe2/vm.generic-tensor:CPUTensor)
+  `()
   "cl-waffe searches for computation nodes in the following order and uses the first one it finds. (Priority1 Priority2 ...)
 Default: `(cl-waffe2/vm.generic-tensor:CPUTensor)
 PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
@@ -43,6 +43,9 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (trace-state :initform nil) ;; For Optimizing Computation Node
 
    ))
+
+;; (defmacro variable  ())
+;; (defmacro parameter ())
 
 (defun compute-visible-shape (orig-shape view)
   (loop for o in orig-shape

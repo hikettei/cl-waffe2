@@ -50,11 +50,13 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 	     (when (subtypep node-name abstract-name)
 	       (return-from determine-facet-of-nodes
 		 node-name))
-	     
+
+	     ;; FIX
 	     (when *facet-monopoly-mode*
 	       (error "Not Found Case1 (Debug Mode)"))))
-  
-  (error "Couldn't find the node"))
+
+  ;; FIX
+  (error "Couldn't find any node for ~a" abstract-name))
 
 (defmacro defnode ((abstract-name
 		   (&rest constructor-arguments)
@@ -191,34 +193,13 @@ Follow these constraints:
 ;; (nth hoge result)を挟む...
 ;; ViewNode
 
-(defnode (AddNode (myself)
-	  :where `([x y] [x y] -> [x y])
-	  :documentation "x + y"))
-
-(defnode (MulNode (myself)
-	  :where `([x y] [x y] -> [x y])
-	  :documentation "x * y"))
+;; Test it.
 
 
-(define-impl (AddNode :device cl-waffe2/vm.generic-tensor:CPUTensor)
-	     :forward ((self x y)
-		       `(+ (tensor-vec ,x)
-			   (tensor-vec ,y)))
-	     :backward ((self dy)
-			`(values ,dy ,dy)))
+;; How to handle with errors (ignoring shape)
+;; define-impl機能は頻繁に使うものでもないので、Testケースをたくさん書いて補うことにする
 
-(define-impl (MulNode :device cl-waffe2/vm.generic-tensor:CPUTensor)
-	     :forward ((self x y)
-		       `(* (tensor-vec ,x) (tensor-vec ,y)))
-	     :backward ((self dy)
-			`(values ,dy ,dy)))
-
-(defun build-test ()
-  (let ((x (make-tensor `(10 10)))
-	(y (make-tensor `(10 10)))
-	(z (make-tensor `(10 10))))
-    (setf (tensor-vec x) 10)
-    (setf (tensor-vec y) 5)
-    (setf (tensor-vec z) 2)
-    
-    (forward (AddNode) (forward (MulNode) x y) z)))
+;; TODO
+;; (variable  (make-tensor `(10 10))) #'(lambda (x) ~)
+;; (parameter (make-tensor `(10 10))) Optimized by optimizer
+;;

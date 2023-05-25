@@ -7,7 +7,6 @@
   ;; Tensor classes
   (:export
    #:AbstractTensor
-   #:CPUTensor
 
    #:tensor-backward
    #:tensor-variables

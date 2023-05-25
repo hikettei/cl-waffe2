@@ -3,10 +3,6 @@
 
 ;; shaping-formatのパーサーなど
 
-;; defstruct TransimissionState
-
-
-;; (defstruct NodeState)
 
 (defun range (start end)
   (loop for i upfrom start below end collect i))

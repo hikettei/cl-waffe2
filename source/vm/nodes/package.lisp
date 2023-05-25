@@ -13,8 +13,7 @@
 		#:tensor-vec
 		#:make-tensor
 		#:shaping-error
-		#:make-statecontainer
-		)
+		#:make-statecontainer)
   (:export
    #:with-devices
    #:with-single-device

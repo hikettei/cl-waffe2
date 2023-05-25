@@ -27,6 +27,9 @@
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
+
+	       (:file "backends/cpu/package")
+	       (:file "backends/cpu/tensor")
 	       
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
@@ -49,7 +52,7 @@
 	       (:file "vm/nodes/t/parser")
 	       (:file "vm/nodes/t/shape")
 	       (:file "vm/nodes/t/nodes")
-
+	       
 	       )
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test-nodes)

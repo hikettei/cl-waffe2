@@ -12,6 +12,7 @@
 (defun error-test-subscript (subscript input)
   (let ((f (cl-waffe2/vm.nodes::create-subscript-p subscript)))
     (multiple-value-bind (res errors) (funcall f input)
+      (declare (ignore res))
       (and errors))))
 
 (test test-simple-subscript-p
