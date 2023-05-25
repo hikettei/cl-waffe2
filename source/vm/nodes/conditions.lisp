@@ -42,3 +42,14 @@ Content  : ~a"
    (lambda (c s)
      (format s "~a" (slot-value c 'msg)))))
 
+
+(define-condition node-not-found (simple-error)
+  ((node :initarg :node))
+  (:report
+   (lambda (c s)
+     (format s "Couldn't find implementation of ~a for ~a.~a"
+	     (slot-value c 'node)
+	     *using-backend*
+	     (if *facet-monopoly-mode*
+		 "~%With *facet-monopoly-mode* = t, cl-waffe only uses the first-priority device."
+		 "")))))

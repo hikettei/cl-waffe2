@@ -53,10 +53,10 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 
 	     ;; FIX
 	     (when *facet-monopoly-mode*
-	       (error "Not Found Case1 (Debug Mode)"))))
+	       (error 'node-not-found
+		      :node abstract-name))))
 
-  ;; FIX
-  (error "Couldn't find any node for ~a" abstract-name))
+  (error 'node-not-found :node abstract-name))
 
 (defmacro defnode ((abstract-name
 		   (&rest constructor-arguments)
@@ -82,6 +82,12 @@ Ignore with t.
 "
   ;; TODO. Error when (length constructor-arguments) = 0 (no name for node)
 
+  (assert (not (= (length constructor-arguments) 0))
+	  nil
+	  "Assertion Failed because constructor-arguments must satisfy:
+(length constructor-arguments) > 0
+because it requires a slot for node itself.")
+  
   (let ((initarg-slots (map 'list #'(lambda (slots)
 				      ;; Auto-Generated Constructor is Enabled Only When:
 				      ;; slot has :initarg
