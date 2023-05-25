@@ -92,27 +92,27 @@ Ignore with t.
 					   (find :initarg slots))
 					slots))
 			    slots)))
-    (flet ((parse-initarg-slot (slot)
-	     (when slot
-	       ;; constraints: slot has :initarg
-	       `(list ,(intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
-		      ,(car slot)))))
-      `(eval-when (:compile-toplevel :load-toplevel :execute)
-	   (defclass ,abstract-name (AbstractNode)
-	     (,@slots)
-	     (:documentation ,documentation))
-	 ;; Backends are modular
-	 (defun ,abstract-name (,@(cdr constructor-arguments))
-	   ,documentation
-	   (let* ((,subscript-p (create-subscript-p ,where))
-		  (,(car constructor-arguments)
-		    (apply #'make-instance (determine-facet-of-nodes ',abstract-name *using-backend*)
-				   (list :function-node ,subscript-p)
-				   ,@(map 'list #'parse-initarg-slot initarg-slots))))
-	     (declare (ignorable ,(car constructor-arguments)))
-	     ,@constructor-body
-	     ;; Backendに応じてNodeのsubclassを生成
-	     (the ,abstract-name ,(car constructor-arguments))))))))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (defclass ,abstract-name (AbstractNode)
+	 (,@slots)
+	 (:documentation ,documentation))
+       ;; Backends are modular
+       (defun ,abstract-name (,@(cdr constructor-arguments))
+	 ,documentation
+	 (let* ((,subscript-p (create-subscript-p ,where))
+		(,(car constructor-arguments)
+		  (make-instance
+		   (determine-facet-of-nodes ',abstract-name *using-backend*)
+		   :function-node ,subscript-p
+		   ,@(loop for slot in initarg-slots
+			   if slot
+			     collect (intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
+			   if slot
+			     collect (car slot)))))
+	   (declare (ignorable ,(car constructor-arguments)))
+	   ,@constructor-body
+	   ;; Backendに応じてNodeのsubclassを生成
+	   (the ,abstract-name ,(car constructor-arguments)))))))
 
 
 (defmacro define-impl ((abstract-name
