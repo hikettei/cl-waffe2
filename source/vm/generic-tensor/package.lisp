@@ -25,6 +25,11 @@
   (:export
    #:shaping-error)
 
+  (:export
+   #:viewinstruction
+   #:viewinstruction-offset
+   #:viewinstruction-size
+   #:call-with-view)
   ;; APIs for StateContainer
   (:export
    #:statecontainer

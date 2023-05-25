@@ -576,3 +576,90 @@ specifing :- means orig-shape (todo: write docs)"
 ;; call-with-visible-areaをColumn/Row-Majorで実装
 ;; ForwardはMacroなので、実行時の形状を受け取って、UnrollされたBodyを返すことが可能
 
+;; **THE CODES BELOW MUST BE OPTIMIZED**
+(defstruct (ViewInstruction
+	    (:constructor
+		make-viewinstruction (offset size)))
+  (size 0 :type fixnum)
+  (offset 0 :type fixnum))
+
+(defun call-with-view-ext (function &rest tensors)
+
+  ;; with :indices/:tflist
+  )
+
+(defun call-with-view (function
+		       &rest tensors
+		       &aux
+			 (result)
+			 (shape (shape (car tensors)))
+			 (dims  (length (shape (car tensors)))))
+  "Unrolling...
+What kind of tensors could be called together?
+-> Tensors whose dimensions and shapes are the same.
+
+(sin x)
+(adds x y) <- Broadcast it.
+(gemm x y z)"
+
+  ;; Detect call-with-view-ext
+
+  (assert (every #'(lambda (tensor) (equal (shape tensor) shape)) tensors)
+	  nil
+	  "Assertion Failed because the number of shapes: ~a doesn't match."
+	  (map 'list #'shape tensors))
+
+  ;; TODO: Orders match?
+
+  ;; Unroll Untill 2D/1D
+
+  (labels ((explore (rest-dim offsets &aux (processing-dim (- dims rest-dim)))
+	     (cond
+	       ((= rest-dim 1)
+		;; 1D
+
+		;; koreha kasu (tmp)
+		(let ((args (loop for tensor in tensors
+				  for k upfrom 0
+				  collect (make-viewinstruction
+					   (+ (nth k offsets)
+					      (view-startindex (nth processing-dim (tensor-view tensor)) 0))
+					   (- (view-endindex (nth processing-dim (tensor-view tensor))
+							     (nth processing-dim (slot-value tensor 'orig-shape)))
+					      (view-startindex (nth processing-dim (tensor-view tensor))
+							       0))))))
+
+		  ;; (if shape is determined...
+		  ;; TODO: (if shape is undetermined -> loop it.
+		  (push (apply function args) result)))
+	       (T
+		;; 3D, 4D, ...
+		(let ((new-offsets (copy-list offsets))
+		      (start-points (loop for tensor in tensors
+					  collect (view-startindex
+						   (nth processing-dim (slot-value tensor 'view)) 0)))
+		      (loop-iternum (view-endindex (nth processing-dim (slot-value (car tensors) 'view))
+						   (nth processing-dim (slot-value (car tensors) 'orig-shape)))))
+
+		  ;; Adds First-Offset
+		  (loop for tensor in tensors
+			for offset in start-points
+			for past-offset in new-offsets
+			for k fixnum upfrom 0
+			do (setf (nth k new-offsets)
+				 (+ past-offset
+				    (* (nth processing-dim (tensor-stride tensor))
+				       offset))))
+
+		  (dotimes (i loop-iternum)
+		    (explore (1- rest-dim) new-offsets)
+
+		    (loop for tensor in tensors
+			  for k fixnum upfrom 0
+			  do (incf (nth k new-offsets) (nth processing-dim (tensor-stride tensor))))))))))
+    
+    (explore
+     dims
+     (make-list (length tensors) :initial-element 0))
+    
+    `(progn ,@(reverse result))))

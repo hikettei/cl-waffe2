@@ -12,7 +12,7 @@
   :description "Deep Learning Framework"
   :pathname "source"
   :serial t
-  :depends-on (:cl-ppcre :fiveam :alexandria)
+  :depends-on (:cl-ppcre :fiveam :alexandria :cffi)
   :components ((:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
 	       (:file "vm/generic-tensor/utils")
@@ -34,7 +34,7 @@
 
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
-	       
+	       (:file "backends/cpu/arithmetic")
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 

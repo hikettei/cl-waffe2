@@ -2,7 +2,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/backends.cpu
-  (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes)
+  (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl)
   (:export
    :CPUTensor))
 
@@ -10,3 +10,4 @@
 
 (setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor))
 
+;; Load libblas.dylib
