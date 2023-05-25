@@ -8,12 +8,13 @@
 					&key &allow-other-keys)
   ;; if projected-p -> alloc new vec
   (let ((shape (getf initargs :shape))
-	(dtype (dtype->lisp-type (getf initargs :dtype))))
+	(dtype (dtype->lisp-type (getf initargs :dtype)))
+	(vec   (getf initargs :vec)))
 
-    ;; If tensor is created as View-Object, DONT alloc new tensor.
-
-    (setf (tensor-vec tensor)
-	  (make-array
-	   (apply #'* shape)
-	   :element-type dtype))))
+    (if vec
+	(setf (tensor-vec tensor) vec)
+	(setf (tensor-vec tensor)
+	      (make-array
+	       (apply #'* shape)
+	       :element-type dtype)))))
 

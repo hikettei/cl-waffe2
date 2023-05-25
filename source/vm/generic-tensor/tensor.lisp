@@ -78,19 +78,16 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   "Computes row-major-strides"
   (row-major-calc-strides (slot-value tensor 'orig-shape)))
 
-;; Tensors must support displace-to
-
-;; (defmethod print-object ((tensor AbstractTensor) stream))
-
-
 (defun make-tensor (shape-or-scalar
 		    &key
 		      (requires-grad nil)
 		      (dtype :float)
-		      (view `(t))
+		      (vec  nil)
+		      (view nil)
 		      (order :column))
   "The function make-tensor creates a new tensor of first-priority of *using-backend*"
-  (declare (type list view))
+  (declare (type list view)
+	   (ignore vec)) ;; vec is working. at initialize-instance :before
   (if (typep shape-or-scalar 'list)
       (make-instance (car *using-backend*)
 		     :dtype dtype
@@ -110,4 +107,37 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
 (defun view (tensor &rest subscripts)
 
-  )
+  ;; TODO: When tensor is scalar, return error.
+  ;; BugFIX: view -> view
+
+  (make-instance (car *using-backend*)
+		 :dtype (dtype tensor)
+		 :order (order tensor)
+		 :requires-grad (slot-value tensor 'requires-grad)
+		 :shape (slot-value tensor 'orig-shape)
+		 :projected-p t
+		 :view subscripts
+		 :vec (slot-value tensor 'vec)))
+
+(defmethod print-object ((tensor AbstractTensor) stream)
+  (format stream
+	  "{~a[~(~a~)] ~a
+  ~a <- Display Contents
+  :state :forward :requires-grad T :backward <AddNode>}"
+	  (class-name (class-of tensor))
+	  (dtype tensor)
+	  (if (slot-value tensor 'scalar-p)
+	      ""
+	      (cond
+		((null (slot-value tensor 'projected-p))
+		 ;; Orig-Shape
+		 (format nil ":shape ~a" (shape tensor)))
+		(T
+		 ;; It has a view
+		 (format nil ":shape ~a -> :view ~a -> :visible-shape ~a"
+			 (slot-value tensor 'orig-shape)
+			 (slot-value tensor 'view)
+			 (shape tensor)))))
+	  "(TODO)"
+	  ))
+

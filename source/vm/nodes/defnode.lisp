@@ -80,6 +80,7 @@ Shaping Format:
 Ignore with t.
 
 "
+  ;; TODO. Error when (length constructor-arguments) = 0 (no name for node)
 
   (let ((initarg-slots (map 'list #'(lambda (slots)
 				      ;; Auto-Generated Constructor is Enabled Only When:

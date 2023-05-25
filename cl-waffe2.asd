@@ -29,6 +29,9 @@
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
 
+	       (:file "base-impl/package")
+	       (:file "base-impl/arithmetic")
+
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
 	       

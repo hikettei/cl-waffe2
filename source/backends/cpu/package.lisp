@@ -9,3 +9,4 @@
 (in-package :cl-waffe2/backends.cpu)
 
 (setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor))
+

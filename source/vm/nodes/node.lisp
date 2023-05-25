@@ -65,7 +65,7 @@ Here's a list of reports.
       (when detected-errors
 	(describe-problems node detected-errors))
 
-      ;;TODO: When Dynamic-Mode
+      ;; TODO: When Dynamic-Mode
       ;; Call (construct-forward) and eval it here.
       
       ;; Forward:  Input-State  -> Output-State

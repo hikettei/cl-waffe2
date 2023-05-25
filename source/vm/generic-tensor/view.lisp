@@ -452,7 +452,7 @@ specifing :- means orig-shape (todo: write docs)"
 				(orig-view  (slot-value tensor 'view))
 				(dimensions (length orig-shape))
 				(subscript-len (length subscripts)))
-  (declare (optimize (speed 3) (safety 0))
+  (declare (optimize (speed 3))
 	   (type AbstractTensor tensor)
 	   (type list subscripts orig-shape orig-view)
 	   (type fixnum dimensions))
