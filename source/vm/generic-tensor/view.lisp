@@ -588,6 +588,8 @@ specifing :- means orig-shape (todo: write docs)"
   ;; with :indices/:tflist
   )
 
+;; TODO: With Undetermined symbols
+;; TOOD: Create a view with undetermined symbols
 (defun call-with-view (function
 		       &rest tensors
 		       &aux
@@ -663,3 +665,137 @@ What kind of tensors could be called together?
      (make-list (length tensors) :initial-element 0))
     
     `(progn ,@(reverse result))))
+
+;; View 書き直す
+
+(deftype subscript-t ()
+  "An list of types which is allowed to become subscripts of the function view."
+  `(or fixnum list null t))
+
+(deftype subscript-syntax ()
+  `(member :index :t :slice :slice-step :indices :tflist :broadcast :repeat))
+
+
+(defstruct (subscript
+	    (:print-function
+	     (lambda (subscript stream depth)
+	       (declare (ignore depth))
+	       (format stream "<~a~a"
+		       (subscript-view subscript)
+		       (if (subscript-constraints subscript)
+			   (format nil ">in ~a" (subscript-constraints subscript))
+			   ">")))))
+  (constraints nil :type list) ;; x is in (10 30)
+  (view nil :type subscript-t)
+  (determined-p nil :type boolean))
+
+(defmacro with-viewcase ((view)
+			 &key
+			   index
+			   tcase
+			   slice
+			   keyword)
+  `(typecase ,view
+     (fixnum ,index)
+     (list
+      (cond
+	((typep (car ,view) 'fixnum)
+	 ,slice)
+	((typep (car ,view) 'keyword)
+	 ,keyword)
+	(T (error "Unknown view ~a" ,view))))
+     (T ,tcase)))
+
+(declaim (ftype (function (subscript-t) subscript-syntax) viewtype))
+(defun viewtype (view)
+  (with-viewcase (view)
+		 :index :index
+		 :tcase :t
+		 :slice (cond
+			  ((= (length view) 2) :slice)
+			  ((= (length view) 3) :slice-step)
+			  (T (error "(start stop) or (start stop step)")))
+		 :keyword (case (car view)
+			    (:indices :indices)
+			    (:broadcast :broadcast)
+			    (:repeat :repeat)
+			    (T (error ":indices :broadcast :repeat")))))
+
+(defmacro lazy+ (x y)
+  `(+ ',x ',y))
+
+(defmacro lazy- (x y)
+  `(- ',x ',y))
+
+(defmacro lazy* (x y)
+  `(- ',x ',y))
+
+
+(defgeneric step-subscript (before-type after-type before after size))
+  
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :index))
+			   before
+			   after
+			   (size fixnum))
+  "Tensor[t][Index]
+Return: (values after-view error)"
+  (let ((index (subscript-view after)))
+    (values after (if (>= index size)
+		      (format nil "IndexError: (TODO)")))))
+
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :index))
+			   before
+			   after
+			   (size symbol))
+  "Tensor[t][Index] but the size is undetermined. (e.g.: Tensor = (a b))
+Return: (values after-view error)"
+  (let ((index (subscript-view after)))
+    (setf (subscript-constraints after) `(,index 0))
+    (values after nil)))
+
+(defun preprocess-subscript (dim tensor size subscript)
+  (declare (type fixnum dim)
+	   (type AbstractTensor tensor))
+  (let* ((determined-p (typep size 'fixnum))
+	 (projected-p  (slot-value tensor 'projected-p))
+	 (past-view (or (when projected-p
+			  (nth dim (tensor-view tensor)))
+			(make-subscript
+			 :determined-p t
+			 :view t)))
+	 (view (make-subscript
+		:determined-p determined-p
+		:view subscript)))
+
+    (step-subscript
+     (viewtype (subscript-view past-view))
+     (viewtype (subscript-view view))
+     past-view
+     view
+     size)))
+
+(defun parse-view-subscripts1 (tensor subscripts)
+  "
+TensorのShape...`((10 10) (10 10) (10 a)) ...
+未決定のシンボルがあったら、それに対する制約を求める。
+shape = (batch-size), viewが`(0 10)なら, batch-size>=10.
+STEP=-1など
+
+subscript = fixnum, t ,list
+list = (0 10)
+       or (0 10 -1)
+       or (:tflist 0 10 0 10)
+       or (:indices 0 1 2 3 4 5)
+       or (:broadcast 10)
+       or (:repeat 10)
+"
+  (loop with shape = (slot-value tensor 'orig-shape)
+        for i fixnum upfrom 0 below (length shape)
+	;; multiple-value-bind (res errror)
+	collect (preprocess-subscript i
+				      tensor
+				      (nth i shape)
+				      (or (nth i subscripts) t))))
+
