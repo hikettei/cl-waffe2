@@ -24,7 +24,7 @@
 				  ,(viewinstruction-offset x-view)
 				  ,(viewinstruction-offset y-view)
 				  ,(viewinstruction-size x-view)))
-			    x y)
+			    `(,x ,y))
 			 ,x))
 	     :backward ((self dy)
 			`(values ,dy ,dy)))

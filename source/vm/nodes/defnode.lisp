@@ -179,7 +179,7 @@ Follow these constraints:
 
 ;; Tests
 ;; backward-test-toolみたいなのが欲しい
-;; 可視化のためのツールを頑張る
+;; 可視化のためのツールを頑張るx
 ;; 次にやる：Define-impl
 ;; Macro-Basedの遅延評価
 ;; Backwardの構築
