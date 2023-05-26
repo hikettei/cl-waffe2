@@ -15,18 +15,17 @@
 
 (define-impl (AddNode :device CPUTensor)
 	     :forward ((self x y)
-		       `(progn
-			  ,(call-with-view
+		       `(,@(call-with-view
 			    #'(lambda (x-view
 				       y-view)
 				`(add-matrix
-				  (tensor-vec ,x)
+			 	  (tensor-vec ,x)
 				  (tensor-vec ,y)
 				  ,(viewinstruction-offset x-view)
 				  ,(viewinstruction-offset y-view)
 				  ,(viewinstruction-size x-view)))
 			    x y)
-			  ,x))
+			 ,x))
 	     :backward ((self dy)
 			`(values ,dy ,dy)))
 

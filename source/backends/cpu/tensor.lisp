@@ -9,12 +9,13 @@
   ;; if projected-p -> alloc new vec
   (let ((shape (getf initargs :shape))
 	(dtype (dtype->lisp-type (getf initargs :dtype)))
-	(vec   (getf initargs :vec)))
-
-    (if vec
-	(setf (tensor-vec tensor) vec)
-	(setf (tensor-vec tensor)
-	      (make-array
-	       (apply #'* shape)
-	       :element-type dtype)))))
+	(vec   (getf initargs :vec))
+	(facet (getf initargs :facet)))
+    (when (eql facet :exist)
+      (if vec
+	  (setf (tensor-vec tensor) vec)
+	  (setf (tensor-vec tensor)
+		(make-array
+		 (apply #'* shape)
+		 :element-type dtype))))))
 
