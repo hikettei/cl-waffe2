@@ -682,11 +682,14 @@ What kind of tensors could be called together?
 	       (declare (ignore depth))
 	       (format stream "<~a~a"
 		       (subscript-view subscript)
-		       (if (subscript-constraints subscript)
-			   (format nil ">in ~a" (subscript-constraints subscript))
+		       (if (typep (subscript-char subscript) 'symbol)
+			   (format nil ">~a∊~a"
+				   (subscript-char subscript)
+				   (subscript-constraints subscript))
 			   ">")))))
-  (constraints nil :type list) ;; x is in (10 30)
+  (constraints nil :type list) ;; x is in (10 30) t ... inf, min=0
   (view nil :type subscript-t)
+  (char nil)
   (determined-p nil :type boolean))
 
 (defmacro with-viewcase ((view)
@@ -706,6 +709,7 @@ What kind of tensors could be called together?
 	(T (error "Unknown view ~a" ,view))))
      (T ,tcase)))
 
+;; TODO: from view to view
 (declaim (ftype (function (subscript-t) subscript-syntax) viewtype))
 (defun viewtype (view)
   (with-viewcase (view)
@@ -721,39 +725,106 @@ What kind of tensors could be called together?
 			    (:repeat :repeat)
 			    (T (error ":indices :broadcast :repeat")))))
 
-(defmacro lazy+ (x y)
-  `(+ ',x ',y))
-
-(defmacro lazy- (x y)
-  `(- ',x ',y))
-
-(defmacro lazy* (x y)
-  `(- ',x ',y))
-
+(defun parse-absolute (index size)
+  (typecase size
+    (fixnum (if (< index 0)
+		(+ index size)
+		index))
+    (symbol
+     (if (< index 0)
+	 `(+ ,index ,size)
+	 index))))
 
 (defgeneric step-subscript (before-type after-type before after size))
-  
-(defmethod step-subscript ((x (eql :t))
-			   (y (eql :index))
-			   before
-			   after
-			   (size fixnum))
-  "Tensor[t][Index]
-Return: (values after-view error)"
-  (let ((index (subscript-view after)))
-    (values after (if (>= index size)
-		      (format nil "IndexError: (TODO)")))))
 
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :index))
 			   before
 			   after
-			   (size symbol))
+			   size)
   "Tensor[t][Index] but the size is undetermined. (e.g.: Tensor = (a b))
 Return: (values after-view error)"
-  (let ((index (subscript-view after)))
-    (setf (subscript-constraints after) `(,index 0))
-    (values after nil)))
+  (let ((index (parse-absolute (subscript-view after) size)))
+    (setf (subscript-char after) size
+          (subscript-constraints after) `(,index t)
+	  (subscript-view after) index)
+    after))
+
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :t))
+			   before
+			   after
+			   size)
+  "Tensor[t][t]"
+  (setf (subscript-char after) size
+        (subscript-constraints after) `(0 t))
+  after)
+	      
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :slice))
+			   before
+			   after
+			   size)
+			   
+  "Tensor[t][2:4]"
+  (let* ((view (subscript-view after))
+	 (view (map 'list #'(lambda (v) (parse-absolute v size)) view)))
+    (setf (subscript-char after) size
+	  (subscript-constraints after) `(,(second view) t)
+	  (subscript-view after) view)
+    after))
+
+	      
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :slice-step))
+			   before
+			   after
+			   size)
+			   
+  "Tensor[t][2:4::-1]"
+  (let* ((view (subscript-view after))
+	 (view (map 'list #'(lambda (v) (parse-absolute v size)) (butlast view))))
+    (setf (subscript-char after) size
+	  (subscript-constraints after) `(,(second view) t)
+	  (subscript-view after) `(,@view ,(third (subscript-view after))))
+    after))
+
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :indices))
+			   before
+			   after
+			   size)
+			   
+  "Tensor[t][:indices 1 2 3...]"
+  (let* ((view (subscript-view after)))
+    (if (typep view 'list)
+	nil) ;; maximize view ...
+    ;; TMP
+    (setf (subscript-char after) size
+	  (subscript-constraints after) `(0 t))
+    after))
+
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :broadcast))
+			   before
+			   after
+			   size)
+			   
+  "Tensor[t][:broadcast n]"
+  (setf (subscript-char after) size
+	(subscript-constraints after) `(1 1))
+  after)
+
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :repeat))
+			   before
+			   after
+			   size)
+			   
+  "Tensor[t][:repeat n]"
+  (setf (subscript-char after) size
+	(subscript-constraints after) `(0 t))
+  after)
 
 (defun preprocess-subscript (dim tensor size subscript)
   (declare (type fixnum dim)
