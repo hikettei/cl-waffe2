@@ -65,6 +65,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
     
     (cond
       ((eql (getf initargs :facet) :input)
+       (setf (tensor-stride tensor) (calc-strides orig-shape order))
        (setf (tensor-view tensor)
 	     (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
        (setf (tensor-visible-shape tensor)

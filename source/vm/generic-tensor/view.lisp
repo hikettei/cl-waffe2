@@ -204,7 +204,7 @@ What kind of tensors could be called together?
 			   before
 			   after
 			   size)
-  "Tensor[t][Index] but the size is undetermined. (e.g.: Tensor = (a b))
+  "Tensor[t][Index]
 Return: (values after-view error)"
   (let ((index (parse-absolute (subscript-view after) size)))
     (setf (subscript-char after) size
@@ -333,7 +333,66 @@ list = (0 10)
 				      (nth i past-view)
 				      (or (nth i subscripts) t))))
 
+(defun call-with-view* (function
+		        tensors
+			&key
+			  (at-least-dim 1)
+			&aux
+			  (shape (shape (car tensors)))
+			  (dims  (length shape)))
+  ;; Continue from here.
 
-(defun call-with-view (function &rest tensors)
+
+  (assert (every #'(lambda (tensor) (equal (shape tensor) shape)) tensors)
+	  nil
+	  "Assertion Failed because the number of shapes: ~a doesn't match."
+	  (map 'list #'shape tensors)) ;; ... (1)
+
   
-  )
+  (labels ((explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
+	     (let* ((new-offsets (copy-list offsets))
+		    (start-points (loop for tensor in tensors
+					collect
+					(compute-visible-start-idx
+					 (subscript-view (nth target-dim (tensor-view tensor)))
+					 (nth target-dim (slot-value tensor 'orig-shape)))))
+		    (end-points (loop for tensor in tensors
+				      collect
+				      (compute-visible-end-idx
+				       (subscript-view (nth target-dim (tensor-view tensor)))
+				       (nth target-dim (slot-value tensor 'orig-shape)))))
+		    (axis-determined-p (every #'numberp end-points)))
+	       ;; When axis-determined-p is nil expand with loop for parts
+	       ;; is t -> Unroll
+	       
+	       (print axis-determined-p)
+	       (print end-points)
+
+	       
+
+	       (cond
+		 ((<= rest-dim at-least-dim)
+		  (print rest-dim)
+		  )
+		 (T
+		  (if axis-determined-p
+		      (loop with stride-space = (gensym)
+			    for index fixnum
+			    upfrom 0
+			      below (car end-points) ;; Postluate that end-points0 = endpoints1 = ... = endpointsn owing to (1)
+			    collect (prog1
+					(explore
+					 (1- rest-dim)
+					 new-offsets)
+				      
+				      ;; If we have a broadcast here, freeze the axis.
+				      (dotimes (k (length tensors))
+					(incf (nth k new-offsets)
+					      (nth index
+						   (tensor-stride (nth k tensors)))))))
+		      nil
+		      ))))))
+    
+    (explore
+     dims
+     (make-list (length tensors) :initial-element 0))))
