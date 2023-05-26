@@ -7,7 +7,7 @@
   nil
   (:documentation "The class ScalarTensor, is used to represent scalar-object."))
 
-(defmethod initialize-instance :after ((tensor ScalarTensor) &rest initargs &key &allow-other-keys)
+(defmethod initialize-instance :before ((tensor ScalarTensor) &rest initargs &key &allow-other-keys)
 
   ;; ErrorCheck Here.
   (declare (ignore initargs))

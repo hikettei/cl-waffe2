@@ -54,7 +54,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; (defmacro variable  ())
 ;; (defmacro parameter ())
 
-(defmethod initialize-instance :before ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
+(defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p   (getf initargs :scalar-p))
 	(view       (getf initargs :view))
 	(order      (getf initargs :order))
