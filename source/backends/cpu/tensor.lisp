@@ -3,9 +3,9 @@
 
 (defclass CPUTensor (AbstractTensor) nil)
 
-(defmethod initialize-instance :before ((tensor CPUTensor)
-					&rest initargs
-					&key &allow-other-keys)
+(defmethod initialize-instance :after ((tensor CPUTensor)
+				       &rest initargs
+				       &key &allow-other-keys)
   ;; if projected-p -> alloc new vec
   (let ((shape (getf initargs :shape))
 	(dtype (dtype->lisp-type (getf initargs :dtype)))

@@ -23,9 +23,9 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    ;; MultiDimensional
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
-   (stride :initform nil :reader tensor-stride :type list)
-   (visible-shape :initform nil :reader shape :type list)
-   (view :initarg :view :initform nil :reader tensor-view :type list)
+   (stride :initform nil :accessor tensor-stride :type list)
+   (visible-shape :initform nil :reader shape :writer write-shape :type list)
+   (view :initarg :view :initform nil :accessor tensor-view :type list)
    
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
    (scalar-p :initarg :scalar-p :initform nil)
@@ -53,25 +53,28 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; (defmacro variable  ())
 ;; (defmacro parameter ())
 
-(defun compute-visible-shape (orig-shape view)
-  (loop for o in orig-shape
-	for v in view
-	collect (- (view-endindex   v o)
-		   (view-startindex v 0))))
-
-(defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
-  (with-slots ((scalar-p scalar-p) (stride stride) (order order) (visible-shape visible-shape) (view view)) tensor
-    ;; visible area
+(defmethod initialize-instance :before ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
+  (let ((scalar-p   (getf initargs :scalar-p))
+	(view       (getf initargs :view))
+	(order      (getf initargs :order))
+	(orig-shape (getf initargs :shape)))
+    (setf (slot-value tensor 'orig-shape) orig-shape)
+    (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
+    
     (cond
       ((eql (getf initargs :facet) :input)
-       
-       )
+       (setf (tensor-view tensor)
+	     (parse-view-subscripts tensor (or view `(t))))
+       (write-shape (compute-visible-shape orig-shape view) tensor)
+       nil)
       (T
        (when (not scalar-p)
-	 (setf stride (calc-strides tensor order))
+	 (setf (tensor-stride tensor) (calc-strides tensor order))
 	 ;; parse-view-subscripts <- safety 0...
-	 (setf view   (parse-view-subscripts tensor (or view `(t))))
-	 (setf visible-shape (compute-visible-shape (original-shape tensor) view))
+	 (setf (tensor-view tensor) (parse-view-subscripts tensor (or view `(t))))
+	 (write-shape
+	  (compute-visible-shape orig-shape (tensor-view tensor))
+	  tensor)
 	 nil)))))
 
 (defmacro assure-dimensions (mat1 mat2)
@@ -80,13 +83,13 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
        t
        (shaping-error "Assertion Failed because two matrices ~a and ~a couldn't operated together." (shape ,mat1) (shape ,mat2))))
 
-(defmethod calc-strides ((tensor AbstractTensor) (order (eql :column)))
+(defmethod calc-strides ((shape list) (order (eql :column)))
   "Computes column-major-strides"
-  (column-major-calc-strides (slot-value tensor 'orig-shape)))
+  (column-major-calc-strides shape))
 
-(defmethod calc-strides ((tensor AbstractTensor) (order (eql :row)))
+(defmethod calc-strides ((shape list) (order (eql :row)))
   "Computes row-major-strides"
-  (row-major-calc-strides (slot-value tensor 'orig-shape)))
+  (row-major-calc-strides shape))
 
 (defun make-tensor (shape-or-scalar
 		    &key
@@ -151,11 +154,12 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		 :shape (slot-value tensor 'orig-shape)
 		 :projected-p t
 		 :view subscripts
+		 :facet (tensor-facet tensor)
 		 :vec (slot-value tensor 'vec)))
 
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
-	  "{~a[~(~a~)] ~a
+	  "{~a[~(~a~)] ~a ~a
   ~a <- Display Contents
   :state :forward :requires-grad T :backward <AddNode>}"
 	  (class-name (class-of tensor))
@@ -163,8 +167,6 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 	  (if (slot-value tensor 'scalar-p)
 	      ""
 	      (cond
-		((eql (tensor-facet tensor) :input)
-		 (format nil ":shape ~a :named ~a" (slot-value tensor 'orig-shape) (tensor-name tensor)))
 		((null (slot-value tensor 'projected-p))
 		 ;; Orig-Shape
 		 (format nil ":shape ~a" (shape tensor)))
@@ -174,6 +176,9 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 			 (slot-value tensor 'orig-shape)
 			 (slot-value tensor 'view)
 			 (shape tensor)))))
+	  (if (eql (tensor-facet tensor) :input)
+	      (format nil ":named ~a" (tensor-name tensor))
+	      "")
 	  "(TODO)"
 	  ))
 
