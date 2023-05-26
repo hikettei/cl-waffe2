@@ -413,8 +413,8 @@ Accordingly, the argument must satisfy: dimensions = ~a
 				   below
 				   (loop for p in ,previous-subscripts
 					 maximize (length p))
-				 collect '~)))
-		    (declare (ignorable ~))
+				 collect nil)))
+		    (declare (ignorable ,@common-symbols))
 		    
 
 		    ;; TODO: When let-binding includes list, use it directly.
@@ -437,7 +437,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						    ((< ,nth-arg ,pos1)
 						     ;; here, we can detect errors
 						     ;; ,var is determined and determined shapes doesn't match.
-						     (when (and ,var
+						     (when (and (not (null ,var))
 								(not
 								 (equal ,var (nth ,nth-arg ,shape))))
 						       (push
@@ -456,7 +456,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						     ;; here, we can detect errors
 						     
 						     (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
-						       (when (and ,var
+						       (when (and (not (null ,var))
 								  (not
 								   (equal ,var (nth ,pos ,shape))))
 							 (push
@@ -478,7 +478,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							
 							do (progn
 							     (when (and ,out-omit-p
-									(numberp (nth ,pos ,undetermined-shape-tmp))
+									(not (null (nth ,pos ,undetermined-shape-tmp)))
 									(not (equal (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
 							       ;; More details
 							       (push
