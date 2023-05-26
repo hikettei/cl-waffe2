@@ -174,8 +174,8 @@ What kind of tensors could be called together?
 (defun compute-visible-shape (orig-shape view)
   (loop for o in orig-shape
 	for v in view
-	collect (let ((end   (compute-visible-end-idx   v o))
-		      (start (compute-visible-start-idx v 0)))
+	collect (let ((end   (compute-visible-end-idx (subscript-view v) o))
+		      (start (compute-visible-start-idx (subscript-view v) 0)))
 		  (cond
 		    ((and (typep start 'fixnum)
 			  (= start 0))

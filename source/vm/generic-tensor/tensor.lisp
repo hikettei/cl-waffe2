@@ -157,6 +157,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		 :past-view (tensor-view tensor)
 		 :view subscripts
 		 :facet (tensor-facet tensor)
+		 :named (tensor-name tensor)
 		 :vec (slot-value tensor 'vec)))
 
 (defmethod print-object ((tensor AbstractTensor) stream)
