@@ -25,7 +25,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; MultiDimensional
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
-   (visible-shape :initform nil :reader shape :writer write-shape :type list)
+   (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
    
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
@@ -59,23 +59,24 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 	(view       (getf initargs :view))
 	(order      (getf initargs :order))
 	(orig-shape (getf initargs :shape)))
+    
     (setf (slot-value tensor 'orig-shape) orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
     
     (cond
       ((eql (getf initargs :facet) :input)
        (setf (tensor-view tensor)
-	     (parse-view-subscripts tensor (or view `(t))))
-       (write-shape (compute-visible-shape orig-shape view) tensor)
+	     (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+       (setf (tensor-visible-shape tensor)
+	     (compute-visible-shape orig-shape (tensor-view tensor)))
        nil)
       (T
        (when (not scalar-p)
-	 (setf (tensor-stride tensor) (calc-strides tensor order))
+	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
 	 ;; parse-view-subscripts <- safety 0...
-	 (setf (tensor-view tensor) (parse-view-subscripts tensor (or view `(t))))
-	 (write-shape
-	  (compute-visible-shape orig-shape (tensor-view tensor))
-	  tensor)
+	 (setf (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+	 (setf (tensor-visible-shape tensor)
+	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))))
 
 (defmacro assure-dimensions (mat1 mat2)
@@ -153,6 +154,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		 :requires-grad (slot-value tensor 'requires-grad)
 		 :shape (slot-value tensor 'orig-shape)
 		 :projected-p t
+		 :past-view (tensor-view tensor)
 		 :view subscripts
 		 :facet (tensor-facet tensor)
 		 :vec (slot-value tensor 'vec)))

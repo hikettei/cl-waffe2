@@ -288,13 +288,13 @@ Return: (values after-view error)"
 	(subscript-constraints after) `(0 t))
   after)
 
-(defun preprocess-subscript (dim tensor size subscript)
+(defun preprocess-subscript (dim tensor size past-view subscript)
   (declare (type fixnum dim)
-	   (type AbstractTensor tensor))
+	   (type AbstractTensor tensor)
+	   (ignore dim))
   (let* ((determined-p (typep size 'fixnum))
 	 (projected-p  (slot-value tensor 'projected-p))
-	 (past-view (or (when projected-p
-			  (nth dim (tensor-view tensor)))
+	 (past-view (or (when projected-p past-view)
 			(make-subscript
 			 :determined-p t
 			 :view t)))
@@ -309,7 +309,7 @@ Return: (values after-view error)"
      view
      size)))
 
-(defun parse-view-subscripts (tensor subscripts)
+(defun parse-view-subscripts (tensor past-view subscripts)
   "
 TensorのShape...`((10 10) (10 10) (10 a)) ...
 未決定のシンボルがあったら、それに対する制約を求める。
@@ -330,6 +330,7 @@ list = (0 10)
 	collect (preprocess-subscript i
 				      tensor
 				      (nth i shape)
+				      (nth i past-view)
 				      (or (nth i subscripts) t))))
 
 
