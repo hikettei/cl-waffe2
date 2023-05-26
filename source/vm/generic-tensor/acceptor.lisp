@@ -17,14 +17,15 @@
   (backward-n-out 0 :type fixnum))
 
 (defun construct-forward (toplevel &key (macroexpand nil))
+  ;; Returns (values function-body variables parameters)
   (declare (type AbstractTensor toplevel))
-  (let ((body `#'(lambda ()
-		   (let ((,(tensor-id toplevel) ,toplevel))
-		     ,(trace-computation-node toplevel :forward)
-		     ,(tensor-id toplevel)))))
+  (let ((body `(lambda ()
+		 (let ((,(tensor-id toplevel) ,toplevel))
+		   ,(trace-computation-node toplevel :forward)
+		   ,(tensor-id toplevel)))))
     (when macroexpand
       (print body))
-    (eval body)))
+    (compile nil body)))
 
 (defun construct-backward (out-scalar)
 

@@ -13,6 +13,8 @@
    #:tensor-state
    #:tensor-out-n
    #:tensor-vec
+   #:tensor-facet
+   #:tensor-name
    )
 
   ;; Dtype API
@@ -36,9 +38,13 @@
    #:make-statecontainer
    )
 
+  (:export
+   #:construct-forward)
+
   ;; Backends / Tensor API
   (:export
    #:shape
+   #:make-input
    #:make-tensor
    #:*using-backend*))
 

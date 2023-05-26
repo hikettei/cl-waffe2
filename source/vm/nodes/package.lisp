@@ -15,6 +15,10 @@
 		#:shaping-error
 		#:make-statecontainer)
   (:export
+   #:forward
+   #:backward)
+  
+  (:export
    #:with-devices
    #:with-single-device
    #:*facet-monopoly-mode*)

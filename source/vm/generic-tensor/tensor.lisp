@@ -20,15 +20,18 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
 (defclass AbstractTensor ()
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list)
+
+   ;; MultiDimensional
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :reader tensor-stride :type list)
    (visible-shape :initform nil :reader shape :type list)
    (view :initarg :view :initform nil :reader tensor-view :type list)
+   
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
    (scalar-p :initarg :scalar-p :initform nil)
+   
    (vec :initarg :vec :initform nil :accessor tensor-vec)
    (dtype :initform :float :initarg dtype :reader dtype)
-   
 
    ;; Building Computation Nodes
    (backward  :initform nil :accessor tensor-backward)
@@ -42,6 +45,9 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
    (trace-state :initform nil) ;; For Optimizing Computation Node
 
+   (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
+   (named :initarg :named :type keyword :accessor tensor-name)
+
    ))
 
 ;; (defmacro variable  ())
@@ -54,15 +60,19 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		   (view-startindex v 0))))
 
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
-  (declare (ignore initargs))
   (with-slots ((scalar-p scalar-p) (stride stride) (order order) (visible-shape visible-shape) (view view)) tensor
     ;; visible area
-    (when (not scalar-p)
-      (setf stride (calc-strides tensor order))
-      ;; parse-view-subscripts <- safety 0...
-      (setf view   (parse-view-subscripts tensor (or view `(t))))
-      (setf visible-shape (compute-visible-shape (original-shape tensor) view))
-      nil)))
+    (cond
+      ((eql (getf initargs :facet) :input)
+       
+       )
+      (T
+       (when (not scalar-p)
+	 (setf stride (calc-strides tensor order))
+	 ;; parse-view-subscripts <- safety 0...
+	 (setf view   (parse-view-subscripts tensor (or view `(t))))
+	 (setf visible-shape (compute-visible-shape (original-shape tensor) view))
+	 nil)))))
 
 (defmacro assure-dimensions (mat1 mat2)
   "Does nothing if mat1 and mat2 has a completely the same shape, otherwise throws shaping-error."
@@ -105,6 +115,30 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :projected-p nil
 		     :view view)))
 
+;; It is allowed: (make-input `(batch-size 512))
+(defun make-input (shape-or-scalar
+		   named
+		   &key
+		     (dtype :float)
+		     (order :column))
+  "named ... variable-name (keyword)"
+  (if (typep shape-or-scalar 'list)
+      (make-instance (car *using-backend*)
+		     :dtype dtype
+		     :order order
+		     :shape shape-or-scalar
+		     :named named
+		     :facet :input)
+      (make-instance 'ScalarTensor
+		     :scapar-p t
+		     :vec shape-or-scalar
+		     :shape nil
+		     :dtype dtype
+		     :projected-p nil
+		     :named named
+		     :facet :input)))
+
+  
 (defun view (tensor &rest subscripts)
 
   ;; TODO: When tensor is scalar, return error.
@@ -129,6 +163,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 	  (if (slot-value tensor 'scalar-p)
 	      ""
 	      (cond
+		((eql (tensor-facet tensor) :input)
+		 (format nil ":shape ~a :named ~a" (slot-value tensor 'orig-shape) (tensor-name tensor)))
 		((null (slot-value tensor 'projected-p))
 		 ;; Orig-Shape
 		 (format nil ":shape ~a" (shape tensor)))

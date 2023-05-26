@@ -251,6 +251,11 @@ Because : The actual ~ath argument given has a shape of ~a.
 	  nth-argument
 	  target-shape))
 
+(defun find-symbols (list)
+  (loop for l in list
+	if (symbolp l)
+	  collect l))
+
 ;; 二度とこのコード読みたくない
 ;; TODO: Fix: let -> where OK
 ;; TODO 四次元の時out-stateを構築できない
@@ -266,7 +271,8 @@ Because : The actual ~ath argument given has a shape of ~a.
 			     (previous-subscripts (gensym "PreviousShape"))
 			     (undetermined-shape-tmp (gensym "UD"))
 			     (all-conditions (gensym "Conds"))
-			     (pos (gensym "pos")))
+			     (pos (gensym "pos"))
+			     (undetermined-symbols (gensym "SYM")))
   "
 Memo:
 
@@ -337,7 +343,10 @@ Rule4: ~は一度のみ使える
 	   ;; Unless then, ~ must be used as the same meaning in all args.
 	   (common-symbols (get-common-symbols (list first-state out-state)))
 	   (body
-	     `#'(lambda (,previous-subscripts &aux (,all-conditions))
+	     `#'(lambda (,previous-subscripts
+			 &aux
+			   (,all-conditions)
+			   (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
 		  ;; previous-suscriptsから次のSubscriptsを作成
 		  ;; If any, return error condition
 		  "Return: (values next-state condition)"
@@ -393,15 +402,15 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		   ,previous-subscripts)
 		  
 		  (let* (,@(map 'list #'(lambda (x)
-					  `(,x ',x))
+					  `(,x))
 				common-symbols)
 			 ,@let-binding
 			 (,undetermined-shape-tmp
 			   (loop for s
 				 upfrom 0
-				 below
-				 (loop for p in ,previous-subscripts
-				       maximize (length p))
+				   below
+				   (loop for p in ,previous-subscripts
+					 maximize (length p))
 				 collect '~)))
 		    
 
@@ -425,9 +434,9 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						    ((< ,nth-arg ,pos1)
 						     ;; here, we can detect errors
 						     ;; ,var is determined and determined shapes doesn't match.
-						     (when (and (numberp ,var)
+						     (when (and ,var
 								(not
-								 (= ,var (nth ,nth-arg ,shape))))
+								 (equal ,var (nth ,nth-arg ,shape))))
 						       (push
 							(build-subscript-error-note
 							 :all-subscript ',subscripts
@@ -444,9 +453,9 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						     ;; here, we can detect errors
 						     
 						     (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
-						       (when (and (numberp ,var)
+						       (when (and ,var
 								  (not
-								   (= ,var (nth ,pos ,shape))))
+								   (equal ,var (nth ,pos ,shape))))
 							 (push
 							  (build-subscript-error-note
 							   :all-subscript ',subscripts
@@ -476,11 +485,11 @@ Accordingly, the argument must satisfy: dimensions = ~a
 								,all-conditions))
 							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 
-		    (flet ((merge-and-determine (shapes)
+		    (flet ((merge-and-determine (shapes names)
 			     (let ((out
 				     (map
 				      'list
-				      #'(lambda (s)
+				      #'(lambda (s name)
 
 					  ;; Use-priorities:
 					  ;; 1. [a b]
@@ -488,16 +497,18 @@ Accordingly, the argument must satisfy: dimensions = ~a
 
 					  ;; TODO: Auto Padding
 					  (or
-					   (unless (symbolp s)
+					   (when (or (not (symbolp s))
+						     (find s ,undetermined-symbols))
 					     s)
 					   (and
 					    (push
 					     (format
 					      nil
-					      "Failed to determine this symbol: ~a" s)
+					      "Failed to determine this symbol: ~a" name)
 					     ,all-conditions)
 					    '~)))
-				      shapes)))
+				      shapes
+				      names)))
 			       out)))
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
@@ -506,7 +517,8 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			 (list ,@(map 'list #'(lambda (arg)
 						`(flatten
 						  (merge-and-determine
-						   (list ,@arg))))
+						   (list ,@arg)
+						   ',arg)))
 				      out-state))
 			 (reverse ,all-conditions))))))))
       (when macroexpand
