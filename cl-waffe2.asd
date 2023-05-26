@@ -56,6 +56,9 @@
 	       (:file "vm/nodes/t/parser")
 	       (:file "vm/nodes/t/shape")
 	       (:file "vm/nodes/t/nodes")
+
+	       (:file "backends/cpu/t/package")
+	       (:file "backends/cpu/t/arithmetic")
 	       
 	       )
   :perform (test-op (o s)

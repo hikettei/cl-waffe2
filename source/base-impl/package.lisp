@@ -6,12 +6,6 @@
    :cl-waffe2/vm.generic-tensor
 	:cl-waffe2/vm.nodes)
   (:export
-   :AddNode
-   :SubNode
-   :MulNode
-   :DivNode
-
-   :node-out
    :node-x
    :node-y))
 
