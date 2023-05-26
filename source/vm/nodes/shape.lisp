@@ -334,7 +334,9 @@ Rule4: ~は一度のみ使える
 				      collect -1
 				    else
 				      collect (length s)))
-	   (out-omit-p (find '~ (flatten out-state) :test #'symbol-eq))
+	   (out-omit-p (if (find '~ (flatten out-state) :test #'symbol-eq)
+			   t
+			   nil))
 	   (~symbol (or (find '~
 			      (flatten (list first-state))
 			      :test #'symbol-eq)
@@ -412,6 +414,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 				   (loop for p in ,previous-subscripts
 					 maximize (length p))
 				 collect '~)))
+		    (declare (ignorable ~))
 		    
 
 		    ;; TODO: When let-binding includes list, use it directly.
@@ -476,7 +479,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							do (progn
 							     (when (and ,out-omit-p
 									(numberp (nth ,pos ,undetermined-shape-tmp))
-									(not (= (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
+									(not (equal (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
 							       ;; More details
 							       (push
 								(format
@@ -484,7 +487,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 								 "Couldn't idenfity ~~ ~~ is determined as ~a ~% butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
 								,all-conditions))
 							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
-
+		    
 		    (flet ((merge-and-determine (shapes names)
 			     (let ((out
 				     (map
