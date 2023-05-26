@@ -5,6 +5,7 @@
 ;; define-tensor (Tensors and Backend are strongly combined.)
 ;; CFFI-Style
 ;; Column-Major And Row-Major
+;; TODO: Detect it: (make-tensor `(10 a)) <- use (make-input)
 
 (defparameter *using-backend*
   `()
@@ -31,7 +32,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (scalar-p :initarg :scalar-p :initform nil)
    
    (vec :initarg :vec :initform nil :accessor tensor-vec)
-   (dtype :initform :float :initarg dtype :reader dtype)
+   (dtype :initform :float :initarg :dtype :reader dtype)
 
    ;; Building Computation Nodes
    (backward  :initform nil :accessor tensor-backward)
@@ -145,7 +146,6 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 (defun view (tensor &rest subscripts)
 
   ;; TODO: When tensor is scalar, return error.
-  ;; BugFIX: view -> view
 
   (make-instance (car *using-backend*)
 		 :dtype (dtype tensor)

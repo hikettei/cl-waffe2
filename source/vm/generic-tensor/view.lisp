@@ -168,13 +168,23 @@ What kind of tensors could be called together?
     (:indices (length (cdr view)))
     (:tflist  size)
     (:broadcast (second view))
-    (:repeat (* (second view) size))))
+    (:repeat `(* ,(second view) size))))
+
 
 (defun compute-visible-shape (orig-shape view)
   (loop for o in orig-shape
 	for v in view
-	collect (- (compute-visible-start-idx  v o)
-		   (compute-visible-end-idx v 0))))
+	collect (let ((end   (compute-visible-end-idx   v o))
+		      (start (compute-visible-start-idx v 0)))
+		  (cond
+		    ((and (typep start 'fixnum)
+			  (= start 0))
+		     end)
+		    ((and (typep end 'fixnum)
+			  (typep start 'fixnum))
+		     `(- ,end ,start))
+		    (T
+		     `(- ,end ,start))))))
 
 
 (defun parse-absolute (index size)
@@ -322,3 +332,7 @@ list = (0 10)
 				      (nth i shape)
 				      (or (nth i subscripts) t))))
 
+
+(defun call-with-view (function &rest tensors)
+  
+  )
