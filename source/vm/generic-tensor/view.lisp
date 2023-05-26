@@ -5,8 +5,8 @@
 (defstruct (ViewInstruction
 	    (:constructor
 		make-viewinstruction (offset size)))
-  (size 0 :type fixnum)
-  (offset 0 :type fixnum))
+  (size)
+  (offset))
 
 ;; TODO: With Undetermined symbols
 ;; TOOD: Create a view with undetermined symbols
@@ -333,6 +333,12 @@ list = (0 10)
 				      (nth i past-view)
 				      (or (nth i subscripts) t))))
 
+(defmacro %* (x y)
+  `(the fixnum (* (the fixnum ,x) (the fixnum ,y))))
+
+(defmacro %+ (x y)
+  `(the fixnum (+ (the fixnum ,x) (the fixnum ,y))))
+
 (defun call-with-view* (function
 		        tensors
 			&key
@@ -349,9 +355,16 @@ list = (0 10)
 	  (map 'list #'shape tensors)) ;; ... (1)
 
   
-  (labels ((explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
-	     (let* ((new-offsets (copy-list offsets))
-		    (start-points (loop for tensor in tensors
+  (labels ((expand-with-function (target-dim offsets)
+	     ;; currently only for 1d
+	     (apply function
+		    (loop for k fixnum upfrom 0
+			  for tensor in tensors
+			  collect (make-viewinstruction
+				   `(nth ,k ,offsets)
+				   (nth target-dim (shape tensor))))))
+	   (explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
+	     (let* ((start-points (loop for tensor in tensors
 					collect
 					(compute-visible-start-idx
 					 (subscript-view (nth target-dim (tensor-view tensor)))
@@ -364,35 +377,48 @@ list = (0 10)
 		    (axis-determined-p (every #'numberp end-points)))
 	       ;; When axis-determined-p is nil expand with loop for parts
 	       ;; is t -> Unroll
-	       
-	       (print axis-determined-p)
-	       (print end-points)
 
-	       
+	       (let ((stride-place (gensym)))
+		 `(let ((,stride-place (list ,@(loop for tensor in tensors
+						     collect (nth target-dim (tensor-stride tensor))))))
+		    (declare (type list ,stride-place))
+		    ;; adds offset
+		    ,@(loop for k upfrom 0
+			    for tensor in tensors
+			    collect `(setf (nth ,k ,offsets) (%+ (%* (nth ,k ,stride-place)
+								     ,(nth k start-points))
+								 (nth ,k ,offsets))))
+		    
 
-	       (cond
-		 ((<= rest-dim at-least-dim)
-		  (print rest-dim)
-		  )
-		 (T
-		  (if axis-determined-p
-		      (loop with stride-space = (gensym)
-			    for index fixnum
-			    upfrom 0
-			      below (car end-points) ;; Postluate that end-points0 = endpoints1 = ... = endpointsn owing to (1)
-			    collect (prog1
-					(explore
-					 (1- rest-dim)
-					 new-offsets)
-				      
-				      ;; If we have a broadcast here, freeze the axis.
-				      (dotimes (k (length tensors))
-					(incf (nth k new-offsets)
-					      (nth index
-						   (tensor-stride (nth k tensors)))))))
-		      nil
-		      ))))))
-    
-    (explore
-     dims
-     (make-list (length tensors) :initial-element 0))))
+		    ,@(if axis-determined-p
+			  (loop for nth fixnum upfrom 0 below (car end-points)
+				collect (prog1
+					    (if (<= rest-dim at-least-dim)
+						(expand-with-function target-dim offsets)
+						(explore
+						 (1- rest-dim)
+						 offsets))
+					  (loop for k upfrom 0
+						for tensor in tensors
+						;; If we have a broadcasted axis here, freeze the axis (TODO)
+						collect `(incf (the fixnum (nth ,k ,offsets)) (the fixnum (nth ,k ,stride-place))))))
+
+			  (let ((nth (gensym)))
+			    `((loop for ,nth fixnum upfrom 0 below ,(car end-points)
+				   collect ,(prog1
+						(if (<= rest-dim at-least-dim)
+						    (expand-with-function target-dim offsets)
+						    (explore
+						     (1- rest-dim)
+						     offsets))
+					      (loop for k upfrom 0
+						    for tensor in tensors
+						    ;; If we have a broadcasted axis here, freeze the axis (TODO)
+						    collect `(incf (the fixnum (nth ,k ,offsets)) (the fixnum (nth ,k ,stride-place))))))))))))))
+
+    ;; (let ((a 0)) ... Tensor内部で使われてる文字を特定+declare
+    (let ((offset-place (gensym)))
+      `(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
+	 ,(explore
+	   dims
+	   offset-place)))))
