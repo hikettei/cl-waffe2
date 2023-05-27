@@ -64,4 +64,6 @@
 	       )
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test-nodes)
+		    (symbol-call :fiveam :run! :test-tensor)
+		    (symbol-call :fiveam :run! :test-backends-cpu)
 		    ))
