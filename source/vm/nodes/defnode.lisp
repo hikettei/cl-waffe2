@@ -146,6 +146,9 @@ Follow these constraints:
 	(impl-name (subnode-name abstract-name device)))
 
     (eval-when (:compile-toplevel :load-toplevel :execute)
+      ;; TODO
+      ;; 宣言された引数の数とforward-argsの数が違ったときにError
+      ;; the format is ~...
       (assert (subtypep device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
 	      nil
 	      "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."

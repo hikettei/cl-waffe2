@@ -9,11 +9,22 @@
 	  :where `([x y] [x y] -> [x y])
 	  :documentation "Bijective-Function has a one-to-one correspondence."))
 
+(defnode (Transpose-Function (myself)
+	  :where `([x y] -> [y x])
+	  :documentation "x y -> y x"))
+
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defclass MyBackend (AbstractTensor) nil)
   (defclass MyBackend-With-Impl (AbstractTensor) nil))
 
 (define-impl (Bijective-Function :device CPUTensor)
+	     :forward ((self x y)
+		       `(values ,x ,y))
+	     :backward ((self dy)
+			`(values ,dy)))
+
+(define-impl (Transpose-Function :device CPUTensor)
 	     :forward ((self x)
 		       `(values ,x))
 	     :backward ((self dy)
@@ -44,4 +55,13 @@
   (is (test-switch-backend2))
   (is (test-switch-backend3)))
 
+(defun shape-test ()
+  (let ((out (forward (Transpose-Function)
+		      (forward (Bijective-Function)
+			       (make-tensor `(10 3))
+			       (make-tensor `(10 3))))))
+    (equal (shape out) `(3 10))))
+
+(test shape-test
+  (is (shape-test)))
 
