@@ -12,7 +12,6 @@
     (incf (aref x (+ offsetx i)) (aref y (+ offsety i)))))
 
 
-
 (define-impl (AddNode :device CPUTensor)
 	     :forward ((self x y)
 		       `(,@(call-with-view

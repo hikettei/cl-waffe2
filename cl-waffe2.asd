@@ -32,9 +32,14 @@
 	       (:file "base-impl/package")
 	       (:file "base-impl/arithmetic")
 
+	       (:file "backends/lisp/package")
+	       (:file "backends/lisp/tensor")
+	       (:file "backends/lisp/arithmetic")
+	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
 	       (:file "backends/cpu/arithmetic")
+
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 
