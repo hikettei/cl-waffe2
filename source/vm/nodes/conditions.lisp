@@ -47,7 +47,7 @@ Content  : ~a"
   ((node :initarg :node))
   (:report
    (lambda (c s)
-     (format s "Couldn't find implementation of ~a for ~a.~a"
+     (format s "Couldn't find any implementation of ~a for ~a.~a"
 	     (slot-value c 'node)
 	     *using-backend*
 	     (if *facet-monopoly-mode*
