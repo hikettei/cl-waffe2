@@ -7,10 +7,11 @@
 
 ;; Problems: Compile-Speed
 ;; (10 a) (10 10) <- a = 10
+
 (defun test1 ()
-  (let* ((input (make-input `(10 10) :train-x))
-	 (out (construct-forward (forward (AddNode) input (make-tensor `(10 10))))))
-    (embody-input input (make-tensor `(10 10)))
+  (let* ((input (make-input `(100 100) :train-x))
+	 (out (construct-forward (forward (AddNode) input (make-tensor `(100 100))) :macroexpand nil)))
+    (embody-input input (make-tensor `(100 100)))
     (print (time (funcall out)))))
 
 (test construct-tensor

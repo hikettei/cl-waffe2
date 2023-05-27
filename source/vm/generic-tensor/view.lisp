@@ -312,7 +312,7 @@ list = (0 10)
 								 (nth ,k ,offsets))))
 		    
 
-		    ,@(if axis-determined-p
+		    ,@(if nil;;axis-determined-p ;; need unroll-p
 			  (loop for nth fixnum upfrom 0 below (car end-points)
 				collect (prog1
 					    (if (<= rest-dim at-least-dim)
