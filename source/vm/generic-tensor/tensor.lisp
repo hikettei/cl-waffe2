@@ -146,7 +146,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :named named
 		     :facet :input)))
 
-(defun embody-tensor (input-tensor actual-tensor)
+(defun embody-input (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor)."
   (declare (type AbstractTensor input-tensor actual-tensor))
 

@@ -51,6 +51,7 @@
   :pathname "source"
   :depends-on (:cl-waffe2 :fiveam)
   :components ((:file "vm/generic-tensor/t/package")
+	       (:file "vm/generic-tensor/t/forward")
 	       
 	       (:file "vm/nodes/t/package")
 	       (:file "vm/nodes/t/parser")

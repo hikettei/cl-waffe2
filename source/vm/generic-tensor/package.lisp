@@ -39,7 +39,7 @@
    )
 
   (:export
-   #:embody-tensor
+   #:embody-input
    #:construct-forward)
 
   ;; Backends / Tensor API
