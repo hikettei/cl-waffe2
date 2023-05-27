@@ -15,8 +15,14 @@
   (define-arith-func matrix-mul *)
   (define-arith-func matrix-div /))
 
-;; (disassemble (add-matrix :uint8))
-	     
+;; Even on SBCL:
+;; (disassemble (add-matrix :uint8)) <- Fails to SIMDify
+;; (disassemble (add-matrix :float)) <- using addss (AVX2 Only?)
+;; (disassemble (add-matrix :double)) <- using addsd (AVX2 Only?)
+
+;; TODO: Implement Backward
+;; TODO: Node in Node (save-for-backward)
+
 (define-impl (AddNode :device LispTensor)
 	     :forward ((self x y)
 		       (let ((adder (matrix-add (dtype x))))
@@ -69,6 +75,7 @@
 			 ,x)))
 	     :backward ((self dy)
 			`(values ,dy ,dy)))
+
 
 (define-impl (DivNode :device LispTensor)
 	     :forward ((self x y)

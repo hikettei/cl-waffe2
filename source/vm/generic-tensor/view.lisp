@@ -285,7 +285,6 @@ a=1, b=2 => NIL
 			  (dims  (length shape)))
   ;; Continue from here.
 
-
   (assert (every #'(lambda (tensor) (shape-equal-list (shape tensor) shape)) tensors)
 	  nil
 	  "Assertion Failed because the number of shapes: ~a doesn't match."

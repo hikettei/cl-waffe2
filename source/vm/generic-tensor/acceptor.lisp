@@ -19,7 +19,23 @@
 (defparameter *node-variables-tmp* nil)
 (defparameter *node-parameters-tmp* nil)
 
+(defun construct-variables-table (variables-list)
+  "Returns a plist where key and value is tensor's name and tensor's pointer."
+  (declare (type list variables-list))
+  (let ((out-table `()))
+    (mapc
+     #'(lambda (tensor)
+	 (setf (getf out-table (tensor-name tensor)) tensor))
+     variables-list)
+    out-table))
+
 (defun construct-forward (toplevel &key (macroexpand nil))
+  "TODO: Docstring
+
+Return:
+    (values function-body[compiled-function]
+            variables[plist]
+            parameters[list])"
   ;; TODO: Collect Variables and make hash-table to modify them
   ;; TODO: Collect Parameters
   ;; Returns (values function-body variables parameters)
@@ -34,7 +50,7 @@
       (when macroexpand
 	(print body))
       (values (compile nil body)
-	      (remove-duplicates *node-variables-tmp*)
+	      (construct-variables-table (remove-duplicates *node-variables-tmp*))
 	      (remove-duplicates *node-parameters-tmp*)))))
 
 (defun construct-backward (out-scalar)

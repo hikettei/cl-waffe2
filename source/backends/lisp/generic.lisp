@@ -52,7 +52,3 @@
 		      body))))
 	*available-dtype-list* *available-lisp-type*)))
 
-(define-with-typevar (add-test1 u) (x y)
-  (declare (optimize (speed 3) (safety 0))
-	   (type u x y))
-  (the u (+ x y)))

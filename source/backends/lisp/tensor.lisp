@@ -19,3 +19,4 @@
 		 (apply #'* shape)
 		 :element-type dtype))))))
 
+
