@@ -21,9 +21,30 @@
   (define-arithmetic-node DivNode "Computes x / y element-wise." nil))
 
 
-#|
-(macrolet ((define-arithmetic-function (name document)
+;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.
+
+;; TODO: Document
+;; TODO: Automatically Dispatch: scalar-add etc... depending or their types.
+(macrolet ((define-arithmetic-node-caller (name node-name document)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-(defun ,name (x y &key (out nil))
-|#
+		(defun ,name (x y)
+		  ,document
+		  (forward (,node-name) x y)))))
+  (define-arithmetic-node-caller
+      !add
+    AddNode
+    "x <- x + y")
+  (define-arithmetic-node-caller
+      !sub
+    SubNode
+    "x <- x - y")
+  (define-arithmetic-node-caller
+      !mul
+    MulNode
+    "x <- x * y")
+  (define-arithmetic-node-caller
+      !div
+    DivNode
+    "x <- x / y"))
+
