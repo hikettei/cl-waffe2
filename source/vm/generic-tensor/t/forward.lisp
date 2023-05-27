@@ -44,7 +44,7 @@
     ;; make-input  -> InputTensorを初期化する (Shapeの形状が決定してなくてOK)
     ;; make-tensor -> AbstractTensorを初期化する (Shapeの形状が決定している必要がある + backendに応じてメモリをallocate)
     
-    (let* ((train-x (make-input `(batch-size 256) :train-x))
+    (let* ((train-x (make-input  `(batch-size 256) :train-x))
 	   (weight  (make-tensor `(100 256) :requires-grad t))
 	   (bias    (make-tensor `(1 256)   :requires-grad t)))
 
@@ -57,5 +57,8 @@
 	  (print parameters) ;; Optimizerに渡す変数たち
 	  (time (funcall forward))
 	  (time (funcall forward))
-	  )))))
+	  t)))))
+
+(test test-complicated-netowrk-forward
+  (is (test-complicated-network-forward)))
 

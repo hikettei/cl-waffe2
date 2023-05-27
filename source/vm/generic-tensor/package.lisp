@@ -16,6 +16,8 @@
    #:tensor-facet
    #:tensor-name
    #:dtype
+   #:mref
+   #:vref
    )
 
   ;; Dtype API

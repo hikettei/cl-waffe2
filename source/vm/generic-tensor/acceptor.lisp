@@ -16,6 +16,12 @@
   (forward-n-out  0 :type fixnum)
   (backward-n-out 0 :type fixnum))
 
+(defun state-reset! (tensor)
+  "Resets tensor's result to get next round output."
+  (declare (type AbstractTensor tensor))
+  (setf (statecontainer-forward-result (tensor-state tensor)) nil
+	(statecontainer-backward-result (tensor-state tensor)) nil))
+
 (defparameter *node-variables-tmp* nil)
 (defparameter *node-parameters-tmp* nil)
 
@@ -35,7 +41,7 @@
 Return:
     (values function-body[compiled-function]
             variables[plist]
-            parameters[list])"
+            all-tensors[list])"
   (declare (type AbstractTensor toplevel))
 
   (let ((*node-variables-tmp*)
@@ -71,14 +77,13 @@ Return:
 	 (AbstractTensor
 	  (if (eql (tensor-facet x) :input)
 	      (push x *node-variables-tmp*))
-	  (if (slot-value x 'requires-grad)
-	      (push x *node-parameters-tmp*))
+	  (push x *node-parameters-tmp*)
 	  (tensor-id x))
 	 ;; Add: AbstractNode
 	 (T x)))
    form))
 
-;; TODO: Use self
+;; TODO: Use Self
 (defun trace-computation-node (toplevel
 			       mode)
   (declare (type AbstractTensor toplevel)
@@ -102,7 +107,6 @@ Return:
 		     ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))
 	      (let (,@(loop for v in variables collect `(,(tensor-id v) ,v)))
 		,@next-states
-		;; TODO: when 2nd forward, 3nd forward, ...? <- RESET Container
 		(when (null (statecontainer-forward-result
 			     (tensor-state ,(tensor-id toplevel))))
 		  (setf

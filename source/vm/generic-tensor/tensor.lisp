@@ -103,7 +103,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		      (order :column))
   "The function make-tensor creates a new tensor of first-priority of *using-backend*"
   (declare (type list view)
-	   (ignore vec)) ;; vec is working. at initialize-instance :before
+	   (ignore vec))
   (if (typep shape-or-scalar 'list)
       (make-instance (car *using-backend*)
 		     :dtype dtype
@@ -146,6 +146,33 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :named named
 		     :facet :input)))
 
+(defun mref (tensor &rest subscripts)
+  "Read-only. Only used for printing the tensor.
+Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors."
+  (declare (type list subscripts))
+  (assert (eql (tensor-facet tensor) :exist)
+	  nil
+	  "Can't reference tensors which doesn't have a existing vec.")
+  (vref tensor
+	(apply #'+
+	       (map 'list
+		    #'(lambda (stride s view shape)
+			(* stride (+ s (compute-visible-start-idx (subscript-view view) shape))))
+		    (tensor-stride tensor)
+		    subscripts
+		    (tensor-view tensor)
+		    (slot-value tensor 'orig-shape)))))
+
+;; If you've created a new backend with different ptr, only you have to do is to define vref.
+(defmethod vref ((tensor AbstractTensor) index)
+    "Read-only. Only used for printing the tensor.
+Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors."
+  (declare (type fixnum index))
+  (assert (eql (tensor-facet tensor) :exist)
+	  nil
+	  "Can't reference tensors which doesn't have a existing vec.")
+  (aref (tensor-vec tensor) index))
+
 (defun embody-input (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor)."
   (declare (type AbstractTensor input-tensor actual-tensor))
@@ -164,9 +191,12 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   ;; which specifications is good for ml
   ;; Copy無しでBatchをいじりたい?。
   ;; メモリ節約のためにCopyするべき？
+  ;; Input-TensorとActual-Tensor
+  ;; はポインタを共有する Viewを移植する 最終的なShapeが同じになるようにする (undeterminedだけEqualから除外)
+  
   (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
-	(slot-value input-tensor 'visible-shape) (compute-visible-shape (slot-value actual-tensor 'orig-shape) (tensor-view input-tensor)))
+	(slot-value input-tensor 'visible-shape) (compute-visible-shape (slot-value actual-tensor 'orig-shape) (tensor-view actual-tensor)))
   t)
 
   
@@ -212,7 +242,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 	      "")
 	  (if (eql (tensor-facet tensor) :input)
 	      (format nil "<<Not-Embodied ~a Tensor>>" (shape tensor))
-	      "(TODO: Print Vecs. Print State)")
+	      ;; TODO: View -> View for printing 3d, 4d... tensor.
+	      (render-tensor tensor :indent 2))
 	  (tensor-facet tensor)
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))

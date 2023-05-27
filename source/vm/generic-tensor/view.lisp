@@ -310,16 +310,15 @@ Return: List[SubScript]
 		     (error ":TFLIST IS NOT IMPLEMENTED"))
 		    (T
 		     (error "Unknown keyword ~a" viewtype))))))
-		     
-  
-  
-(defun call-with-view  (function
-		        tensors
-			&key
-			  (at-least-dim 1)
-			&aux
-			  (shape (shape (car tensors)))
-			  (dims  (length shape)))
+
+
+(defun call-with-view (function
+		       tensors
+		       &key
+			 (at-least-dim 1)
+		       &aux
+			 (shape (shape (car tensors)))
+			 (dims  (length shape)))
   ;; Continue from here.
 
   (assert (every #'(lambda (tensor) (shape-equal-list (shape tensor) shape)) tensors)

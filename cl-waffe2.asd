@@ -19,6 +19,7 @@
 	       (:file "vm/generic-tensor/dtype")
 	       (:file "vm/generic-tensor/view")
 	       (:file "vm/generic-tensor/tensor")
+	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
 	       (:file "vm/generic-tensor/acceptor")
 	       
@@ -64,6 +65,7 @@
   :depends-on (:cl-waffe2 :fiveam)
   :components ((:file "vm/generic-tensor/t/package")
 	       (:file "vm/generic-tensor/t/forward")
+	       (:file "vm/generic-tensor/t/view")
 	       
 	       (:file "vm/nodes/t/package")
 	       (:file "vm/nodes/t/parser")
