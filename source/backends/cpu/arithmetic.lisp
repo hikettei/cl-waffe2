@@ -5,7 +5,7 @@
 ;; What if [10 10] + [10 1]????
 
 (defun add-matrix (x y offsetx offsety size)
-  (declare (optimize (speed 3) (safety 0))
+  (declare (optimize (speed 3))
 	   (type (simple-array single-float (*)) x y)
 	   (type fixnum offsetx offsety size))
   (dotimes (i size)

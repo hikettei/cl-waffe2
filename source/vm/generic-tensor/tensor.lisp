@@ -111,6 +111,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :requires-grad requires-grad
 		     :shape shape-or-scalar
 		     :projected-p nil
+		     :facet :exist
 		     :view view)
       (make-instance 'ScalarTensor
 		     :scalar-p t
@@ -119,6 +120,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :dtype dtype
 		     :requires-grad requires-grad
 		     :projected-p nil
+		     :facet :exist
 		     :view view)))
 
 ;; It is allowed: (make-input `(batch-size 512))

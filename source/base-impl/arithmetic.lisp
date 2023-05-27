@@ -4,7 +4,7 @@
 (macrolet ((define-arithmetic-node (name document save-for-backward)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defnode (,name (myself out)
+		(defnode (,name (myself)
 			  :where `([~] [~] -> [~])
 			  :slots ,(if save-for-backward
 				      `((out :initarg :out :accessor node-out)
