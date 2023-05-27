@@ -16,16 +16,26 @@
   (forward-n-out  0 :type fixnum)
   (backward-n-out 0 :type fixnum))
 
+(defparameter *node-variables-tmp* nil)
+(defparameter *node-parameters-tmp* nil)
+
 (defun construct-forward (toplevel &key (macroexpand nil))
+  ;; TODO: Collect Variables and make hash-table to modify them
+  ;; TODO: Collect Parameters
   ;; Returns (values function-body variables parameters)
   (declare (type AbstractTensor toplevel))
-  (let ((body `(lambda ()
-		 (let ((,(tensor-id toplevel) ,toplevel))
-		   ,(trace-computation-node toplevel :forward)
-		   ,(tensor-id toplevel)))))
-    (when macroexpand
-      (print body))
-    (compile nil body)))
+
+  (let ((*node-variables-tmp*)
+	(*node-parameters-tmp*))
+    (let ((body `(lambda ()
+		   (let ((,(tensor-id toplevel) ,toplevel))
+		     ,(trace-computation-node toplevel :forward)
+		     ,(tensor-id toplevel)))))
+      (when macroexpand
+	(print body))
+      (values (compile nil body)
+	      (remove-duplicates *node-variables-tmp*)
+	      (remove-duplicates *node-parameters-tmp*)))))
 
 (defun construct-backward (out-scalar)
 
@@ -43,7 +53,12 @@
   (map-tree
    #'(lambda (x)
        (typecase x
-	 (AbstractTensor (tensor-id x))
+	 (AbstractTensor
+	  (if (eql (tensor-facet x) :input)
+	      (push x *node-variables-tmp*))
+	  (if (slot-value x 'requires-grad)
+	      (push x *node-parameters-tmp*))
+	  (tensor-id x))
 	 ;; Add: AbstractNode
 	 (T x)))
    form))

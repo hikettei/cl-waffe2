@@ -256,6 +256,8 @@ Because : The actual ~ath argument given has a shape of ~a.
 	if (symbolp l)
 	  collect l))
 
+
+
 ;; 二度とこのコード読みたくない
 ;; TODO: Fix: let -> where OK
 ;; TODO 四次元の時out-stateを構築できない
@@ -491,7 +493,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							do (progn
 							     (when (and ,out-omit-p
 									(not (null (nth ,pos ,undetermined-shape-tmp)))
-									(not (equal (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
+									(not (shape-equal (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
 							       ;; More details
 							       (push
 								(format

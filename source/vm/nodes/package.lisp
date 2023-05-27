@@ -13,6 +13,7 @@
 		#:tensor-vec
 		#:make-tensor
 		#:shaping-error
+		#:shape-equal
 		#:make-statecontainer)
   (:export
    #:forward

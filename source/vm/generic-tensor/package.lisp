@@ -40,6 +40,9 @@
    )
 
   (:export
+   #:shape-equal)
+
+  (:export
    #:embody-input
    #:construct-forward)
 

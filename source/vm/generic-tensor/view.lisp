@@ -261,6 +261,21 @@ list = (0 10)
 (defmacro %+ (x y)
   `(the fixnum (+ (the fixnum ,x) (the fixnum ,y))))
 
+(defun shape-equal (a b)
+  "a=1, b=k => T
+a=1, b=2 => NIL
+..."
+  (if (and (numberp a)
+	   (numberp b))
+      (= (the fixnum a) (the fixnum b))
+      (if (and (symbolp a)
+	       (symbolp b))
+	  (eql a b)
+	  t)))
+
+(defun shape-equal-list (list1 list2)
+  (every #'shape-equal list1 list2))
+  
 (defun call-with-view  (function
 		        tensors
 			&key
@@ -271,7 +286,7 @@ list = (0 10)
   ;; Continue from here.
 
 
-  (assert (every #'(lambda (tensor) (equal (shape tensor) shape)) tensors)
+  (assert (every #'(lambda (tensor) (shape-equal-list (shape tensor) shape)) tensors)
 	  nil
 	  "Assertion Failed because the number of shapes: ~a doesn't match."
 	  (map 'list #'shape tensors)) ;; ... (1)
