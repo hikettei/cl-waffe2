@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+(defparameter *unroll-threshold* 10 "")
 ;; TO Add: ViewInstruction2D for implement matmul
 (defstruct (ViewInstruction
 	    (:constructor
@@ -45,8 +46,11 @@
 	 ,slice)
 	((typep (car ,view) 'keyword)
 	 ,keyword)
-	(T (error "Unknown view ~a" ,view))))
-     (T ,tcase)))
+	(T (error "Unknown view: ~a" ,view))))
+     (T
+      (if (eql ,view t)
+	  ,tcase
+	  (error "Unknown view: ~a" ,view)))))
 
 ;; TODO: from view to view
 (declaim (ftype (function (subscript-t) subscript-syntax) viewtype))
@@ -67,7 +71,7 @@
 (defun compute-visible-start-idx (view size)
   (declare (ignore size))
   (case (viewtype view)
-    (:index 0)
+    (:index view)
     (:t     0)
     (:slice (car view))
     (:slice-step (car view))
@@ -79,10 +83,11 @@
 ;; :Lazy-Eval it
 (defun compute-visible-end-idx (view size)
   (case (viewtype view)
-    (:index 1)
+    (:index (1+ view))
     (:t     size)
     (:slice (second view))
-    (:slice-step (second view))
+    ;; FIXME: Should be divided :slice-step
+    (:slice-step (round (/ (second view) (abs (third view)))))
     (:indices (length (cdr view)))
     (:tflist  size)
     (:broadcast (second view))
@@ -117,6 +122,7 @@
 
 (defgeneric step-subscript (before-type after-type before after size))
 
+;; [T] -> Any
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :index))
 			   before
@@ -244,7 +250,6 @@ list = (0 10)
 "
   (loop with shape = (slot-value tensor 'orig-shape)
         for i fixnum upfrom 0 below (length shape)
-	;; multiple-value-bind (res errror)
 	collect (preprocess-subscript i
 				      tensor
 				      (nth i shape)
@@ -271,6 +276,39 @@ a=1, b=2 => NIL
 
 (defun shape-equal-list (list1 list2)
   (every #'shape-equal list1 list2))
+
+
+;; Translate :tflist into :indices
+(defun expand-view-stride-adder (nth offsets strides target-dim tensors)
+  (loop for k fixnum upfrom 0
+	for tensor in tensors
+	collect (let* ((view (subscript-view (nth target-dim (tensor-view tensor))))
+		       (viewtype (viewtype view)))
+		  (cond
+		    ((or (eql viewtype :index)
+			 (eql viewtype :broadcast))
+		     ;; when Tensor[Index], iternum = 1 therefore there's no need to incr offsets.
+		     ;; when :broadcast, freeze the axis.
+		     nil)
+		    ((or (eql viewtype :t)
+			 (eql viewtype :slice))
+		     `(incf (the fixnum (nth ,k ,offsets))
+			    (the fixnum (nth ,k ,strides))))
+		    ((eql viewtype :slice-step)
+		     `(incf (the fixnum (nth ,k ,offsets))
+			    (%* ,(third view)
+				(the fixnum (nth ,k ,strides)))))
+		    ((eql viewtype :repeat)
+		     (error ":REPEAT IS NOT IMPLEMENTED"))
+		    ((eql viewtype :indices)
+		     (print nth)
+		     (error ":INDICES IS NOT IMPLEMENTED"))
+		    ((eql viewtype :tflist)
+		     (error ":TFLIST IS NOT IMPLEMENTED"))
+		    (T
+		     (error "Unknown keyword ~a" viewtype))))))
+		     
+  
   
 (defun call-with-view  (function
 		        tensors
@@ -307,7 +345,7 @@ a=1, b=2 => NIL
 				       (subscript-view (nth target-dim (tensor-view tensor)))
 				       (nth target-dim (slot-value tensor 'orig-shape)))))
 		    (axis-determined-p (every #'numberp end-points)))
-	       (declare (ignore axis-determined-p))
+	       (declare (ignorable axis-determined-p))
 	       ;; When axis-determined-p is nil expand with loop for parts
 	       ;; is t -> Unroll
 
@@ -323,7 +361,8 @@ a=1, b=2 => NIL
 								 (nth ,k ,offsets))))
 		    
 
-		    ,@(if nil;;axis-determined-p ;; need unroll-p
+		    ,@(if (and axis-determined-p
+			       (<= (car end-points) *unroll-threshold*))
 			  (loop for nth fixnum upfrom 0 below (car end-points)
 				collect (prog1
 					    (if (<= rest-dim at-least-dim)
@@ -331,23 +370,30 @@ a=1, b=2 => NIL
 						(explore
 						 (1- rest-dim)
 						 offsets))
-					  (loop for k upfrom 0
-						for tensor in tensors
-						;; If we have a broadcasted axis here, freeze the axis (TODO)
-						collect `(incf (the fixnum (nth ,k ,offsets)) (the fixnum (nth ,k ,stride-place))))))
+					  (expand-view-stride-adder
+					   nth
+					   offsets
+					   stride-place
+					   target-dim
+					   tensors)))
 
 			  (let ((nth (gensym)))
-			    `((loop for ,nth fixnum upfrom 0 below ,(car end-points)
-				    collect ,(prog1
-						 (if (<= rest-dim at-least-dim)
-						     (expand-with-function target-dim offsets)
-						     (explore
-						      (1- rest-dim)
-						      offsets))
-					       (loop for k upfrom 0
-						     for tensor in tensors
-						     ;; If we have a broadcasted axis here, freeze the axis (TODO)
-						     collect `(incf (the fixnum (nth ,k ,offsets)) (the fixnum (nth ,k ,stride-place))))))))))))))
+			    `((loop for ,nth fixnum
+				    upfrom 0
+				      below ,(car end-points)
+				    collect
+				    ,(prog1
+					 (if (<= rest-dim at-least-dim)
+					     (expand-with-function target-dim offsets)
+					     (explore
+					      (1- rest-dim)
+					      offsets))
+				       (expand-view-stride-adder
+					nth
+					offsets
+					stride-place
+					target-dim
+					tensors)))))))))))
 
     (let ((offset-place (gensym))
 	  (nondeterministic-symbols))
