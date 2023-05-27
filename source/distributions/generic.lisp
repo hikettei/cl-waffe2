@@ -52,6 +52,8 @@
 					(symbol-name type-ident))
 				 type
 				 obj))
+			    (single-float
+			     (coerce obj type))
 			    (T obj)))
 		      body))))
 	*available-dtype-dense-list* *available-lisp-type-dense*)))
