@@ -2,6 +2,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/backends.cpu
+  (:documentation "The package :cl-waffe2/backends.cpu provides the BLAS Backend to cl-waffe. Note that this package is SBCL-Dependant.")
   (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl)
   (:export
    :CPUTensor))
@@ -57,7 +58,4 @@ To continue with BLAS, Add the following code to the initialisation file and res
   #+sbcl(find-and-load-libblas)
   #-sbcl(warn-blas-without-sbcl)
   )
-
-;; CPUTensor -> BLAS Backend, SBCL Dependant.
-
 

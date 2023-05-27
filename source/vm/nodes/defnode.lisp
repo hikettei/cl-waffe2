@@ -204,4 +204,6 @@ Follow these constraints:
 ;; TODO
 ;; (variable  (make-tensor `(10 10))) #'(lambda (x) ~)
 ;; (parameter (make-tensor `(10 10))) Optimized by optimizer
-;;
+;; (print-object Node)
+;; TODO: Error-case of define-impl
+

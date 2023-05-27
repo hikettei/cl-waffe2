@@ -297,6 +297,7 @@ list = (0 10)
 				       (subscript-view (nth target-dim (tensor-view tensor)))
 				       (nth target-dim (slot-value tensor 'orig-shape)))))
 		    (axis-determined-p (every #'numberp end-points)))
+	       (declare (ignore axis-determined-p))
 	       ;; When axis-determined-p is nil expand with loop for parts
 	       ;; is t -> Unroll
 
@@ -353,7 +354,4 @@ list = (0 10)
 	     dims
 	     offset-place))))))
 
-;; TODO Tensor内部で使われてる文字を特定してlet
-;; Variables
-;; (set-variable hoge :a tensor)
 

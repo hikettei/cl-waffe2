@@ -3,6 +3,8 @@
 
 ;; experiment
 ;; What if [10 10] + [10 1]????
+;; define-vop
+;; Before working with cpu-backend, dtypeのspecification
 
 (defun add-matrix (x y offsetx offsety size)
   (declare (optimize (speed 3))
