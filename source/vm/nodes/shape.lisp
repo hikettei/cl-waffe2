@@ -438,6 +438,12 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						     ;; here, we can detect errors
 						     ;; ,var is determined and determined shapes doesn't match.
 						     (when (and (not (null ,var))
+								(or
+								 ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
+								 (and (symbolp ,var)
+								      (symbolp (nth ,nth-arg ,shape)))
+								 (and (numberp ,var)
+								      (numberp (nth ,nth-arg ,shape))))
 								(not
 								 (equal ,var (nth ,nth-arg ,shape))))
 						       (push
@@ -457,6 +463,12 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						     
 						     (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
 						       (when (and (not (null ,var))
+								  (or
+								   ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
+								   (and (symbolp ,var)
+									(symbolp (nth ,nth-arg ,shape)))
+								   (and (numberp ,var)
+									(numberp (nth ,nth-arg ,shape))))
 								  (not
 								   (equal ,var (nth ,pos ,shape))))
 							 (push

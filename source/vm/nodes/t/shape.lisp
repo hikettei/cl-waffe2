@@ -106,6 +106,14 @@
 
 (test test-xy-subscript-p
   (is (test-subscript
+       `([x y] [x y] -> [x y])
+       `((10 a) (10 3))
+       `((10 3))))
+  (is (test-subscript
+       `([x y] [x y] [x y] -> [x y])
+       `((10 a) (10 3) (10 3))
+       `((10 3))))
+  (is (test-subscript
        `([~ x] [~ x] -> [~ x])
        `((10 3) (10 3))
        `((10 3))))
@@ -186,8 +194,20 @@
        `([~] [~] -> [~])
        `((10 5 2) (3 2 3))))
 
-    (is (error-test-subscript
+  (is (error-test-subscript
        `([~] [~] -> [~])
+       `((10 a) (10 b))))
+
+  (is (error-test-subscript
+       `([x y] [x y] [x y] -> [x y])
+       `((10 a) (10 1) (10 2))))
+  
+  (is (error-test-subscript
+       `([x y] [x y] [x y] -> [x y])
+       `((10 a) (10 b) (10 b))))
+  
+  (is (error-test-subscript
+       `([x y] [x y]-> [x y])
        `((10 a) (10 b))))
 
   ;; Should be added more... (After deciding specifications)
