@@ -338,9 +338,22 @@ list = (0 10)
 						     ;; If we have a broadcasted axis here, freeze the axis (TODO)
 						     collect `(incf (the fixnum (nth ,k ,offsets)) (the fixnum (nth ,k ,stride-place))))))))))))))
 
-    ;; (let ((a 0)) ... Tensor内部で使われてる文字を特定+declare
-    (let ((offset-place (gensym)))
+    (let ((offset-place (gensym))
+	  (nondeterministic-symbols))
+      (mapc #'(lambda (tensor)
+		(loop for i upfrom 0
+		      for shape in (shape tensor)
+		      if (not (numberp shape))
+			do (push `(,shape (nth ,i (shape ,tensor))) nondeterministic-symbols)))
+	    tensors)
       `(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
-	 ,(explore
-	   dims
-	   offset-place)))))
+	 (let (,@nondeterministic-symbols)
+	   (declare (type fixnum ,@(map 'list #'car nondeterministic-symbols)))
+	   ,(explore
+	     dims
+	     offset-place))))))
+
+;; TODO Tensor内部で使われてる文字を特定してlet
+;; Variables
+;; (set-variable hoge :a tensor)
+

@@ -144,6 +144,28 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :named named
 		     :facet :input)))
 
+(defun embody-tensor (input-tensor actual-tensor)
+  "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor)."
+  (declare (type AbstractTensor input-tensor actual-tensor))
+
+  (assert (eql (tensor-facet input-tensor) :input)
+	  nil
+	  "Assertion Failed with (eql (tensor-facet input-tensor) :input)")
+
+  (assert (eql (tensor-facet actual-tensor) :exist)
+	  nil
+	  "Assertion Failed with (eql (tensor-facet actual-tensor) :exist)")
+
+  ;; TODO: Error Check
+
+  ;; Here, we Viewを使いたい
+  ;; which specifications is good for ml
+  ;; Copy無しでBatchをいじりたい?。
+  ;; メモリ節約のためにCopyするべき？
+  (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape))
+  t)
+
   
 (defun view (tensor &rest subscripts)
 
