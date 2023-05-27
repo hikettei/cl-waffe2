@@ -29,7 +29,7 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 (defmacro with-single-device ((device-name) &body body)
   "Under this macro, cl-waffe only use devices with device-name, otherwise an error will occur"
   `(let ((*facet-monopoly-mode* t))
-     (with-backend (,device-name)
+     (with-devices (,device-name)
        ,@body)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

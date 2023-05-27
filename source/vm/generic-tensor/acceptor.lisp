@@ -36,9 +36,6 @@ Return:
     (values function-body[compiled-function]
             variables[plist]
             parameters[list])"
-  ;; TODO: Collect Variables and make hash-table to modify them
-  ;; TODO: Collect Parameters
-  ;; Returns (values function-body variables parameters)
   (declare (type AbstractTensor toplevel))
 
   (let ((*node-variables-tmp*)
@@ -49,6 +46,8 @@ Return:
 		     ,(tensor-id toplevel)))))
       (when macroexpand
 	(print body))
+
+      ;; Enhancement: save the compiled body as fasl.
       (values (compile nil body)
 	      (construct-variables-table (remove-duplicates *node-variables-tmp*))
 	      (remove-duplicates *node-parameters-tmp*)))))
@@ -121,4 +120,5 @@ Return:
 	   ;; current
 
 	   ))))))
+
 

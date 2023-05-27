@@ -1,14 +1,12 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; **THE CODES BELOW MUST BE OPTIMIZED**
+;; TO Add: ViewInstruction2D for implement matmul
 (defstruct (ViewInstruction
 	    (:constructor
 		make-viewinstruction (offset size)))
   (size)
   (offset))
-
-;; View 書き直す
 
 (deftype subscript-t ()
   "An list of types which is allowed to become subscripts of the function view."
@@ -16,7 +14,6 @@
 
 (deftype subscript-syntax ()
   `(member :index :t :slice :slice-step :indices :tflist :broadcast :repeat))
-
 
 (defstruct (subscript
 	    (:print-function
@@ -67,7 +64,6 @@
 			    (:repeat :repeat)
 			    (T (error ":indices :broadcast :repeat")))))
 
-;; 一般化したい
 (defun compute-visible-start-idx (view size)
   (declare (ignore size))
   (case (viewtype view)

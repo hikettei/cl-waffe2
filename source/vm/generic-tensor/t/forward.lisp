@@ -5,16 +5,21 @@
 (in-suite :test-tensor)
 
 
-;; Problems: Compile-Speed
-;; (10 a) (10 10) <- a = 10
+;; Problems: Compile-Speed (add config) (there's no need)
+;; (10 a) (10 10) <- a = 10 (DONE)
 
-(defun test1 ()
-  (let* ((input (make-input `(100 100) :train-x))
-	 (out (construct-forward (forward (AddNode) input (make-tensor `(100 100))) :macroexpand nil)))
-    (embody-input input (make-tensor `(100 100)))
-    (print (time (funcall out)))))
+;; Making Add/Sub/Mul/Div Nodes
+;; OpenBLAS/Common Lisp backend.
+;; update: construct-forward (InputTensor UI)
+;; add:    construct-backward
+;; view -> view.
+;; ViewNode
 
-(test construct-tensor
-  (is (test1)))
+(defun test-simple-forward ()
+  (with-single-device (LispTensor)
+    (let ((out (!add (make-tensor `(10 10))
+		     (make-tensor `(10 10)))))
+      (funcall (construct-forward out)))))
 
-
+(test test-forward
+  (is (test-simple-forward)))

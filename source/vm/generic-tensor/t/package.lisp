@@ -5,7 +5,8 @@
   (:use :cl
    :cl-waffe2/vm.generic-tensor :fiveam
    :cl-waffe2/base-impl
-   :cl-waffe2/vm.nodes))
+	:cl-waffe2/vm.nodes
+	:cl-waffe2/backends.lisp))
 
 (in-package :cl-waffe2/vm.nodes.generic-tensor)
 
