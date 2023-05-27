@@ -1,6 +1,6 @@
 
 
-(in-package :cl-waffe2/vm.nodes.generic-tensor)
+(in-package :cl-waffe2/vm.nodes.generic-tensor.test)
 
 (in-suite :test-tensor)
 
@@ -32,4 +32,30 @@
 
 (test forward-with-view-simple-test
   (is (test-simple-forward-with-view)))
+
+
+;; Still in Concept Stage but illustrates what cl-waffe can do.
+(defun test-complicated-network-forward ()
+  ;; with-devices ... 使用するTensorの優先順位
+  ;; LispTensor <- Common Lispで書かれたカーネル(SIMD化はAVX2まで)
+  ;; CPUTensor  <- Accelerated by OpenBLAS
+  (with-devices (LispTensor)
+
+    ;; make-input  -> InputTensorを初期化する (Shapeの形状が決定してなくてOK)
+    ;; make-tensor -> AbstractTensorを初期化する (Shapeの形状が決定している必要がある + backendに応じてメモリをallocate)
+    
+    (let* ((train-x (make-input `(batch-size 256) :train-x))
+	   (weight  (make-tensor `(100 256) :requires-grad t))
+	   (bias    (make-tensor `(1 256)   :requires-grad t)))
+
+      (let ((out (!add (!mul train-x weight) (view bias `(:broadcast 100) t))))
+	(multiple-value-bind (forward variables parameters) (construct-forward out)
+
+	  ;; InputTensorに実際の学習データを与える
+	  (embody-input (getf variables :train-x) (make-tensor `(100 256)))
+	  (print variables)  ;; 変数一覧
+	  (print parameters) ;; Optimizerに渡す変数たち
+	  (time (funcall forward))
+	  (time (funcall forward))
+	  )))))
 

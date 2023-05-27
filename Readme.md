@@ -15,6 +15,18 @@ Since few month ago, I was working on the preceding project: [cl-waffe](https://
 
 5. Make macro-based JIT a first priority mechanism. (tbh I'm inspired by CFFI's translating system)
 
+# about cl-waffe
+
+### Safe and Static Shaping
+
+### View First.
+
+### Macro-Base JIT
+
+### All Tensors and Nodes are Generic.
+
+### Useful APIs
+
 # The Project Structures
 
 
@@ -63,3 +75,27 @@ Shapeの制約をすっごく厳しくする
 	     :backward ((node dy)
 			))
 ```
+
+# TODO
+
+Documentの整理
+
+set-variable
+
+define-impl, 引数の数の違いをdetect
+
+print-object(Node)
+
+Broadcast
+
+SVD
+
+lparallel?
+
+Github Actions
+
+distributions
+
+# Acknowledgements
+
+Todo

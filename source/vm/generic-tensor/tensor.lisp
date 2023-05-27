@@ -165,7 +165,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   ;; Copy無しでBatchをいじりたい?。
   ;; メモリ節約のためにCopyするべき？
   (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
-	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape))
+	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
+	(slot-value input-tensor 'visible-shape) (compute-visible-shape (slot-value actual-tensor 'orig-shape) (tensor-view input-tensor)))
   t)
 
   
