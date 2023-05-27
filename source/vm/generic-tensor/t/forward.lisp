@@ -21,5 +21,15 @@
 		     (make-tensor `(10 10)))))
       (funcall (construct-forward out)))))
 
+(defun test-simple-forward-with-view ()
+  (with-single-device (LispTensor)
+    (let ((out (!add (view (make-tensor `(10 1)) t `(:broadcast 10))
+		     (make-tensor `(10 10)))))
+      (funcall (construct-forward out)))))
+
 (test test-forward
   (is (test-simple-forward)))
+
+(test forward-with-view-simple-test
+  (is (test-simple-forward-with-view)))
+

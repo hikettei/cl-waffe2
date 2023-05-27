@@ -47,7 +47,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (trace-state :initform nil) ;; For Optimizing Computation Node
 
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
-   (named :initarg :named :type keyword :accessor tensor-name)
+   (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
    ))
 
@@ -170,7 +170,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
   
 (defun view (tensor &rest subscripts)
-
+  "TODO: Docstring"
   ;; TODO: When tensor is scalar, return error.
 
   (make-instance (car *using-backend*)

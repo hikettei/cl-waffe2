@@ -29,6 +29,7 @@
    #:shaping-error)
 
   (:export
+   #:view
    #:viewinstruction
    #:viewinstruction-offset
    #:viewinstruction-size

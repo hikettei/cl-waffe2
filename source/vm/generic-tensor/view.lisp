@@ -1,8 +1,9 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-(defparameter *unroll-threshold* 10 "")
-;; TO Add: ViewInstruction2D for implement matmul
+(defparameter *unroll-threshold* 10 "Unroll if iternum is below this threshold")
+
+;; TO Add: ViewInstruction2D to implement matmul
 (defstruct (ViewInstruction
 	    (:constructor
 		make-viewinstruction (offset size)))
@@ -247,6 +248,8 @@ list = (0 10)
        or (:indices 0 1 2 3 4 5)
        or (:broadcast 10)
        or (:repeat 10)
+
+Return: List[SubScript]
 "
   (loop with shape = (slot-value tensor 'orig-shape)
         for i fixnum upfrom 0 below (length shape)
@@ -264,7 +267,7 @@ list = (0 10)
 
 (defun shape-equal (a b)
   "a=1, b=k => T
-a=1, b=2 => NIL
+   a=1, b=2 => NIL
 ..."
   (if (and (numberp a)
 	   (numberp b))
@@ -360,7 +363,6 @@ a=1, b=2 => NIL
 								     ,(nth k start-points))
 								 (nth ,k ,offsets))))
 		    
-
 		    ,@(if (and axis-determined-p
 			       (<= (car end-points) *unroll-threshold*))
 			  (loop for nth fixnum upfrom 0 below (car end-points)
