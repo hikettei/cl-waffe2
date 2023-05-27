@@ -2,9 +2,12 @@
 (in-package :cl-waffe2/backends.cpu)
 
 ;; experiment
-;; What if [10 10] + [10 1]????
+;; What if [10 10] + [10 1] speaking of memory-layout ????
 ;; define-vop
 ;; Before working with cpu-backend, dtypeのspecification
+
+;; OpenBLAS Kernelは後回しにする・・・
+;; make generics.
 
 (defun add-matrix (x y offsetx offsety size)
   (declare (optimize (speed 3))
@@ -29,4 +32,5 @@
 			 ,x))
 	     :backward ((self dy)
 			`(values ,dy ,dy)))
+
 

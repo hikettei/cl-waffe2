@@ -188,8 +188,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
 	  "{~a[~(~a~)] ~a ~a
-  ~a <- Display Contents
-  :state :forward :requires-grad T :backward <AddNode>}"
+  ~a
+  :facet :~(~a~)
+  :requires-grad ~a
+  :backward ~a}"
 	  (class-name (class-of tensor))
 	  (dtype tensor)
 	  (if (slot-value tensor 'scalar-p)
@@ -207,6 +209,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 	  (if (eql (tensor-facet tensor) :input)
 	      (format nil ":named ~a" (tensor-name tensor))
 	      "")
-	  "(TODO)"
-	  ))
+	  (if (eql (tensor-facet tensor) :input)
+	      (format nil "<<Not-Embodied ~a Tensor>>" (shape tensor))
+	      "(TODO: Print Vecs. Print State)")
+	  (tensor-facet tensor)
+	  (slot-value tensor 'requires-grad)
+	  (tensor-backward tensor)))
 

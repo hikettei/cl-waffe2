@@ -21,8 +21,10 @@
 
 #+sbcl(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor))
 
+;; TODO: Delete this alert with *cl-waffe-never-use-blas* = t
 (defun could-not-find ()
-  (format t "Note:
+  (format t "
+== Note [About CPUTensor's Performance] ========================
 cl-waffe could not find the OpenBLAS shared library (e.g.: libblas.dylib, the path could be found with the locate command or something), continuing without blas, but using the Common Lisp backend. (i.e.:LispTensor)
 
 To continue with BLAS, Add the following code to the initialisation file and restart your program. (e.g.: ~~/.sbclrc, ~~/.roswell/init.lisp), otherwise **THE PERFORMANCE MAY DECREASE**.
@@ -34,6 +36,7 @@ To continue with BLAS, Add the following code to the initialisation file and res
     `((:libblas \"libblas.dylib for example\")))
 
 ```
+================================================================
 ")
 
   (setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.lisp:LispTensor)))
@@ -44,7 +47,8 @@ To continue with BLAS, Add the following code to the initialisation file and res
 	(dolist (path (gethash :libblas config))
 	  (load-foreign-library
 	   (pathname path))))
-      (could-not-find)))
+      (could-not-find))
+  nil)
 
 (defun warn-blas-without-sbcl ()
   (if (boundp 'cl-user::*cl-waffe-config*)
