@@ -19,3 +19,8 @@
 ;; ./nn/
 ;; ./optimizers
 ;; ./distrivutions
+
+;; The Package cl-waffe2: APIのエクスポート
+;; 便利なマクロの定義
+;; Add: with-config macro.
+;;

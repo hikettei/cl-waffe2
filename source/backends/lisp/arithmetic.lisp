@@ -7,7 +7,7 @@
 			 (type (simple-array u (*)) x y)
 			 (type fixnum offsetx offsety size incx incy))
 		(dotimes (i size)
-		  (setf (aref x (+ offsetx i))
+		  (setf (aref x (+ offsetx (the fixnum (* incx i))))
 			(,f (aref x (+ offsetx (the fixnum (* incx i))))
 			    (aref y (+ offsety (the fixnum (* incy i))))))))))
   (define-arith-func matrix-add +)
