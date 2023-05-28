@@ -48,6 +48,8 @@
 	       (:file "distributions/sampling")
 	       (:file "distributions/dense")
 	       (:file "distributions/sparse")
+
+	       (:file "package")
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 
