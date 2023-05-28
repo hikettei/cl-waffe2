@@ -6,6 +6,8 @@
    :cl-waffe2/vm.generic-tensor
 	:cl-waffe2/vm.nodes)
   (:export
+   #:!sum)
+  (:export
    :node-x
    :node-y))
 
