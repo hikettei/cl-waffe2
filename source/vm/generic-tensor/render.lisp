@@ -164,11 +164,9 @@ The result sequence MUST not over max-length.
 (defun render-tensor (tensor &key (indent 0))
   "Renders :vec parts"
   (with-output-to-string (out)
-    (flet ((shape (tensor)
-	     (compute-visible-actual-shape tensor)))
-      (let ((*matrix-element-displaying-size*
-	      (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (shape tensor))
-			 maximize (length (format nil "~a" (vref tensor i)))))))
-	(pprint-vector out tensor t indent)
-	out))))
+    (let ((*matrix-element-displaying-size*
+	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))
+		       maximize (length (format nil "~a" (vref tensor i)))))))
+      (pprint-vector out tensor t indent)
+      out)))
 
