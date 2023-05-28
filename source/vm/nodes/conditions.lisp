@@ -50,3 +50,4 @@ Content  : ~a"
 	     (if *facet-monopoly-mode*
 		 "~%With *facet-monopoly-mode* = t, cl-waffe only uses the first-priority device."
 		 "")))))
+

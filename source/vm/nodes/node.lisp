@@ -63,6 +63,8 @@ Here's a list of reports.
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
 
       (when detected-errors
+	;; Enhancement
+	;; CALL-VIEW-AND-CONTINUE
 	(describe-problems node detected-errors))
 
       ;; TODO: When Dynamic-Mode

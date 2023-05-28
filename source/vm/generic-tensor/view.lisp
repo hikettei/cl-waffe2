@@ -81,7 +81,6 @@
     (:broadcast 0)
     (:repeat 0)))
 
-;; :Lazy-Eval it
 (defun compute-visible-end-idx (view size)
   (case (viewtype view)
     (:index (1+ view))
@@ -498,52 +497,67 @@ Return: List[SubScript]
 	       ;; When axis-determined-p is nil expand with loop for parts
 	       ;; is t -> Unroll
 
-	       (let ((stride-place (gensym)))
+	       (let ((stride-place (gensym "STRIDESTMP"))
+		     (old-offsets offsets)
+		     (loop-name (gensym "LOOP"))
+		     (out (gensym "OUT"))
+		     (offsets (gensym "Offsets")))
 		 `(let ((,stride-place (list ,@(loop for tensor in tensors
-						     collect (nth target-dim (tensor-stride tensor))))))
+						     collect (nth target-dim (tensor-stride tensor)))))
+			(,offsets (copy-list ,old-offsets)))
 		    (declare (type list ,stride-place))
 		    ;; adds offset
+		    ,(format nil "[NOTE] axis=~a ========" target-dim)
+		    "[Note] ----- Adding First Offsets -----"
 		    ,@(loop for k upfrom 0
 			    for tensor in tensors
 			    collect `(setf (nth ,k ,offsets) (%+ (%* (nth ,k ,stride-place)
 								     ,(nth k start-points))
 								 (nth ,k ,offsets))))
-		    
+
 		    ,@(if (and axis-determined-p
 			       (<= (car end-points) *unroll-threshold*))
-			  (loop for nth fixnum upfrom 0 below (car end-points)
-				collect (prog1
-					    (if (<= rest-dim at-least-dim)
-						(expand-with-function target-dim offsets)
+			  (loop named iterator-loop
+			        for nth fixnum upfrom 0 below (car end-points)
+				collect `(progn
+					   "[NOTE] Getting Next Round"
+					   ,(if (<= rest-dim at-least-dim)
+						(return-from iterator-loop (list (expand-with-function target-dim offsets)))
 						(explore
 						 (1- rest-dim)
 						 offsets))
-					  (expand-view-stride-adder
-					   nth
-					   offsets
-					   stride-place
-					   target-dim
-					   tensors)))
-
+					   "[Note] Adding Offsets of this round"
+					   ,@(unless (= nth (1- (car end-points)))
+					       (expand-view-stride-adder
+						nth
+						offsets
+						stride-place
+						target-dim
+						tensors))))
 			  (let ((nth (gensym)))
-			    `((loop for ,nth fixnum
+			    `((loop named ,loop-name
+				    for ,nth fixnum
 				    upfrom 0
 				      below ,(car end-points)
 				    collect
-				    ,(prog1
-					 (if (<= rest-dim at-least-dim)
-					     (expand-with-function target-dim offsets)
-					     (explore
-					      (1- rest-dim)
-					      offsets))
-				       (expand-view-stride-adder
-					nth
-					offsets
-					stride-place
-					target-dim
-					tensors)))))))))))
+				    ,(progn
+				       `(prog1
+					    ,(if (<= rest-dim at-least-dim)
+						 `(let ((,out ,(expand-with-function target-dim offsets)))
+						    (return-from ,loop-name ,out))
+						 (explore
+						  (1- rest-dim)
+						  offsets))
+					  (unless (= ,nth (1- ,(car end-points)))
+					    (progn
+					      ,@(expand-view-stride-adder
+					       nth
+					       offsets
+					       stride-place
+					       target-dim
+					       tensors))))))))))))))
 
-    (let ((offset-place (gensym))
+    (let ((offset-place (gensym "OffsetsTmp"))
 	  (nondeterministic-symbols))
       (mapc #'(lambda (tensor)
 		(loop for i upfrom 0

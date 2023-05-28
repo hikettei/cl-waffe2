@@ -15,6 +15,7 @@
 ;; view -> view.
 ;; ViewNode
 
+
 (defun test-simple-forward ()
   (with-single-device (LispTensor)
     (let ((out (!add (make-tensor `(10 10))
@@ -56,9 +57,42 @@
 	  (print variables)  ;; 変数一覧
 	  (print parameters) ;; Optimizerに渡す変数たち
 	  (time (funcall forward))
-	  (time (funcall forward))
 	  t)))))
 
 (test test-complicated-netowrk-forward
   (is (test-complicated-network-forward)))
+
+;; Tests call-with-view, view=t, dtype=uint8
+
+
+
+(defun test-elementwise-unroll-forward ()
+  (with-devices (LispTensor)
+    (let ((a (make-tensor `(3 3) :dtype :uint8))
+	  (b (make-tensor `(3 3) :dtype :uint8)))
+      (dotimes (i 9)
+	(setf (vref a i) 1)
+	(setf (vref b i) 1))
+      (let ((out (!add a b)))
+	(multiple-value-bind (forward vars params) (construct-forward out :macroexpand t)
+	  (let ((result (tensor-vec (funcall forward))))
+	    (print result)
+	    (every #'(lambda (elm) (= elm 2)) result)))))))
+
+(defun test-elementwise-forward ()
+  (with-devices (LispTensor)
+    (let ((a (make-tensor `(100 100) :dtype :uint8))
+	  (b (make-tensor `(100 100) :dtype :uint8)))
+      (dotimes (i 10000)
+	(setf (vref a i) 1)
+	(setf (vref b i) 1))
+      (let ((out (!add a b)))
+	(multiple-value-bind (forward vars params) (construct-forward out :macroexpand t)
+	  (let ((result (tensor-vec (funcall forward))))
+	    (every #'(lambda (elm) (= elm 2)) result)))))))
+
+(test test-call-with-view
+  (is (test-elementwise-unroll-forward))
+  (is (test-elementwise-forward))
+  )
 
