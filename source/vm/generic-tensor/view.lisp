@@ -509,6 +509,7 @@ Return: List[SubScript]
 		    ;; adds offset
 		    ,(format nil "[NOTE] axis=~a ========" target-dim)
 		    "[Note] ----- Adding First Offsets -----"
+		    
 		    ,@(loop for k upfrom 0
 			    for tensor in tensors
 			    collect `(setf (nth ,k ,offsets) (%+ (%* (nth ,k ,stride-place)
@@ -539,7 +540,7 @@ Return: List[SubScript]
 				    for ,nth fixnum
 				    upfrom 0
 				      below ,(car end-points)
-				    collect
+				    do
 				    ,(progn
 				       `(prog1
 					    ,(if (<= rest-dim at-least-dim)
