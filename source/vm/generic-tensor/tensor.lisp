@@ -163,9 +163,28 @@ Whether you cares about performance or not, this function shouldn't be used igno
 		    (tensor-view tensor)
 		    (slot-value tensor 'orig-shape)))))
 
+;; Note that mref is super slow and only used in a limited situation.
+(defun (setf mref) (new-value tensor &rest subscripts)
+  (declare (type list subscripts))
+  
+  (assert (eql (tensor-facet tensor) :exist)
+	  nil
+	  "Can't reference tensors which doesn't have a existing vec.")
+
+  (setf (vref tensor
+	      (apply #'+
+		     (map 'list
+			  #'(lambda (stride s view shape)
+			      (* stride (+ s (compute-visible-start-idx (subscript-view view) shape))))
+			  (tensor-stride tensor)
+			  subscripts
+			  (tensor-view tensor)
+			  (slot-value tensor 'orig-shape))))
+	new-value))
+
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.
 (defmethod vref ((tensor AbstractTensor) index)
-    "Read-only. Only used for printing the tensor.
+    "Only used for printing the tensor.
 Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
 
 If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
@@ -174,6 +193,17 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	  nil
 	  "Can't reference tensors which doesn't have a existing vec.")
   (aref (tensor-vec tensor) index))
+
+(defmethod (setf vref) (new-value (tensor AbstractTensor) index)
+    "Only used for printing the tensor.
+Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
+
+If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
+  (declare (type fixnum index))
+  (assert (eql (tensor-facet tensor) :exist)
+	  nil
+	  "Can't reference tensors which doesn't have a existing vec.")
+  (setf (aref (tensor-vec tensor) index) new-value))
 
 (defun embody-input (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor)."

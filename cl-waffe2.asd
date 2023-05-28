@@ -46,8 +46,8 @@
 	       (:file "distributions/generic")
 	       (:file "distributions/randomness")
 	       (:file "distributions/sampling")
+	       (:file "distributions/dense")
 	       (:file "distributions/sparse")
-
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 

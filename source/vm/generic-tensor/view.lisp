@@ -197,7 +197,6 @@ Return: (values after-view error)"
 			   before
 			   after
 			   size)
-			   
   "Tensor[t][:broadcast n]"
   (setf (subscript-char after) size
 	(subscript-constraints after) `(1 1))

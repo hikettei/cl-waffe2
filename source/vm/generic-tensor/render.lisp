@@ -83,7 +83,6 @@ The result sequence MUST not over max-length.
 
 
 ;; More columns in one print
-
 (defun pprint-vector (stream
 		      tensor
 		      &optional
