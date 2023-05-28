@@ -250,7 +250,7 @@ If you've created a new backend with having different ptr-type (can't be accesse
 
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
-	  "{~a[~(~a~)] ~a ~a
+	  "{~a[~(~a~)] ~a ~a ~a
   ~a
   :facet :~(~a~)
   :requires-grad ~a
@@ -272,6 +272,10 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	  (if (eql (tensor-facet tensor) :input)
 	      (format nil ":named ~a" (tensor-name tensor))
 	      "")
+	  (let ((state (tensor-state tensor)))
+	    (if state
+		(format nil "~%  :vec-state [~(~a~)]" (statecontainer-state state))
+		""))
 	  (if (eql (tensor-facet tensor) :input)
 	      (format nil "<<Not-Embodied ~a Tensor>>" (shape tensor))
 	      ;; TODO: View -> View for printing 3d, 4d... tensor.

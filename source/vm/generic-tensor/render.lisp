@@ -6,7 +6,7 @@
 (defparameter *matrix-element-displaying-size* 13 ;; the same as digits of single-float
   "Decides how long elements to be omitted. If 3, cl-waffe prints 123 as it is but 1234 is displayed like: 1... (omitted)")
 
-(defparameter *matrix-column-elements-displaying-length* 8
+(defparameter *matrix-column-elements-displaying-length* 6
   "(1 2 3 4 5 6) -> (1 2 .. 5 6)")
 
 (defparameter *matrix-columns-displaying-length* 4
