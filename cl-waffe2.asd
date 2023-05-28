@@ -50,6 +50,9 @@
 	       (:file "distributions/sparse")
 
 	       (:file "package")
+	       (:file "utils")
+
+	       (:file "viz/package")
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 
