@@ -166,7 +166,9 @@ Whether you cares about performance or not, this function shouldn't be used igno
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.
 (defmethod vref ((tensor AbstractTensor) index)
     "Read-only. Only used for printing the tensor.
-Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors."
+Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
+
+If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
   (declare (type fixnum index))
   (assert (eql (tensor-facet tensor) :exist)
 	  nil

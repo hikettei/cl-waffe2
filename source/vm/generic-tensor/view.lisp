@@ -121,6 +121,7 @@
 	 `(+ ,index ,size)
 	 index))))
 
+
 (defgeneric step-subscript (before-type after-type before after size))
 
 ;; [T] -> Any
@@ -144,7 +145,7 @@ Return: (values after-view error)"
 			   size)
   "Tensor[t][t]"
   (setf (subscript-char after) size
-        (subscript-constraints after) `(0 t))
+        (subscript-constraints after) `(0 t)) ;; using before, adjust constraints
   after)
 	      
 (defmethod step-subscript ((x (eql :t))
@@ -212,6 +213,153 @@ Return: (values after-view error)"
   (setf (subscript-char after) size
 	(subscript-constraints after) `(0 t))
   after)
+
+;; Tensor[Index] -> Any
+;; Tensor = (10, 10), Tensor[0] = (1, 10)
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :t))
+			   before
+			   after
+			   size)
+  "Tensor[0][t] is the same as just doing Tensor[t][0]"
+  (step-subscript :t :t before after size))
+
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :index))
+			   before
+			   after
+			   size)
+  "Tensor[0][1]"
+  (step-subscript :t :index before after size))
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :slice))
+			   before
+			   after
+			   size)
+  "Tensor[0][0:10]"
+  (step-subscript :t :slice before after size))
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :slice-step))
+			   before
+			   after
+			   size)
+  "Tensor[0][0:10::2]"
+  (step-subscript :t :slice-step before after size))
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :indices))
+			   before
+			   after
+			   size)
+  "Tensor[1][:indices 0 1 2]"
+  (step-subscript :t :indices before after size))
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :tflist))
+			   before
+			   after
+			   size)
+  "Tensor[1][:tflist t]"
+  (step-subscript :t :tflist before after size))
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :broadcast))
+			   before
+			   after
+			   size)
+  "Tensor[1][:broadcast 10]"
+  (step-subscript :t :broadcast before after size))
+
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :repeat))
+			   before
+			   after
+			   size)
+  "Tensor[1][:repeat 10]"
+  ;; The same as just doing broadcast
+  (step-subscript :t :broadcast before after size))
+
+
+;; Tensor[0:10] -> Any
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :t))
+			   before
+			   after
+			   size)
+  "Tensor[0:10][t] is the equivalent to Tensor[t][0:10]"
+  (step-subscript :t :slice before after size))
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :index))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][0] Add offset to index.
+
+I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
+  (incf (subscript-view after) (car (subscript-view before)))
+  (step-subscript :t :slice before after size))
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :slice))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][0:3]" ;; Just Adding Offsets
+  (incf (car (subscript-view after))
+	(car (subscript-view before)))
+  (incf (second (subscript-view after))
+	(car (subscript-view before)))
+  (step-subscript :t :slice before after size))
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :slice-step))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][0:3::2]"
+  (step-subscript :slice :slice before after size))
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :indices))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][:indices 10 20]"
+  (error "TODO [2:10] -> [:indices 10 20]")
+  ;; [:indices 10 20] + [2, 10][0]
+  )
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :tflist))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][:tflist t t nil]"
+  ;; padding with NIL
+  (error "TODO [2:10] -> [:tflist t nil...]"))
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :broadcast))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][:broadcast 10]"
+  (error "TODO [2:10] -> [:broadcast 10]"))
+
+(defmethod step-subscript ((x (eql :slice))
+			   (y (eql :repeat))
+			   before
+			   after
+			   size)
+  "Tensor[2:10][:repeat 10]"
+  (error "TODO [2:10] -> [:repeat 10]"))
+
 
 (defun preprocess-subscript (dim tensor size past-view subscript)
   (declare (type fixnum dim)
