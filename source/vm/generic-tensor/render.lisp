@@ -2,6 +2,7 @@
 (in-package :cl-waffe2/vm.generic-tensor)
 
 
+;; Printing Parameter for Preview
 (defparameter *matrix-element-displaying-size* 13 ;; the same as digits of single-float
   "Decides how long elements to be omitted. If 3, cl-waffe prints 123 as it is but 1234 is displayed like: 1... (omitted)")
 
@@ -43,6 +44,7 @@ The result sequence MUST not over max-length.
     (setf (nth (1- k) sub) index)
     (apply #'mref tensor sub)))
 
+;; (1 2)
 (defun pprint-1d-vector (stream
 			 dim-indicator
 			 tensor
@@ -74,7 +76,7 @@ The result sequence MUST not over max-length.
       (progn
 	(write-string "(" stream)
 	(dotimes (i size)
-	  (write-string (format nil "~A" (print-element (mref tensor i) :dont-fill (= i (1- size)))) stream)
+	  (write-string (format nil "~A" (print-element (last-mref tensor i) :dont-fill (= i (1- size)))) stream)
 	  (unless (= i (1- size))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
