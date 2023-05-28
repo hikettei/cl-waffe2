@@ -26,7 +26,7 @@
   (with-single-device (LispTensor)
     (let ((out (!add (view (make-tensor `(10 1)) t `(:broadcast 10))
 		     (make-tensor `(10 10)))))
-      (funcall (construct-forward out :macroexpand t)))))
+      (funcall (construct-forward out :macroexpand nil)))))
 
 (test test-forward
   (is (test-simple-forward)))

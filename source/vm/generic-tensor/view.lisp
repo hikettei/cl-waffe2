@@ -70,6 +70,16 @@
 			    (:repeat :repeat)
 			    (T (error ":indices :broadcast :repeat")))))
 
+(defun compute-visible-actual-shape (tensor)
+  (loop for v in (tensor-view tensor)
+	for s in (slot-value tensor 'orig-shape)
+	collect (- (compute-visible-end-idx-actual
+		    (subscript-view v)
+		    s)
+		   (compute-visible-start-idx
+		    (subscript-view v)
+		    s))))
+
 (defun compute-visible-start-idx (view size)
   (declare (ignore size))
   (case (viewtype view)
@@ -93,6 +103,18 @@
     (:tflist  size)
     (:broadcast (second view))
     (:repeat `(* ,(second view) size))))
+
+(defun compute-visible-end-idx-actual (view size)
+  (case (viewtype view)
+    (:index (1+ view))
+    (:t     size)
+    (:slice (second view))
+    ;; FIXME: Should be divided :slice-step
+    (:slice-step (round (/ (second view) (abs (third view)))))
+    (:indices (length (cdr view)))
+    (:tflist  size)
+    (:broadcast 1)
+    (:repeat (second view))))
 
 
 (defun compute-visible-shape (orig-shape view)
@@ -360,6 +382,27 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
   (error "TODO [2:10] -> [:repeat 10]"))
 
 
+
+;; Tensor[:broadcast n] -> Any
+(defmethod step-subscript ((x (eql :broadcast))
+			   (y (eql :t))
+			   before
+			   after
+			   size)
+  "Tensor[:broadcast 10][t]"
+  (step-subscript :t :broadcast before after size))
+
+(defmethod step-subscript ((x (eql :broadcast))
+			   (y (eql :index))
+			   before
+			   after
+			   size)
+  "Tensor[:broadcast 10][1]"
+  ;; TODO: ADD CONSTRAINTS
+  (setf (subscript-view after) 0)
+  (step-subscript :t :index before after size))
+
+
 (defun preprocess-subscript (dim tensor size past-view subscript)
   (declare (type fixnum dim)
 	   (type AbstractTensor tensor)
@@ -458,7 +501,13 @@ Return: List[SubScript]
 		    (T
 		     (error "Unknown keyword ~a" viewtype))))))
 
-
+(defun compute-stepby (view)
+  ;; view ... list
+  (case (viewtype view)
+    (:slice-step (third view))
+    (:broadcast 0)
+    (T 1)))
+    
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 (defun call-with-view (function
 		       tensors
@@ -484,12 +533,7 @@ Return: List[SubScript]
 				   `(nth ,k ,offsets)
 				    (nth target-dim (shape tensor))
 				    (let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
-				      (case (viewtype view)
-					(:slice-step
-					 (third view))
-					(:broadcast
-					 0)
-					(T 1)))))))
+				      (compute-stepby view))))))
 	   (explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
 	     (let* ((start-points (loop for tensor in tensors
 					collect
@@ -522,7 +566,9 @@ Return: List[SubScript]
 		    ,@(loop for k upfrom 0
 			    for tensor in tensors
 			    collect `(setf (nth ,k ,offsets) (%+ (%* (nth ,k ,stride-place)
-								     ,(nth k start-points))
+								     (%*
+								      ,(compute-stepby (subscript-view (nth target-dim (tensor-view tensor))))
+								      ,(nth k start-points)))
 								 (nth ,k ,offsets))))
 
 		    ,@(if (and axis-determined-p
@@ -561,11 +607,11 @@ Return: List[SubScript]
 					  (unless (= ,nth (1- ,(car end-points)))
 					    (progn
 					      ,@(expand-view-stride-adder
-					       nth
-					       offsets
-					       stride-place
-					       target-dim
-					       tensors))))))))))))))
+						 nth
+						 offsets
+						 stride-place
+						 target-dim
+						 tensors))))))))))))))
 
     (let ((offset-place (gensym "OffsetsTmp"))
 	  (nondeterministic-symbols))
