@@ -2,13 +2,13 @@
 (in-package :cl-waffe2/vm.generic-tensor)
 
 
-(defparameter *matrix-element-displaying-size* 13 ;; digits of single-float
-  "Decides how long elements to be omitted. If 3, xmatrix prints 123 as it is but 1234 is displayed like: 1... (omitted)")
+(defparameter *matrix-element-displaying-size* 13 ;; the same as digits of single-float
+  "Decides how long elements to be omitted. If 3, cl-waffe prints 123 as it is but 1234 is displayed like: 1... (omitted)")
 
-(defparameter *matrix-column-elements-displaying-length* 4
+(defparameter *matrix-column-elements-displaying-length* 8
   "(1 2 3 4 5 6) -> (1 2 .. 5 6)")
 
-(defparameter *matrix-columns-displaying-length* 2
+(defparameter *matrix-columns-displaying-length* 4
   "((1 2 3) (4 5 6) (7 8 9)) -> ((1 2 3) ... (7 8 9))")
 
 (defun trim-string (str max-length)
@@ -53,16 +53,28 @@ The result sequence MUST not over max-length.
 
   (if (>= size
 	  *matrix-column-elements-displaying-length*)
-      (write-string (format nil "(~A ~A ~1~ ~A ~A)" ;; is it better: ~ -> ...
-			    (print-element (last-mref tensor 0))
-			    (print-element (last-mref tensor 1))
-			    (print-element (last-mref tensor (- size 2)))
-			    (print-element (last-mref tensor (1- size)) :dont-fill t))
+      (let ((midpoint (round (/ *matrix-column-elements-displaying-length* 2))))
+	(write-string "(" stream)
+	(dotimes (k midpoint)
+	  (write-string (print-element (last-mref tensor k)) stream)
+	  (write-string " " stream))
+
+	(write-string "~ " stream)
+
+	(loop for k downfrom midpoint to 1
+	      do (progn
+		   (write-string
+		    (print-element
+		     (last-mref tensor (- size k))
+		     :dont-fill (= k 1))
 		    stream)
+		   (unless (= k 1)
+		     (write-string " " stream))))
+	(write-string ")" stream))
       (progn
 	(write-string "(" stream)
 	(dotimes (i size)
-	  (write-string (format nil "~A" (print-element (aref tensor i) :dont-fill (= i (1- size)))) stream)
+	  (write-string (format nil "~A" (print-element (mref tensor i) :dont-fill (= i (1- size)))) stream)
 	  (unless (= i (1- size))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
@@ -104,38 +116,47 @@ The result sequence MUST not over max-length.
 		       (write-string " " stream)))
 		   (write-string " " stream))))
 	   (write-string ")" stream))
-	 (let ((args (make-list dim-indicator :initial-element t)))
+	 (let ((args (make-list dim-indicator :initial-element t))
+	       (midpoint (round (/ *matrix-columns-displaying-length* 2))))
 	   (labels ((render-column (line do-newline)
 		      (pprint-vector stream line newline (1+ indent-size) (1+ dim-indicator))
 		      (if do-newline
 			  (if newline
 			      (dotimes (k (1+ indent-size))
-				(write-string " " stream))))))
+				(write-string " " stream)))))
+		    (display-nth (n newline)
+		      (render-column
+		       (apply #'view tensor `(,@args ,n))
+		       newline)))
 	     ;; Displays first and last vector
 
 	     ;; First vector
-	     (let ((tensor-view (apply #'view tensor `(,@args 0))))
-	       (render-column tensor-view T))
-
-	     ;; Newline
-	     (if newline
-		 (progn
-		   (write-char #\newline stream)
-		   ;; Fix: Indent collapses
-		   (dotimes (_ (+ indent-size *matrix-element-displaying-size*))
-		     (write-string " " stream))
-		   ;; (write-string (format nil "(x~a)" (nth dim-indicator (matrix-visible-shape matrix))) stream)
-		   (write-string "..." stream)
-		   (write-char #\newline stream)
-		   (dotimes (k (1+ indent-size))
-		     (write-string " " stream))))
+	     (dotimes (k midpoint)
+	       (display-nth k T)
+	       ;; Newline
+	       (if newline
+		   (progn
+		     (when (= k (1- midpoint))
+		       (write-char #\newline stream))
+		     ;; Fix: the position of ... is collapsed.
+		     (dotimes (_ (+ indent-size *matrix-element-displaying-size*))
+		       (write-string " " stream))
+		     (when (= k (1- midpoint))
+		       (write-string "..." stream))
+		     (write-char #\newline stream)
+		     (dotimes (k (1+ indent-size))
+		       (write-string " " stream)))))
 
 	     ;; Last Vector
-	     (let ((tensor-view (apply #'view tensor `(,@args ,(1- (nth dim-indicator (shape tensor)))))))
-	       (render-column
-		tensor-view
-		NIL))
-	     (write-string ")" stream))))))))
+	     (loop with size = (nth dim-indicator (shape tensor))
+	           for k downfrom midpoint to 1 do
+		     (progn
+		       (display-nth (- size k) NIL)
+		       (when (not (= k 1))
+			 (write-char #\newline stream)
+			 (dotimes (i (1+ indent-size))
+			   (write-string " " stream)))))
+	     (write-string ")" stream)))))))
 
 
 
