@@ -163,6 +163,14 @@ The result sequence MUST not over max-length.
 
 (defun render-tensor (tensor &key (indent 0))
   "Renders :vec parts"
+
+  (when (typep tensor 'Scalartensor)
+    (return-from render-tensor
+      (with-output-to-string (str)
+	(dotimes (i indent) (princ " " str))
+	(format str "~a" (tensor-vec tensor)))))
+
+  
   (with-output-to-string (out)
     (let ((*matrix-element-displaying-size*
 	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))

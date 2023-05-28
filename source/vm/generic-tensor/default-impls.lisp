@@ -12,5 +12,6 @@
   ;; ErrorCheck Here.
   (declare (ignore initargs))
 
-  )
+  (setf (slot-value tensor 'orig-shape)    `(1)
+	(slot-value tensor 'visible-shape) `(1)))
 

@@ -48,6 +48,30 @@
     DivNode
     "x <- x / y"))
 
+
+(macrolet ((define-scalar-mat-node (name document)
+	     `(progn
+		(export ',name)
+		(defnode (,name (myself)
+			  :where `([scal] [~] -> [~] where scal = 1)
+			  :documentation ,document)))))
+  (define-scalar-mat-node
+      ScalarAddNode
+    "x <- scal + x")
+
+  (define-scalar-mat-node
+      ScalarSubNode
+    "x <- x - scal")
+
+  (define-scalar-mat-node
+      ScalarMulNode
+    "x <- scal * x")
+
+  (define-scalar-mat-node
+      ScalarDivNode
+    "x <- x / scal"))
+
+
 ;; TODO: backward
 (defun !sum (tensor &key (axis t) (out nil))
     "Sum up the tensor along axis.

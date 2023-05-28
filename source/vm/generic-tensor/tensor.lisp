@@ -249,6 +249,7 @@ If you've created a new backend with having different ptr-type (can't be accesse
 		 :named (tensor-name tensor)
 		 :vec (slot-value tensor 'vec)))
 
+;; TODO: Print ScalarTensor
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
 	  "{~a[~(~a~)] ~a ~a ~a

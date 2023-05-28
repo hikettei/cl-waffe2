@@ -34,7 +34,17 @@
 (defparameter *node-variables-tmp* nil)
 (defparameter *node-parameters-tmp* nil)
 
-;; (defun build ())
+(defun build (toplevel-tensor)
+  "Return:
+    (values forward backward variables parameters)"
+  (multiple-value-bind (forward vars params) (construct-forward toplevel-tensor)
+    (values
+     forward
+     (unless *no-grad*
+       (construct-backward toplevel-tensor)
+       nil)
+     vars
+     params)))
 
 (defun construct-variables-table (variables-list)
   "Returns a plist where key and value is tensor's name and tensor's pointer."
@@ -59,6 +69,7 @@ Return:
   (let ((*node-variables-tmp*)
 	(*node-parameters-tmp*))
     (let ((body `(lambda ()
+		   ;;(declare (optimize (speed 3) (safety 0)))
 		   (let ((,(tensor-id toplevel) ,toplevel))
 		     ,(trace-forward-computation-node toplevel)
 		     ,(tensor-id toplevel)))))
