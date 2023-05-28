@@ -12,12 +12,21 @@
 		#:tensor-out-n
 		#:tensor-vec
 		#:make-tensor
+		#:make-input
 		#:shaping-error
 		#:shape-equal
-		#:make-statecontainer)
+		#:order
+		#:dtype
+		#:make-statecontainer
+		#:*no-grad*
+		#:with-no-grad)
   (:export
    #:forward
    #:backward)
+
+  (:export
+   #:*no-grad*
+   #:with-no-grad)
   
   (:export
    #:with-devices

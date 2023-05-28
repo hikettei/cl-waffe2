@@ -18,6 +18,7 @@
    #:dtype
    #:mref
    #:vref
+   #:grad
    )
 
   ;; Dtype API
@@ -29,6 +30,10 @@
   ;; Conditions
   (:export
    #:shaping-error)
+
+  (:export
+   #:*no-grad*
+   #:with-no-grad)
 
   (:export
    #:view

@@ -51,14 +51,22 @@ Here's a list of reports.
 	   for n upfrom 2
 	   do (format out "~%~%~a. ~a" n err)))))
 
+(defun make-grad-gensym ()
+  (intern (symbol-name (gensym "Chain")) "KEYWORD"))
+
+;; Forward:  f(input-state) -> output-state
+;; Backward: g(output-state) -> input-state
+
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node dy))
 
+;; we can optimize or pruning the computation node
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
   (let* ((transition-function (abstractnode-node node))
 	 (input-states (loop for i in inputs collect (shape i))))
+    
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
 
@@ -73,23 +81,33 @@ Here's a list of reports.
       ;; Forward:  Input-State  -> Output-State
       ;; Backward: Output-State -> Input-State
 
-      (let* ((forward-form (call-next-method))
-	     (backward-form nil) ;; Input-Stateの数だけBackwardが必要
-	     ;; build-backward <- その地点から逆伝播を構築
-	     ;; backward <- その地点から逆伝播を計算
-	     ;; (funcall backward scalar-out)
-	     ;; First, forwardの構築(その後でBackwardをどうするか決める)
-	     (state (make-statecontainer
-		     :forward-out-form  forward-form
-		     :backward-out-form backward-form
-		     :forward-n-out  (length out-state)
-		     :backward-n-out (length input-states)))
+      ;; Forward:
+      ;; [30 10] + [30 10] -> [10 10] -> [5 5]
+      ;; Memo: Sharing Allocated memory between f and b
+      ;; can be realised with self ...
+      ;; recompute grad
+      (let* ((forward-form  (call-next-method))
+	     (backward-forms
+	       (map 'list
+		    #'(lambda (shape
+			       &aux (dy (make-input shape (make-grad-gensym)
+						    :dtype (dtype (car inputs))
+						    :order (order (car inputs)))))
+				 (unless *no-grad* (cons dy (backward node dy))))
+		    out-state))
 	     (next-tensor
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
-		     collect (let ((next-tensor (make-tensor shape)))
-			       (setf (tensor-out-n next-tensor) nth-arg)
-			       (setf (tensor-state next-tensor) state)
+		     collect (let* ((next-tensor (make-tensor shape))
+				    (bw (nth nth-arg backward-forms))
+				    (state (make-statecontainer
+					    :backward-input-variable (car bw)
+					    :forward-out-form forward-form
+					    :backward-out-form (cdr bw)
+					    :forward-n-out (length out-state)
+					    :backward-n-out (length input-states))))
+			       (setf (tensor-out-n next-tensor)     nth-arg)
+			       (setf (tensor-state next-tensor)     state)
 			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
 			       next-tensor))))
@@ -113,10 +131,11 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 (class-name (class-of node))))
 
 (defmethod backward :around ((node AbstractNode) dy)
-  (let ((out (multiple-value-list (call-next-method))))
-    ;; update or lazy-evaluate
-    out))
+  (unless *no-grad*
+    (let ((out (multiple-value-list (call-next-method))))
+      ;; update or lazy-evaluate
+      out)))
 
 (defmethod backward ((node AbstractNode) dy)
-  (error "Couldn't step forward because ~a backward is undefined." node))
+  (error "Couldn't step backward because ~a backward is undefined." node))
 
