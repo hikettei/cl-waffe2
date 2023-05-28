@@ -35,6 +35,7 @@
    #:viewinstruction
    #:viewinstruction-offset
    #:viewinstruction-size
+   #:viewinstruction-by
    #:call-with-view)
   ;; APIs for StateContainer
   (:export

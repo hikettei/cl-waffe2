@@ -6,8 +6,9 @@
 ;; TO Add: ViewInstruction2D to implement matmul
 (defstruct (ViewInstruction
 	    (:constructor
-		make-viewinstruction (offset size)))
-  (size)
+		make-viewinstruction (offset size by)))
+  (size) ;; contains list, fixnum...
+  (by)
   (offset))
 
 (deftype subscript-t ()
@@ -458,6 +459,7 @@ Return: List[SubScript]
 		     (error "Unknown keyword ~a" viewtype))))))
 
 
+;; :indices, :tflist -> wrap by call-with-view-ext*
 (defun call-with-view (function
 		       tensors
 		       &key
@@ -480,7 +482,14 @@ Return: List[SubScript]
 			  for tensor in tensors
 			  collect (make-viewinstruction
 				   `(nth ,k ,offsets)
-				   (nth target-dim (shape tensor))))))
+				    (nth target-dim (shape tensor))
+				    (let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
+				      (case (viewtype view)
+					(:slice-step
+					 (third view))
+					(:broadcast
+					 0)
+					(T 1)))))))
 	   (explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
 	     (let* ((start-points (loop for tensor in tensors
 					collect
