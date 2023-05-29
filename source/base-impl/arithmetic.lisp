@@ -34,19 +34,23 @@
   (define-arithmetic-node-caller
       !add
     AddNode
-    "x <- x + y")
+    "The node AddNode represents how matrices are added.
+x <- x + y")
   (define-arithmetic-node-caller
       !sub
     SubNode
-    "x <- x - y")
+    "The node SubNode represents how matrices are substracted.
+x <- x - y")
   (define-arithmetic-node-caller
       !mul
     MulNode
-    "x <- x * y")
+    "The node MulNode represents how matrices are multiplied element-wise.
+x <- x * y")
   (define-arithmetic-node-caller
       !div
     DivNode
-    "x <- x / y"))
+    "The Node DivNode represents how matrices are divided.
+x <- x / y"))
 
 
 (macrolet ((define-scalar-mat-node (name document)
@@ -72,10 +76,33 @@
     "x <- x / scal"))
 
 
-;; TODO: backward
+;; TODO: Make it differentiable.
+;; Things that I have to do is:
+;; Add ->ViewNode
 (defun !sum (tensor &key (axis t) (out nil))
-    "Sum up the tensor along axis.
-axis = nil or fixnum or list."
+  "Sum up the given tensor along the axis.
+
+Semantics:
+Let A be a 3 x 3 Tensor, the operation is to sum up A along axis=1.
+
+1. Prepare A
++++
++++
++++
+
+2. Prepare A-out 3 * 1
++++
+
+3. Broadcast A-out along axis=1
+
++++
+---
+---
+
+
+4. Adds A and A-out element-wise.
+
+This could be applied whenever the given axis is consisted of axes of list."
   (declare (type AbstractTensor tensor)
 	   (type (or t list fixnum) axis))
   (let* ((shape (copy-list (shape tensor)))

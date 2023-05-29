@@ -32,6 +32,7 @@
 
 	       (:file "base-impl/package")
 	       (:file "base-impl/arithmetic")
+	       (:file "base-impl/fundamental")
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")

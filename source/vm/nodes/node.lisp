@@ -69,7 +69,7 @@ Here's a list of reports.
     
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
-
+      
       (when detected-errors
 	;; Enhancement
 	;; CALL-VIEW-AND-CONTINUE

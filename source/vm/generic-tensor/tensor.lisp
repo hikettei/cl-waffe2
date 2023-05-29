@@ -125,27 +125,20 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :view view)))
 
 ;; It is allowed: (make-input `(batch-size 512))
-(defun make-input (shape-or-scalar
+(defun make-input (shape
 		   named
 		   &key
 		     (dtype :float)
 		     (order :column))
   "named ... variable-name (keyword)"
-  (if (typep shape-or-scalar 'list)
-      (make-instance (car *using-backend*)
-		     :dtype dtype
-		     :order order
-		     :shape shape-or-scalar
-		     :named named
-		     :facet :input)
-      (make-instance 'ScalarTensor
-		     :scapar-p t
-		     :vec shape-or-scalar
-		     :shape nil
-		     :dtype dtype
-		     :projected-p nil
-		     :named named
-		     :facet :input)))
+  (declare (type list shape)
+	   (type keyword named))
+  (make-instance (car *using-backend*)
+		 :dtype dtype
+		 :order order
+		 :shape shape
+		 :named named
+		 :facet :input))
 
 (defun mref (tensor &rest subscripts)
   "Read-only. Only used for printing the tensor.
@@ -236,6 +229,12 @@ If you've created a new backend with having different ptr-type (can't be accesse
 (defun view (tensor &rest subscripts)
   "TODO: Docstring"
   ;; TODO: When tensor is scalar, return error.
+
+  (assert (not (typep tensor 'ScalarTensor))
+	  nil
+	  "Assertion Failed with (not (typep tensor 'ScalarTensor))
+ViewObject will never created to ScalarTensor.
+got: ~a" tensor)
 
   (make-instance (car *using-backend*)
 		 :dtype (dtype tensor)

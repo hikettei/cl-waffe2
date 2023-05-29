@@ -9,8 +9,9 @@
 
 (defmethod initialize-instance :before ((tensor ScalarTensor) &rest initargs &key &allow-other-keys)
 
-  ;; ErrorCheck Here.
-  (declare (ignore initargs))
+  (let ((vec (getf initargs :vec)))
+    (assert (typep vec 'number) nil
+	    "Assertion Failed with (typep vec 'number). but got: ~a" vec))
 
   (setf (slot-value tensor 'orig-shape)    `(1)
 	(slot-value tensor 'visible-shape) `(1)))

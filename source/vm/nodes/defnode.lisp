@@ -116,7 +116,6 @@ because it requires a slot for node itself.")
 			     collect (car slot)))))
 	   (declare (ignorable ,(car constructor-arguments)))
 	   ,@constructor-body
-	   ;; Backendに応じてNodeのsubclassを生成
 	   (the ,abstract-name ,(car constructor-arguments)))))))
 
 
@@ -149,11 +148,7 @@ Follow these constraints:
       ;; TODO
       ;; 宣言された引数の数とforward-argsの数が違ったときにError
       ;; the format is ~...
-      (assert (subtypep device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
-	      nil
-	      "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
-	      abstract-name
-	      device)
+
 
       (assert (= (length backward-args) 1)
 	      nil
@@ -162,6 +157,12 @@ Follow these constraints:
 	      abstract-name))
 
     `(progn
+       (eval-when (:compile-toplevel :load-toplevel :execute)
+	 (assert (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
+		 nil
+		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
+		 ',abstract-name
+		 ',device))
        (defclass ,impl-name (,abstract-name)
 	 nil
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
@@ -172,11 +173,11 @@ Follow these constraints:
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
-	   (declare (type ,device ,@forward-args))
+	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
 	   ,@forward-body))
        (defmethod backward ((,backward-self-name ,impl-name) ,@backward-args)
 	 (declare (type ,impl-name ,backward-self-name)
-		  (type ,device ,@backward-args))
+		  (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	 ,@backward-body))))
 
 ;; backward-test-toolみたいなのが欲しい

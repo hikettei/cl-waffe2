@@ -404,7 +404,8 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		   (range 0 (length ,previous-subscripts))
 		   ',max-required-dims
 		   ,previous-subscripts)
-		  
+
+				  
 		  (let* (,@(map 'list #'(lambda (x)
 					  `(,x))
 				common-symbols)
@@ -418,7 +419,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 				 collect nil)))
 		    (declare (ignorable ,@common-symbols))
 		    
-
+		    
 		    ;; TODO: When let-binding includes list, use it directly.
 		    
 		    ;; Identify Non-Determined Symbols

@@ -116,12 +116,19 @@
     (:broadcast 1)
     (:repeat (second view))))
 
+(defun force-list (view)
+  "Returns subscript-t if view is Subscript otherwise returns a view"
+  (if (typep view 'subscript)
+      (subscript-view view)
+      view))
 
 (defun compute-visible-shape (orig-shape view)
+  "TODO: DOC"
   (loop for o in orig-shape
-	for v in view
-	collect (let ((end   (compute-visible-end-idx (subscript-view v) o))
-		      (start (compute-visible-start-idx (subscript-view v) 0)))
+	for i upfrom 0
+	collect (let* ((v (or (nth i view) t))
+		       (end   (compute-visible-end-idx   (force-list v) o))
+		       (start (compute-visible-start-idx (force-list v) 0)))
 		  (cond
 		    ((and (typep start 'fixnum)
 			  (= start 0))
@@ -169,13 +176,13 @@ Return: (values after-view error)"
   (setf (subscript-char after) size
         (subscript-constraints after) `(0 t)) ;; using before, adjust constraints
   after)
-	      
+
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :slice))
 			   before
 			   after
 			   size)
-			   
+  
   "Tensor[t][2:4]"
   (let* ((view (subscript-view after))
 	 (view (map 'list #'(lambda (v) (parse-absolute v size)) view)))
@@ -184,13 +191,13 @@ Return: (values after-view error)"
 	  (subscript-view after) view)
     after))
 
-	      
+
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :slice-step))
 			   before
 			   after
 			   size)
-			   
+  
   "Tensor[t][2:4::-1]"
   (let* ((view (subscript-view after))
 	 (view (map 'list #'(lambda (v) (parse-absolute v size)) (butlast view))))
@@ -204,7 +211,7 @@ Return: (values after-view error)"
 			   before
 			   after
 			   size)
-			   
+  
   "Tensor[t][:indices 1 2 3...]"
   (let* ((view (subscript-view after)))
     (if (typep view 'list)
@@ -229,7 +236,7 @@ Return: (values after-view error)"
 			   before
 			   after
 			   size)
-			   
+  
   "Tensor[t][:repeat n]"
   (setf (subscript-char after) size
 	(subscript-constraints after) `(0 t))
