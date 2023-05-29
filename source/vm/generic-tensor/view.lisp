@@ -126,7 +126,7 @@
   "TODO: DOC"
   (loop for o in orig-shape
 	for i upfrom 0
-	collect (let* ((v (or (nth i view) t))
+	collect (let* ((v     (or (nth i view) t))
 		       (end   (compute-visible-end-idx   (force-list v) o))
 		       (start (compute-visible-start-idx (force-list v) 0)))
 		  (cond
@@ -135,7 +135,7 @@
 		     end)
 		    ((and (typep end 'fixnum)
 			  (typep start 'fixnum))
-		     `(- ,end ,start))
+		     (- end start))
 		    (T
 		     `(- ,end ,start))))))
 

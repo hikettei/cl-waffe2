@@ -51,8 +51,6 @@ The result sequence MUST not over max-length.
 			 &aux
 			   (size (nth dim-indicator (shape tensor))))
 
-  ;;"Assertion Failed with matrix.dims == 1")
-
   (if (>= size
 	  *matrix-column-elements-displaying-length*)
       (let ((midpoint (round (/ *matrix-column-elements-displaying-length* 2))))
