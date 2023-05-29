@@ -31,7 +31,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
    (scalar-p :initarg :scalar-p :initform nil)
    
-   (vec :initarg :vec :initform nil :accessor tensor-vec)
+   (vec :initarg :vec :initform nil :reader vec :writer write-vec)
    (dtype :initform :float :initarg :dtype :reader dtype)
 
    ;; Building Computation Nodes
@@ -51,6 +51,26 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
    ))
+
+;; Inline
+;; (declaim (inline tensor-vec))
+(defun tensor-vec (tensor)
+  (declare (type AbstractTensor tensor)
+	   (optimize (speed 3) (safety 0)))
+  (if (null (tensor-name tensor))
+      (vec tensor)
+      (if (vec tensor) ;; equal size?
+	  (vec tensor)
+	  (let ((alloc (make-tensor
+			(shape tensor)
+			:dtype (dtype tensor)
+			:order (order tensor))))
+	    (setf (tensor-vec tensor) (vec alloc))
+	    (vec tensor)))))
+
+(defun (setf tensor-vec) (new-value tensor)
+  (declare (type AbstractTensor tensor))
+  (write-vec new-value tensor))
 
 ;; (defmacro variable  ())
 ;; (defmacro parameter ())
@@ -131,13 +151,12 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     (dtype :float)
 		     (order :column))
   "named ... variable-name (keyword)"
-  (declare (type list shape)
-	   (type keyword named))
+  (declare (type list shape))
   (make-instance (car *using-backend*)
 		 :dtype dtype
 		 :order order
 		 :shape shape
-		 :named named
+		 :named (or named t)
 		 :facet :input))
 
 (defun mref (tensor &rest subscripts)

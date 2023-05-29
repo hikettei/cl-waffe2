@@ -256,6 +256,18 @@ Because : The actual ~ath argument given has a shape of ~a.
 	if (symbolp l)
 	  collect l))
 
+(defmacro num-major-setq (var obj)
+  `(setq ,var
+	 (or (when (numberp ,var)
+	       ,var)
+	     ,obj)))
+
+(defmacro num-major-setf (var obj)
+  `(setf ,var
+	 (or (when (numberp ,var)
+	       ,var)
+	     ,obj)))
+
 
 
 ;; 二度とこのコード読みたくない
@@ -460,7 +472,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							 :nth-argument ,nth-arg
 							 :target-shape ,shape)
 							,all-conditions))
-						     (setq ,var (nth ,nth-arg ,shape)))
+						     (num-major-setq ,var (nth ,nth-arg ,shape)))
 						    ((> (- (length ,shape) ,nth-arg) ,pos1)
 						     ;; here, we can detect errors
 						     
@@ -485,7 +497,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							   :nth-argument ,nth-arg
 							   :target-shape ,shape)
 							  ,all-conditions))
-						       (setq ,var (nth ,pos ,shape)))))
+						       (num-major-setq ,var (nth ,pos ,shape)))))
 				       else
 					 collect `(loop for ,pos fixnum
 							upfrom ,pos1
@@ -501,7 +513,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 								 nil
 								 "Couldn't idenfity ~~ ~~ is determined as ~a ~% butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
 								,all-conditions))
-							     (setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
+							     (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 		    
 		    (flet ((merge-and-determine (shapes names)
 			     (let ((out

@@ -86,11 +86,11 @@ Here's a list of reports.
       ;; Memo: Sharing Allocated memory between f and b
       ;; can be realised with self ...
       ;; recompute grad
-      (let* ((forward-form  (call-next-method))
+      (let* ((forward-form (call-next-method))
 	     (backward-forms
 	       (map 'list
 		    #'(lambda (shape
-			       &aux (dy (make-input shape (make-grad-gensym)
+			       &aux (dy (make-input shape nil
 						    :dtype (dtype (car inputs))
 						    :order (order (car inputs)))))
 				 (unless *no-grad* (cons dy (backward node dy))))
@@ -99,9 +99,9 @@ Here's a list of reports.
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
 		     collect (let* ((next-tensor
-				      (make-tensor shape
-						   :dtype (dtype (car inputs))
-						   :order (order (car inputs))))
+				      (make-input shape nil
+						  :dtype (dtype (car inputs))
+						  :order (order (car inputs))))
 				    (bw (nth nth-arg backward-forms))
 				    (state (make-statecontainer
 					    :backward-input-variable (car bw)

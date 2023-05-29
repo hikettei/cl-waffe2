@@ -33,8 +33,8 @@
 (with-export !copy
   (defun !copy (tensor)
     "TODO: DOCSTRING"
-    (let ((out (make-tensor (shape tensor)
-			    :dtype (dtype tensor)
-			    :order (slot-value tensor 'cl-waffe2/vm.generic-tensor::order))))
+    (let ((out (make-input (shape tensor) nil
+			   :dtype (dtype tensor)
+			   :order (order tensor))))
       (!move out tensor))))
 

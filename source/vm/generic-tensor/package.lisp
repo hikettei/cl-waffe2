@@ -19,6 +19,7 @@
    #:mref
    #:vref
    #:grad
+   #:order
    )
 
   ;; Dtype API

@@ -629,7 +629,7 @@ Return: List[SubScript]
 			do (push `(,shape (nth ,i (shape ,tensor))) nondeterministic-symbols)))
 	    tensors)
       `(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
-	 (let (,@nondeterministic-symbols)
+	 (let* (,@nondeterministic-symbols)
 	   (declare (type fixnum ,@(map 'list #'car nondeterministic-symbols)))
 	   ,(explore
 	     dims
