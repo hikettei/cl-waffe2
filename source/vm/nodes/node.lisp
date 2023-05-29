@@ -98,7 +98,10 @@ Here's a list of reports.
 	     (next-tensor
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
-		     collect (let* ((next-tensor (make-tensor shape))
+		     collect (let* ((next-tensor
+				      (make-tensor shape
+						   :dtype (dtype (car inputs))
+						   :order (order (car inputs))))
 				    (bw (nth nth-arg backward-forms))
 				    (state (make-statecontainer
 					    :backward-input-variable (car bw)

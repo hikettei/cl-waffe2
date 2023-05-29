@@ -103,5 +103,36 @@
 			`(values ,dy ,dy)))
 
 
+(define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
+  (declare (optimize (speed 3))
+	   (type (simple-array u (*)) x out)
+	   (type fixnum offseto offsetx inco incx size))
+  (dotimes (i size)
+    (setf (aref out (+ offseto (the fixnum (* inco i))))
+	  (aref x   (+ offsetx (the fixnum (* incx i)))))))
 
+(defun size-of (tensor)
+  (apply #'* (shape tensor)))
+
+(define-impl (MoveTensorNode :device LispTensor)
+	     :forward ((self x y)
+		       ;; x <- y
+		       ;; When a new tensor is created at body...?
+		       ;; how to jit it?
+		       (let ((mover (matrix-move (dtype x))))
+			 `(,@(call-with-view
+			      #'(lambda (x-view y-view)
+				  `(funcall
+				    ,mover
+				    (tensor-vec ,x)
+				    (tensor-vec ,y)
+				    ,(viewinstruction-offset x-view)
+				    ,(viewinstruction-offset y-view)
+				    ,(viewinstruction-by x-view)
+				    ,(viewinstruction-by y-view)
+				    ,(viewinstruction-size x-view)))
+			      `(,x ,y))
+			   ,x)))
+	     :backward ((self dy)
+			`(values ,dy ,dy)))
 

@@ -30,7 +30,7 @@
 		(export ',name)
 		(defun ,name (x y)
 		  ,document
-		  (forward (,node-name) x y)))))
+		  (forward (,node-name) (!copy x) y)))))
   (define-arithmetic-node-caller
       !add
     AddNode
@@ -140,5 +140,4 @@ This could be applied whenever the given axis is consisted of axes of list."
 
       (let ((out* (apply #'view out view-args)))
 	(!add out* tensor)))))
-
 
