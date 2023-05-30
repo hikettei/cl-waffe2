@@ -49,7 +49,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
-
+   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape)
    ))
 
 ;; Inline
@@ -57,9 +57,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 (defun tensor-vec (tensor)
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
+  ;; add: (assert )
   (if (null (tensor-name tensor))
       (vec tensor)
-      (if (vec tensor) ;; equal size?
+      (if (vec tensor) ;; add: equal size?
 	  (vec tensor)
 	  (let ((alloc (make-tensor
 			(shape tensor)
@@ -151,12 +152,14 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     (dtype :float)
 		     (order :column))
   "named ... variable-name (keyword)"
-  (declare (type list shape))
+  (declare (type list shape)
+	   (type (or null keyword) named))
   (make-instance (car *using-backend*)
 		 :dtype dtype
 		 :order order
 		 :shape shape
-		 :named (or named t)
+		 :input-shape shape
+		 :named (or named (symbol-name (gensym "ChainTMP")))
 		 :facet :input))
 
 (defun mref (tensor &rest subscripts)
@@ -218,8 +221,8 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	  "Can't reference tensors which doesn't have a existing vec.")
   (setf (aref (tensor-vec tensor) index) new-value))
 
-(defun embody-input (input-tensor actual-tensor)
-  "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor)."
+(defun embody-actual-tensor (input-tensor actual-tensor)
+  "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor). (Pointers are shared.)"
   (declare (type AbstractTensor input-tensor actual-tensor))
 
   (assert (eql (tensor-facet input-tensor) :input)
@@ -230,18 +233,13 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	  nil
 	  "Assertion Failed with (eql (tensor-facet actual-tensor) :exist)")
 
-  ;; TODO: Error Check
-
-  ;; Here, we Viewを使いたい
-  ;; which specifications is good for ml
-  ;; Copy無しでBatchをいじりたい?。
-  ;; メモリ節約のためにCopyするべき？
-  ;; Input-TensorとActual-Tensor
-  ;; はポインタを共有する Viewを移植する 最終的なShapeが同じになるようにする (undeterminedだけEqualから除外)
-  
   (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
-	(slot-value input-tensor 'visible-shape) (compute-visible-shape (slot-value actual-tensor 'orig-shape) (tensor-view actual-tensor)))
+	
+	(slot-value input-tensor 'visible-shape)
+	(compute-visible-shape
+	 (slot-value actual-tensor 'orig-shape)
+	 (tensor-view actual-tensor)))
   t)
 
   
@@ -263,6 +261,7 @@ got: ~a" tensor)
 		 :projected-p t
 		 :past-view (tensor-view tensor)
 		 :view subscripts
+		 :input-shape (tensor-input-shape tensor)
 		 :facet (tensor-facet tensor)
 		 :named (tensor-name tensor)
 		 :vec (slot-value tensor 'vec)))

@@ -25,6 +25,84 @@
   (forward-n-out  0 :type fixnum)
   (backward-n-out 0 :type fixnum))
 
+;; Tracks all the variables used in the computation node.
+;; event.on(その変数のシンボルを変更) -> かいに存在する計算ノードのAllocation
+;; を変更させる
+(defstruct (NodeVariables
+	    (:constructor make-variable-table
+		(symbols
+		 variables
+		 tmp-variables)))
+  (symbols symbols :type list)
+  (variables variables :type list)
+  (tmp-variables tmp-variables :type list))
+
+(defstruct (NodeParameters))
+
+;; Symbols
+;; Determined
+;; Variables
+;; TMPS
+;; print-obj
+
+;; variablesのデータ型を作る
+;; variablesのデータ型に決定されたシンボルのテーブルを作る
+
+(defun embody-input (variables variable-name tensor)
+  "(embody-input variables :a tensor)"
+  (declare (type NodeVariables variables))
+
+  (let ((input (getf (nodevariables-variables variables) variable-name)))
+    (when (null input)
+      (error "Couldn't find a variable of ~a" variable-name))
+
+    (let ((symbols-changed (make-hash-table)))
+      (loop for place in (tensor-input-shape input)
+	    for val   in (shape tensor)
+	    if (symbolp place)
+	      do (setf (gethash place symbols-changed) val))
+
+      ;; input <- tensor's visible-area
+      (embody-actual-tensor input tensor)
+
+      (maybe-optimize-memory-allocation
+       variables
+       symbols-changed))))
+
+(defun maybe-delete-tensor-vec (tensor)
+  (if (vec tensor)
+      nil ;; TODO: add-generic tensor-delete 
+      )
+  (setf (tensor-vec tensor) nil))
+
+(defun tensor-update-alloc (tensor name size)
+  (declare (optimize (speed 3))
+	   (type AbstractTensor tensor)
+	   (type symbol name)
+	   (type fixnum size))
+  (let* ((shape    (the list (tensor-input-shape tensor)))
+	 (name-pos (position name shape :test #'eql)))
+    (when name-pos
+      (setf (nth name-pos (slot-value tensor 'orig-shape)) size
+	    (nth name-pos (slot-value tensor 'visible-shape)) size))))
+
+(defun maybe-optimize-memory-allocation (variables symbols-changed)
+  (declare (type NodeVariables variables))
+
+  (let ((var-table (nodevariables-variables variables))
+	(tmp-vars  (nodevariables-tmp-variables variables)))
+    (maphash
+     #'(lambda (key val)
+	 ;; Detects the shape has changed compared with old-one.
+	 (when (not (eql (getf var-table key) val))
+	   (map 'list #'maybe-delete-tensor-vec tmp-vars)
+	   (map 'list #'(lambda (x)
+			  (tensor-update-alloc x key val))
+		tmp-vars)))
+     symbols-changed)
+    t))
+
+
 (defun state-reset! (tensor)
   "Resets tensor's result to get next round output."
   (declare (type AbstractTensor tensor))
@@ -47,14 +125,30 @@
      params)))
 
 (defun construct-variables-table (variables-list)
-  "Returns a plist where key and value is tensor's name and tensor's pointer."
+  "Returns variable-table where key and value is tensor's name and tensor's pointer."
   (declare (type list variables-list))
-  (let ((out-table `()))
+  (let ((variable-table `())
+	(tmp-variable-table)
+	(symbols `()))
+
     (mapc
      #'(lambda (tensor)
-	 (setf (getf out-table (tensor-name tensor)) tensor))
+	 (let ((shapes (shape tensor)))
+	   (loop for s in shapes
+		 if (symbolp s)
+		   do (setf (getf symbols s) nil)))
+
+	 ;; tensor-name is keyword -> user-defined
+	 ;; tensor-name is string  -> automatically-generated (assertion make not for users to never declare it)
+	 
+	 (if (typep (tensor-name tensor) 'keyword) ;; user-defined
+	     (setf  (getf variable-table (tensor-name tensor)) tensor))
+
+	 (if (typep (tensor-name tensor) 'string)
+	     (push tensor tmp-variable-table)))
      variables-list)
-    out-table))
+
+    (make-variable-table symbols variable-table tmp-variable-table)))
 
 (defun construct-forward (toplevel &key (macroexpand nil))
   "TODO: Docstring
