@@ -15,9 +15,11 @@ Since few month ago, I was working on the preceding project: [cl-waffe](https://
 
 5. Make macro-based JIT a first priority mechanism. (tbh I'm inspired by CFFI's translating system)
 
-# about cl-waffe
+# Features
 
 ### Safe and Static Shaping
+
+No gc time, Static Memory Space...
 
 ### View First.
 
@@ -99,3 +101,30 @@ distributions
 # Acknowledgements
 
 Todo
+
+1. Viewのテスト (strideの加算) at generic-tensor
+
+2. View slice etc...
+
+3. base-impl
+
+4. construt-backward
+
+5. Scalar and Matrix (Shape Generics)
+
+Forward時Backward時の余計な計算ノードの枝刈り、memory-alloc strategy.
+
+6. Parallel Programming?
+
+TODO:
+
+save-for-backward
+
+scalar-XXX operations
+
+defnode IN defnode
+
+ViewNode (with facet-monopoly-mode)
+
+NodeViz
+

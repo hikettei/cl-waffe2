@@ -5,3 +5,5 @@
   `(multiple-value-bind (,forward ,variables, parameters) (construct-forward ,out)
      ,@body))
 
+;; (defmacro with-config :DTYPE, DEVICE, etc..)
+
