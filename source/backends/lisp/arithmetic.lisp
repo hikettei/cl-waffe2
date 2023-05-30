@@ -120,19 +120,22 @@
 		       ;; When a new tensor is created at body...?
 		       ;; how to jit it?
 		       (let ((mover (matrix-move (dtype x))))
-			 `(,@(call-with-view
-			      #'(lambda (x-view y-view)
-				  `(funcall
-				    ,mover
-				    (tensor-vec ,x)
-				    (tensor-vec ,y)
-				    ,(viewinstruction-offset x-view)
-				    ,(viewinstruction-offset y-view)
-				    ,(viewinstruction-by x-view)
-				    ,(viewinstruction-by y-view)
-				    ,(viewinstruction-size x-view)))
-			      `(,x ,y))
-			   ,x)))
+			 `(progn
+			    (when (not (movetensor-ignore-me ,self))
+			      ,(call-with-view
+				#'(lambda (x-view y-view)
+				    `(funcall
+				      ,mover
+				      (tensor-vec ,x)
+				      (tensor-vec ,y)
+				      ,(viewinstruction-offset x-view)
+				      ,(viewinstruction-offset y-view)
+				      ,(viewinstruction-by x-view)
+				      ,(viewinstruction-by y-view)
+				      ,(viewinstruction-size x-view)))
+				`(,x ,y)))
+			    ,x)))
 	     :backward ((self dy)
-			`(values ,dy ,dy)))
+			`(values ,dy)))
+
 
