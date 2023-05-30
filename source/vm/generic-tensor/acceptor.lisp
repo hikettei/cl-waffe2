@@ -37,6 +37,26 @@
   (variables variables :type list)
   (tmp-variables tmp-variables :type list))
 
+(defmethod print-object ((node NodeVariables) stream)
+  (let ((syms (nodevariables-symbols node))
+	(vars (nodevariables-variables node)))
+    (format
+     stream
+     "{NodeVariables
+    - symbols
+~a
+    - variables
+~a
+    - :n-tmp-variables ~a}"
+     (with-output-to-string (out)
+       (loop for k upfrom 0 below (length syms) by 2
+	     do (format out "     [~a -> ~a]~%" (nth k syms) (nth (1+ k) syms))))
+     (with-output-to-string (out)
+       (loop for k upfrom 0 below (length vars) by 2
+	     do (format out "     [~a -> ~a]~%" (nth k vars) (shape (nth (1+ k) vars)))))
+     (length (nodevariables-tmp-variables node)))))
+
+
 (defstruct (NodeParameters))
 
 ;; Symbols
@@ -71,8 +91,7 @@
 
 (defun maybe-delete-tensor-vec (tensor)
   (if (vec tensor)
-      nil ;; TODO: add-generic tensor-delete 
-      )
+      (tensor-delete tensor))
   (setf (tensor-vec tensor) nil))
 
 (defun tensor-update-alloc (tensor name size)

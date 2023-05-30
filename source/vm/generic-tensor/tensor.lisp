@@ -52,8 +52,12 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape)
    ))
 
+(defmethod tensor-delete ((tensor AbstractTensor))
+  nil
+  )
+
 ;; Inline
-;; (declaim (inline tensor-vec))
+(declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
