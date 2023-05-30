@@ -129,3 +129,46 @@
 	(explore ast))
       (format stream "}~%"))))
 
+(defnode (1DFunc (self)
+	  :where `([~] -> [~])
+	  :documentation ""))
+
+(define-impl (1DFunc :device cl-waffe2/backends.lisp:LispTensor)
+	     :forward ((self x)   `(progn ,x))
+	     :backward ((self dy) `(values ,dy)))
+
+(defun !f (tensor)
+  (forward (1DFunc) (!copy tensor)))
+
+(defun build-node ()
+  (with-devices (cl-waffe2/backends.lisp:LispTensor)
+    (let* ((input (make-input `(batch-size n) :input))
+	   (bias  (make-input `(batch-size n) :bias))
+	   (l (!f input))
+	   (x1 (!sub input (!f (!mul input bias))))
+	   (out (!sub x1 (!f input)))
+	   (out (!add l out)))
+      (viz-computation-node out "./out.dot")
+      )))
+
+
+
+(defun build-res-node ()
+  (with-devices (cl-waffe2/backends.lisp:LispTensor)
+    (let* ((input (make-input `(batch-size n) :input))
+	   (weight (make-tensor `(100 100)))
+	   (out1 (!add (!f input) weight))
+	   (out2 (!add (!f out1) weight))
+	   (out3 (!add (!f out2) weight)))
+      (viz-computation-node out3 "./out1.dot"))))
+
+(defun build-node1 ()
+  (with-devices (cl-waffe2/backends.lisp:LispTensor)
+    (let* ((input (make-input `(batch-size n) :input))
+	   (weight (make-tensor `(100 100)))
+	   (k (!f input))
+	   (out1 (!add k weight))
+	   (out2 (!add k weight))
+	   (out3 (!mul out1 out2)))
+      (viz-computation-node out3 "./out2.dot"))))
+

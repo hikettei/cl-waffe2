@@ -25,9 +25,6 @@
   (forward-n-out  0 :type fixnum)
   (backward-n-out 0 :type fixnum))
 
-;; Tracks all the variables used in the computation node.
-;; event.on(その変数のシンボルを変更) -> かいに存在する計算ノードのAllocation
-;; を変更させる
 (defstruct (NodeVariables
 	    (:constructor make-variable-table
 		(symbols
@@ -56,17 +53,7 @@
 	     do (format out "     [~a -> ~a]~%" (nth k vars) (shape (nth (1+ k) vars)))))
      (length (nodevariables-tmp-variables node)))))
 
-
 (defstruct (NodeParameters))
-
-;; Symbols
-;; Determined
-;; Variables
-;; TMPS
-;; print-obj
-
-;; variablesのデータ型を作る
-;; variablesのデータ型に決定されたシンボルのテーブルを作る
 
 (defun embody-input (variables variable-name tensor)
   "(embody-input variables :a tensor)"

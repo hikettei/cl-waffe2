@@ -22,15 +22,19 @@
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
 	       (:file "vm/generic-tensor/acceptor")
-	       
 
+	       ;; Load package.lisp first. (since scheduling depends on vm/nodes/package, MoveNodeTensor in base-impl/package)
 	       (:file "vm/nodes/package")
+	       (:file "base-impl/package")
+	       
+	       (:file "vm/generic-tensor/scheduling")
+	       
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
 
-	       (:file "base-impl/package")
+	       
 	       (:file "base-impl/arithmetic")
 	       (:file "base-impl/fundamental")
 
@@ -54,6 +58,8 @@
 	       (:file "utils")
 
 	       (:file "viz/package")
+	       (:file "viz/ast")
+	       
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
 

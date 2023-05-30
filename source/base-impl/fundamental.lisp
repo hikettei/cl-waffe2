@@ -12,7 +12,6 @@
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (export 'MoveTensorNode)
   (defnode (MoveTensorNode (myself)
 	    :where `([~] [~] -> [~])
 	    :slots ((ignore-me :initarg nil)) ;; when t, ignored.

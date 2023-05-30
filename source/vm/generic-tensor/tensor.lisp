@@ -246,7 +246,8 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	 (tensor-view actual-tensor)))
   t)
 
-  
+
+;; TODO: Extend the backward states.
 (defun view (tensor &rest subscripts)
   "TODO: Docstring"
   ;; TODO: When tensor is scalar, return error.
