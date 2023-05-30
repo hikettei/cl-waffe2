@@ -73,6 +73,10 @@
 	  (:input "#f0f8ff")
 	  (:parameter "#ff6347")))))
 
+(defun node-address-id (node)
+  #+sbcl(format nil "~%~x" (sb-kernel:get-lisp-obj-address node))
+  #-sbcl "")
+
 (defun node-dot-name (node)
   (let ((type (node-attribute node)))
     (case type
@@ -129,12 +133,15 @@
 	(explore ast))
       (format stream "}~%"))))
 
+
+;; Tests (TODO: Delete)
+
 (defnode (1DFunc (self)
 	  :where `([~] -> [~])
 	  :documentation ""))
 
 (define-impl (1DFunc :device cl-waffe2/backends.lisp:LispTensor)
-	     :forward ((self x)   `(progn ,x))
+	     :forward ((self x)   `(progn (print "1DFunc Called") ,x))
 	     :backward ((self dy) `(values ,dy)))
 
 (defun !f (tensor)
@@ -165,10 +172,21 @@
 (defun build-node1 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let* ((input (make-input `(batch-size n) :input))
+	   (val   (make-tensor `(100 100)))
 	   (weight (make-tensor `(100 100)))
-	   (k (!f input))
+	   (l (!mul input weight))
+	   (k (!f l))
 	   (out1 (!add k weight))
 	   (out2 (!add k weight))
 	   (out3 (!mul out1 out2)))
-      (viz-computation-node out3 "./out2.dot"))))
+      (cl-waffe2/vm.generic-tensor::optimize-computation-node! out3 :speed 4)
+      (viz-computation-node out3 "./out2.dot")
+      (multiple-value-bind (forward vars params) (construct-forward out3)
+	(embody-input vars :input val)
+	(time (funcall forward))
+	(time (funcall forward))
+	(time (funcall forward))
+	(time (funcall forward))
+	)
+      )))
 
