@@ -22,7 +22,8 @@
 		#:with-no-grad)
   (:export
    #:forward
-   #:backward)
+   #:backward
+   #:node-passed-p)
 
   (:export
    #:*no-grad*

@@ -6,7 +6,8 @@
    :cl-waffe2/vm.generic-tensor
 	:cl-waffe2/vm.nodes)
   (:export
-   #:MoveTensorNode)
+   #:MoveTensorNode
+   #:movetensor-ignore-me)
   (:export
    #:!sum)
   (:export

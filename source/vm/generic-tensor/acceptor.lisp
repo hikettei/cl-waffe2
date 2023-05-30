@@ -112,8 +112,9 @@
 (defun state-reset! (tensor)
   "Resets tensor's result to get next round output."
   (declare (type AbstractTensor tensor))
-  (setf (statecontainer-forward-result  (tensor-state tensor)) nil
-	(statecontainer-backward-result (tensor-state tensor)) nil))
+  (if (tensor-state tensor)
+      (setf (statecontainer-forward-result  (tensor-state tensor)) nil
+	    (statecontainer-backward-result (tensor-state tensor)) nil)))
 
 (defparameter *node-variables-tmp* nil)
 (defparameter *node-parameters-tmp* nil)
@@ -168,18 +169,20 @@ Return:
   ;; toplevel (usually out-scalar) -> forward -> each variables, parameters
   (let ((*node-variables-tmp*)
 	(*node-parameters-tmp*))
-    (let ((body `(lambda ()
-		   ;;(declare (optimize (speed 3) (safety 0)))
-		   (let ((,(tensor-id toplevel) ,toplevel))
-		     ,(trace-forward-computation-node toplevel)
-		     ,(tensor-id toplevel)))))
-      (when macroexpand
-	(print body))
+    (let ((body `(let ((,(tensor-id toplevel) ,toplevel))
+		   ,(trace-forward-computation-node toplevel)
+		   ,(tensor-id toplevel))))
+      (let ((body `(lambda ()
+		     (declare (optimize (speed 3)))
+		     (mapc #'state-reset! ',(remove-duplicates *node-variables-tmp*))
+		     ,body)))
+	(when macroexpand
+	  (print body))
 
-      ;; Enhancement: save the compiled body as fasl.
-      (values (compile nil body)
-	      (construct-variables-table (remove-duplicates *node-variables-tmp*))
-	      (remove-duplicates *node-parameters-tmp*)))))
+	;; Enhancement: save the compiled body as fasl.
+	(values (compile nil body)
+		(construct-variables-table (remove-duplicates *node-variables-tmp*))
+		(remove-duplicates *node-parameters-tmp*))))))
 
 (defun construct-backward (out-scalar &key (macroexpand nil))
   (declare (type AbstractTensor out-scalar))

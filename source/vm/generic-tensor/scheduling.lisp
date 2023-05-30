@@ -53,7 +53,23 @@
       :non-deterministic))
 
 (defun movetensor-p (tensor)
-  (typep tensor 'MoveTensorNode))
+  (subtypep (class-of (tensor-backward tensor))
+	    'cl-waffe2/base-impl:MoveTensorNode))
+
+(defmacro ignore-me? (tensor)
+  `(cl-waffe2/base-impl:movetensor-ignore-me
+    (tensor-backward ,tensor)))
+
+(defun tensor-attribute (tensor)
+  (declare (type AbstractTensor tensor))
+  (let ((name (tensor-name tensor)))
+    (typecase name
+      (string  :chain) ;; auto-generated
+      (keyword :input)
+      (T       :input))))
+
+(defmacro move-ignorable-p (tensor)
+  `(cl-waffe2/vm.nodes:node-passed-p (tensor-backward ,tensor)))
 
 (defun optimize-computation-node! (out-tensor major n-cores)
   "The function optimize-computation-node! do these works:
@@ -63,7 +79,10 @@
 3. Scheduling the lparallel depending on their nodes and threads."
   (declare (type AbstractTensor out-tensor)
 	   (type fixnum n-cores)
+	   (optimize (speed 3))
 	   (type (and keyword (member :speed :memory)) major))
+
+  ;; (setf lparallel:*kernel* (make-kernel 4))
   ;; <<TODO: Assert -> out-tensor is NOT MoveTensorNode>>
 
 
@@ -76,31 +95,48 @@
   ;;    [AddTensor]
   ;;
 
+  ;; (move-ignorable-p (car past-variables)) <- lparallel point
+  
+  ;; Explore in a top-down way.
   (let* ((current-node   (tensor-backward out-tensor))
  	 (past-variables (tensor-variables out-tensor))
 	 (state (node-state out-tensor)) ;; deterministic or non-deterministic
 	 )
-    
-    ;; e.g.:
-    ;;    Variables       | current-node
-    ;; [MoveTensor], [AddNode] -> [CurrentNode]
-    ;;  PastVar1      PastVar2      out-tensor (Corresponding tensors)
 
-    ;; If the tensor is deterministic and the higher node is MoveTensor
-    ;; Here's no dependencies between CurrentNode and N Higher Node.
-    ;; Therefore no need to make a copy, ignore it.
-    ;; Note that The case when the higher node's tensor is a Input.
-    ;; In that case, No Side-Effects are ALLOWED.
+    ;; When out-tensor is MoveTensorNode or the top of tensor...
+    (when (not (or (null current-node) (movetensor-p out-tensor)))
+      
+      ;; e.g.:
+      ;;    Variables             | current-node
+      ;; [MoveTensor], [AddNode] -> [CurrentNode]
+      ;;  PastVar1      PastVar2      out-tensor (Corresponding tensors)
 
-    ;; e.g.: [InputTensor] -> [MoveTensor] -> [1DFunction]
-    ;; ↑ Copy it
+      ;; If the tensor is deterministic and the higher node is MoveTensor
+      ;; Here's no dependencies between CurrentNode and N Higher Node.
+      ;; Therefore no need to make a copy, ignore it.
+      ;; Note that The case when the higher node's tensor is a Input.
+      ;; In that case, No Side-Effects are ALLOWED.
 
-    (when (and (eql state :deterministic))
+      ;; e.g.: [InputTensor] -> [MoveTensor] -> [1DFunction]
+      ;; ↑ Copy it
 
-      )
-    
-   
-    
+      ;;
+      ;;   t [Node]
+      ;;       |
+      ;;  t+1 [A]  <- The result of Node is only used once
+      ;;
 
-    ))
+      (when (and ;;(eql major :memory) ;; Only Enabled When Memory-Major.
+	         (eql state :deterministic)
+		 (movetensor-p (car past-variables)) ;; The higher node is MoveTensor
+		 (not (move-ignorable-p (car past-variables))) ;; Is it the last call in the node?
+		 (eql (tensor-attribute (car past-variables)) :chain))
+	(setf (move-ignorable-p (car past-variables)) t)
+	(setf (ignore-me? (car past-variables)) t)))
+
+    ;; Explore Higher
+    (mapc
+     #'(lambda (var)
+	 (optimize-computation-node! var major n-cores))
+     past-variables)))
 

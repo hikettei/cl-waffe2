@@ -14,8 +14,16 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defnode (MoveTensorNode (myself)
 	    :where `([~] [~] -> [~])
-	    :slots ((ignore-me :initarg nil)) ;; when t, ignored.
-	    :documentation "")))
+	    :slots ((ignore-me :initform nil :accessor movetensor-ignore-me)) ;; when t, ignored.
+	    :documentation "The Node MoveTensorNode must satisfy the following behaviours:
+
+Forward:
+1. If ignore-me is t, return the given value itself.
+2. Otherwise, move x <- y.
+
+Note that until (tensor-vec) is called, x is never allocated.
+
+The option ignore-me can be accessed by the function (movetensor-ignore-me MoveTensorNode)")))
 
 (defmacro with-export (name &body body)
   `(eval-when (:compile-toplevel :load-toplevel :execute)

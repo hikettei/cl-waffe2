@@ -7,7 +7,8 @@
     :function-node
     :reader abstractnode-node
     :type function) ;; [x y] [y z] -> [z x]
-   (variables :initform nil :reader node-variables :writer set-variables :type list))
+   (variables :initform nil :reader node-variables :writer set-variables :type list)
+   (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
 
 AbstractNode must possess following:
