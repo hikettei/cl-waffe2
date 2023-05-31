@@ -37,7 +37,6 @@
    #:with-no-grad)
 
   (:export
-   #:view
    #:viewinstruction
    #:viewinstruction-offset
    #:viewinstruction-size

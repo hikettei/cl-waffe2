@@ -24,7 +24,7 @@
 
 (defun test-simple-forward-with-view ()
   (with-single-device (LispTensor)
-    (let ((out (!add (view (make-tensor `(10 1)) t `(:broadcast 10))
+    (let ((out (!add (!view (make-tensor `(10 1)) t `(:broadcast 10))
 		     (make-tensor `(10 10)))))
       (funcall (construct-forward out :macroexpand nil)))))
 
@@ -49,7 +49,7 @@
 	   (weight  (make-tensor `(100 256) :requires-grad t))
 	   (bias    (make-tensor `(1 256)   :requires-grad t)))
 
-      (let ((out (!add (!mul train-x weight) (view bias `(:broadcast 100) t))))
+      (let ((out (!add (!mul train-x weight) (!view bias `(:broadcast 100) t))))
 	(multiple-value-bind (forward variables parameters) (construct-forward out :macroexpand nil)
 
 	  ;; Embody InputTensor with actual datum
