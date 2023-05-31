@@ -5,6 +5,7 @@
 	    (:constructor
 		make-astnode (tensor)))
   (id (gensym "NODE"))
+  (n-ref (cl-waffe2/vm.generic-tensor::tensor-n-ref tensor))
   (tensor tensor)
   (node (tensor-backward tensor))
   (shape (shape tensor) :type list))
@@ -26,6 +27,10 @@
 	  (keyword :input)
 	  (T :parameter)))))
 
+(defun movetensor-p (node)
+  (subtypep (class-of node)
+	    'cl-waffe2/base-impl:MoveTensorNode))
+
 (defparameter *all-of-nodes* nil)
 
 (defun trace-nodes (tensor)
@@ -44,7 +49,6 @@
   "TODO: DOCSTRING"
   (declare (type AbstractTensor out-tensor)
 	   (type (and keyword (member :dot :print)) format))
-
   (case format
     (:dot
      (output-to-dot out-tensor stream))
@@ -65,7 +69,7 @@
 
 (defun node-color (node)
   (let ((type (node-attribute node)))
-    (if (equal "Move" (node-dot-name node))
+    (if (movetensor-p (astnode-node node))
 	"gray"
 	(case type
 	  (:node "#e6e6fa")
@@ -83,8 +87,11 @@
       (:node (let* ((name (symbol-name (class-name (class-of (astnode-node node)))))
 		    (pos (or (position #\- name :test #'equal) (length name))))
 	       (if (equal "MOVETENSORNODE" (subseq name 0 pos))
-		   "Move"
-		   (subseq name 0 pos))))
+		   (format nil "~a"
+			   (if (movetensor-ignore-me (astnode-node node))
+			       "(Deleted)"
+			       "Move"))
+		   (format nil "~a [~a]" (subseq name 0 pos) (astnode-n-ref node)))))
       (t
        (let ((tensor (astnode-tensor node)))
 	 (format nil
@@ -155,6 +162,7 @@
 	   (x1 (!sub input (!f (!mul input bias))))
 	   (out (!sub x1 (!f input)))
 	   (out (!add l out)))
+      (cl-waffe2/vm.generic-tensor::optimize-computation-node! out :speed 4)
       (viz-computation-node out "./out.dot")
       )))
 
@@ -167,6 +175,7 @@
 	   (out1 (!add (!f input) weight))
 	   (out2 (!add (!f out1) weight))
 	   (out3 (!add (!f out2) weight)))
+      (cl-waffe2/vm.generic-tensor::optimize-computation-node! out3 :speed 4)
       (viz-computation-node out3 "./out1.dot"))))
 
 (defun build-node1 ()
@@ -184,9 +193,8 @@
       (multiple-value-bind (forward vars params) (construct-forward out3)
 	(embody-input vars :input val)
 	(time (funcall forward))
-	(time (funcall forward))
-	(time (funcall forward))
-	(time (funcall forward))
+	;;(time (funcall forward))
+	;;(time (funcall forward))
+	;;(time (funcall forward))
 	)
       )))
-

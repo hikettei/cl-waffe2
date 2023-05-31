@@ -22,15 +22,19 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 (defclass AbstractTensor ()
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list)
 
-   ;; MultiDimensional
+   ;; MultiDimensional APIs
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
    (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
-   
+
+   ;; Viewed?
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
+
+   ;; Is it scalar?
    (scalar-p :initarg :scalar-p :initform nil)
-   
+
+   ;; vec container
    (vec :initarg :vec :initform nil :reader vec :writer write-vec)
    (dtype :initform :float :initarg :dtype :reader dtype)
 
@@ -45,12 +49,14 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (grad :initform nil :reader grad :writer set-grad)
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
-   (trace-state :initform nil) ;; For Optimizing Computation Node
-
+   
+   (tensor-n-ref :initform 0 :accessor tensor-n-ref :type fixnum) ;; For optimizing
+   (tensor-already-traced :initform nil :accessor tensor-traced-p :type boolean)
+   
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
-   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape)
-   ))
+   
+   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape)))
 
 (defmethod tensor-delete ((tensor AbstractTensor))
   nil

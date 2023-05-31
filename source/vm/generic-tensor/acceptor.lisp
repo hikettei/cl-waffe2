@@ -1,14 +1,10 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; CFFI-Styleの No Overhead generic-function
-;; Building Forward/Backward codes
-
-;;(defstruct (StateContainer)) result (計算結果), state, (実行されてない 実行された), form (S式)を格納できる
-
-(defparameter *no-grad* nil "")
+(defparameter *no-grad* nil "TODO: DOC")
 
 (defmacro with-no-grad (&body body)
+  "TODO:DOC"
   `(let ((*no-grad* t))
      ,@body))
 

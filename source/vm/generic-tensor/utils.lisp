@@ -32,3 +32,4 @@
       (setf (nth i strides) (lazy* (nth (- i 1) strides)
 				   (nth (- i 1) shape))))
     strides))
+
