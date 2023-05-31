@@ -17,8 +17,6 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (declare (type keyword name))
   (or (eql name :column) (eql name :row)))
 
-;; cl-xmatrixからView関連のコードを移植しておく
-
 (defclass AbstractTensor ()
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list)
 
@@ -268,8 +266,8 @@ got: ~a" tensor)
 		 :dtype (dtype tensor)
 		 :order (order tensor)
 		 :requires-grad (slot-value tensor 'requires-grad)
-		 :shape (slot-value tensor 'orig-shape)
-		 :projected-p t
+		 :shape         (slot-value tensor 'orig-shape)
+		 :projected-p   t
 		 :past-view (tensor-view tensor)
 		 :view subscripts
 		 :input-shape (tensor-input-shape tensor)

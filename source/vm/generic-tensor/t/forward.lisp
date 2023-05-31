@@ -37,13 +37,13 @@
 
 ;; Still in Concept Stage but illustrates what cl-waffe can do.
 (defun test-complicated-network-forward ()
-  ;; with-devices ... 使用するTensorの優先順位
-  ;; LispTensor <- Common Lispで書かれたカーネル(SIMD化はAVX2まで)
+  ;; with-devices ... Priority of devices
+  ;; LispTensor <- AVX2, Common Lisp's simple-array
   ;; CPUTensor  <- Accelerated by OpenBLAS
   (with-devices (LispTensor)
 
-    ;; make-input  -> InputTensorを初期化する (Shapeの形状が決定してなくてOK)
-    ;; make-tensor -> AbstractTensorを初期化する (Shapeの形状が決定している必要がある + backendに応じてメモリをallocate)
+    ;; make-input  -> Initializes InputTensor (shape is any)
+    ;; make-tensor -> Initialises AbstractTensor (shape is determined)
     
     (let* ((train-x (make-input  `(batch-size 256) :train-x))
 	   (weight  (make-tensor `(100 256) :requires-grad t))
@@ -52,10 +52,10 @@
       (let ((out (!add (!mul train-x weight) (view bias `(:broadcast 100) t))))
 	(multiple-value-bind (forward variables parameters) (construct-forward out :macroexpand nil)
 
-	  ;; InputTensorに実際の学習データを与える
-	  (embody-input (getf variables :train-x) (make-tensor `(100 256)))
-	  (print variables)  ;; 変数一覧
-	  (print parameters) ;; Optimizerに渡す変数たち
+	  ;; Embody InputTensor with actual datum
+	  (embody-input variables :train-x (make-tensor `(100 256)))
+	  ;; (print variables)  ;; an list of variables used
+	  ;; (print parameters) ;; parameters to be optimized.
 	  (time (funcall forward))
 	  t)))))
 
@@ -63,9 +63,6 @@
   (is (test-complicated-network-forward)))
 
 ;; Tests call-with-view, view=t, dtype=uint8
-
-
-
 (defun test-elementwise-unroll-forward ()
   (with-devices (LispTensor)
     (let ((a (make-tensor `(3 3) :dtype :uint8))

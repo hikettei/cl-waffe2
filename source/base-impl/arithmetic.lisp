@@ -1,6 +1,14 @@
 
 (in-package :cl-waffe2/base-impl)
 
+;;
+;; Add: define-doc
+;;
+;;
+;;
+;;
+;;
+					
 (macrolet ((define-arithmetic-node (name document save-for-backward)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -138,6 +146,13 @@ This could be applied whenever the given axis is consisted of axes of list."
 	      nil
 	      "!sum: Assertion Failed because the given out's shape is ~a, but excepted: ~a" (shape out) shape)
 
-      (let ((out* (apply #'view out view-args)))
-	(!add out* tensor)))))
+      (let ((out* (apply #'!view out view-args)))
+	(apply #'!view
+	       (!add out* tensor)
+	       (loop for v in view-args
+		     if (and (typep v 'list)
+			     (eql (car v) :broadcast))
+		       collect 0
+		     else
+		       collect v))))))
 

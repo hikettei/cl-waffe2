@@ -9,7 +9,13 @@
    #:MoveTensorNode
    #:movetensor-ignore-me)
   (:export
-   #:!sum)
+   #:2DMatmulNode
+   #:!matmul)
+  (:export
+   #:!sum
+   #:!move
+   #:!copy
+   #:!view)
   (:export
    :node-x
    :node-y))

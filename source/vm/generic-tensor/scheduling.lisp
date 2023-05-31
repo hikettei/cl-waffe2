@@ -1,29 +1,6 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; Comment out in English:
-;; NFA <-> DFA
-;; DFA --> NFA
-
-;; out-tensorからTraceして、ノードに含まれる ignore-me optionをTにするか、
-;; 遷移先(variables)を適度置き換える
-
-;; deterministic-p
-;; nondeterministic-p
-
-;; Speed-Majorな最適化と (First)
-;; Memory-Majorな最適化のアルゴリズムがある (Second)
-
-;; Speed-Major
-;; Tensorで分岐しているノードをCopyして依存関係をなくす
-;; 非決定的な計算ノードに直してlparallelで並列化する
-
-
-;; 計算木の各部分は、一つのTensor-Inputに依存する
-;; この依存を解決するには
-;; NFA -> DFAに変換 (Memory-Major)
-;; TensorをCopy (Speed-Major)
-
 (defun deterministic-p (tensor)
   "Returns t if tensor's node is deterministic
 [Any-Previous-Node]
@@ -57,9 +34,6 @@
 
 (defmacro ignore-me? (node)
   `(cl-waffe2/base-impl:movetensor-ignore-me ,node))
-
-(defmacro move-ignorable-p (node)
-  `(cl-waffe2/vm.nodes:node-passed-p ,node))
 
 (defun tensor-attribute (tensor)
   (declare (type AbstractTensor tensor))

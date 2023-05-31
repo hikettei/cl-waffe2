@@ -271,13 +271,9 @@ Because : The actual ~ath argument given has a shape of ~a.
 
 
 ;; 二度とこのコード読みたくない
-;; TODO: Fix: let -> where OK
-;; TODO 四次元の時out-stateを構築できない
-;; TODO: ~のShapeを判定
-;; TOOD: out-stateのエラーのnote
-;; TODO: 仕様を書く
-;; TODO: Support it: where a = (1 2 3) (OK)
-;; TODO: Optimize them... (Enough fast with SBCL)
+;; Fix: subscript = [shape] where shape = `(1 2 3)
+;; => ndimension doesn't match. (Currently avoided by using ~)
+;; signifcantly slow compilation...
 (defun create-subscript-p (subscripts
 			   &key
 			     (macroexpand nil)
@@ -359,13 +355,15 @@ Rule4: ~は一度のみ使える
 	   ;; Unless then, ~ must be used as the same meaning in all args.
 	   (common-symbols (get-common-symbols (list first-state out-state)))
 	   (body
-	     `#'(lambda (,previous-subscripts
+	     `(lambda (,previous-subscripts
 			 &aux
 			   (,all-conditions)
 			   (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
+		(declare (optimize (compilation-speed 3))
+			 #+sbcl(sb-ext:muffle-conditions cl:style-warning sb-ext:compiler-note))
 		  ;; previous-suscriptsから次のSubscriptsを作成
 		  ;; If any, return error condition
-		  "Return: (values next-state condition)"
+		  ;; "Return: (values next-state condition)"
 		  ;; TODO: Judge At-Least dims and return error.
 		  ;; 1. Determine symbols, defined by let-binding
 
@@ -430,7 +428,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					 maximize (length p))
 				 collect nil)))
 		    (declare (ignorable ,@common-symbols))
-		    
 		    
 		    ;; TODO: When let-binding includes list, use it directly.
 		    
@@ -553,5 +550,5 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			 (reverse ,all-conditions))))))))
       (when macroexpand
 	(print body))
-      (eval body))))
+      (compile nil body))))
 

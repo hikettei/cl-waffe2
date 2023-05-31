@@ -153,7 +153,7 @@
 
     (make-variable-table symbols variable-table tmp-variable-table)))
 
-(defun construct-forward (toplevel &key (macroexpand nil))
+(defun construct-forward (toplevel &key (macroexpand nil) (ignore-optimize nil))
   "TODO: Docstring
 
 Return:
@@ -162,6 +162,8 @@ Return:
             all-tensors[list])"
   (declare (type AbstractTensor toplevel))
 
+  (unless ignore-optimize
+    (optimize-computation-node! toplevel :speed 1))
   ;; toplevel (usually out-scalar) -> forward -> each variables, parameters
   (let ((*node-variables-tmp*)
 	(*node-parameters-tmp*))
