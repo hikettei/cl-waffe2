@@ -164,7 +164,7 @@
 	   (x1 (!sub input (!f (!mul input bias))))
 	   (out (!sub x1 (!f input)))
 	   (out (!add l out)))
-      (viz-computation-node out "./out.dot")
+      (viz-computation-node out "./assets/out.dot")
       )))
 
 
@@ -176,7 +176,7 @@
 	   (out1 (!add (!f input) weight))
 	   (out2 (!add (!f out1) weight))
 	   (out3 (!add (!f out2) weight)))
-      (viz-computation-node out3 "./out1.dot")
+      (viz-computation-node out3 "./assets/out1.dot")
       (multiple-value-bind (forward vars params) (construct-forward out3)
 	(embody-input vars :input (make-tensor `(100 100)))
 	(time (funcall forward))
@@ -194,7 +194,7 @@
 	   (out1 (!add k weight))
 	   (out2 (!add k weight))
 	   (out3 (!mul out1 out2)))
-      (viz-computation-node out3 "./out2.dot")
+      (viz-computation-node out3 "./assets/out2.dot")
       (multiple-value-bind (forward vars params) (construct-forward out3)
 	(embody-input vars :input val)
 	(time (funcall forward))
@@ -205,11 +205,13 @@
 
 (defun build-node3 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
-    (let* ((x (make-tensor `(10 10)))
-	   (y (make-tensor `(10 10)))
+    (let* ((x (make-tensor `(100 100)))
+	   (y (make-tensor `(100 100)))
 	   (z (!sum (!add x (!f (!f (!f (!f (!f (!f y))))))))))
-      (viz-computation-node z "./out3.dot")
+
+      (viz-computation-node z "./assets/out2.dot")
       (multiple-value-bind (forward vars params) (construct-forward z)
+	(viz-computation-node z "./assets/out3.dot")
 	(time (funcall forward))
 	(time (funcall forward))
 	(time (funcall forward))
