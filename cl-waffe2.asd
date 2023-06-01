@@ -21,11 +21,13 @@
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
-	       (:file "vm/generic-tensor/acceptor")
 
 	       ;; Load package.lisp first. (since scheduling depends on vm/nodes/package, MoveNodeTensor in base-impl/package)
 	       (:file "vm/nodes/package")
 	       (:file "base-impl/package")
+	       
+
+	       (:file "vm/generic-tensor/acceptor")
 	       
 	       (:file "vm/generic-tensor/scheduling")
 	       

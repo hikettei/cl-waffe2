@@ -39,8 +39,9 @@
 				  ,(viewinstruction-by y-view)))
 			    `(,x ,y))
 			 ,x)))
-	     :backward ((self dy)
-			(values dy dy)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dx dy))
+			(values dout dout)))
 
 	     
 (define-impl (SubNode :device LispTensor)
@@ -59,31 +60,36 @@
 				  ,(viewinstruction-by y-view)))
 			    `(,x ,y))
 			 ,x)))
-	     :backward ((self dy)
-			(values dy dy)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dx dy))
+			(values dout dout)))
 
 
 (define-impl (MulNode :device LispTensor)
+	     ;;:save-for-backward (t t)
 	     :forward ((self x y)
 		       (let ((multiplier (matrix-mul (dtype x))))
-		       `(,@(call-with-view
-			    #'(lambda (x-view
-				       y-view)
-				`(funcall ,multiplier
-			 	  (tensor-vec ,x)
-				  (tensor-vec ,y)
-				  ,(viewinstruction-offset x-view)
-				  ,(viewinstruction-offset y-view)
-				  ,(viewinstruction-size x-view)
-				  ,(viewinstruction-by x-view)
-				  ,(viewinstruction-by y-view)))
-			    `(,x ,y))
-			 ,x)))
-	     :backward ((self dy)
-			(values dy dy)))
+			 `(,@(call-with-view
+			      #'(lambda (x-view
+					 y-view)
+				  `(funcall ,multiplier
+			 		    (tensor-vec ,x)
+					    (tensor-vec ,y)
+					    ,(viewinstruction-offset x-view)
+					    ,(viewinstruction-offset y-view)
+					    ,(viewinstruction-size x-view)
+					    ,(viewinstruction-by x-view)
+					    ,(viewinstruction-by y-view)))
+			      `(,x ,y))
+			   ,x)))
+	     :backward ((self dout dx dy)
+			(values
+			 (!mul dy dout)
+			 (!mul dx dout))))
 
 
 (define-impl (DivNode :device LispTensor)
+	     ;; :save-for-backward (t t)
 	     :forward ((self x y)
 		       (let ((divider (matrix-div (dtype x))))
 		       `(,@(call-with-view
@@ -99,8 +105,10 @@
 				  ,(viewinstruction-by y-view)))
 			    `(,x ,y))
 			 ,x)))
-	     :backward ((self dy)
-			(values dy dy)))
+	     :backward ((self dout dx dy)
+			(values
+			 (!mul dy dout)
+			 (!mul dx dout))))
 
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
@@ -135,5 +143,7 @@
 				      ,(viewinstruction-size x-view)))
 				`(,x ,y)))
 			    ,x)))
-	     :backward ((self dy)
-			(values dy)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dx dy))
+			(values dout dout)))
+

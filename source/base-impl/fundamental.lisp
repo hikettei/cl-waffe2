@@ -51,8 +51,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	      (declare (ignore old))
 	      `(progn ,viewed-tensor))
 	     :backward
-	     ((self dy)
-	      `(values ,dy ,dy)))
+	     ((self dout dx dy)
+	      (declare (ignore dx dy))
+	      (values dout dout)))
 
 (defun !view (tensor &rest subscripts)
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))

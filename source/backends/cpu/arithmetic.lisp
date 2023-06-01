@@ -30,7 +30,8 @@
 				  ,(viewinstruction-size x-view)))
 			    `(,x ,y))
 			 ,x))
-	     :backward ((self dy)
-			(values dy dy)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dx dy))
+			(values dout dout)))
 
 

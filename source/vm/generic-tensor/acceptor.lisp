@@ -115,15 +115,21 @@
 (defparameter *node-variables-tmp* nil)
 (defparameter *node-parameters-tmp* nil)
 
-(defun build (toplevel-tensor)
+(defun build (toplevel-tensor
+	      &key
+		(requires-grad (not *no-grad*))
+		(macroexpand-forward nil)
+		(macroexpand-backward nil))
   "Return:
     (values forward backward variables parameters)"
-  (multiple-value-bind (forward vars params) (construct-forward toplevel-tensor)
+  (multiple-value-bind (forward vars params backward)
+      (construct-forward toplevel-tensor
+			 :requires-grad requires-grad
+			 :macroexpand-forward macroexpand-forward
+			 :macroexpand-backward macroexpand-backward)
     (values
      forward
-     (unless *no-grad*
-       (construct-backward toplevel-tensor)
-       nil)
+     backward
      vars
      params)))
 
@@ -155,11 +161,12 @@
 
 (defun construct-forward (toplevel
 			  &key
-			    (macroexpand nil)
+			    (requires-grad nil)
+			    (macroexpand-forward nil)
+			    (macroexpand-backward nil)
 			    (ignore-optimize nil)
 			    (unroll-threshold 10))
   "TODO: Docstring
-
 
 Return:
     (values function-body[compiled-function]
@@ -179,28 +186,28 @@ Return:
       (let ((body `(lambda ()
 		     (declare (optimize (speed 3)))
 		     (mapc #'state-reset! ',(remove-duplicates *node-variables-tmp*))
-		     ,body)))
-	(when macroexpand
+		     ,body))
+	    (backward (if requires-grad
+			  (construct-backward toplevel :macroexpand macroexpand-backward))))
+	(when macroexpand-forward
 	  (print body))
 
 	;; Enhancement: save the compiled body as fasl.
 	(values (compile nil body) 
 		(construct-variables-table (remove-duplicates *node-variables-tmp*))
-		(remove-duplicates *node-parameters-tmp*))))))
+		(remove-duplicates *node-parameters-tmp*)
+		backward)))))
 
 (defun construct-backward (out-scalar &key (macroexpand nil))
   (declare (type AbstractTensor out-scalar))
 
   ;; out-scalar -> backward -> Each Parameters
-
-  (let ((*node-variables-tmp*)
-	(*node-parameters-tmp*))
-    (let ((body
-	    `(lambda (,(tensor-id out-scalar))
-	       ,(trace-backward-computation-node out-scalar (tensor-id out-scalar)))))
-      (when macroexpand
-	(print body))
-      (compile nil body))))
+  (let ((body
+	  `(lambda (,(tensor-id out-scalar))
+	     ,(trace-backward-computation-node out-scalar (tensor-id out-scalar)))))
+    (when macroexpand
+      (print body))
+    (compile nil body)))
 
 (defun map-tree (fn tree)
   (let ((tree (funcall fn tree)))
@@ -258,37 +265,12 @@ Return:
 ;; TODO: NO GC, NO ALLOC at runtime
 (defun trace-backward-computation-node (toplevel past-dy)
   (declare (type AbstractTensor toplevel))
-  (let* ((state (tensor-state toplevel))
-	 (variables  (tensor-variables toplevel))
-	 (out-place (gensym "OUT"))
-	 (dy-out (statecontainer-backward-out-form state))
-	 (dy     (statecontainer-backward-input-variable state))
-	 (dy-idx (tensor-id dy))
-	 (node  (tensor-backward toplevel))
-	 (node-id (gensym (format nil "~a" (class-name (class-of node))))))
 
-    ;; g(dy) -> dy-out0, dy-out1,
-    `(flet ((,node-id (,dy-idx)
-	      ;; compile backward. (e.g.: (values (!sin (cos dy))))
-	      (values
-	       ,@(loop for var in dy-out
-		       collect
-		       (if (tensor-state var)
-			   `(progn
-			      ;; g(dy) -> dy-out.
-			      ,@(trace-forward-computation-node var)
-			      ,(tensor-id var))
-			   (tensor-id var))))))
-       (let ((,out-place (multiple-value-list (,node-id (tensor-id ,past-dy)))))
-	 (declare (ignorable ,out-place))
-	 ,@(loop for k fixnum upfrom 0
-		 for var in variables
-		 if (tensor-state var)
-		   collect (trace-backward-computation-node
-			    var
-			    `(nth ,k ,out-place))
-		 if (slot-value var 'requires-grad)
-		   collect `(set-grad `(nth ,k ,out-place) ,var))))))
+;;  (apply
+  ;; #'cl-waffe2/vm.nodes::backward
+   ;;(tensor-backward toplevel)
+   ;;past-dy)
+  )
 
 
 ;; TODO

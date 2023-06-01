@@ -59,7 +59,7 @@ Here's a list of reports.
 ;; Backward: g(output-state) -> input-state
 
 (defgeneric forward  (node &rest inputs))
-(defgeneric backward (node dy))
+(defgeneric backward (node &rest inputs))
 
 ;; we can optimize or pruning the computation node
 (defmethod forward :around ((node AbstractNode) &rest inputs)
@@ -88,17 +88,6 @@ Here's a list of reports.
       ;; can be realised with self ...
       ;; recompute grad
       (let* ((forward-form (call-next-method))
-	     (backward-forms
-	       (map 'list
-		    #'(lambda (shape
-			       &aux (dy (make-input shape nil
-						    :dtype (dtype (car inputs))
-						    :order (order (car inputs)))))
-			(unless *no-grad*
-			  ;; (cons Input-Variable Output-Form)
-			  ;; g(InputVariable) -> OutputForm
-			  (cons dy (backward node dy))))
-		    out-state))
 	     (next-tensor
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
@@ -106,11 +95,8 @@ Here's a list of reports.
 				      (make-input shape nil
 						  :dtype (dtype (car inputs))
 						  :order (order (car inputs))))
-				    (bw (nth nth-arg backward-forms))
 				    (state (make-statecontainer
-					    :backward-input-variable (car bw)
 					    :forward-out-form forward-form
-					    :backward-out-form (cdr bw)
 					    :forward-n-out (length out-state)
 					    :backward-n-out (length input-states))))
 			       (setf (tensor-out-n next-tensor)     nth-arg)
@@ -137,13 +123,10 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 node
 	 (class-name (class-of node))))
 
-(defmethod backward :around ((node AbstractNode) dy)
+(defmethod backward :around ((node AbstractNode) &rest inputs)
   (unless *no-grad*
     (with-no-grad
-      (let ((out (multiple-value-list (call-next-method))))
-	;; out ... (list tensor1 tensor2)
-	out))))
+      (multiple-value-list (call-next-method)))))
 
-(defmethod backward ((node AbstractNode) dy)
+(defmethod backward ((node AbstractNode) &rest inputs)
   (error "Couldn't step backward because ~a backward is undefined." node))
-

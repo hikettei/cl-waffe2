@@ -20,13 +20,13 @@
   (with-single-device (LispTensor)
     (let ((out (!add (make-tensor `(10 10))
 		     (make-tensor `(10 10)))))
-      (funcall (construct-forward out)))))
+      (funcall (build out)))))
 
 (defun test-simple-forward-with-view ()
   (with-single-device (LispTensor)
     (let ((out (!add (!view (make-tensor `(10 1)) t `(:broadcast 10))
 		     (make-tensor `(10 10)))))
-      (funcall (construct-forward out :macroexpand nil)))))
+      (funcall (build out)))))
 
 (test test-forward
   (is (test-simple-forward)))
@@ -50,7 +50,7 @@
 	   (bias    (make-tensor `(1 256)   :requires-grad t)))
 
       (let ((out (!add (!mul train-x weight) (!view bias `(:broadcast 100) t))))
-	(multiple-value-bind (forward variables parameters) (construct-forward out :macroexpand nil)
+	(multiple-value-bind (forward bw variables parameters) (build out)
 
 	  ;; Embody InputTensor with actual datum
 	  (embody-input variables :train-x (make-tensor `(100 256)))
@@ -71,7 +71,7 @@
 	(setf (vref a i) 1)
 	(setf (vref b i) 1))
       (let ((out (!add a b)))
-	(multiple-value-bind (forward vars params) (construct-forward out :macroexpand nil)
+	(multiple-value-bind (forward bw vars params) (build out)
 	  (let ((result (tensor-vec (funcall forward))))
 	    (every #'(lambda (elm) (= elm 2)) result)))))))
 
@@ -83,7 +83,7 @@
 	(setf (vref a i) 1)
 	(setf (vref b i) 1))
       (let ((out (!add a b)))
-	(multiple-value-bind (forward vars params) (construct-forward out :macroexpand nil)
+	(multiple-value-bind (forward bw vars params) (build out)
 	  (let ((result (tensor-vec (funcall forward))))
 	    (every #'(lambda (elm) (= elm 2)) result)))))))
 

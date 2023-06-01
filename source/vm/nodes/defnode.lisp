@@ -145,17 +145,13 @@ Follow these constraints:
 	(impl-name (subnode-name abstract-name device)))
 
     (eval-when (:compile-toplevel :load-toplevel :execute)
-      ;; TODO
-      ;; 宣言された引数の数とforward-argsの数が違ったときにError
-      ;; the format is ~...
 
-
-      (assert (= (length backward-args) 1)
+      (assert (= (1- (length backward-args)) (length forward-args))
 	      nil
-	      "Assertion Failed because the arguments of backward, must be: (node dy) but got ~a. At ~a node"
+	      "(TODO: Rewrite it) Assertion Failed because the arguments of backward, must be: (node dy) but got ~a. At ~a node"
 	      backward-args
 	      abstract-name))
-
+    
     `(progn
        (eval-when (:compile-toplevel :load-toplevel :execute)
 	 (assert (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
@@ -175,10 +171,11 @@ Follow these constraints:
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
 	   ,@forward-body))
-       (defmethod backward ((,backward-self-name ,impl-name) ,@backward-args)
-	 (declare (type ,impl-name ,backward-self-name)
-		  (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
-	 ,@backward-body))))
+       (defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
+	 (declare (type ,impl-name ,backward-self-name))
+	 (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
+	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
+	   ,@backward-body)))))
 
 ;; backward-test-toolみたいなのが欲しい
 ;; torchviz/計算Tree/macroexpand;; (build tensor)みたいなノードで(works like pytorch's a.backward())計算ノードを受理 逆伝播の関数順伝播の関数を構築

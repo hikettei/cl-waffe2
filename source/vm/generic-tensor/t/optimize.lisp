@@ -12,7 +12,7 @@
 	     :forward ((self x)   `(progn
 				     ;;(print "1DFunc Called")
 				     ,x))
-	     :backward ((self dy) `(values ,dy)))
+	     :backward ((self dout dx) (values dout)))
 
 (defun !f (tensor)
   (forward (1DFunc) (!copy tensor)))
@@ -24,7 +24,7 @@
 	   (out1 (!add (!f input) weight))
 	   (out2 (!add (!f out1) weight))
 	   (out3 (!add (!f out2) weight)))
-      (multiple-value-bind (forward vars params) (construct-forward out3)
+      (multiple-value-bind (forward bw vars params) (build out3)
 	(viz-computation-node out3 "./assets/out1.dot")
 	(embody-input vars :input (make-tensor `(100 100)))
 	(funcall forward)))))
@@ -40,7 +40,7 @@
 	   (out2 (!add k weight))
 	   (out3 (!mul out1 out2)))
       
-      (multiple-value-bind (forward vars params) (construct-forward out3)
+      (multiple-value-bind (forward bw vars params) (build out3)
 	(viz-computation-node out3 "./assets/out2.dot")
 	(embody-input vars :input val)
 	(funcall forward)))))
@@ -51,7 +51,7 @@
 	   (y (make-tensor `(100 100)))
 	   (z (!sum (!add x (!f (!f (!f (!f (!f (!f y))))))))))
 
-      (multiple-value-bind (forward vars params) (construct-forward z)
+      (multiple-value-bind (forward bw vars params) (build z)
 	(viz-computation-node z "./assets/out3.dot")
 	(funcall forward)))))
 
