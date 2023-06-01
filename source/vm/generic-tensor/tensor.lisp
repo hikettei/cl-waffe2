@@ -174,7 +174,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   "Read-only. Only used for printing the tensor.
 Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors."
   (declare (type list subscripts))
-  (assert (eql (tensor-facet tensor) :exist)
+  (assert (not (null (vec tensor)))
 	  nil
 	  "Can't reference tensors which doesn't have a existing vec.")
   (vref tensor
@@ -191,7 +191,7 @@ Whether you cares about performance or not, this function shouldn't be used igno
 (defun (setf mref) (new-value tensor &rest subscripts)
   (declare (type list subscripts))
   
-  (assert (eql (tensor-facet tensor) :exist)
+  (assert (not (null (vec tensor)))
 	  nil
 	  "Can't reference tensors which doesn't have a existing vec.")
 
@@ -213,7 +213,7 @@ Whether you cares about performance or not, this function shouldn't be used igno
 
 If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
   (declare (type fixnum index))
-  (assert (eql (tensor-facet tensor) :exist)
+  (assert (not (null (vec tensor)))
 	  nil
 	  "Can't reference tensors which doesn't have a existing vec.")
   (aref (tensor-vec tensor) index))
@@ -224,7 +224,7 @@ Whether you cares about performance or not, this function shouldn't be used igno
 
 If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
   (declare (type fixnum index))
-  (assert (eql (tensor-facet tensor) :exist)
+  (assert (not (null (vec tensor)))
 	  nil
 	  "Can't reference tensors which doesn't have a existing vec.")
   (setf (aref (tensor-vec tensor) index) new-value))
@@ -304,7 +304,8 @@ got: ~a" tensor)
 	    (if state
 		(format nil "~%  :vec-state [~(~a~)]" (statecontainer-state state))
 		""))
-	  (if (eql (tensor-facet tensor) :input)
+	  (if (and (eql (tensor-facet tensor) :input)
+		   (null (vec tensor)))
 	      (format nil "<<Not-Embodied ~a Tensor>>" (shape tensor))
 	      ;; TODO: View -> View for printing 3d, 4d... tensor.
 	      (render-tensor tensor :indent 2))

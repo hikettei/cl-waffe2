@@ -209,7 +209,8 @@ Return:
 			 :dtype (dtype out-scalar)
 			 :order (order out-scalar)))
 	 (body `(lambda (,(tensor-id out))
-		  ,(explore-backwards out-scalar out))))
+		  ,(explore-backwards out-scalar out)
+		  t)))
     ;(print body)
     (when macroexpand (print body))
     (compile nil body)))
@@ -255,6 +256,7 @@ Return:
 		    ;; use state here, to avoid recomputing node.
 		    ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))
 	     (let (,@(loop for v in variables collect `(,(tensor-id v) ,v)))
+	       (declare (ignorable ,@(map 'list #'tensor-id variables)))
 	       ,@next-states
 	       (when (null (statecontainer-forward-result
 			    (tensor-state ,(tensor-id toplevel))))
@@ -269,6 +271,8 @@ Return:
 			   (tensor-state ,(tensor-id toplevel))))))))))))
 
 ;; TODO: Save-For-backward
+;; TODO: 不要なノードの枝刈り
+;; TODO: set-grad <- 加算
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
@@ -289,21 +293,20 @@ Return:
 	    ,@(map 'list
 		   #'(lambda (tensor)
 		       `(,(tensor-id tensor) ,tensor))
-		   outs)
-	    (,(tensor-id past-dy) ,past-dy))
+		   outs))
        (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
 		(ignorable ,@(map 'list #'tensor-id outs)))
        ,@(loop for out    in outs
 	       for tensor in (tensor-variables toplevel)
-	       if (tensor-state tensor)
-		 collect `(progn
-			    ,(trace-forward-computation-node out)
-			    ,(explore-backwards tensor out))
+	       collect `(progn
+			  (let ((,(tensor-id out) ,(trace-forward-computation-node out)))
+			  ,(if (tensor-state tensor)
+			       (explore-backwards tensor out))))
 
 	       ;; When Reached The End Of Nodes.
-	       if (and (null (tensor-state tensor))
-		       (slot-value tensor 'requires-grad))
-		 collect `(set-grad ,out ,tensor)))))
+	       if (slot-value tensor 'requires-grad)
+		 ;; Change to: Add
+		 collect `(set-grad ,(tensor-id out) ,tensor)))))
 
 
 ;; TODO

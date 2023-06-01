@@ -40,8 +40,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dout dx dy)
-			(declare (ignore dx dy))
-			(values dout dout)))
+			(values (!move dx dout) (!move dy dout))))
 
 	     
 (define-impl (SubNode :device LispTensor)
@@ -61,8 +60,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dout dx dy)
-			(declare (ignore dx dy))
-			(values dout dout)))
+			(values (!move dx dout) (!move dy dout))))
 
 
 (define-impl (MulNode :device LispTensor)
@@ -84,8 +82,8 @@
 			   ,x)))
 	     :backward ((self dout dx dy)
 			(values
-			 (!mul dy dout)
-			 (!mul dx dout))))
+			 (!move dx (!mul dout dx))
+			 (!move dy (!mul dout dy)))))
 
 
 (define-impl (DivNode :device LispTensor)
@@ -107,8 +105,8 @@
 			 ,x)))
 	     :backward ((self dout dx dy)
 			(values
-			 (!mul dy dout)
-			 (!mul dx dout))))
+			 (!move dx (!mul dy dout))
+			 (!move dy (!mul dx dout)))))
 
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
@@ -123,27 +121,27 @@
   (apply #'* (shape tensor)))
 
 (define-impl (MoveTensorNode :device LispTensor)
-	     :forward ((self x y)
-		       ;; x <- y
-		       ;; When a new tensor is created at body...?
-		       ;; how to jit it?
-		       (let ((mover (matrix-move (dtype x))))
-			 `(progn
-			    (when (not (movetensor-ignore-me ,self))
-			      ,(call-with-view
-				#'(lambda (x-view y-view)
-				    `(funcall
-				      ,mover
-				      (tensor-vec ,x)
-				      (tensor-vec ,y)
-				      ,(viewinstruction-offset x-view)
-				      ,(viewinstruction-offset y-view)
-				      ,(viewinstruction-by x-view)
-				      ,(viewinstruction-by y-view)
-				      ,(viewinstruction-size x-view)))
-				`(,x ,y)))
-			    ,x)))
+	     :forward
+	     ((self x y)
+	      ;; x <- y.
+	      ;; If movetensor-ignore-me is T, return y.
+	      (let ((mover (matrix-move (dtype x))))
+		`(if (not (movetensor-ignore-me ,self))
+	       	     (progn
+		       ,(call-with-view
+			 #'(lambda (x-view y-view)
+			     `(funcall
+			       ,mover
+			       (tensor-vec ,x)
+			       (tensor-vec ,y)
+			       ,(viewinstruction-offset x-view)
+			       ,(viewinstruction-offset y-view)
+			       ,(viewinstruction-by x-view)
+			       ,(viewinstruction-by y-view)
+			       ,(viewinstruction-size x-view)))
+			 `(,x ,y))
+		       ,x)
+		     ,y)))
 	     :backward ((self dout dx dy)
-			(declare (ignore dx dy))
-			(values dout dout)))
+			(values (!move dx dout) (!move dy dout))))
 
