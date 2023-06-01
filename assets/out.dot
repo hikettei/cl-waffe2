@@ -1,0 +1,66 @@
+digraph computation_node {
+  node[shape="box" style="filled" color="black" penwidth="2"];
+  INPUT [label = "INPUT
+(BATCH-SIZE N)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP1125 [label = "ChainTMP1125
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1272 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE1271 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  BIAS [label = "BIAS
+(BATCH-SIZE N)" fillcolor="#f0f8ff" style="filled, solid"];
+  INPUT [label = "INPUT
+(BATCH-SIZE N)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP1004 [label = "ChainTMP1004
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1267 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE1266 [label = "MULNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1046 [label = "ChainTMP1046
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1264 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1263 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  INPUT [label = "INPUT
+(BATCH-SIZE N)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP1077 [label = "ChainTMP1077
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1260 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE1259 [label = "SUBNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1156 [label = "ChainTMP1156
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1257 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1256 [label = "SUBNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  INPUT [label = "INPUT
+(BATCH-SIZE N)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP973 [label = "ChainTMP973
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1253 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE1252 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1198 [label = "ChainTMP1198
+(BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1250 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1249 [label = "ADDNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE1250 -> NODE1249[penwidth="2"];
+  ChainTMP1198 -> NODE1250[style="dashed"];
+  NODE1252 -> NODE1250[penwidth="2"];
+  NODE1253 -> NODE1252[weight=10];
+  ChainTMP973 -> NODE1253[style="dashed"];
+  INPUT -> NODE1253[style="dashed"];
+  NODE1256 -> NODE1249[penwidth="2"];
+  NODE1257 -> NODE1256[penwidth="2"];
+  ChainTMP1156 -> NODE1257[style="dashed"];
+  NODE1259 -> NODE1257[penwidth="2"];
+  NODE1260 -> NODE1259[weight=10];
+  ChainTMP1077 -> NODE1260[style="dashed"];
+  INPUT -> NODE1260[style="dashed"];
+  NODE1263 -> NODE1259[penwidth="2"];
+  NODE1264 -> NODE1263[penwidth="2"];
+  ChainTMP1046 -> NODE1264[style="dashed"];
+  NODE1266 -> NODE1264[penwidth="2"];
+  NODE1267 -> NODE1266[weight=10];
+  ChainTMP1004 -> NODE1267[style="dashed"];
+  INPUT -> NODE1267[style="dashed"];
+  BIAS -> NODE1266[style="dashed"];
+  NODE1271 -> NODE1256[penwidth="2"];
+  NODE1272 -> NODE1271[weight=10];
+  ChainTMP1125 -> NODE1272[style="dashed"];
+  INPUT -> NODE1272[style="dashed"];
+}
