@@ -130,7 +130,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		      (dtype :float)
 		      (vec  nil)
 		      (view nil)
-		      (order :column))
+		      (order :column)
+		      (initial-element))
   "The function make-tensor creates a new tensor of first-priority of *using-backend*"
   (declare (type list view)
 	   (ignore vec))
@@ -142,6 +143,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		     :shape shape-or-scalar
 		     :projected-p nil
 		     :facet :exist
+		     :initial-element initial-element
 		     :view view)
       (make-instance 'ScalarTensor
 		     :scalar-p t

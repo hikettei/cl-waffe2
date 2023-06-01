@@ -117,6 +117,7 @@
 
 (defun build (toplevel-tensor
 	      &key
+		(ignore-optimize nil)
 		(requires-grad (not *no-grad*))
 		(macroexpand-forward nil)
 		(macroexpand-backward nil))
@@ -124,6 +125,7 @@
     (values forward backward variables parameters)"
   (multiple-value-bind (forward vars params backward)
       (construct-forward toplevel-tensor
+			 :ignore-optimize ignore-optimize
 			 :requires-grad requires-grad
 			 :macroexpand-forward macroexpand-forward
 			 :macroexpand-backward macroexpand-backward)
@@ -205,10 +207,11 @@ Return:
 
   ;; out-scalar -> backward -> Each Parameters
 
-  (let* ((out (make-input (shape out-scalar) :out-scalar
-			 :dtype (dtype out-scalar)
-			 :order (order out-scalar)))
-	 (body `(lambda (,(tensor-id out))
+  (let* ((out (make-tensor (shape out-scalar)
+			   :dtype (dtype out-scalar)
+			   :order (order out-scalar)
+			   :initial-element 1.0))
+	 (body `(lambda ()
 		  ,(explore-backwards out-scalar out)
 		  t)))
     ;(print body)
@@ -286,6 +289,8 @@ Return:
 	       ;; detach from computation node.
 	       (map 'list #'view (tensor-variables toplevel)))))
 
+    ;; variables <- Parameterも上書きしちゃうのでCopy
+    ;; TODO: SaveForBackward
     `(let* (,@(map 'list
 		   #'(lambda (tensor)
 		       `(,(tensor-id tensor) ,tensor))
@@ -299,17 +304,15 @@ Return:
        ,@(loop for out    in outs
 	       for tensor in (tensor-variables toplevel)
 	       collect `(progn
-			  (let ((,(tensor-id out) ,(trace-forward-computation-node out)))
-			  ,(if (tensor-state tensor)
-			       (explore-backwards tensor out))))
-
-	       ;; When Reached The End Of Nodes.
-	       if (slot-value tensor 'requires-grad)
-		 ;; Change to: Add
-		 collect `(set-grad ,(tensor-id out) ,tensor)))))
+			  ,(trace-forward-computation-node out)
+			  ,(if (slot-value tensor 'requires-grad)
+			       `(set-grad ,(tensor-id out) ,(tensor-id tensor))
+			       (if (tensor-state tensor)
+				   (explore-backwards tensor out))))))))
 
 
 ;; TODO
+;; REPL-Friendly-Utils:
 ;; (defnode ValueTensor
 ;; (defun value (tensor) )
 
