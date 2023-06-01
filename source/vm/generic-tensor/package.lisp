@@ -54,7 +54,10 @@
 
   (:export
    #:embody-input
-   #:construct-forward)
+   #:build
+   #:construct-forward
+   #:construct-backward
+   )
 
   ;; Backends / Tensor API
   (:export

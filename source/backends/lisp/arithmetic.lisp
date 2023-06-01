@@ -40,7 +40,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dy)
-			`(values ,dy ,dy)))
+			(values dy dy)))
 
 	     
 (define-impl (SubNode :device LispTensor)
@@ -60,7 +60,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dy)
-			`(values ,dy ,dy)))
+			(values dy dy)))
 
 
 (define-impl (MulNode :device LispTensor)
@@ -80,7 +80,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dy)
-			`(values ,dy ,dy)))
+			(values dy dy)))
 
 
 (define-impl (DivNode :device LispTensor)
@@ -100,7 +100,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dy)
-			`(values ,dy ,dy)))
+			(values dy dy)))
 
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
@@ -136,6 +136,4 @@
 				`(,x ,y)))
 			    ,x)))
 	     :backward ((self dy)
-			`(values ,dy)))
-
-
+			(values dy)))

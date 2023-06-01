@@ -31,6 +31,6 @@
 			    `(,x ,y))
 			 ,x))
 	     :backward ((self dy)
-			`(values ,dy ,dy)))
+			(values dy dy)))
 
 

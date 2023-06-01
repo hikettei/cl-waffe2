@@ -94,7 +94,10 @@ Here's a list of reports.
 			       &aux (dy (make-input shape nil
 						    :dtype (dtype (car inputs))
 						    :order (order (car inputs)))))
-				 (unless *no-grad* (cons dy (backward node dy))))
+			(unless *no-grad*
+			  ;; (cons Input-Variable Output-Form)
+			  ;; g(InputVariable) -> OutputForm
+			  (cons dy (backward node dy))))
 		    out-state))
 	     (next-tensor
 	       (loop for shape in out-state
@@ -136,9 +139,10 @@ Use the define-impl macro to give definitions for the node and forward them.
 
 (defmethod backward :around ((node AbstractNode) dy)
   (unless *no-grad*
-    (let ((out (multiple-value-list (call-next-method))))
-      ;; update or lazy-evaluate
-      out)))
+    (with-no-grad
+      (let ((out (multiple-value-list (call-next-method))))
+	;; out ... (list tensor1 tensor2)
+	out))))
 
 (defmethod backward ((node AbstractNode) dy)
   (error "Couldn't step backward because ~a backward is undefined." node))

@@ -196,9 +196,8 @@ Return:
   (let ((*node-variables-tmp*)
 	(*node-parameters-tmp*))
     (let ((body
-	    `(lambda ()
-	       (let ((,(tensor-id out-scalar) ,out-scalar))
-		 ,(trace-backward-computation-node out-scalar out-scalar)))))
+	    `(lambda (,(tensor-id out-scalar))
+	       ,(trace-backward-computation-node out-scalar (tensor-id out-scalar)))))
       (when macroexpand
 	(print body))
       (compile nil body))))
@@ -256,21 +255,31 @@ Return:
 		    (statecontainer-forward-result
 		     (tensor-state ,(tensor-id toplevel)))))))))))
 
-
-;; TODO: NO GC, NO ALLOC
+;; TODO: NO GC, NO ALLOC at runtime
 (defun trace-backward-computation-node (toplevel past-dy)
   (declare (type AbstractTensor toplevel))
   (let* ((state (tensor-state toplevel))
 	 (variables  (tensor-variables toplevel))
 	 (out-place (gensym "OUT"))
-	 (dy-idx (tensor-id (statecontainer-backward-input-variable state)))
+	 (dy-out (statecontainer-backward-out-form state))
+	 (dy     (statecontainer-backward-input-variable state))
+	 (dy-idx (tensor-id dy))
 	 (node  (tensor-backward toplevel))
 	 (node-id (gensym (format nil "~a" (class-name (class-of node))))))
 
-    `(flet ((,node-id (,dy-idx)     
-	      ,@(dispatch-tensor-variable
-		 (statecontainer-backward-out-form state))))
-       (let ((,out-place (multiple-value-list (,node-id ,(tensor-id past-dy)))))
+    ;; g(dy) -> dy-out0, dy-out1,
+    `(flet ((,node-id (,dy-idx)
+	      ;; compile backward. (e.g.: (values (!sin (cos dy))))
+	      (values
+	       ,@(loop for var in dy-out
+		       collect
+		       (if (tensor-state var)
+			   `(progn
+			      ;; g(dy) -> dy-out.
+			      ,@(trace-forward-computation-node var)
+			      ,(tensor-id var))
+			   (tensor-id var))))))
+       (let ((,out-place (multiple-value-list (,node-id (tensor-id ,past-dy)))))
 	 (declare (ignorable ,out-place))
 	 ,@(loop for k fixnum upfrom 0
 		 for var in variables
@@ -281,4 +290,8 @@ Return:
 		 if (slot-value var 'requires-grad)
 		   collect `(set-grad `(nth ,k ,out-place) ,var))))))
 
+
+;; TODO
+;; (defnode ValueTensor
+;; (defun value (tensor) )
 
