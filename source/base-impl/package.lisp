@@ -10,6 +10,10 @@
    #:movetensor-ignore-me
    #:movetensor-save-for-backward)
   (:export
+   #:AddNode
+   #:SubNode
+   #:MulNode
+   #:DivNode
    #:2DMatmulNode
    #:!matmul)
   (:export
