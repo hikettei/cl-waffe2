@@ -7,7 +7,8 @@
 	:cl-waffe2/vm.nodes)
   (:export
    #:MoveTensorNode
-   #:movetensor-ignore-me)
+   #:movetensor-ignore-me
+   #:movetensor-save-for-backward)
   (:export
    #:2DMatmulNode
    #:!matmul)

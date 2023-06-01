@@ -45,6 +45,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
    (grad :initform nil :reader grad :writer set-grad)
+   (gradient-adder :accessor gradient-adder)
    (requires-grad :initform nil :initarg :requires-grad :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
    
@@ -84,6 +85,23 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; (defmacro variable  ())
 ;; (defmacro parameter ())
 
+(defun make-gradient-adder (target shape)
+  (let ((out (make-input shape nil
+			 :dtype (dtype target)
+			 :order (order target))))
+    (with-no-grad
+      (multiple-value-bind (fw bw vars params) (build (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode) (grad target) out))
+	(declare (ignore bw vars params))
+	#'(lambda (new-value)
+	    (assert (equal (shape new-value) shape)
+		    nil
+		    "Attempted to add a new grad: ~a to ~a but failed due to shaping problems."
+		    (shape new-value)
+		    shape)
+	    (embody-actual-tensor out new-value)
+	    (funcall fw)
+	    nil)))))
+
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p   (getf initargs :scalar-p))
 	(view       (getf initargs :view))
@@ -108,13 +126,32 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 	 (setf (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
-	 nil)))))
+	 nil)))
+    ;; Alloc for grads
+    (when (getf initargs :requires-grad)
+      (set-grad (make-tensor
+		 (tensor-visible-shape tensor)
+		 :dtype (getf initargs :dtype)
+		 :requires-grad nil
+		 :order (getf initargs :order))
+		tensor)
+      (setf (gradient-adder tensor)
+	    (make-gradient-adder tensor (tensor-visible-shape tensor))))))
 
+(defmethod add-grads ((tensor AbstractTensor) new-value)
+  "tensor's gradient += new-value"
+  (assert (slot-value tensor 'requires-grad)
+	  nil
+	  "Assertion Failed with requires-grad = t")
+  (funcall (gradient-adder tensor) new-value))
+
+;; (defmethod init-grads ())
 (defmacro assure-dimensions (mat1 mat2)
   "Does nothing if mat1 and mat2 has a completely the same shape, otherwise throws shaping-error."
   `(if (equal (the list (shape ,mat1)) (the list (shape ,mat2)))
        t
        (shaping-error "Assertion Failed because two matrices ~a and ~a couldn't operated together." (shape ,mat1) (shape ,mat2))))
+
 
 (defmethod calc-strides ((shape list) (order (eql :column)))
   "Computes column-major-strides"

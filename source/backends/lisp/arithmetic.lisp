@@ -64,7 +64,7 @@
 
 
 (define-impl (MulNode :device LispTensor)
-	     ;;:save-for-backward (t t)
+	     :save-for-backward (t t)
 	     :forward ((self x y)
 		       (let ((multiplier (matrix-mul (dtype x))))
 			 `(,@(call-with-view
@@ -87,7 +87,7 @@
 
 
 (define-impl (DivNode :device LispTensor)
-	     ;; :save-for-backward (t t)
+	     :save-for-backward (t t)
 	     :forward ((self x y)
 		       (let ((divider (matrix-div (dtype x))))
 		       `(,@(call-with-view

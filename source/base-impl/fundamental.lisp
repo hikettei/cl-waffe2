@@ -13,7 +13,8 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defnode (MoveTensorNode (myself)
 	    :where `([~] [~] -> [~])
-	    :slots ((ignore-me :initform nil :accessor movetensor-ignore-me)) ;; when t, ignored.
+	    :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		    (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	    :documentation "
 The Node MoveTensorNode must satisfy the following behaviours:
 

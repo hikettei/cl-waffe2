@@ -275,7 +275,6 @@ Return:
 
 ;; TODO: Save-For-backward
 ;; TODO: 不要なノードの枝刈り
-;; TODO: set-grad <- 加算
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
@@ -290,7 +289,6 @@ Return:
 	       (map 'list #'view (tensor-variables toplevel)))))
 
     ;; variables <- Parameterも上書きしちゃうのでCopy
-    ;; TODO: SaveForBackward
     `(let* (,@(map 'list
 		   #'(lambda (tensor)
 		       `(,(tensor-id tensor) ,tensor))
@@ -306,7 +304,8 @@ Return:
 	       collect `(progn
 			  ,(trace-forward-computation-node out)
 			  ,(if (slot-value tensor 'requires-grad)
-			       `(set-grad ,(tensor-id out) ,(tensor-id tensor))
+			       ;; !copy and add.
+			       `(add-grads ,tensor ,(tensor-id out))
 			       (if (tensor-state tensor)
 				   (explore-backwards tensor out))))))))
 
@@ -315,4 +314,3 @@ Return:
 ;; REPL-Friendly-Utils:
 ;; (defnode ValueTensor
 ;; (defun value (tensor) )
-

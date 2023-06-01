@@ -5,6 +5,9 @@
 
 (defparameter *facet-monopoly-mode* nil "If t, only use devices with Priority1, otherwise an error will occur.")
 
+(defun movetensor-p (node)
+  (subtypep (class-of node) 'cl-waffe2/base-impl:MoveTensorNode))
+
 (defun list-of-abstracttensor-p (list)
   "Return t if LIST is non nil and contains only AbstractTensor."
   (and (consp list)
@@ -123,6 +126,7 @@ because it requires a slot for node itself.")
 			&key
 			  (device))
 		       &key
+			 save-for-backward
 			 forward
 			 backward
 		       &aux
@@ -168,6 +172,12 @@ Follow these constraints:
        ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
+	 (loop for input in ,inputs
+	       for state in ',save-for-backward
+	       if state
+		 do (let ((prev (tensor-backward input)))
+		      (if (movetensor-p prev)
+			  (setf (cl-waffe2/base-impl:movetensor-save-for-backward prev) t))))
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
 	   ,@forward-body))

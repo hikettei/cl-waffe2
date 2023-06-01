@@ -70,6 +70,7 @@ tensor-ref-n indicates that how many times the tensor was used in the node."
  	 (past-variables (tensor-variables out-tensor)))
 
     (when (and (movetensor-p current-node)
+	       (not (cl-waffe2/base-impl:movetensor-save-for-backward current-node))
 	       ;; (!copy place past-out) i.e. (!copy Chain Past-Out)
 	       (eql (tensor-attribute (car past-variables)) :chain)
 	       (let* ((prev-out (second past-variables))
