@@ -153,8 +153,13 @@
 
     (make-variable-table symbols variable-table tmp-variable-table)))
 
-(defun construct-forward (toplevel &key (macroexpand nil) (ignore-optimize nil))
+(defun construct-forward (toplevel
+			  &key
+			    (macroexpand nil)
+			    (ignore-optimize nil)
+			    (unroll-threshold 10))
   "TODO: Docstring
+
 
 Return:
     (values function-body[compiled-function]
@@ -166,7 +171,8 @@ Return:
     (optimize-computation-node! toplevel :speed 1))
   ;; toplevel (usually out-scalar) -> forward -> each variables, parameters
   (let ((*node-variables-tmp*)
-	(*node-parameters-tmp*))
+	(*node-parameters-tmp*)
+	(*unroll-threshold* unroll-threshold))
     (let ((body `(let ((,(tensor-id toplevel) ,toplevel))
 		   ,(trace-forward-computation-node toplevel)
 		   ,(tensor-id toplevel))))
@@ -178,7 +184,7 @@ Return:
 	  (print body))
 
 	;; Enhancement: save the compiled body as fasl.
-	(values (compile nil body)
+	(values (compile nil body) 
 		(construct-variables-table (remove-duplicates *node-variables-tmp*))
 		(remove-duplicates *node-parameters-tmp*))))))
 
@@ -246,8 +252,7 @@ Return:
 		(multiple-value-list (funcall #',node-id ,@(dispatch-tensor-variable variables)))))
 	     
 	     (setq ,(tensor-id toplevel)
-		   (nth
-		    ,(tensor-out-n toplevel)
+		   (nth ,(tensor-out-n toplevel)
 		    (statecontainer-forward-result
 		     (tensor-state ,(tensor-id toplevel)))))))))))
 

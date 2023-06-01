@@ -79,6 +79,7 @@
   :components ((:file "vm/generic-tensor/t/package")
 	       (:file "vm/generic-tensor/t/forward")
 	       (:file "vm/generic-tensor/t/view")
+	       (:file "vm/generic-tensor/t/optimize")
 	       
 	       (:file "vm/nodes/t/package")
 	       (:file "vm/nodes/t/parser")

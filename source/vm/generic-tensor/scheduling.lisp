@@ -89,7 +89,9 @@ tensor-ref-n indicates that how many times the tensor was used in the node."
 
 1. Optimize MoveTensorNode
 2. Optimize the connection of ChainTMP
-3. Scheduling the lparallel depending on their nodes and threads."
+3. Scheduling the lparallel depending on their nodes and threads.
+
+Computation Time: O(total_nodes * 2)"
   (declare (type AbstractTensor out-tensor)
 	   (type (and keyword (member :speed :memory)) major)
 	   (type fixnum n-cores)
