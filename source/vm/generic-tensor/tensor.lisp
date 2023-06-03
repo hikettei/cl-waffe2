@@ -47,7 +47,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (grad :initform nil :reader grad :writer set-grad)
    (gradient-adder :accessor gradient-adder)
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
-   (ancestor-param-p :initform nil :accessor ancestor-param-p :type boolean)
+   (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
    
    (tensor-n-ref :initform 0 :accessor tensor-n-ref :type fixnum) ;; For optimizing

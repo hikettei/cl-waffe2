@@ -36,6 +36,7 @@
   `(cl-waffe2/base-impl:movetensor-ignore-me ,node))
 
 (defun tensor-attribute (tensor)
+  "Return: (member :chain :input)"
   (declare (type AbstractTensor tensor))
   (let ((name (tensor-name tensor)))
     (typecase name

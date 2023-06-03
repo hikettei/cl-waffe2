@@ -149,5 +149,6 @@
 				     (movetensor-ignore-me self))
 				    dout
 				    (!copy dout))))
+			  ;; side eff
 			  (values dout dy-out))))
 

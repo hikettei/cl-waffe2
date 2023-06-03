@@ -38,7 +38,10 @@
 		(export ',name)
 		(defun ,name (x y)
 		  ,document
-		  (forward (,node-name) (!copy x) y)))))
+		  ;; Note: !copy is only needed when backward will be used.
+		  (forward (,node-name) (!copy x) (if *no-grad*
+						      y
+						      (!copy y)))))))
   (define-arithmetic-node-caller
       !add
     AddNode

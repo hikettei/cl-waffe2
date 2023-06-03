@@ -173,9 +173,12 @@ Follow these constraints:
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
 	 ;; Make a copy of tensors by coercing them into invoke MoveTensorNode
+	 ;; The copy is only needed when cl-waffe2 is used as deep learning framework. (i.e.: backward is called)
 	 (loop for input in ,inputs
 	       for state in ',save-for-backward
-	       if state
+	       if (and state
+		       *no-grad*
+		       (cl-waffe2/vm.generic-tensor:ancestor-param-p input))
 		 do (let ((prev (tensor-backward input)))
 		      (if (movetensor-p prev)
 			  (setf (cl-waffe2/base-impl:movetensor-save-for-backward prev) t))))

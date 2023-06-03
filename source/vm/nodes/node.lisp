@@ -61,7 +61,6 @@ Here's a list of reports.
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node &rest inputs))
 
-;; we can optimize or pruning the computation node
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
