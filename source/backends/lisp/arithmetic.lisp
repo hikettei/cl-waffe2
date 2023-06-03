@@ -20,9 +20,6 @@
 ;; (disassemble (add-matrix :float)) <- using addss (AVX2 Only?)
 ;; (disassemble (add-matrix :double)) <- using addsd (AVX2 Only?)
 
-;; TODO: Implement Backward
-;; TODO: Node in Node (save-for-backward)
-
 (define-impl (AddNode :device LispTensor)
 	     :forward ((self x y)
 		       (let ((adder (matrix-add (dtype x))))

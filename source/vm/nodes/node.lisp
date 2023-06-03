@@ -92,6 +92,7 @@ Here's a list of reports.
 	     (next-tensor
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
+		     ;; Make -> ScalarTensor if shape = (1)
 		     collect (let* ((next-tensor
 				      (make-input shape nil
 						  :dtype (dtype (car inputs))

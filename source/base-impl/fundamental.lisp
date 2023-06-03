@@ -26,11 +26,6 @@ Note that until (tensor-vec) is called, x is never allocated.
 
 The option ignore-me can be accessed by the function (movetensor-ignore-me MoveTensorNode)")))
 
-(defmacro with-export (name &body body)
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (export ',name)
-     ,@body))
-
 
 (defun !move (place tensor)
   "TODO: DOCSTRING"
@@ -42,6 +37,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			 :dtype (dtype tensor)
 			 :order (order tensor))))
     (!move out tensor)))
+
 
 (defnode (ViewTensorNode (myself result)
 	  :where `([~ result] [~] -> [result] where result = ',result)))
@@ -57,6 +53,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	      (values dout dout)))
 
 (defun !view (tensor &rest subscripts)
+  "TODO: DOC"
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
     (with-tmp-device

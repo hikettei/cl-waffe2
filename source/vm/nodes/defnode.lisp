@@ -192,31 +192,3 @@ Follow these constraints:
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	   ,@backward-body)))))
 
-;; backward-test-toolみたいなのが欲しい
-;; torchviz/計算Tree/macroexpand;; (build tensor)みたいなノードで(works like pytorch's a.backward())計算ノードを受理 逆伝播の関数順伝播の関数を構築
-;; (value tensor)で今までのノードを動的に構築 (cl-waffeと同じ)
-;; どこでvalueしてもok. debug is ez.
-;; (build tensor)で関数構築するとき、Lispのコードも残しておく (i.e.: print debugなどもしやすい)
-
-;; Constaints 引数は以下の形式でないといけない
-;; Forward: (Node device-tensor1 device-tensor2 ...)
-;; Backward: (Node device-tensor1)
-
-;; TODO: Generic Where
-;; RNNみたいに(values x hs)を返したいときはどうする？
-;; outのコードは一パターンのみ
-;; (nth hoge result)を挟む...
-;; ViewNode
-
-;; Test it.
-
-
-;; How to handle with errors (ignoring shape)
-;; define-impl機能は頻繁に使うものでもないので、Testケースをたくさん書いて補うことにする
-
-;; TODO
-;; (variable  (make-tensor `(10 10))) #'(lambda (x) ~)
-;; (parameter (make-tensor `(10 10))) Optimized by optimizer
-;; (print-object Node)
-;; TODO: Error-case of define-impl
-

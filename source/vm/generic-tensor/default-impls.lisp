@@ -8,11 +8,6 @@
   (:documentation "The class ScalarTensor, is used to represent scalar-object."))
 
 (defmethod initialize-instance :before ((tensor ScalarTensor) &rest initargs &key &allow-other-keys)
-
-  (let ((vec (getf initargs :vec)))
-    (assert (typep vec 'number) nil
-	    "Assertion Failed with (typep vec 'number). but got: ~a" vec))
-
+  (declare (ignore initargs))
   (setf (slot-value tensor 'orig-shape)    `(1)
 	(slot-value tensor 'visible-shape) `(1)))
-

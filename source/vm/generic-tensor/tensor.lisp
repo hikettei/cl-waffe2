@@ -163,7 +163,8 @@ Note that this function is inlined.
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))
-    ;; Alloc for grads
+    
+    ;; Setup utils for collecting gradients.
     (when (getf initargs :requires-grad)
       (set-grad (make-tensor
 		 (tensor-visible-shape tensor)
@@ -254,13 +255,21 @@ Input:
     - order (as it is)"
   (declare (type list shape)
 	   (type (or null keyword) named))
-  (make-instance (car *using-backend*)
-		 :dtype dtype
-		 :order order
-		 :shape shape
-		 :input-shape shape
-		 :named (or named (symbol-name (gensym "ChainTMP")))
-		 :facet :input))
+  (if (equal shape `(1))
+      (make-instance 'ScalarTensor
+		     :dtype dtype
+		     :order order
+		     :shape shape
+		     :input-shape shape
+		     :named (or named (symbol-name (gensym "ChainTMPScalar")))
+		     :facet :input)
+      (make-instance (car *using-backend*)
+		     :dtype dtype
+		     :order order
+		     :shape shape
+		     :input-shape shape
+		     :named (or named (symbol-name (gensym "ChainTMP")))
+		     :facet :input)))
 
 (defun mref (tensor &rest subscripts)
   "Read-only. Only used for printing the tensor.
@@ -362,11 +371,9 @@ Note that view is only created for Tensors, not a Scalar.
 "
   ;; TODO: When tensor is scalar, return error.
 
-  (assert (not (typep tensor 'ScalarTensor))
-	  nil
-	  "Assertion Failed with (not (typep tensor 'ScalarTensor))
-ViewObject will never created to ScalarTensor.
-got: ~a" tensor)
+  (when (typep tensor 'ScalarTensor)
+    (format t ":BROADCAST IS IGNORED (TODO)")
+    (return-from view tensor))
 
   (make-instance (car *using-backend*)
 		 :dtype (dtype tensor)

@@ -27,3 +27,8 @@
 
 (in-package :cl-waffe2/base-impl)
 	
+(defmacro with-export (name &body body)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (export ',name)
+     ,@body))
+
