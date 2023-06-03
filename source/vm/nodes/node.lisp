@@ -66,7 +66,9 @@ Here's a list of reports.
   ;; Update Computation Nodes
 
   (let* ((transition-function (abstractnode-node node))
-	 (input-states (loop for i in inputs collect (shape i))))
+	 (input-states (loop for i in inputs collect (shape i)))
+	 ;; Records that Is it worth to trace backward?
+	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:requires-grad inputs)))
     
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
@@ -99,6 +101,7 @@ Here's a list of reports.
 					    :forward-out-form forward-form
 					    :forward-n-out (length out-state)
 					    :backward-n-out (length input-states))))
+			       (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p next-tensor) ancestor-param-p)
 			       (setf (tensor-out-n next-tensor)     nth-arg)
 			       (setf (tensor-state next-tensor)     state)
 			       (setf (tensor-backward next-tensor)  node)

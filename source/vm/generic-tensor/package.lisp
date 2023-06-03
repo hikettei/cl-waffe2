@@ -17,6 +17,8 @@
    #:tensor-name
    #:dtype
    #:tensor-attribute
+   #:requires-grad
+   #:ancestor-param-p
    #:mref
    #:vref
    #:grad

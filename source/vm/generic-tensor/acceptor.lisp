@@ -272,9 +272,7 @@ Return:
 			  (statecontainer-forward-result
 			   (tensor-state ,(tensor-id toplevel))))))))))))
 
-;; TODO: 不要なノードの枝刈り
 ;; TODO: backwardの定義 -> defnodeに移動
-;; TODO: ParameterをCopyしてSide-Effectsを排除する
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
@@ -305,8 +303,11 @@ Return:
 			  ,(if (slot-value tensor 'requires-grad)
 			       ;; !copy and add.
 			       `(add-grads ,(tensor-id tensor) ,(tensor-id out))
-			       (if (tensor-state tensor)
-				   (explore-backwards tensor out))))))))
+			       (when (and
+				      (tensor-state tensor)
+				      (ancestor-param-p tensor))
+				 ;; Explore deeper if there's any params.
+				 (explore-backwards tensor out))))))))
 
 
 ;; TODO

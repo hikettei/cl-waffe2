@@ -172,12 +172,14 @@ Follow these constraints:
        ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
+	 ;; Make a copy of tensors by coercing them into invoke MoveTensorNode
 	 (loop for input in ,inputs
 	       for state in ',save-for-backward
 	       if state
 		 do (let ((prev (tensor-backward input)))
 		      (if (movetensor-p prev)
 			  (setf (cl-waffe2/base-impl:movetensor-save-for-backward prev) t))))
+	 
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
 	   ,@forward-body))
