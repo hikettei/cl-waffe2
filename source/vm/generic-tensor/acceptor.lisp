@@ -272,19 +272,25 @@ Return:
 			  (statecontainer-forward-result
 			   (tensor-state ,(tensor-id toplevel))))))))))))
 
+(defun !maybe-move (place tensor)
+  (if (movetensor-p (tensor-backward tensor))
+      tensor
+      (cl-waffe2/base-impl:!move place tensor)))
+
 ;; TODO: backwardの定義 -> defnodeに移動
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
   ;; g(t's dout dx dy dz...) -> [t-1]'s dout
   ;; first past-dy = 1.0
-  (let ((outs (apply
+  (let* ((outs (apply
 	       ;; (backward self dout dx dy dz ...)
 	       #'cl-waffe2/vm.nodes::backward
 	       (tensor-backward toplevel)
 	       past-dy
 	       ;; detach from computation node by projecting into -> <t>.
-	       (map 'list #'view (tensor-variables toplevel)))))
+	       (map 'list #'view (tensor-variables toplevel))))
+	 (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
 
     `(let* (,@(map 'list
 		   #'(lambda (tensor)
@@ -310,6 +316,7 @@ Return:
 				 (explore-backwards tensor out))))))))
 
 ;; TODO
+
 ;; REPL-Friendly-Utils:
 ;; (defnode ValueTensor
 ;; (defun value (tensor) )

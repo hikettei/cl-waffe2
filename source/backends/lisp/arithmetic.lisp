@@ -15,6 +15,19 @@
   (define-arith-func matrix-mul *)
   (define-arith-func matrix-div /))
 
+(macrolet ((define-scalar-func (name f)
+	     `(define-with-typevar (,name u) (x scalar offsetx size incx)
+		(declare (optimize (speed 3))
+			 (type (simple-array u (*)) x)
+			 (type u scalar)
+			 (type fixnum offsetx size incx))
+		(dotimes (i size)
+		  (setf (aref x (+ offsetx (the fixnum (* incx i))))
+			(,f (aref x (+ offsetx (the fixnum (* incx i))))
+			    scalar))))))
+  (define-scalar-func scalar-add +)
+  (define-scalar-func scalar-mul *))
+
 ;; Even on SBCL:
 ;; (disassemble (add-matrix :uint8)) <- Fails to SIMDify
 ;; (disassemble (add-matrix :float)) <- using addss (AVX2 Only?)
@@ -56,7 +69,7 @@
 			    `(,x ,y))
 			 ,x)))
 	     :backward ((self dout dx dy)
-			(values (!move dx dout) (!move dy dout))))
+			(values (!move dx dout) (!move dy (!mul -1 dout)))))
 
 
 (define-impl (MulNode :device LispTensor)
@@ -78,8 +91,8 @@
 			   ,x)))
 	     :backward ((self dout dx dy)
 			(values
-			 (!move dx (!mul dout dx))
-			 (!move dy (!mul dout dy)))))
+			 (!move dx (!mul dout dy))
+			 (!move dy (!mul dout dx)))))
 
 
 (define-impl (DivNode :device LispTensor)
@@ -103,6 +116,44 @@
 			(values
 			 (!move dx (!mul dy dout))
 			 (!move dy (!mul dx dout)))))
+
+(define-impl (ScalarAdd :device LispTensor)
+	     :forward
+	     ((self scalar x)
+	      (let ((adder (scalar-add (dtype x))))
+		`(,@(call-with-view
+		     #'(lambda (x-view)
+			 `(funcall
+			   ,adder
+			   (tensor-vec ,x)
+			   (tensor-vec ,scalar)
+			   ,(viewinstruction-offset x-view)
+			   ,(viewinstruction-size x-view)
+			   ,(viewinstruction-by x-view)))
+		     `(,x))
+		  ,x)))
+	     :backward
+	     ((self dout dx dy)
+	      (values (!move dx dout) (!move dy dout))))
+
+(define-impl (ScalarMul :device LispTensor)
+	     :forward
+	     ((self scalar x)
+	      (let ((multiplier (scalar-mul (dtype x))))
+		`(,@(call-with-view
+		     #'(lambda (x-view)
+			 `(funcall
+			   ,multiplier
+			   (tensor-vec ,x)
+			   (tensor-vec ,scalar)
+			   ,(viewinstruction-offset x-view)
+			   ,(viewinstruction-size x-view)
+			   ,(viewinstruction-by x-view)))
+		     `(,x))
+		  ,x)))
+	     :backward
+	     ((self dout dx dy)
+	      (values (!mul dout dy) (!mul dout dx))))
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
   (declare (optimize (speed 3))

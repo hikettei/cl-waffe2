@@ -48,7 +48,8 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 (defun determine-facet-of-nodes (abstract-name devices)
   (declare (type list devices)
 	   (type symbol abstract-name))
-  (loop for device in devices
+  ;; ScalarTensor is forced to use.
+  (loop for device in `(,@devices ScalarTensor)
 	do (let ((node-name (subnode-name abstract-name device)))
 	     (when (subtypep node-name abstract-name)
 	       (return-from determine-facet-of-nodes
