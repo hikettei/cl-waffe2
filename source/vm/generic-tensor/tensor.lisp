@@ -143,7 +143,8 @@ Note that this function is inlined.
 	(view       (getf initargs :view))
 	(order      (getf initargs :order))
 	(orig-shape (getf initargs :shape)))
-    
+
+    ;; orig-shape = used to compute strides.
     (setf (slot-value tensor 'orig-shape) orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
     

@@ -24,6 +24,7 @@
    #:vref
    #:grad
    #:order
+   #:view
    )
 
   ;; Dtype API

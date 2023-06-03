@@ -50,7 +50,7 @@ The result sequence MUST not over max-length.
 			 tensor
 			 &aux
 			   (size (nth dim-indicator (shape tensor))))
-
+  
   (if (>= size
 	  *matrix-column-elements-displaying-length*)
       (let ((midpoint (round (/ *matrix-column-elements-displaying-length* 2))))
@@ -91,7 +91,7 @@ The result sequence MUST not over max-length.
   (cond
     ((= 1 (length (shape tensor)))
      (pprint-1d-vector stream dim-indicator tensor))
-    ((= dim-indicator (1- (length (shape tensor))))
+    ((= (1+ dim-indicator) (length (shape tensor)))
      (pprint-1d-vector stream dim-indicator tensor))
     (T
      (write-string "(" stream)
@@ -103,7 +103,6 @@ The result sequence MUST not over max-length.
 	   (dotimes (i first-dim)
 	     ;; pprint(n-1) and indent
 	     (let ((tensor-view (apply #'view tensor `(,@args ,i))))
-	       
 	       (pprint-vector stream tensor-view newline (1+ indent-size) (1+ dim-indicator)))
 	     
 	     (unless (= i (1- first-dim))

@@ -1,8 +1,17 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;;
+;; TODO:
+;; 1. All View APIs
+;;    |-> parse-subscript, call-with-view
+;; 2. Optimize Call-With-View (by reshaping it).
+;;    e.g.: `(10 10 10) is reshaped into `(1000). for view=`(t t t)
+;;    ^-Offsetが0の次元は連結する
+;;    e.g.: `(t t t) should be regarded as `(3t), as long as they're continuous in memory
+;; 3. Prepare Documentations
 
-(defparameter *unroll-threshold* 10 "Unroll if iternum is below this threshold")
+(defparameter *unroll-threshold* 10 "Unroll if iternum falls below this threshold")
 
 ;; TO Add: ViewInstruction2D to implement matmul
 (defstruct (ViewInstruction
@@ -12,12 +21,14 @@
   (by)
   (offset))
 
+;; (stride-of view) (offset-of view) (size-of view)
+
 (deftype subscript-t ()
   "An list of types which is allowed to become subscripts of the function view."
   `(or fixnum list null t))
 
 (deftype subscript-syntax ()
-  `(member :index :t :slice :slice-step :indices :tflist :broadcast :repeat))
+  `(member :index :t :slice :slice-step :indices :tflist :broadcast))
 
 (defstruct (subscript
 	    (:print-function
@@ -68,8 +79,7 @@
 		 :keyword (case (car view)
 			    (:indices :indices)
 			    (:broadcast :broadcast)
-			    (:repeat :repeat)
-			    (T (error ":indices :broadcast :repeat")))))
+			    (T (error "Unknown view keyword ~a, all available keywords are following: :indices :broadcast :repeat" view)))))
 
 (defun compute-visible-actual-shape (tensor)
   (loop for v in (tensor-view tensor)
@@ -82,18 +92,19 @@
 		    s))))
 
 (defun compute-visible-start-idx (view size)
+  "Given view, this function returns a offset at the dimension."
   (declare (ignore size))
   (case (viewtype view)
     (:index view)
     (:t     0)
-    (:slice (car view))
+    (:slice      (car view))
     (:slice-step (car view))
     (:indices 0)
     (:tflist  0)
-    (:broadcast 0)
-    (:repeat 0)))
+    (:broadcast 0)))
 
 (defun compute-visible-end-idx (view size)
+  "Given view and size, this function returns a size at the dimension."
   (case (viewtype view)
     (:index (1+ view))
     (:t     size)
@@ -102,8 +113,7 @@
     (:slice-step (round (/ (second view) (abs (third view)))))
     (:indices (length (cdr view)))
     (:tflist  size)
-    (:broadcast (second view))
-    (:repeat `(* ,(second view) size))))
+    (:broadcast (second view))))
 
 (defun compute-visible-end-idx-actual (view size)
   (case (viewtype view)
@@ -114,8 +124,7 @@
     (:slice-step (round (/ (second view) (abs (third view)))))
     (:indices (length (cdr view)))
     (:tflist  size)
-    (:broadcast 1)
-    (:repeat (second view))))
+    (:broadcast 1)))
 
 (defun force-list (view)
   "Returns subscript-t if view is Subscript otherwise returns a view"
@@ -124,7 +133,7 @@
       view))
 
 (defun compute-visible-shape (orig-shape view)
-  "TODO: DOC"
+  "Returns a visible size of orig-shape given view."
   (loop for o in orig-shape
 	for i upfrom 0
 	collect (let* ((v     (or (nth i view) t))
@@ -142,6 +151,7 @@
 
 
 (defun parse-absolute (index size)
+  "Returns a absolute index."
   (typecase size
     (fixnum (if (< index 0)
 		(+ index size)
@@ -154,7 +164,10 @@
 
 (defgeneric step-subscript (before-type after-type before after size))
 
+;; ===================================================
 ;; [T] -> Any
+;; ===================================================
+
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :index))
 			   before
@@ -162,6 +175,8 @@
 			   size)
   "Tensor[t][Index]
 Return: (values after-view error)"
+
+  ;; Parse -1, -2, -3...
   (let ((index (parse-absolute (subscript-view after) size)))
     (setf (subscript-char after) size
           (subscript-constraints after) `(,index t)
@@ -203,7 +218,7 @@ Return: (values after-view error)"
   (let* ((view (subscript-view after))
 	 (view (map 'list #'(lambda (v) (parse-absolute v size)) (butlast view))))
     (setf (subscript-char after) size
-	  (subscript-constraints after) `(,(second view) t)
+	  (subscript-constraints after) `(,(max (car view) (second view)) t)
 	  (subscript-view after) `(,@view ,(third (subscript-view after))))
     after))
 
@@ -217,6 +232,7 @@ Return: (values after-view error)"
   (let* ((view (subscript-view after)))
     (if (typep view 'list)
 	nil) ;; maximize view ...
+    
     ;; TMP
     (setf (subscript-char after) size
 	  (subscript-constraints after) `(0 t))
@@ -232,19 +248,10 @@ Return: (values after-view error)"
 	(subscript-constraints after) `(1 1))
   after)
 
-(defmethod step-subscript ((x (eql :t))
-			   (y (eql :repeat))
-			   before
-			   after
-			   size)
-  
-  "Tensor[t][:repeat n]"
-  (setf (subscript-char after) size
-	(subscript-constraints after) `(0 t))
-  after)
-
+;; ===================================================
 ;; Tensor[Index] -> Any
 ;; Tensor = (10, 10), Tensor[0] = (1, 10)
+;; ===================================================
 
 (defmethod step-subscript ((x (eql :index))
 			   (y (eql :t))
@@ -252,7 +259,7 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[0][t] is the same as just doing Tensor[t][0]"
-  (step-subscript :t :t before after size))
+  before)
 
 
 (defmethod step-subscript ((x (eql :index))
@@ -261,6 +268,8 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[0][1]"
+
+  ;; Return error?
   (step-subscript :t :index before after size))
 
 (defmethod step-subscript ((x (eql :index))
@@ -280,14 +289,6 @@ Return: (values after-view error)"
   (step-subscript :t :slice-step before after size))
 
 (defmethod step-subscript ((x (eql :index))
-			   (y (eql :indices))
-			   before
-			   after
-			   size)
-  "Tensor[1][:indices 0 1 2]"
-  (step-subscript :t :indices before after size))
-
-(defmethod step-subscript ((x (eql :index))
 			   (y (eql :tflist))
 			   before
 			   after
@@ -303,17 +304,9 @@ Return: (values after-view error)"
   "Tensor[1][:broadcast 10]"
   (step-subscript :t :broadcast before after size))
 
-(defmethod step-subscript ((x (eql :index))
-			   (y (eql :repeat))
-			   before
-			   after
-			   size)
-  "Tensor[1][:repeat 10]"
-  ;; The same as just doing broadcast
-  (step-subscript :t :broadcast before after size))
-
-
+;; ===================================================
 ;; Tensor[0:10] -> Any
+;; ===================================================
 
 (defmethod step-subscript ((x (eql :slice))
 			   (y (eql :t))
@@ -321,7 +314,7 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[0:10][t] is the equivalent to Tensor[t][0:10]"
-  (step-subscript :t :slice before after size))
+  before)
 
 (defmethod step-subscript ((x (eql :slice))
 			   (y (eql :index))
@@ -332,7 +325,7 @@ Return: (values after-view error)"
 
 I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
   (incf (subscript-view after) (car (subscript-view before)))
-  (step-subscript :t :slice before after size))
+  after)
 
 (defmethod step-subscript ((x (eql :slice))
 			   (y (eql :slice))
@@ -343,8 +336,9 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
   (incf (car (subscript-view after))
 	(car (subscript-view before)))
   (incf (second (subscript-view after))
-	(car (subscript-view before)))
-  (step-subscript :t :slice before after size))
+	(car    (subscript-view before)))
+  ;; (step-subscript :t :slice before after size)
+  after)
 
 (defmethod step-subscript ((x (eql :slice))
 			   (y (eql :slice-step))
@@ -380,16 +374,6 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
 			   size)
   "Tensor[2:10][:broadcast 10]"
   (error "TODO [2:10] -> [:broadcast 10]"))
-
-(defmethod step-subscript ((x (eql :slice))
-			   (y (eql :repeat))
-			   before
-			   after
-			   size)
-  "Tensor[2:10][:repeat 10]"
-  (error "TODO [2:10] -> [:repeat 10]"))
-
-
 
 ;; Tensor[:broadcast n] -> Any
 (defmethod step-subscript ((x (eql :broadcast))
@@ -515,7 +499,11 @@ Return: List[SubScript]
     (:slice-step (third view))
     (:broadcast 0)
     (T 1)))
-    
+
+(defun optimize-shape (tensor)
+  ;; `(t t t) -> `(t)
+  )
+
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 (defun call-with-view (function
 		       tensors
@@ -534,6 +522,7 @@ Return: List[SubScript]
   
   (labels ((expand-with-function (target-dim offsets)
 	     ;; currently only for 1d
+	     ;; Here, :tflist, :indices
 	     (apply function
 		    (loop for k fixnum upfrom 0
 			  for tensor in tensors
