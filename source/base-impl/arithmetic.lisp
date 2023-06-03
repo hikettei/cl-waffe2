@@ -101,19 +101,19 @@ Note that the operation is automatically replaced into in-place operation."
 		  (forward (,node-name) scalar (!copy x))))))
   (define-scalar-mat-node-caller
       !scalar-add ScalarAddNode
-    "DOC")
+    "X += scalar")
   (define-scalar-mat-node-caller
       !scalar-mul ScalarMulNode
-    "DOC"))
+    "X *= scalar"))
 
 (with-export !scalar-sub
   (defun !scalar-sub (scalar x)
-    "DOC"
+    "X -= scalar"
     (!scalar-add (- scalar) x)))
 
 (with-export !scalar-div
   (defun !scalar-div (scalar x)
-    "DOC"
+    "X /= scalar"
     (!scalar-mul (/ scalar) x)))
 
 ;; ===============================================================
