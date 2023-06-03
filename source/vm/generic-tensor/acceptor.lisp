@@ -210,11 +210,10 @@ Return:
   (let* ((out (make-tensor (shape out-scalar)
 			   :dtype (dtype out-scalar)
 			   :order (order out-scalar)
-			   :initial-element 1.0))
+			   :initial-element 1))
 	 (body `(lambda ()
 		  ,(explore-backwards out-scalar out)
 		  t)))
-    ;(print body)
     (when macroexpand (print body))
     (compile nil body)))
 
@@ -273,8 +272,9 @@ Return:
 			  (statecontainer-forward-result
 			   (tensor-state ,(tensor-id toplevel))))))))))))
 
-;; TODO: Save-For-backward
 ;; TODO: 不要なノードの枝刈り
+;; TODO: backwardの定義 -> defnodeに移動
+;; TODO: ParameterをCopyしてSide-Effectsを排除する
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
@@ -285,10 +285,9 @@ Return:
 	       #'cl-waffe2/vm.nodes::backward
 	       (tensor-backward toplevel)
 	       past-dy
-	       ;; detach from computation node.
+	       ;; detach from computation node by projecting into -> <t>.
 	       (map 'list #'view (tensor-variables toplevel)))))
 
-    ;; variables <- Parameterも上書きしちゃうのでCopy
     `(let* (,@(map 'list
 		   #'(lambda (tensor)
 		       `(,(tensor-id tensor) ,tensor))
@@ -305,7 +304,7 @@ Return:
 			  ,(trace-forward-computation-node out)
 			  ,(if (slot-value tensor 'requires-grad)
 			       ;; !copy and add.
-			       `(add-grads ,tensor ,(tensor-id out))
+			       `(add-grads ,(tensor-id tensor) ,(tensor-id out))
 			       (if (tensor-state tensor)
 				   (explore-backwards tensor out))))))))
 

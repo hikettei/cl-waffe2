@@ -55,18 +55,52 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
    
-   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape)))
+   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
+  (:documentation "The class AbstractTensor is a fundamental datatype of dealing with various kernel (e.g.: CPU, Metal, CUDA...).
+
+The class provides the fundamental features following:
+    1. Lazy-Evaluated Multi-Dimensional Matrix APIs, and accordingly stride APIs for column/row major.
+    2. Multi-Dimensional Matrix Offsets (i.e.: View APIs).
+    3. Recording What Functions were called in the previous computation. (To construct backward.)
+    4. vec container
+    5. Keep Gradients
+    6. Input API
+    7. Trace Informations for JIT to create well-optimized computation node.
+
+Users can extend this class and define the brand-new Tensor's Dtype depending on their use.
+
+See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.
+"))
 
 (defmethod tensor-delete ((tensor AbstractTensor))
+  ""
   nil
   )
 
 ;; Inline
 (declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
+  "The function tensor-vec has a multiple behaviours depending on the state of tensor.
+
+1. If the given tensor is existing, or is input but allocated.
+   Returns the given tensor's vec.
+
+2. If the given tensor is Input, and still not yet being accessed.
+   Allocates the new area for matrix, and set tensor's vec slot it.
+   The allocated area of tensor is returned.
+
+In a short words:
+
+Basically, tensor-vec is a function where:
+  Input  -> AbstractTensor
+  Output -> The tensor's vec slot (depends on their kernel)
+
+However, using this function allows us to optimize the timing of allocation.
+
+Note that this function is inlined.
+"
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
-  ;; add: (assert )
   (if (null (tensor-name tensor))
       (vec tensor)
       (if (vec tensor) ;; add: equal size?
@@ -86,6 +120,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; (defmacro parameter ())
 
 (defun make-gradient-adder (target shape)
+  "Returns a instant-kernel to add the new-gradient to given target."
   (let ((out (make-input shape nil
 			 :dtype (dtype target)
 			 :order (order target))))
@@ -169,7 +204,17 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		      (view nil)
 		      (order :column)
 		      (initial-element))
-  "The function make-tensor creates a new tensor of first-priority of *using-backend*"
+  "Refering a first-priority of  *using-backends* (that is, a car part) to know what kernel to use, the function make-tensor creates and allocate a new matrix.
+
+Input:
+    - shape-or-scalar (Any), set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
+    - requires-grad (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
+    - dtype (keyword) Set dtype you wanna use. See also: (Dtype API)
+    - vec (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
+    - order (member :column :row) 
+    - initial-element (Optional)
+
+With regard to practical usage, the tutorials would be more helpful rather than this document."
   (declare (type list view)
 	   (ignore vec))
   (if (typep shape-or-scalar 'list)
@@ -198,7 +243,14 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 		   &key
 		     (dtype :float)
 		     (order :column))
-  "named ... variable-name (keyword)"
+  "Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
+WIth regard to practical usage, visit my tutorial.
+
+Input:
+    - Shape [list] Consisted of Fixnum or Symbol.
+    - named [keyword]
+    - dtype (as it is)
+    - order (as it is)"
   (declare (type list shape)
 	   (type (or null keyword) named))
   (make-instance (car *using-backend*)
@@ -274,11 +326,11 @@ If you've created a new backend with having different ptr-type (can't be accesse
 
   (assert (eql (tensor-facet input-tensor) :input)
 	  nil
-	  "Assertion Failed with (eql (tensor-facet input-tensor) :input)")
+	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
 
-  (assert (eql (tensor-facet actual-tensor) :exist)
+  (assert (vec actual-tensor)
 	  nil
-	  "Assertion Failed with (eql (tensor-facet actual-tensor) :exist)")
+	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
   (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
@@ -292,7 +344,21 @@ If you've created a new backend with having different ptr-type (can't be accesse
 
 ;; TODO: Extend the backward states.
 (defun view (tensor &rest subscripts)
-  "TODO: Docstring"
+  "The function view creates a view of given tensor.
+Note that the function *view* doesn't records ANY NODES, while the function *!view* does.
+
+Subscripts can be following:
+
+- fixnum
+- (start stop)
+- (start stop by)
+- t
+- (:indices ...)
+- (:tflist ...)
+- (:broadcast fixnum)
+
+Note that view is only created for Tensors, not a Scalar.
+"
   ;; TODO: When tensor is scalar, return error.
 
   (assert (not (typep tensor 'ScalarTensor))

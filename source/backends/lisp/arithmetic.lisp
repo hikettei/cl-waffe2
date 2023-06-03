@@ -41,7 +41,6 @@
 			 ,x)))
 	     :backward ((self dout dx dy)
 			(values (!move dx dout) (!move dy dout))))
-
 	     
 (define-impl (SubNode :device LispTensor)
 	     :forward ((self x y)
@@ -143,5 +142,5 @@
 		       ,x)
 		     ,y)))
 	     :backward ((self dout dx dy)
-			(values (!move dx dout) (!move dy dout))))
+			(values (!copy dout) (!copy dout))))
 
