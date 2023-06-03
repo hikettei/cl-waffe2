@@ -158,7 +158,6 @@ The result sequence MUST not over max-length.
 	     (write-string ")" stream)))))))
 
 
-
 (defun render-tensor (tensor &key (indent 0))
   "The function reader-tensor renders :vec parts"
   (when (typep tensor 'Scalartensor)

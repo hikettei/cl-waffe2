@@ -16,6 +16,7 @@
    #:tensor-facet
    #:tensor-name
    #:dtype
+   #:tensor-attribute
    #:mref
    #:vref
    #:grad

@@ -107,7 +107,6 @@
 			 (!move dx (!mul dy dout))
 			 (!move dy (!mul dx dout)))))
 
-
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
   (declare (optimize (speed 3))
 	   (type (simple-array u (*)) x out)
@@ -123,6 +122,7 @@
 	     :forward
 	     ((self x y)
 	      ;; x <- y.
+	      ;; place val
 	      ;; If movetensor-ignore-me is T, return y.
 	      (let ((mover (matrix-move (dtype x))))
 		`(if (not (movetensor-ignore-me ,self))
@@ -142,5 +142,12 @@
 		       ,x)
 		     ,y)))
 	     :backward ((self dout dx dy)
-			(values (!copy dout) (!copy dout))))
+			(declare (ignore dx))
+			(let ((dy-out
+				(if (and
+				     (eql (tensor-attribute dy) :chain)
+				     (movetensor-ignore-me self))
+				    dout
+				    (!copy dout))))
+			  (values dout dy-out))))
 
