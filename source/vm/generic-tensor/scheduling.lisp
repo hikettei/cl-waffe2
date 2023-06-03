@@ -99,7 +99,7 @@ Computation Time: O(total_nodes * 2)"
 	   (type fixnum n-cores)
 	   (optimize (speed 3)))
   (when (tensor-traced-p out-tensor)
-    (error "The computation nodes are already optimized."))
+    (return-from optimize-computation-node!))
   
   (trace-and-explore-nodes! out-tensor)
   (trace-and-optimize-node! out-tensor major n-cores)

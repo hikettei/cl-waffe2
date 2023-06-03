@@ -91,8 +91,8 @@
 			   ,x)))
 	     :backward ((self dout dx dy)
 			(values
-			 (!move dx (!mul dout dy))
-			 (!move dy (!mul dout dx)))))
+			 (!mul dout dy)
+			 (!mul dout dx))))
 
 
 (define-impl (DivNode :device LispTensor)
@@ -114,8 +114,8 @@
 			 ,x)))
 	     :backward ((self dout dx dy)
 			(values
-			 (!move dx (!mul dy dout))
-			 (!move dy (!mul dx dout)))))
+			 (!mul dy dout)
+			 (!mul dx dout))))
 
 (define-impl (ScalarAdd :device LispTensor)
 	     :forward

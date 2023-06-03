@@ -277,7 +277,6 @@ Return:
       tensor
       (cl-waffe2/base-impl:!move place tensor)))
 
-;; TODO: backwardの定義 -> defnodeに移動
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
