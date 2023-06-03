@@ -116,32 +116,6 @@ Note that the operation is automatically replaced into in-place operation."
     "DOC"
     (!scalar-mul (/ scalar) x)))
 
-(defun scalar-p (tensor)
-  (subtypep (class-of tensor) 'cl-waffe2/vm.generic-tensor:ScalarTensor))
-
-(macrolet ((define-arith-function (name
-				   invertor
-				   scalar-and-scalar-operation
-				   scalar-operation
-				   matrix-operation)
-	     `(eval-when (:compile-toplevel :load-toplevel :execute)
-		(export ',name)
-		(defun ,name (x y)
-		  ""
-		  (cond
-		    ((and (scalartensor-p x)
-			  (scalartensor-p y))
-		     (,scalar-and-scalar-operation x y))
-		    ((scalartensor-p x)
-		     ;; X is scalar, Y is matrix.
-		     (,scalar-operation x y))
-		    ((scalartensor-p y)
-		     (,scalar-operation y (,invertor x)))
-		    (T
-		     (,matrix-operation x y)))))))
-
-  )
-
 ;; ===============================================================
 ;; Scalar-And-Scalar Defnode And Functions.
 ;; ===============================================================
@@ -153,13 +127,113 @@ Note that the operation is automatically replaced into in-place operation."
   (define-sas-node ScalarAndScalarSub)
   (define-sas-node ScalarAndScalarMul)
   (define-sas-node ScalarAndScalarDiv))
-		  
 
 (define-impl (ScalarAndScalarAdd :device ScalarTensor)
 	     :forward ((self x y)
-		       `(and
-			 (incf (tensor-vec ,x) (tensor-vec ,y))
-			 ,x))
+		       (let ((t1 (dtype->lisp-type (dtype x)))
+			     (t2 (dtype->lisp-type (dtype y))))
+			 `(and
+			   (setf (the ,t1 (tensor-vec ,x))
+				 (+ (the ,t1 (tensor-vec ,x))
+				    (the ,t2 (tensor-vec ,y))))
+			   ,x)))
 	     :backward ((self dout dx dy)
+			(declare (ignore dx dy))
 			(values dout dout)))
+
+(define-impl (ScalarAndScalarSub :device ScalarTensor)
+	     :forward ((self x y)
+		       (let ((t1 (dtype->lisp-type (dtype x)))
+			     (t2 (dtype->lisp-type (dtype y))))
+			 `(and
+			   (setf (the ,t1 (tensor-vec ,x))
+				 (- (the ,t1 (tensor-vec ,x))
+				    (the ,t2 (tensor-vec ,y))))
+			   ,x)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dx dy))
+			(values dout (!sas-mul -1 dout))))
+
+(define-impl (ScalarAndScalarMul :device ScalarTensor)
+	     :forward ((self x y)
+		       (let ((t1 (dtype->lisp-type (dtype x)))
+			     (t2 (dtype->lisp-type (dtype y))))
+			 `(and
+			   (setf (the ,t1 (tensor-vec ,x))
+				 (the ,t1
+				      (* (the ,t1 (tensor-vec ,x))
+					 (the ,t2 (tensor-vec ,y)))))
+			   ,x)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dout))
+			(values dy dx)))
+
+(define-impl (ScalarAndScalarDiv :device ScalarTensor)
+	     :forward ((self x y)
+		       (let ((t1 (dtype->lisp-type (dtype x)))
+			     (t2 (dtype->lisp-type (dtype y))))
+			 `(and
+			   (setf (the ,t1 (tensor-vec ,x))
+				 (/ (the ,t1 (tensor-vec ,x))
+				    (the ,t2 (tensor-vec ,y))))
+			   ,x)))
+	     :backward ((self dout dx dy)
+			(declare (ignore dout))
+			(values (!sas-div 1 dy) dx)))
+
+(defun !sas-add (x y)
+  (forward (ScalarAndScalarAdd) x y))
+
+(defun !sas-sub (x y)
+  (forward (ScalarAndScalarSub) x y))
+
+(defun !sas-mul (x y)
+  (forward (ScalarAndScalarMul) x y))
+
+(defun !sas-div (x y)
+  (forward (ScalarAndScalarDiv) x y))
+
+
+;; ===============================================================
+;; Defines general-purpose functions.
+;; ===============================================================
+
+
+(defun scalartensor-p (tensor)
+  (subtypep (class-of tensor) 'cl-waffe2/vm.generic-tensor:ScalarTensor))
+
+(macrolet ((define-arith-function (name
+				   invertor
+				   scalar-and-scalar-operation
+				   scalar-operation
+				   matrix-operation)
+	     `(eval-when (:compile-toplevel :load-toplevel :execute)
+		(export ',name)
+		(defun ,name (x y)
+		  "TODO: Document, Broadcast-auto"
+		  (let ((x (if (numberp x)
+			       (make-tensor x :dtype (dtype-of x))
+			       x))
+			(y (if (numberp y)
+			       (make-tensor y :dtype (dtype-of y))
+			       y)))
+		    (cond
+		      ((and (scalartensor-p x)
+			    (scalartensor-p y))
+		       (,scalar-and-scalar-operation x y))
+		      ((scalartensor-p x)
+		       ;; X is scalar, Y is matrix.
+		       (,scalar-operation x y))
+		      ((scalartensor-p y)
+		       (,scalar-operation y (,invertor x)))
+		      (T
+		       (,matrix-operation x y))))))))
+  (define-arith-function
+      !add + !sas-add !scalar-add !matrix-add)
+  (define-arith-function
+      !sub - !sas-sub !scalar-sub !matrix-sub)
+  (define-arith-function
+      !mul * !sas-mul !scalar-mul !matrix-mul)
+  (define-arith-function
+      !div / !sas-div !scalar-div !matrix-div))
 

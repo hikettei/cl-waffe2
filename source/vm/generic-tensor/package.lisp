@@ -7,6 +7,7 @@
   ;; Tensor classes
   (:export
    #:AbstractTensor
+   #:ScalarTensor
 
    #:tensor-backward
    #:tensor-variables
@@ -29,6 +30,7 @@
   (:export
    #:dtype-t
    #:dtype->lisp-type
+   #:dtype-of
    )
 
   ;; Conditions

@@ -38,3 +38,13 @@
     (:int8   '(signed-byte 8))
     (:bit    'bit)))
 
+(defun dtype-of (scalar)
+  (typecase scalar
+    (single-float :float)
+    (double-float :double)
+    ;; FIXME
+    (fixnum :int32)))
+
+(defun coerce-into-dtype (scalar)
+  (coerce scalar (dtype-of scalar)))
+
