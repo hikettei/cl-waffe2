@@ -23,7 +23,8 @@
   (:export
    #:forward
    #:backward
-   #:node-passed-p)
+   #:node-passed-p
+   #:ignore-shape-error)
 
   (:export
    #:*no-grad*

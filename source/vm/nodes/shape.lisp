@@ -258,13 +258,15 @@ Because : The actual ~ath argument given has a shape of ~a.
 
 (defmacro num-major-setq (var obj)
   `(setq ,var
-	 (or (when (numberp ,var)
+	 (or (when (or (numberp ,var)
+		       (listp   ,var))
 	       ,var)
 	     ,obj)))
 
 (defmacro num-major-setf (var obj)
   `(setf ,var
-	 (or (when (numberp ,var)
+	 (or (when (or (numberp ,var)
+		       (listp ,var))
 	       ,var)
 	     ,obj)))
 
@@ -508,7 +510,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							       (push
 								(format
 								 nil
-								 "Couldn't idenfity ~~ ~~ is determined as ~a ~% butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
+								 "Couldn't idenfity ~~: ~~ is determined as ~a ~% butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
 								,all-conditions))
 							     (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 		    

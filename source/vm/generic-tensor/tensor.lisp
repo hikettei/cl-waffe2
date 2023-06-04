@@ -352,8 +352,8 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	 (tensor-view actual-tensor)))
   t)
 
+;; (defun reshape ())
 
-;; TODO: Extend the backward states.
 (defun view (tensor &rest subscripts)
   "The function view creates a view of given tensor.
 Note that the function *view* doesn't records ANY NODES, while the function *!view* does.

@@ -183,7 +183,7 @@ Return:
 	(*node-parameters-tmp*)
 	(*unroll-threshold* unroll-threshold))
     (let ((body `(let ((,(tensor-id toplevel) ,toplevel))
-		   ,(trace-forward-computation-node toplevel)
+		    (funcall ,(compile-forward toplevel))
 		   ,(tensor-id toplevel)))
 	  (backward (if requires-grad
 			(construct-backward toplevel :macroexpand macroexpand-backward))))
@@ -238,39 +238,33 @@ Return:
 	 (T x)))
    form))
 
-;; TODO: Use Self
-(defun trace-forward-computation-node (toplevel)
-  (declare (type AbstractTensor toplevel))
-  (let ((state     (tensor-state toplevel))
-	(variables (tensor-variables toplevel))
-	(node      (tensor-backward toplevel)))
-    (when state
-      (labels ((explore (var)
-		 (trace-forward-computation-node var)))
-	(let ((next-states (loop for v in variables
-				 if (tensor-state v)
-				   collect (explore v)))
-	      (node-id (gensym (format nil "~a" (class-name (class-of node))))))
-	  ;; current
-	  ;; past
-	  ;; Forward = reverse(build((car tensor)) + build((cdr tensor))) + ...
-	  `(flet ((,node-id (,@(dispatch-tensor-variable variables))
-		    ;; use state here, to avoid recomputing node.
-		    ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))
-	     (let (,@(loop for v in variables collect `(,(tensor-id v) ,v)))
-	       (declare (ignorable ,@(map 'list #'tensor-id variables)))
-	       ,@next-states
-	       (when (null (statecontainer-forward-result
-			    (tensor-state ,(tensor-id toplevel))))
-		 (setf
-		  (statecontainer-forward-result
-		   (tensor-state ,(tensor-id toplevel)))
-		  (multiple-value-list (funcall #',node-id ,@(dispatch-tensor-variable variables)))))
-	       
-	       (setq ,(tensor-id toplevel)
-		     (nth ,(tensor-out-n toplevel)
-			  (statecontainer-forward-result
-			   (tensor-state ,(tensor-id toplevel))))))))))))
+(defun compile-forward (toplevel)
+  (declare (type AbstractTensor toplevel)
+	   (optimize (speed 3)))
+  (let ((state     (tensor-state     toplevel))
+	(variables (tensor-variables toplevel)))
+    
+    (when (null state)
+      (return-from compile-forward #'(lambda () toplevel)))
+
+    (let ((next-states (map 'list #'compile-forward variables))
+	  (out-places  (map 'list #'tensor-id       variables)))
+
+      (compile nil
+	       `(lambda ()
+		  (declare (optimize (speed 3)))
+		  (let (,@(loop for f in next-states
+				for p in out-places
+				collect `(,p (funcall ,f))))
+		    (declare (type AbstractTensor ,@out-places)
+			     (ignorable ,@out-places))
+		    ;; If toplevel isn't evaluated yet...
+		    (when (null (statecontainer-forward-result ,state))
+		      (setf (statecontainer-forward-result ,state)
+			    (multiple-value-list
+			     (progn
+			       ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))))
+		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result ,state))))))))
 
 (defun !maybe-move (place tensor)
   (if (movetensor-p (tensor-backward tensor))
@@ -282,6 +276,8 @@ Return:
   (declare (type AbstractTensor toplevel past-dy))
   ;; g(t's dout dx dy dz...) -> [t-1]'s dout
   ;; first past-dy = 1.0
+
+  ;; Get a backward node.
   (let* ((outs (apply
 	       ;; (backward self dout dx dy dz ...)
 	       #'cl-waffe2/vm.nodes::backward
@@ -301,10 +297,11 @@ Return:
 		   outs))
        (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
 		(ignorable ,@(map 'list #'tensor-id outs)))
+       
        ,@(loop for out    in outs
 	       for tensor in (tensor-variables toplevel)
-	       collect `(progn
-			  ,(trace-forward-computation-node out)
+	       collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
+			  (declare (ignorable ,(tensor-id out)))
 			  ,(if (slot-value tensor 'requires-grad)
 			       ;; !copy and add.
 			       `(add-grads ,(tensor-id tensor) ,(tensor-id out))

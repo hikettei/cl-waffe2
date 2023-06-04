@@ -2,9 +2,6 @@
 (in-package :cl-waffe2/base-impl)
 
 
-;; TODO: Make it differentiable.
-;; Things that I have to do is:
-;; Add ->ViewNode
 (defun !sum (tensor &key (axis t) (out nil))
   "Sum up the given tensor along the axis.
 

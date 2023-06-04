@@ -7,7 +7,7 @@
     :function-node
     :reader abstractnode-node
     :type function) ;; [x y] [y z] -> [z x]
-   ;; (variables :initform nil :reader node-variables :writer set-variables :type list)
+   (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
 
@@ -72,7 +72,8 @@ Here's a list of reports.
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
       
-      (when detected-errors
+      (when (and detected-errors
+		 (not (ignore-shape-error node)))
 	;; Enhancement
 	;; CALL-VIEW-AND-CONTINUE
 	(describe-problems node detected-errors))

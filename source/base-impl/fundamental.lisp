@@ -39,8 +39,10 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
     (!move out tensor)))
 
 
-(defnode (ViewTensorNode (myself result)
-	  :where `([~ result] [~] -> [result] where result = ',result)))
+(defnode (ViewTensorNode (myself result before)
+	  :where `([result] [before] -> [result]
+			    where before = ',before result = ',result))
+  (setf (ignore-shape-error myself) t))
 
 (define-impl (ViewTensorNode :device TMPDevice)
 	     :forward
@@ -50,12 +52,12 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	     :backward
 	     ((self dout dx dy)
 	      (declare (ignore dx dy))
-	      (values dout dout)))
+	      (values dx dy)))
 
 (defun !view (tensor &rest subscripts)
   "TODO: DOC"
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
     (with-tmp-device
-      (forward (ViewTensorNode (shape out)) out tensor))))
+      (forward (ViewTensorNode (shape out) (shape tensor)) out tensor))))
 
