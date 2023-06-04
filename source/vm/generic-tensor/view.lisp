@@ -22,7 +22,14 @@
   (by)
   (offset))
 
-;; (stride-of view) (offset-of view) (size-of view)
+(defun stride-of (views nth)
+  (viewinstruction-by (nth nth views)))
+
+(defun offset-of (views nth)
+  (viewinstruction-offset (nth nth views)))
+
+(defun size-of (views nth)
+  (viewinstruction-size (nth nth views)))
 
 (deftype subscript-t ()
   "An list of types which is allowed to become subscripts of the function view."
@@ -583,16 +590,18 @@ Example:
      (shape tensor))
     (values result (reverse views))))
 
-(defun funcall-with-view (function tensors target-dim offsets)
+(defun funcall-with-view (function tensors target-dim offsets rest-dims)
   (apply function
 	 (loop for k fixnum upfrom 0
 	       for tensor in tensors
 	       collect
-	       (make-viewinstruction
-		`(nth ,k ,offsets)
-		(nth target-dim (shape tensor))
-		(let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
-		  (compute-stepby view))))))
+	       (loop for target-dim upfrom target-dim below (+ rest-dims target-dim)
+		     collect
+		     (make-viewinstruction
+		      `(nth ,k ,offsets)
+		      (nth target-dim (shape tensor))
+		      (let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
+			(compute-stepby view)))))))
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 ;; TODO: at-least-dim=2
@@ -614,7 +623,7 @@ Example:
 
   
   (labels ((expand-with-function (target-dim offsets)
-	     (funcall-with-view function tensors target-dim offsets))
+	     (funcall-with-view function tensors target-dim offsets at-least-dim))
 	   (explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim))
 	     (let* ((start-points (loop for tensor in tensors

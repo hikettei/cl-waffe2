@@ -25,9 +25,9 @@
 				`(add-matrix
 			 	  (tensor-vec ,x)
 				  (tensor-vec ,y)
-				  ,(viewinstruction-offset x-view)
-				  ,(viewinstruction-offset y-view)
-				  ,(viewinstruction-size x-view)))
+				  ,(offset-of x-view 0)
+				  ,(offset-of y-view 0)
+				  ,(size-of x-view 0)))
 			    `(,x ,y))
 			 ,x))
 	     :backward ((self dout dx dy)

@@ -48,6 +48,9 @@
    #:viewinstruction-size
    #:viewinstruction-by
    #:call-with-view
+   #:stride-of
+   #:size-of
+   #:offset-of
    #:compute-visible-shape)
   ;; APIs for StateContainer
   (:export
