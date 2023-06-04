@@ -10,6 +10,7 @@
 ;;    ^-Offsetが0の次元は連結する
 ;;    e.g.: `(t t t) should be regarded as `(3t), as long as they're continuous in memory
 ;; 3. Prepare Documentations
+;; 4. Add: :tflist :indices
 
 (defparameter *unroll-threshold* 10 "Unroll if iternum falls below this threshold")
 
@@ -202,26 +203,38 @@ Return: (values after-view error)"
   "Tensor[t][2:4]"
   (let* ((view (subscript-view after))
 	 (view (map 'list #'(lambda (v) (parse-absolute v size)) view)))
-    (setf (subscript-char after) size
-	  (subscript-constraints after) `(,(second view) t)
-	  (subscript-view after) view)
-    after))
 
+    (if (> (car view) (second view))
+	(progn
+	  (setf (subscript-view after) `(,(second view) ,(car view) -1))
+	  (step-subscript :t :slice-step before after size))
+	;; -> step-subscript :t :slice-step when 10 -> 1
+	(progn
+	  (setf (subscript-char after) size
+		(subscript-constraints after) `(,(second view) t)
+		(subscript-view after) view)
+	  after))))
 
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :slice-step))
 			   before
 			   after
 			   size)
-  
   "Tensor[t][2:4::-1]"
   (let* ((view (subscript-view after))
 	 (view (map 'list #'(lambda (v) (parse-absolute v size)) (butlast view))))
-    (setf (subscript-char after) size
-	  (subscript-constraints after) `(,(max (car view) (second view)) t)
-	  (subscript-view after) `(,@view ,(third (subscript-view after))))
-    after))
 
+    (if (> (car view) (second view))
+	(progn
+	  (setf (subscript-view after) `(,(second view) ,(car view) ,(- (third view))))
+	  (step-subscript :t :slice-step before after size))
+	(progn
+	  (setf (subscript-char after) size
+		(subscript-constraints after) `(,(max (car view) (second view)) t)
+		(subscript-view after) `(,@view ,(third (subscript-view after))))
+	  after))))
+
+;; Ignore it for a while
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :indices))
 			   before
@@ -229,14 +242,17 @@ Return: (values after-view error)"
 			   size)
   
   "Tensor[t][:indices 1 2 3...]"
-  (let* ((view (subscript-view after)))
-    (if (typep view 'list)
-	nil) ;; maximize view ...
-    
-    ;; TMP
-    (setf (subscript-char after) size
-	  (subscript-constraints after) `(0 t))
-    after))
+  (error "NOT IMPLEMENTED YET: <T> -> <INDICES>"))
+
+;; Ignore it for a while
+(defmethod step-subscript ((x (eql :t))
+			   (y (eql :tflist))
+			   before
+			   after
+			   size)
+  
+  "Tensor[t][:indices 1 2 3...]"
+  (error "NOT IMPLEMENTED YET: <T> -> <TFLIST>"))
 
 (defmethod step-subscript ((x (eql :t))
 			   (y (eql :broadcast))
@@ -267,10 +283,11 @@ Return: (values after-view error)"
 			   before
 			   after
 			   size)
-  "Tensor[0][1]"
-
+"Tensor[0][1]"
   ;; Return error?
-  (step-subscript :t :index before after size))
+  ;; before == after
+  (step-subscript :t :index before after size)
+  )
 
 (defmethod step-subscript ((x (eql :index))
 			   (y (eql :slice))
@@ -278,7 +295,9 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[0][0:10]"
-  (step-subscript :t :slice before after size))
+  (error "Error: Index -> Slice")
+  ;;(step-subscript :t :slice before after size)
+  )
 
 (defmethod step-subscript ((x (eql :index))
 			   (y (eql :slice-step))
@@ -286,15 +305,26 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[0][0:10::2]"
-  (step-subscript :t :slice-step before after size))
+  (error "Error: Index -> Slice")
+  ;;(step-subscript :t :slice-step before after size)
+  )
 
+(defmethod step-subscript ((x (eql :index))
+			   (y (eql :indices))
+			   before
+			   after
+			   size)
+  "Tensor[1][:tflist t]"
+  (error "Error: Index -> Indices"))
+
+;; Ignore it for tmp
 (defmethod step-subscript ((x (eql :index))
 			   (y (eql :tflist))
 			   before
 			   after
 			   size)
   "Tensor[1][:tflist t]"
-  (step-subscript :t :tflist before after size))
+  (error "Error: Index -> Indices"))
 
 (defmethod step-subscript ((x (eql :index))
 			   (y (eql :broadcast))
@@ -302,6 +332,8 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[1][:broadcast 10]"
+  ;; FIXME: Is offsets considered?
+  ;; i.e.: Tensor[1][:broadcast 10] is working?
   (step-subscript :t :broadcast before after size))
 
 ;; ===================================================
@@ -500,9 +532,37 @@ Return: List[SubScript]
     (:broadcast 0)
     (T 1)))
 
-(defun optimize-shape (tensor)
-  ;; `(t t t) -> `(t)
-  )
+(define-modify-macro multf (&optional (number 1)) *)
+
+(defun formulate-iternum (tensor)
+  "Considering the given tensor's view, the function formulate-iternum returns a new tensor with being reducted size.
+
+Example:
+  `(<T> <T> <T>) -> `(<3T>)"
+  (declare (optimize (speed 3)))
+
+  (let ((result)
+	(stack))
+    (declare (type list result stack))
+    (mapc
+     #'(lambda (shape view size)
+	 (let ((start-idx (compute-visible-start-idx (force-list view) shape)))
+	   (declare (type fixnum start-idx))
+	   (unless result (push 1 result))
+	   (push size stack)
+	   (if (= start-idx 0)
+	       (and (multf ;; A *= n
+			(the fixnum (nth (1- (length result)) result))
+			(the fixnum (apply #'* stack)))
+		    (setq stack nil)))))
+		
+     (slot-value tensor 'orig-shape)
+     (tensor-view tensor)
+     (shape tensor))
+
+    (if stack
+	(push (apply #'* stack) result))
+    (reverse result)))
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 (defun call-with-view (function
