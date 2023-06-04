@@ -182,15 +182,13 @@ Return:
   (let ((*node-variables-tmp*)
 	(*node-parameters-tmp*)
 	(*unroll-threshold* unroll-threshold))
-    (let ((body `(let ((,(tensor-id toplevel) ,toplevel))
-		    (funcall ,(compile-forward toplevel))
-		   ,(tensor-id toplevel)))
+    (let ((body (compile-forward toplevel))
 	  (backward (if requires-grad
 			(construct-backward toplevel :macroexpand macroexpand-backward))))
       (let ((body `(lambda ()
 		     (declare (optimize (speed 3)))
 		     (mapc #'state-reset! ',(remove-duplicates *node-variables-tmp*))
-		     ,body)))
+		     (funcall ,body))))
 	(when macroexpand-forward
 	  (print body))
 
@@ -242,6 +240,7 @@ Return:
   (declare (type AbstractTensor toplevel)
 	   (optimize (speed 3)))
   (let ((state     (tensor-state     toplevel))
+	(id        (tensor-id        toplevel))
 	(variables (tensor-variables toplevel)))
     
     (when (null state)
@@ -255,16 +254,17 @@ Return:
 		  (declare (optimize (speed 3)))
 		  (let (,@(loop for f in next-states
 				for p in out-places
-				collect `(,p (funcall ,f))))
+				collect `(,p (funcall ,f)))
+			 (,id ,toplevel))
 		    (declare (type AbstractTensor ,@out-places)
 			     (ignorable ,@out-places))
 		    ;; If toplevel isn't evaluated yet...
-		    (when (null (statecontainer-forward-result ,state))
-		      (setf (statecontainer-forward-result ,state)
+		    (when (null (statecontainer-forward-result (tensor-state ,id)))
+		      (setf (statecontainer-forward-result (tensor-state ,id))
 			    (multiple-value-list
 			     (progn
 			       ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))))
-		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result ,state))))))))
+		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,id)))))))))
 
 (defun !maybe-move (place tensor)
   (if (movetensor-p (tensor-backward tensor))
