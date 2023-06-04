@@ -98,8 +98,8 @@
   (case (viewtype view)
     (:index view)
     (:t     0)
-    (:slice      (car view))
-    (:slice-step (car view))
+    (:slice      (min (car view) (second view)))
+    (:slice-step (min (car view) (second view)))
     (:indices 0)
     (:tflist  0)
     (:broadcast 0)))
@@ -109,9 +109,9 @@
   (case (viewtype view)
     (:index (1+ view))
     (:t     size)
-    (:slice (second view))
+    (:slice (max (car view) (second view)))
     ;; FIXME: Should be divided :slice-step
-    (:slice-step (round (/ (second view) (abs (third view)))))
+    (:slice-step (round (/ (max (car view) (second view)) (abs (third view)))))
     (:indices (length (cdr view)))
     (:tflist  size)
     (:broadcast (second view))))
@@ -146,9 +146,9 @@
 		     end)
 		    ((and (typep end 'fixnum)
 			  (typep start 'fixnum))
-		     (- end start))
+		     (abs (- end start)))
 		    (T
-		     `(- ,end ,start))))))
+		     `(abs (- ,end ,start)))))))
 
 
 (defun parse-absolute (index size)
@@ -515,8 +515,6 @@ Return: List[SubScript]
 		     `(incf (the fixnum (nth ,k ,offsets))
 			    (%* ,(third view)
 				(the fixnum (nth ,k ,strides)))))
-		    ((eql viewtype :repeat)
-		     (error ":REPEAT IS NOT IMPLEMENTED"))
 		    ((eql viewtype :indices)
 		     (print nth)
 		     (error ":INDICES IS NOT IMPLEMENTED"))
@@ -532,37 +530,75 @@ Return: List[SubScript]
     (:broadcast 0)
     (T 1)))
 
+;; =======================================
+;; Expands call-with-view
+;; =======================================
+
+(defun l* (&rest args)
+  (let ((numbers 1)
+	(symbols))
+    (mapc
+     #'(lambda (num)
+	 (typecase num
+	   (number
+	    (multf numbers num))
+	   (T
+	    (push num symbols))))
+     args)
+    (if symbols
+	(if (= numbers 1)
+	    `(* ,@symbols)
+	    `(* ,numbers ,@symbols))
+	numbers)))
+
+;; multf: A *= n
 (define-modify-macro multf (&optional (number 1)) *)
 
+;; FixMe: The case when tensor is a input.
 (defun formulate-iternum (tensor)
   "Considering the given tensor's view, the function formulate-iternum returns a new tensor with being reducted size.
 
 Example:
   `(<T> <T> <T>) -> `(<3T>)"
-  (declare (optimize (speed 3)))
-
   (let ((result)
-	(stack))
-    (declare (type list result stack))
+	(views)
+	(endcp t))
+    (declare (type list result))
     (mapc
      #'(lambda (shape view size)
-	 (let ((start-idx (compute-visible-start-idx (force-list view) shape)))
+	 (let ((start-idx (compute-visible-start-idx (force-list view) shape))
+	       (end-idx   (compute-visible-end-idx   (force-list view) shape)))
 	   (declare (type fixnum start-idx))
-	   (unless result (push 1 result))
-	   (push size stack)
-	   (if (= start-idx 0)
-	       (and (multf ;; A *= n
-			(the fixnum (nth (1- (length result)) result))
-			(the fixnum (apply #'* stack)))
-		    (setq stack nil)))))
-		
+	   
+	   (if (and (= start-idx 0)
+		    (equal end-idx shape))
+	       (progn
+		 (if endcp (push 1 result))
+		 (if endcp (push t views))
+		 (setf
+		  (nth (1- (length result)) result)
+		  (l*
+		   (nth (1- (length result)) result)
+		   size))
+		 (setq endcp t))
+	       (and (push size result)
+		    (push view views)
+		    (setq endcp nil)))))
      (slot-value tensor 'orig-shape)
      (tensor-view tensor)
      (shape tensor))
+    (values result (reverse views))))
 
-    (if stack
-	(push (apply #'* stack) result))
-    (reverse result)))
+(defun funcall-with-view (function tensors target-dim offsets)
+  (apply function
+	 (loop for k fixnum upfrom 0
+	       for tensor in tensors
+	       collect
+	       (make-viewinstruction
+		`(nth ,k ,offsets)
+		(nth target-dim (shape tensor))
+		(let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
+		  (compute-stepby view))))))
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 (defun call-with-view (function
@@ -581,16 +617,7 @@ Example:
 
   
   (labels ((expand-with-function (target-dim offsets)
-	     ;; currently only for 1d
-	     ;; Here, :tflist, :indices
-	     (apply function
-		    (loop for k fixnum upfrom 0
-			  for tensor in tensors
-			  collect (make-viewinstruction
-				   `(nth ,k ,offsets)
-				    (nth target-dim (shape tensor))
-				    (let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
-				      (compute-stepby view))))))
+	     (funcall-with-view function tensors target-dim offsets))
 	   (explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
 	     (let* ((start-points (loop for tensor in tensors
 					collect
@@ -680,8 +707,66 @@ Example:
 	    tensors)
       `(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
 	 (let* (,@nondeterministic-symbols)
-	   (declare (type fixnum ,@(map 'list #'car nondeterministic-symbols)))
+	   (declare (type fixnum ,@(map 'list #'car nondeterministic-symbols))
+		    (ignorable   ,@(map 'list #'car nondeterministic-symbols)))
 	   ,(explore
 	     dims
 	     offset-place))))))
 
+(defun call-with-view1 (function
+			tensors
+			&key
+			  (at-least-dim 1)
+			&aux
+			  (shape (shape (car tensors)))
+			  (dims  (length shape)))
+  ""
+  (declare (optimize (speed 3))
+	   (type function function)
+	   (type list tensors))
+  
+  (assert (every #'(lambda (tensor) (shape-equal-list (shape tensor) shape)) tensors)
+	  nil
+	  "Assertion Failed because the number of shapes: ~a doesn't match."
+	  (map 'list #'shape tensors)) ;; ... (1)
+
+  (let* ((reducted-iternums ;; concatenate offset=0 dims
+	   (map 'list #'formulate-iternum tensors))
+	 (iternum-reductable-p
+	   (every #'(lambda (size) (shape-equal-list size (car reducted-iternums)))
+		  reducted-iternums))
+	 (iternums (if iternum-reductable-p
+		       reducted-iternums
+		       (map 'list #'shape tensors))))
+    (declare (type list reducted-iternums iternums))
+
+    (labels ((expand-with-function (target-dim offsets)
+	       (funcall-with-view function tensors target-dim offsets))
+	     (compute-range (dimension)
+	       
+	       )
+	     (explore (dims offset-place)
+	       (expand-to-view-iterator
+		
+		)))
+
+      (let ((offset-place (gensym "OffsetsTmp"))
+	    (nondeterministic-symbols))
+
+	;; Collecting undetermined symbols
+	(mapc
+	 #'(lambda (tensor)
+	     (loop for i fixnum upfrom 0
+		   for shape in (shape tensor)
+		   if (not (numberp shape))
+		     do (push `(,shape (nth ,i (shape ,tensor))) nondeterministic-symbols)))
+	 tensors)
+
+	;; Tensors' total offsets.
+	`(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
+	   (let* (,@nondeterministic-symbols)
+	     (declare (type fixnum ,@(map 'list #'car nondeterministic-symbols))
+		      (ignorable   ,@(map 'list #'car nondeterministic-symbols)))
+	     ,(explore
+	       dims
+	       offset-place)))))))
