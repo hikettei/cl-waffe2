@@ -33,16 +33,22 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (defun !copy (tensor)
   "TODO: DOCSTRING"
-  (let ((out (make-input (actual-shape tensor) nil
+  (let ((out (make-input (shape tensor) nil
 			 :dtype (dtype tensor)
 			 :order (order tensor))))
     (!move out tensor)))
 
-
-(defnode (ViewTensorNode (myself result before)
+(defnode (ViewTensorNode (myself subscripts result before)
+	  :slots ((subscripts :initarg :subscripts))
 	  :where `(A[result] B[before] -> A[result]
-			    where before = ',before result = ',result))
+			     where before = ',before result = ',result))
   (setf (ignore-shape-error myself) t))
+
+;;
+;; 
+;;
+;;
+;;
 
 (define-impl (ViewTensorNode :device TMPDevice)
 	     :forward
@@ -51,13 +57,13 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	      `(progn ,viewed-tensor))
 	     :backward
 	     ((self dout dx dy)
-	      (declare (ignore dout))
-	      (values dx dy)))
+	      (values (!move (apply #'!view dx (slot-value self 'subscripts)) dout)
+		      (!move (apply #'!view dy (slot-value self 'subscripts)) dout))))
 
 (defun !view (tensor &rest subscripts)
   "TODO: DOC"
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
     (with-tmp-device
-      (forward (ViewTensorNode (shape out) (shape tensor)) out tensor))))
+      (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor))))
 
