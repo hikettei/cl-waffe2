@@ -104,6 +104,32 @@ At       : ~ath Token, ~a"
       (incf pointer 1))
     (reverse results)))
 
+(defun separate-shape-and-name (list)
+  "A[~] -> A and [~]"
+  (let ((names-found)
+	(parsed)
+	(state :symbol))
+    (loop for token in list
+	  for p upfrom 0
+	  do (cond
+	       ((and (eql state :symbol)
+		     (not (symbol-eq token '[)))
+		(push token names-found)
+		(setq state :[))
+	       ((and (eql state :symbol)
+		     (symbol-eq token '[))
+		(push token parsed)
+		(setq state :content))
+	       ((eql state :[)
+		(push token parsed)
+		(setq state :content))
+	       ((eql state :content)
+		(push token parsed)
+		(if (symbol-eq token '])
+		    (setq state :symbol)))))
+    
+    (values (reverse names-found) (reverse parsed))))
+
 (defun bnf-parse-subscripts-toplevel (subscripts)
   "Toplevel of Subscripts
 
@@ -170,9 +196,14 @@ Return:
  Input-Shape -> Output-Shape where X = 0
 (the where phase is optional.)"))
 
-	  (values (bnf-parse-variables input-part)
-		  (bnf-parse-variables (cdr output-part))
-		  (bnf-parse-let-phase (cdr let-part))))))))
+	  (multiple-value-bind (input-vars input-part) (separate-shape-and-name input-part)
+	    (multiple-value-bind (output-vars output-part) (separate-shape-and-name (cdr output-part))
+
+	      (values input-vars
+		      output-vars
+		      (bnf-parse-variables input-part)
+		      (bnf-parse-variables output-part)
+		      (bnf-parse-let-phase (cdr let-part))))))))))
 
 ;; export
 (defun parse-subscript (subscripts)
@@ -207,7 +238,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
   (declare (type list subscripts))
 
   ;; replace [a b] into [ a b ] (couldn't intepreted as a separated token)
-  (multiple-value-bind (first-state out-state let-binding)
+  (multiple-value-bind (inputs outputs first-state out-state let-binding)
       (bnf-parse-subscripts-toplevel
        (read-from-string
 	(regex-replace-all "\\]"
@@ -216,7 +247,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 			    (format nil "~a" subscripts)
 			    " [ ")
 			   " ] ")))
-    (values first-state out-state let-binding)))
+    (values inputs outputs first-state out-state let-binding)))
 
 (defun get-common-symbols (symbols)
   (remove-duplicates (flatten symbols) :test #'symbol-eq))
@@ -315,7 +346,9 @@ Rule3: where x = 1かlocalのスコープで用いられていない添文は自
 
 Rule4: ~は一度のみ使える
 "
-  (multiple-value-bind (first-state
+  (multiple-value-bind (input-names
+			output-names
+			first-state
 			out-state
 			let-binding)
       (parse-subscript subscripts)
@@ -552,5 +585,10 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			 (reverse ,all-conditions))))))))
       (when macroexpand
 	(print body))
-      (compile nil body))))
+      
+      (values (compile nil body)
+	      (map 'list
+		   #'(lambda (sym)
+		       (position sym input-names :test #'symbol-eq))
+		   output-names)))))
 

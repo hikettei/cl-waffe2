@@ -108,11 +108,12 @@ because it requires a slot for node itself.")
        ;; Backends are modular
        (defun ,abstract-name (,@(cdr constructor-arguments))
 	 ,documentation
-	 (let* ((,subscript-p (create-subscript-p ,where))
+	 (let* ((,subscript-p (multiple-value-list (create-subscript-p ,where)))
 		(,(car constructor-arguments)
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend*)
-		   :function-node ,subscript-p
+		   :function-node (car ,subscript-p)
+		   :transmission-state (second ,subscript-p)
 		   ,@(loop for slot in initarg-slots
 			   if slot
 			     collect (intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")

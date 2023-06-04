@@ -1,8 +1,8 @@
 
 (in-package :cl-waffe2/base-impl)
 
-(defnode (2DMatmulNode (myself)
-	  :where `([i j] [j k] [i k] -> [i k])
+(defnode (MatMulNode (myself)
+	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots nil
 	  :documentation ""))
 

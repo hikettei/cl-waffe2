@@ -170,7 +170,13 @@
   (is (test-subscript
        `([x y] -> [x out] where out = `(10 10 10))
        `((10 3))
-       `((10 10 10 10)))))
+       `((10 10 10 10))))
+  ;;(is (test-subscript
+  ;;     `([a] [b] -> [b] where a = `(10 10 10) b = `(2 2 2))
+  ;;     `((10 10 10) (2 2 2))
+  ;;     `((2 2 2))))
+
+  )
 
 (test test-error-subscript
   (is (error-test-subscript

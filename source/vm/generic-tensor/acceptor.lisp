@@ -264,6 +264,7 @@ Return:
 			    (multiple-value-list
 			     (progn
 			       ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))))
+		    (print (tensor-view (car (statecontainer-forward-result (tensor-state ,id)))))
 		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,id)))))))))
 
 (defun !maybe-move (place tensor)

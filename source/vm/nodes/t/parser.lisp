@@ -12,8 +12,9 @@
 		 excepted2
 		 excepted3)
   (multiple-value-bind
-	(x y z)
+	(is bs x y z)
       (cl-waffe2/vm.nodes::parse-subscript subscript)
+    (declare (ignore is bs))
     (and (equal x excepted1)
 	 (equal y excepted2)
 	 (equal z excepted3))))

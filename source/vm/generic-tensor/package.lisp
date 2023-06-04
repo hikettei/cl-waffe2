@@ -15,6 +15,7 @@
    #:tensor-out-n
    #:tensor-vec
    #:tensor-facet
+   #:tensor-stride
    #:tensor-name
    #:dtype
    #:tensor-attribute
@@ -25,6 +26,8 @@
    #:grad
    #:order
    #:view
+   #:tensor-view
+   #:detach
    )
 
   ;; Dtype API

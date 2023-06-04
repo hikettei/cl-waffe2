@@ -7,6 +7,7 @@
     :function-node
     :reader abstractnode-node
     :type function) ;; [x y] [y z] -> [z x]
+   (transmission-state :initarg :transmission-state :reader transmission-state :type list)
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
@@ -102,6 +103,8 @@ Here's a list of reports.
 					    :forward-out-form forward-form
 					    :forward-n-out  (length out-state)
 					    :backward-n-out (length input-states))))
+
+			       ;; Extend Views.
 			       (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p next-tensor) ancestor-param-p)
 			       (setf (tensor-out-n next-tensor)     nth-arg)
 			       (setf (tensor-state next-tensor)     state)

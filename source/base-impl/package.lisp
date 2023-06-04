@@ -14,7 +14,7 @@
    #:SubNode
    #:MulNode
    #:DivNode
-   #:2DMatmulNode
+   #:MatmulNode
    #:!matmul)
   (:export
    #:!sum

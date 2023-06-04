@@ -12,7 +12,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defnode (MoveTensorNode (myself)
-	    :where `([~] [~] -> [~])
+	    :where `(A[~] B[~] -> A[~])
 	    :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		    (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	    :documentation "
@@ -40,7 +40,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 
 (defnode (ViewTensorNode (myself result before)
-	  :where `([result] [before] -> [result]
+	  :where `(A[result] B[before] -> A[result]
 			    where before = ',before result = ',result))
   (setf (ignore-shape-error myself) t))
 
@@ -51,7 +51,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	      `(progn ,viewed-tensor))
 	     :backward
 	     ((self dout dx dy)
-	      (declare (ignore dx dy))
+	      (declare (ignore dout))
 	      (values dx dy)))
 
 (defun !view (tensor &rest subscripts)
@@ -59,5 +59,14 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
     (with-tmp-device
-      (forward (ViewTensorNode (shape out) (shape tensor)) out tensor))))
+      (let ((result (forward (ViewTensorNode (shape out) (shape tensor)) (detach out) tensor)))
+	(setf (cl-waffe2/vm.generic-tensor:ancestor-param-p out)
+	      (cl-waffe2/vm.generic-tensor:ancestor-param-p result)
+	      
+	      (tensor-out-n out) (tensor-out-n result)
+	      (tensor-state out) (tensor-state result)
+	      
+	      (tensor-backward out) (tensor-backward result)  
+	      (tensor-variables out) (tensor-variables result))
+	out))))
 

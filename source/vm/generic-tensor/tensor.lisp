@@ -389,6 +389,10 @@ Note that view is only created for Tensors, not a Scalar.
 		 :named (tensor-name tensor)
 		 :vec (slot-value tensor 'vec)))
 
+(defun detach (tensor)
+  "detach tensor from computation node."
+  (view tensor))
+
 ;; TODO: Print ScalarTensor
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
