@@ -11,6 +11,7 @@
 		#:tensor-state
 		#:tensor-out-n
 		#:tensor-vec
+		#:tensor-view
 		#:make-tensor
 		#:make-input
 		#:shaping-error

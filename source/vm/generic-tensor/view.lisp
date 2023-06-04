@@ -166,6 +166,22 @@
 		    (T
 		     `(abs (- ,end ,start)))))))
 
+(defun actual-shape (tensor)
+  (loop with view = (tensor-view tensor)
+        for o in (original-shape tensor)
+	for i upfrom 0
+	collect (let* ((v     (or (nth i view) t))
+		       (end   (compute-visible-end-idx-actual (force-list v) o))
+		       (start (compute-visible-start-idx (force-list v) o)))
+		  (cond
+		    ((and (typep start 'fixnum)
+			  (= start 0))
+		     end)
+		    ((and (typep end 'fixnum)
+			  (typep start 'fixnum))
+		     (abs (- end start)))
+		    (T
+		     `(abs (- ,end ,start)))))))
 
 (defun parse-absolute (index size)
   "Returns a absolute index."

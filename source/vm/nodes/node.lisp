@@ -66,6 +66,8 @@ Here's a list of reports.
   ;; Update Computation Nodes
 
   (let* ((transition-function (abstractnode-node node))
+	 (pointer-states      (transmission-state node))
+	 ;; What View To Use? modottara yaru.
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
@@ -94,17 +96,39 @@ Here's a list of reports.
 	     (next-tensor
 	       (loop for shape in out-state
 		     for nth-arg upfrom 0
+		     for extend-from in pointer-states
 		     ;; Make -> ScalarTensor if shape = (1)
 		     collect (let* ((next-tensor
 				      (make-input shape nil
-						  :dtype (dtype (car inputs))
-						  :order (order (car inputs))))
+						  :dtype (dtype (nth (or extend-from 0) inputs))
+						  :order (order (nth (or extend-from 0) inputs))))
 				    (state (make-statecontainer
 					    :forward-out-form forward-form
 					    :forward-n-out  (length out-state)
 					    :backward-n-out (length input-states))))
 
-			       ;; Extend Views.
+			       ;; Move ga hikituganai...
+			       ;; Extend Views, Strides, Orig-Shapes, etc..
+			       (when extend-from
+				 ;; Detect Errors
+				 (let ((input (nth extend-from inputs)))
+				   (setf (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
+					 (slot-value input       'cl-waffe2/vm.generic-tensor::orig-shape)
+					 
+					 (tensor-view next-tensor)
+					 (tensor-view input)
+					 
+					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::projected-p)
+					 (slot-value input 'cl-waffe2/vm.generic-tensor::projected-p)
+					 
+					 (cl-waffe2/vm.generic-tensor:tensor-stride next-tensor)
+					 (cl-waffe2/vm.generic-tensor:tensor-stride input))
+
+
+				   (when (cl-waffe2/vm.generic-tensor::vec input)
+				     (setf (tensor-vec next-tensor) (tensor-vec input)
+					   (cl-waffe2/vm.generic-tensor::tensor-facet input) :exist))))
+			       
 			       (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p next-tensor) ancestor-param-p)
 			       (setf (tensor-out-n next-tensor)     nth-arg)
 			       (setf (tensor-state next-tensor)     state)

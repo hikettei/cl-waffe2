@@ -21,6 +21,7 @@
    #:tensor-attribute
    #:requires-grad
    #:ancestor-param-p
+   #:actual-shape
    #:mref
    #:vref
    #:grad

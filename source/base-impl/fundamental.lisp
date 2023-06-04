@@ -33,7 +33,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (defun !copy (tensor)
   "TODO: DOCSTRING"
-  (let ((out (make-input (shape tensor) nil
+  (let ((out (make-input (actual-shape tensor) nil
 			 :dtype (dtype tensor)
 			 :order (order tensor))))
     (!move out tensor)))
@@ -59,14 +59,5 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
     (with-tmp-device
-      (let ((result (forward (ViewTensorNode (shape out) (shape tensor)) (detach out) tensor)))
-	(setf (cl-waffe2/vm.generic-tensor:ancestor-param-p out)
-	      (cl-waffe2/vm.generic-tensor:ancestor-param-p result)
-	      
-	      (tensor-out-n out) (tensor-out-n result)
-	      (tensor-state out) (tensor-state result)
-	      
-	      (tensor-backward out) (tensor-backward result)  
-	      (tensor-variables out) (tensor-variables result))
-	out))))
+      (forward (ViewTensorNode (shape out) (shape tensor)) out tensor))))
 
