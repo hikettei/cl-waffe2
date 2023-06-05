@@ -178,6 +178,7 @@ Return:
 
   (unless ignore-optimize
     (optimize-computation-node! toplevel :speed 1))
+  
   ;; toplevel (usually out-scalar) -> forward -> each variables, parameters
   (let ((*node-variables-tmp*)
 	(*node-parameters-tmp*)
@@ -187,7 +188,7 @@ Return:
 			(construct-backward toplevel :macroexpand macroexpand-backward))))
       (let ((body `(lambda ()
 		     (declare (optimize (speed 3)))
-		     (mapc #'state-reset! ',(remove-duplicates *node-variables-tmp*))
+		     (mapc #'state-reset! ',(remove-duplicates *node-parameters-tmp*))
 		     (funcall ,body))))
 	(when macroexpand-forward
 	  (print body))
@@ -230,7 +231,6 @@ Return:
 	 (AbstractTensor
 	  (if (eql (tensor-facet x) :input)
 	      (push x *node-variables-tmp*))
-	  (push x *node-parameters-tmp*)
 	  (tensor-id x))
 	 ;; Add: AbstractNode
 	 (T x)))
@@ -259,6 +259,9 @@ Return:
 		    (declare (type AbstractTensor ,@out-places)
 			     (ignorable ,@out-places))
 		    ;; If toplevel isn't evaluated yet...
+		    ,(and
+		      (push toplevel *node-parameters-tmp*)
+		      nil)
 		    (when (null (statecontainer-forward-result (tensor-state ,id)))
 		      (setf (statecontainer-forward-result (tensor-state ,id))
 			    (multiple-value-list

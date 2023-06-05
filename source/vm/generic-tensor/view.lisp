@@ -621,6 +621,7 @@ Example:
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 ;; TODO: at-least-dim=2
+;; TODO: View, (1 10 -1)
 (defun call-with-view (function
 		       tensors
 		       &key
