@@ -52,8 +52,7 @@ This could be applied whenever the given axis is consisted of axes of list."
 			     collect `(:broadcast ,s)))
        (setq shape (make-list dims :initial-element 1))))
 
-    (let ((out (or out (make-tensor
-			shape
+    (let ((out (or out (make-tensor shape
 			:dtype (dtype tensor)
 			:order (slot-value tensor 'cl-waffe2/vm.generic-tensor::order)))))
 
@@ -63,11 +62,10 @@ This could be applied whenever the given axis is consisted of axes of list."
 
       (let ((out* (apply #'!view out view-args)))
 	(apply #'!view
-	       (!add out* tensor)
+	       (forward (AddNode) out* tensor)
 	       (loop for v in view-args
 		     if (and (typep v 'list)
 			     (eql (car v) :broadcast))
 		       collect 0
 		     else
-		       collect v))))))
-
+		       collect t))))))

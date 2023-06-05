@@ -1,21 +1,11 @@
 
 (in-package :cl-waffe2/base-impl)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defclass TMPDevice (AbstractTensor) nil))
-
-(defmacro with-tmp-device (&body body)
-  `(let ((*using-backend* `(,@*using-backend* TMPDevice))
-	 (*facet-monopoly-mode* NIL))
-     ,@body))
-
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defnode (MoveTensorNode (myself)
-	    :where `(A[~] B[~] -> A[~])
-	    :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
-		    (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
-	    :documentation "
+(defnode (MoveTensorNode (myself)
+	  :where `(A[~] B[~] -> A[~])
+	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+	  :documentation "
 The Node MoveTensorNode must satisfy the following behaviours:
 
 Forward:
@@ -24,7 +14,7 @@ Forward:
 
 Note that until (tensor-vec) is called, x is never allocated.
 
-The option ignore-me can be accessed by the function (movetensor-ignore-me MoveTensorNode)")))
+The option ignore-me can be accessed by the function (movetensor-ignore-me MoveTensorNode)"))
 
 
 (defun !move (place tensor)
@@ -44,13 +34,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			     where before = ',before result = ',result))
   (setf (ignore-shape-error myself) t))
 
-;;
-;; 
-;;
-;;
-;;
-
-(define-impl (ViewTensorNode :device TMPDevice)
+(define-impl (ViewTensorNode)
 	     :forward
 	     ((self viewed-tensor old)
 	      (declare (ignore old))
@@ -64,6 +48,5 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
   "TODO: DOC"
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
-    (with-tmp-device
-      (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor))))
+    (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)))
 

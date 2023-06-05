@@ -109,6 +109,8 @@ Here's a list of reports.
 
 			       ;; Move ga hikituganai...
 			       ;; Extend Views, Strides, Orig-Shapes, etc..
+
+			       
 			       (when extend-from
 				 ;; Detect Errors
 				 (let ((input (nth extend-from inputs)))

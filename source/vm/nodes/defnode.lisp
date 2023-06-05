@@ -49,7 +49,7 @@ backend-priority is described as: (Priority1 Priority2 ...)"
   (declare (type list devices)
 	   (type symbol abstract-name))
   ;; ScalarTensor is forced to use.
-  (loop for device in `(,@devices ScalarTensor)
+  (loop for device in `(,@devices ScalarTensor t)
 	do (let ((node-name (subnode-name abstract-name device)))
 	     (when (subtypep node-name abstract-name)
 	       (return-from determine-facet-of-nodes
@@ -126,7 +126,7 @@ because it requires a slot for node itself.")
 
 (defmacro define-impl ((abstract-name
 			&key
-			  (device))
+			  (device t))
 		       &key
 			 save-for-backward
 			 forward
@@ -151,16 +151,15 @@ Follow these constraints:
 	(impl-name (subnode-name abstract-name device)))
 
     (eval-when (:compile-toplevel :load-toplevel :execute)
-
       (assert (= (1- (length backward-args)) (length forward-args))
 	      nil
-	      "(TODO: Rewrite it) Assertion Failed because the arguments of backward, must be: (node dy) but got ~a. At ~a node"
+	      "Assertion Failed because the number of arguments of forward and backward, doesn't correspond.: ~a At ~a"
 	      backward-args
 	      abstract-name))
     
     `(progn
        (eval-when (:compile-toplevel :load-toplevel :execute)
-	 (assert (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor)
+	 (assert (or (eql ',device t) (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor))
 		 nil
 		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
 		 ',abstract-name
@@ -194,3 +193,4 @@ Follow these constraints:
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	   ,@backward-body)))))
 
+;; (defmacro defmodule

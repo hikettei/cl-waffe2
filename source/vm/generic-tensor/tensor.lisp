@@ -387,7 +387,7 @@ Note that view is only created for Tensors, not a Scalar.
 		 :input-shape (tensor-input-shape tensor)
 		 :facet (tensor-facet tensor)
 		 :named (tensor-name tensor)
-		 :vec (slot-value tensor 'vec)))
+		 :vec (vec tensor)))
 
 (defun detach (tensor)
   "detach tensor from computation node."
