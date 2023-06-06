@@ -125,7 +125,7 @@ Note that this function is inlined.
   (let ((out (make-input shape nil
 			 :dtype (dtype target)
 			 :order (order target))))
-    (with-no-grad
+    (let ((*no-grad* t))
       (multiple-value-bind (fw bw vars params) (build (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode) (grad target) out))
 	(declare (ignore bw vars params))
 	#'(lambda (new-value)

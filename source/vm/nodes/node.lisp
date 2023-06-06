@@ -174,7 +174,8 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 (class-name (class-of node))))
 
 (defmethod backward :around ((node AbstractNode) &rest inputs)
-  (unless *no-grad*
+  (declare (ignore inputs))
+  (when (not *no-grad*)
     (with-no-grad
       (multiple-value-list (call-next-method)))))
 
