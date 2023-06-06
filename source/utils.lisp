@@ -7,3 +7,6 @@
 
 ;; (defmacro with-config :DTYPE, DEVICE, etc..)
 
+
+;; (defmacro with-cpu  (with-devices (CPUTensor LispTensor)
+;; (defmacro with-cuda

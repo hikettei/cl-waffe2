@@ -8,6 +8,7 @@ function ... lambda(i) where i = index"
   (declare (type AbstractTensor tensor)
 	   (type function function))
 
+  ;; TODO: Coerce into their type.
   (typecase (tensor-vec tensor)
     (simple-array
      (loop for i fixnum
@@ -37,6 +38,12 @@ function ... lambda(i) where i = index"
       uniform-random
       (upper)
     #'(lambda (i) (declare (ignore i)) (random upper))
+    "")
+  
+  (define-initializer-function
+      ax+b
+      (a b)
+    #'(lambda (i) (step-ax+b a i b))
     "")
 
   )

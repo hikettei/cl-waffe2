@@ -24,3 +24,4 @@
 ;; 便利なマクロの定義
 ;; Add: with-config macro.
 ;;
+

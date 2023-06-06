@@ -2,55 +2,70 @@ digraph computation_node {
   node[shape="box" style="filled" color="black" penwidth="2"];
   TENSOR [label = "TENSOR
 (100 100)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP1703 [label = "ChainTMP1703
+(100 100)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1815 [label = "Move" fillcolor="gray" style="filled, solid"];
   TENSOR [label = "TENSOR
 (100 100)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP1593 [label = "ChainTMP1593
+(100 100)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1812 [label = "Move" fillcolor="gray" style="filled, solid"];
   TENSOR [label = "TENSOR
 (100 100)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP1483 [label = "ChainTMP1483
+(100 100)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE1809 [label = "Move" fillcolor="gray" style="filled, solid"];
   INPUT [label = "INPUT
 (BATCH-SIZE N)" fillcolor="#f0f8ff" style="filled, solid"];
-  ChainTMP946 [label = "ChainTMP946
+  ChainTMP1421 [label = "ChainTMP1421
 (BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
-  NODE1164 [label = "Move" fillcolor="gray" style="filled, solid"];
-  NODE1163 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
-  ChainTMP973 [label = "ChainTMP973
+  NODE1806 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE1805 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1458 [label = "ChainTMP1458
 (BATCH-SIZE N)" fillcolor="#f0e68c" style="filled, solid"];
-  NODE1161 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
-  NODE1160 [label = "ADDNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
-  ChainTMP1011 [label = "ChainTMP1011
+  NODE1803 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1802 [label = "ADDNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1531 [label = "ChainTMP1531
 (100 100)" fillcolor="#f0e68c" style="filled, solid"];
-  NODE1158 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
-  NODE1157 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
-  ChainTMP1038 [label = "ChainTMP1038
+  NODE1800 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1799 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1568 [label = "ChainTMP1568
 (100 100)" fillcolor="#f0e68c" style="filled, solid"];
-  NODE1155 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
-  NODE1154 [label = "ADDNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
-  ChainTMP1076 [label = "ChainTMP1076
+  NODE1797 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1796 [label = "ADDNODE [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1641 [label = "ChainTMP1641
 (100 100)" fillcolor="#f0e68c" style="filled, solid"];
-  NODE1152 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
-  NODE1151 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
-  ChainTMP1103 [label = "ChainTMP1103
+  NODE1794 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1793 [label = "1DFUNC [1]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP1678 [label = "ChainTMP1678
 (100 100)" fillcolor="#f0e68c" style="filled, solid"];
-  NODE1149 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
-  NODE1148 [label = "ADDNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
-  NODE1149 -> NODE1148[penwidth="2"];
-  ChainTMP1103 -> NODE1149[style="dashed"];
-  NODE1151 -> NODE1149[penwidth="2"];
-  NODE1152 -> NODE1151[penwidth="2"];
-  ChainTMP1076 -> NODE1152[style="dashed"];
-  NODE1154 -> NODE1152[penwidth="2"];
-  NODE1155 -> NODE1154[penwidth="2"];
-  ChainTMP1038 -> NODE1155[style="dashed"];
-  NODE1157 -> NODE1155[penwidth="2"];
-  NODE1158 -> NODE1157[penwidth="2"];
-  ChainTMP1011 -> NODE1158[style="dashed"];
-  NODE1160 -> NODE1158[penwidth="2"];
-  NODE1161 -> NODE1160[penwidth="2"];
-  ChainTMP973 -> NODE1161[style="dashed"];
-  NODE1163 -> NODE1161[penwidth="2"];
-  NODE1164 -> NODE1163[weight=10];
-  ChainTMP946 -> NODE1164[style="dashed"];
-  INPUT -> NODE1164[style="dashed"];
-  TENSOR -> NODE1160[style="dashed"];
-  TENSOR -> NODE1154[style="dashed"];
-  TENSOR -> NODE1148[style="dashed"];
+  NODE1791 [label = "(Deleted)" fillcolor="gray" style="filled, solid"];
+  NODE1790 [label = "ADDNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE1791 -> NODE1790[penwidth="2"];
+  ChainTMP1678 -> NODE1791[style="dashed"];
+  NODE1793 -> NODE1791[penwidth="2"];
+  NODE1794 -> NODE1793[penwidth="2"];
+  ChainTMP1641 -> NODE1794[style="dashed"];
+  NODE1796 -> NODE1794[penwidth="2"];
+  NODE1797 -> NODE1796[penwidth="2"];
+  ChainTMP1568 -> NODE1797[style="dashed"];
+  NODE1799 -> NODE1797[penwidth="2"];
+  NODE1800 -> NODE1799[penwidth="2"];
+  ChainTMP1531 -> NODE1800[style="dashed"];
+  NODE1802 -> NODE1800[penwidth="2"];
+  NODE1803 -> NODE1802[penwidth="2"];
+  ChainTMP1458 -> NODE1803[style="dashed"];
+  NODE1805 -> NODE1803[penwidth="2"];
+  NODE1806 -> NODE1805[weight=10];
+  ChainTMP1421 -> NODE1806[style="dashed"];
+  INPUT -> NODE1806[style="dashed"];
+  NODE1809 -> NODE1802[weight=10];
+  ChainTMP1483 -> NODE1809[style="dashed"];
+  TENSOR -> NODE1809[style="dashed"];
+  NODE1812 -> NODE1796[weight=10];
+  ChainTMP1593 -> NODE1812[style="dashed"];
+  TENSOR -> NODE1812[style="dashed"];
+  NODE1815 -> NODE1790[weight=10];
+  ChainTMP1703 -> NODE1815[style="dashed"];
+  TENSOR -> NODE1815[style="dashed"];
 }
