@@ -94,7 +94,7 @@
              (direction (param-direction param)))
         (if (mat-param-p param)
             (let ((arg (gensym (symbol-name name))))
-              `(let ((,arg (tensor-ptr ,name)))
+              `(let ((,arg ,name))
                  ,(blas-call-form* (rest params) (cons arg args) fn)))
             (if (and (listp ctype)
                      (eq (first ctype) :pointer))

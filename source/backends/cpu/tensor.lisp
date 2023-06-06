@@ -22,10 +22,13 @@
 		 :initial-element initial-element))))))
 
 
-(defun tensor-ptr (tensor)
-  (declare (type CPUTensor tensor))
+(defun tensor-ptr (tensor &key (offset 0))
+  (declare (type CPUTensor tensor)
+	   (type fixnum offset)
+	   (optimize (speed 3) (safety 0)))
   #+sbcl
-  (sb-sys:vector-sap (sb-ext:array-storage-vector (tensor-vec tensor)))
+  (let ((ptr (sb-sys:vector-sap (sb-ext:array-storage-vector (the (simple-array * (*)) (tensor-vec tensor))))))
+    (incf-pointer ptr (* (the fixnum (foreign-type-size (dtype tensor))) offset)))
   #-(or sbcl)
   (error "CPUTensor requires SBCL!"))
 
