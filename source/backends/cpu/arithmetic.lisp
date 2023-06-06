@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/backends.cpu)
 
+;; BLAS -> Lisp
 
 (defun expand-axpy-form (x y &key (alpha 1.0))
   (let ((dtype (dtype x)))
@@ -69,6 +70,8 @@
 			(values
 			 (!move dx dout)
 			 (!move dy (!mul -1.0 dout)))))
+
+;; MulNode/DivNode -> LispKernel
 
 (define-impl (MoveTensorNode :device CPUTensor)
 	     :forward ((self x y)

@@ -15,6 +15,8 @@
    #:MulNode
    #:DivNode
    #:MatmulNode
+   #:trans-a?
+   #:trans-b?
    #:!matmul)
   (:export
    #:!sum

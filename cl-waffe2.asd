@@ -54,6 +54,7 @@
 	       (:file "backends/cpu/blas")
 	       (:file "backends/cpu/blas-functions")
 	       (:file "backends/cpu/arithmetic")
+	       (:file "backends/cpu/matrix-ops")
 
 	       (:file "distributions/package")
 	       (:file "distributions/generic")
