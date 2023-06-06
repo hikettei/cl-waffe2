@@ -17,7 +17,8 @@
    #:MatmulNode
    #:trans-a?
    #:trans-b?
-   #:!matmul)
+   #:!matmul
+   #:!t)
   (:export
    #:!sum
    #:!move

@@ -633,7 +633,7 @@ Example:
 	   (type function function)
 	   (type list tensors shape))
   
-  (assert (every #'(lambda (tensor) (shape-equal-list (shape tensor) shape)) tensors)
+  (assert (every #'(lambda (tensor) (shape-equal-list (butlast (shape tensor) at-least-dim) (butlast shape at-least-dim))) tensors)
 	  nil
 	  "Assertion Failed because the number of shapes: ~a doesn't match."
 	  (map 'list #'shape tensors)) ;; ... (1)

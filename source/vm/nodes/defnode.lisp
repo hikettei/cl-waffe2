@@ -141,7 +141,14 @@ Follow these constraints:
    Forward  -> (node input-tensor1 input-tensor2 ...)
    Backward -> (node dy)
 
-   Other parameters should be given as constructor."
+   Other parameters should be given as constructor.
+
+Note:
+When device=t
+
+save-for-backward's behaviour
+
+backward's arguments are:"
   (let ((forward-self-name (caar forward))
 	(backward-self-name (caar backward))
 	(forward-args  (cdar forward))
