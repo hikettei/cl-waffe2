@@ -68,7 +68,8 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 		      (slots nil)
 		      (documentation ""))
 		   &body constructor-body
-		     &aux (subscript-p (gensym)))
+		   &aux (subscript-p  (gensym))
+		        (subscript-p1 (gensym)))
   "The macro defnode helps you to describe how nodes are working.
 
 abstract-name... The Common Name for your node.
@@ -108,12 +109,14 @@ because it requires a slot for node itself.")
        ;; Backends are modular
        (defun ,abstract-name (,@(cdr constructor-arguments))
 	 ,documentation
-	 (let* ((,subscript-p (multiple-value-list (create-subscript-p ,where)))
+	 (let* ((,subscript-p  (multiple-value-list (create-subscript-p ,where)))
+		(,subscript-p1 (multiple-value-list (create-subscript-p ,where :fixed t))) ;; subscript-p without ~
 		(,(car constructor-arguments)
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend*)
-		   :function-node (car ,subscript-p)
-		   :transmission-state (second ,subscript-p)
+		   :function-node  (car ,subscript-p)
+		   :function-node1 (car ,subscript-p1)
+		   :transmission-state (second ,subscript-p) ;; (second subscript-p) == (second subscript-p1)
 		   ,@(loop for slot in initarg-slots
 			   if slot
 			     collect (intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")

@@ -55,4 +55,9 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [ ] NN Features (Optimizers, etc...)
 - [ ] Train MLP
 - [ ] Optimize Memory-management.
+- [ ] Mathematical and Dense Operations (exp log sin cos etc...)
+- [ ] Operations like: argmax/argmin, reshape, transpose, swapaxes.
+- [ ] Optimize call-with-view, to minimize the number of using funcall.
+- [ ] Fix the issue where [~ a b] can't be applied to 2D Tensor.
+
 

@@ -6,7 +6,12 @@
     :initarg
     :function-node
     :reader abstractnode-node
-    :type function) ;; [x y] [y z] -> [z x]
+    :type function) ;; [x ~ y] [y z] -> [z x]
+   (function-node1
+    :initarg
+    :function-node1
+    :reader abstractnode-node1
+    :type (or null function)) ;; [x y] [y z] -> [z x], ~ is removed. If ~ isn't used at function-node, set nil
    (transmission-state :initarg :transmission-state :reader transmission-state :type list)
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
@@ -65,7 +70,8 @@ Here's a list of reports.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
-  (let* ((transition-function (abstractnode-node node))
+  (let* ((transition-function     (abstractnode-node node))
+	 (transition-function-sub (abstractnode-node1 node))
 	 (pointer-states      (transmission-state node))
 	 ;; What View To Use? modottara yaru.
 	 (input-states (loop for i in inputs collect (shape i)))
@@ -74,12 +80,23 @@ Here's a list of reports.
     
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
+
+      ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
       
-      (when (and detected-errors
-		 (not (ignore-shape-error node)))
-	;; Enhancement
-	;; CALL-VIEW-AND-CONTINUE
-	(describe-problems node detected-errors))
+      (when detected-errors
+	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
+	
+	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
+	  ;; Enhancement
+	  ;; CALL-VIEW-AND-CONTINUE
+	  ;; If error is not originated from ~.
+
+	  ;; The case when error continues...
+	  
+	  (if (and detected-errors-1
+		   (not (ignore-shape-error node)))
+	      (describe-problems node detected-errors)
+	      (setq out-state out-state1))))
 
       ;; TODO: When Dynamic-Mode
       ;; Call (construct-forward) and eval it here.

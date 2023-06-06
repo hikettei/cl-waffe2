@@ -252,9 +252,10 @@ Return:
       (compile nil
 	       `(lambda ()
 		  (declare (optimize (speed 3)))
-		  (let (,@(loop for f in next-states
-				for p in out-places
-				collect `(,p (funcall ,f)))
+		  ;; When Same Tensors continues, The variable hoge is defined but never used will be occurs...
+		  (let* (,@(loop for f in next-states
+				 for p in out-places
+				 collect `(,p (funcall ,f)))
 			 (,id ,toplevel))
 		    (declare (type AbstractTensor ,@out-places)
 			     (ignorable ,@out-places))

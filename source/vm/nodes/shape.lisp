@@ -206,7 +206,7 @@ Return:
 		      (bnf-parse-let-phase (cdr let-part))))))))))
 
 ;; export
-(defun parse-subscript (subscripts)
+(defun parse-subscript (subscripts &key (fixed nil))
   "Subscripts are following format:
 
 subscripts := variables -> variables
@@ -240,13 +240,19 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
   ;; replace [a b] into [ a b ] (couldn't intepreted as a separated token)
   (multiple-value-bind (inputs outputs first-state out-state let-binding)
       (bnf-parse-subscripts-toplevel
-       (read-from-string
-	(regex-replace-all "\\]"
-			   (regex-replace-all
-			    "\\["
-			    (format nil "~a" subscripts)
-			    " [ ")
-			   " ] ")))
+       (let ((out
+	       (read-from-string
+		(regex-replace-all "\\]"
+				   (regex-replace-all
+				    "\\["
+				    (format nil "~a" subscripts)
+				    " [ ")
+				   " ] "))))
+	 (if fixed
+	     (loop for s in out
+		   unless (symbol-eq s '~)
+		     collect s)
+	     out)))
     (values inputs outputs first-state out-state let-binding)))
 
 (defun get-common-symbols (symbols)
@@ -310,6 +316,7 @@ Because : The actual ~ath argument given has a shape of ~a.
 (defun create-subscript-p (subscripts
 			   &key
 			     (macroexpand nil)
+			     (fixed nil)
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
 			     (undetermined-shape-tmp (gensym "UD"))
@@ -317,6 +324,8 @@ Because : The actual ~ath argument given has a shape of ~a.
 			     (pos (gensym "pos"))
 			     (undetermined-symbols (gensym "SYM")))
   "
+If fixed is t, ignore ~.
+
 Memo:
 
 Example:
@@ -351,7 +360,7 @@ Rule4: ~は一度のみ使える
 			first-state
 			out-state
 			let-binding)
-      (parse-subscript subscripts)
+      (parse-subscript subscripts :fixed fixed)
 
     ;; [~ a b] [a b ~]
     ;; [~ a b] [~ k b] let k = (/ b 2)
