@@ -59,7 +59,7 @@ This could be applied whenever the given axis is consisted of axes of list."
       (assert (equal (shape out) shape)
 	      nil
 	      "!sum: Assertion Failed because the given out's shape is ~a, but excepted: ~a" (shape out) shape)
-
+      
       (let ((out* (apply #'!view out view-args)))
 	(apply #'!view
 	       (forward (AddNode) out* tensor)
@@ -69,3 +69,4 @@ This could be applied whenever the given axis is consisted of axes of list."
 		       collect 0
 		     else
 		       collect t))))))
+

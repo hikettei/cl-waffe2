@@ -50,6 +50,9 @@
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
+	       
+	       (:file "backends/cpu/blas")
+	       (:file "backends/cpu/blas-functions")
 	       (:file "backends/cpu/arithmetic")
 
 	       (:file "distributions/package")

@@ -7,15 +7,26 @@
 					&rest initargs
 					&key &allow-other-keys)
   ;; if projected-p -> alloc new vec
-  (let ((shape (getf initargs :shape))
+  (let* ((shape (getf initargs :shape))
 	(dtype (dtype->lisp-type (getf initargs :dtype)))
 	(vec   (getf initargs :vec))
-	(facet (getf initargs :facet)))
+	(facet (getf initargs :facet))
+	(initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
     (when (eql facet :exist)
       (if vec
 	  (setf (tensor-vec tensor) vec)
 	  (setf (tensor-vec tensor)
 		(make-array
 		 (apply #'* shape)
-		 :element-type dtype))))))
+		 :element-type dtype
+		 :initial-element initial-element))))))
+
+
+(defun tensor-ptr (tensor)
+  (declare (type CPUTensor tensor))
+  #+sbcl
+  (sb-sys:vector-sap (sb-ext:array-storage-vector (tensor-vec tensor)))
+  #-(or sbcl)
+  (error "CPUTensor requires SBCL!"))
+
 
