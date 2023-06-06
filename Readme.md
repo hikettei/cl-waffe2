@@ -31,14 +31,14 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [x] Fundamental Dtypes
 - [x] Displaying Tensor's all element in a small area.
 - [x] Scheduling and Optimizing the allocation of array, by analyzing the computation node.
-- [x] Pruning the computation node.
+- [x] Pruning the rebundant computation node.
 - [x] Basic Arithmetic Operation (+ - * /, and gemm)
 - [ ] Support both column and row major ordering.
-- [ ] Sampling distribution (dense)
-- [ ] Sampling distribution (sparse)
+- [ ] Sampling distributions (dense)
+- [ ] Sampling distributions (sparse)
 - [ ] Casting from different dtypes.
 - [ ] Parallelize the computation node by lparallel.
-- [ ] Let View APIs Support :indices :tflist
+- [ ] Let View APIs Support :indices :tflist (with cmp operations, bit-matrix)
 - [ ] Eliminate Bugs
 - [ ] swapaxes/transpose
 - [ ] CUDA Backend (Also, metal backends etc could be realised)
@@ -57,7 +57,9 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [ ] Optimize Memory-management.
 - [ ] Mathematical and Dense Operations (exp log sin cos etc...)
 - [ ] Operations like: argmax/argmin, reshape, transpose, swapaxes.
-- [ ] Optimize call-with-view, to minimize the number of using funcall.
-- [ ] Fix the issue where [~ a b] can't be applied to 2D Tensor.
+- [ ] Optimize call-with-view, to minimize the number of using funcall. (i.e.: reshape (10 10) into (100) tensor)
+- [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
+- [ ] Optimized Sparse Matrix
+- [ ] FP16 Matrix
 
 
