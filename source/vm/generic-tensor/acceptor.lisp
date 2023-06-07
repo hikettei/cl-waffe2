@@ -115,6 +115,7 @@
 (defparameter *node-variables-tmp* nil)
 (defparameter *node-parameters-tmp* nil)
 
+;; fw, bw, vars, params = build(out-node, input-vars)
 (defun build (toplevel-tensor
 	      &key
 		(ignore-optimize nil)
@@ -272,9 +273,11 @@ Return:
 		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,id)))))))))
 
 (defun !maybe-move (place tensor)
-  (if (movetensor-p (tensor-backward tensor))
-      tensor
-      (cl-waffe2/base-impl:!move place tensor)))
+  "If previous node of tensor is MoveTensor, this function is ignored, otherwise do a !move"
+  (when tensor
+    (if (movetensor-p (tensor-backward tensor))
+	tensor
+	(cl-waffe2/base-impl:!move place tensor))))
 
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
@@ -284,37 +287,37 @@ Return:
 
   ;; Get a backward node.
   (let* ((outs (apply
-	       ;; (backward self dout dx dy dz ...)
-	       #'cl-waffe2/vm.nodes::backward
-	       (tensor-backward toplevel)
-	       past-dy
-	       ;; detach from computation node by projecting into -> <t>.
-	       (map 'list #'view (tensor-variables toplevel))))
+		;; (backward self dout dx dy dz ...)
+		#'cl-waffe2/vm.nodes::backward
+		(tensor-backward toplevel)
+		past-dy
+		;; detach from computation node by projecting into -> <t>.
+		(map 'list #'detach (tensor-variables toplevel))))
 	 (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
 
     `(let* (,@(map 'list
 		   #'(lambda (tensor)
 		       `(,(tensor-id tensor) ,tensor))
 		   (tensor-variables toplevel))
-	    ,@(map 'list
-		   #'(lambda (tensor)
-		       `(,(tensor-id tensor) ,tensor))
-		   outs))
+	    ,@(loop for tensor in outs
+		    if tensor
+		      collect `(,(tensor-id tensor) ,tensor)))
        (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
-		(ignorable ,@(map 'list #'tensor-id outs)))
+		(ignorable ,@(map 'list #'tensor-id (loop for o in outs if o collect o))))
        
        ,@(loop for out    in outs
 	       for tensor in (tensor-variables toplevel)
-	       collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
-			  (declare (ignorable ,(tensor-id out)))
-			  ,(if (slot-value tensor 'requires-grad)
-			       ;; !copy and add.
-			       `(add-grads ,(tensor-id tensor) ,(tensor-id out))
-			       (when (and
-				      (tensor-state tensor)
-				      (ancestor-param-p tensor))
-				 ;; Explore deeper if there's any params.
-				 (explore-backwards tensor out))))))))
+	       if out
+		 collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
+			    (declare (ignorable ,(tensor-id out)))
+			    ,(if (slot-value tensor 'requires-grad)
+				 ;; !copy and add.
+				 `(add-grads ,(tensor-id tensor) ,(tensor-id out))
+				 (when (and
+					(tensor-state tensor)
+					(ancestor-param-p tensor))
+				   ;; Explore deeper if there's any params.
+				   (explore-backwards tensor out))))))))
 
 ;; TODO
 

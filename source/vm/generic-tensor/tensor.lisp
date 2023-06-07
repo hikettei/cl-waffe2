@@ -256,21 +256,13 @@ Input:
     - order (as it is)"
   (declare (type list shape)
 	   (type (or null keyword) named))
-  (if (equal shape `(1))
-      (make-instance 'ScalarTensor
-		     :dtype dtype
-		     :order order
-		     :shape shape
-		     :input-shape shape
-		     :named (or named (symbol-name (gensym "ChainTMPScalar")))
-		     :facet :input)
-      (make-instance (car *using-backend*)
-		     :dtype dtype
-		     :order order
-		     :shape shape
-		     :input-shape shape
-		     :named (or named (symbol-name (gensym "ChainTMP")))
-		     :facet :input)))
+  (make-instance (car *using-backend*)
+		 :dtype dtype
+		 :order order
+		 :shape shape
+		 :input-shape shape
+		 :named (or named (symbol-name (gensym "ChainTMP")))
+		 :facet :input))
 
 (defun mref (tensor &rest subscripts)
   "Read-only. Only used for printing the tensor.
@@ -372,26 +364,30 @@ Note that view is only created for Tensors, not a Scalar.
 "
   ;; TODO: When tensor is scalar, return error.
 
-  (when (typep tensor 'ScalarTensor)
-    (format t ":BROADCAST IS IGNORED (TODO)")
-    (return-from view tensor))
+  (let ((subscripts
+	  (loop for s in subscripts collect (force-list s))))
+    (when (typep tensor 'ScalarTensor)
+      (format t ":BROADCAST IS IGNORED for scalar input (TODO)")
+      (return-from view tensor))
 
-  (make-instance (car *using-backend*)
-		 :dtype (dtype tensor)
-		 :order (order tensor)
-		 :requires-grad (slot-value tensor 'requires-grad)
-		 :shape         (slot-value tensor 'orig-shape)
-		 :projected-p   t
-		 :past-view (tensor-view tensor)
-		 :view subscripts
-		 :input-shape (tensor-input-shape tensor)
-		 :facet (tensor-facet tensor)
-		 :named (tensor-name tensor)
-		 :vec (vec tensor)))
+    (make-instance (car *using-backend*)
+		   :dtype (dtype tensor)
+		   :order (order tensor)
+		   :requires-grad (slot-value tensor 'requires-grad)
+		   :shape         (slot-value tensor 'orig-shape)
+		   :projected-p   t
+		   :past-view (tensor-view tensor)
+		   :view subscripts
+		   :input-shape (tensor-input-shape tensor)
+		   :facet (tensor-facet tensor)
+		   :named (tensor-name tensor)
+		   :vec (vec tensor))))
 
 (defun detach (tensor)
   "detach tensor from computation node."
-  (view tensor))
+  (let* ((view (tensor-view tensor))
+	 (out  (view tensor)))
+    (apply #'view out view)))
 
 ;; TODO: Print ScalarTensor
 (defmethod print-object ((tensor AbstractTensor) stream)

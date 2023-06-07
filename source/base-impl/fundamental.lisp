@@ -38,11 +38,17 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	     :forward
 	     ((self viewed-tensor old)
 	      (declare (ignore old))
-	      `(progn ,viewed-tensor))
+	      `(progn
+		 ,viewed-tensor))
 	     :backward
 	     ((self dout dx dy)
-	      (values (!move (apply #'!view dx (slot-value self 'subscripts)) dout)
-		      (!move (apply #'!view dy (slot-value self 'subscripts)) dout))))
+	      (declare (ignore dx))
+	      (let ((subscripts (tensor-view dy)))
+		(values
+		 nil
+		 (!move
+		  dy
+		  (apply #'!view dout subscripts))))))
 
 (defun !view (tensor &rest subscripts)
   "TODO: DOC"
