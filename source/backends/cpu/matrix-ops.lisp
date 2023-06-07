@@ -5,9 +5,8 @@
 
 (declaim (ftype (function (boolean) (signed-byte 8)) trans->c))
 (defun trans->c (transpose-specifier)
-  (declare (optimize (safety 0)))
   (if transpose-specifier
-      #.(char-code #\C)
+      #.(char-code #\T)
       #.(char-code #\N)))
 
 ;; TODO: 2D Gemm

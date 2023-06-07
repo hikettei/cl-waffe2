@@ -31,17 +31,20 @@ backendのforward/backwardはAbstractNodeを継承して、定義する
   ""
   (funcall (abstractnode-node node) previous-shape))
 
-(defun describe-problems (error-node detected-errors)
+(defun describe-problems (error-node detected-errors inputs outputs)
   ;; Enhancement:
   ;; Restart-Case
   ;; [Fix-Definition-And-Step]
   ;; [Replace-Shape-And-Step]
   ;; More Details:
   ;; Displays [pre-|post-]computation node
-  ;;
+  ;; TODO: make it more intuitive....
   (shaping-error
    "Couldn't step forward because of shape-error.
-At: ~a
+
+At:     ~a
+Inputs:          ~a
+Excepted Output: ~a
 Here's a list of reports.
 
 1. ~a
@@ -49,6 +52,8 @@ Here's a list of reports.
 ~a
 ~a"
    error-node
+   (map 'list #'shape inputs)
+   outputs
    (car detected-errors)
    (if (cdr detected-errors)
        "Also, these reports could be helpful for you (calculated ignoring the first errors.)"
@@ -95,7 +100,7 @@ Here's a list of reports.
 	  
 	  (if (and detected-errors-1
 		   (not (ignore-shape-error node)))
-	      (describe-problems node detected-errors)
+	      (describe-problems node detected-errors inputs out-state)
 	      (setq out-state out-state1))))
 
       ;; TODO: When Dynamic-Mode

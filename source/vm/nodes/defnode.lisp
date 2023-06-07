@@ -106,6 +106,11 @@ because it requires a slot for node itself.")
        (defclass ,abstract-name (AbstractNode)
 	 (,@slots)
 	 (:documentation ,documentation))
+       (defmethod print-object ((object ,abstract-name) stream)
+	 (format stream
+		 "<~a, :where ~a>"
+		 (class-name (class-of object))
+		 ',where))
        ;; Backends are modular
        (defun ,abstract-name (,@(cdr constructor-arguments))
 	 ,documentation
