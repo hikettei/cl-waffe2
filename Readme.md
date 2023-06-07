@@ -32,6 +32,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [x] Displaying Tensor's all element in a small area.
 - [x] Scheduling and Optimizing the allocation of array, by analyzing the computation node.
 - [x] Pruning the rebundant computation node.
+- [ ] Precompute the constant-node.
 - [x] Basic Arithmetic Operation (+ - * /, and gemm)
 - [ ] Support both column and row major ordering.
 - [ ] Sampling distributions (dense)
