@@ -85,7 +85,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Optimized Sparse Matrix
 - [ ] FP16 Matrix
 - [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512.
-
+- [ ] (After released v1.0) cl-waffe2 for coalton.
 # Basics
 
 ### AbstractTensor

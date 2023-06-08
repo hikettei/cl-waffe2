@@ -173,6 +173,9 @@ SideEffects:
 ;; F() -> G(X, N, OUT) Function Family
 ;; ==============================================================
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  
+(export '(ExptNode !expt))
 (defnode (ExptNode (myself)
 	  :where `(X[~] OUT[~] N[scal] -> OUT[~] where scal = 1)
 	  :backward ((self dout x out n)
@@ -200,5 +203,7 @@ Output:
     (if out
 	(forward (ExptNode) x out n)
 	(forward (ExptNode) x (make-input (shape x) nil :dtype (dtype x) :order (order x)) n))))
+
+)
 
 
