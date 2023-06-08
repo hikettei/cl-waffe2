@@ -37,7 +37,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [ ] Support both column and row major ordering.
 - [ ] Sampling distributions (dense)
 - [ ] Sampling distributions (sparse)
-- [ ] Casting from different dtypes.
+- [ ] Establish Specification About Dtype APIs, (e.g.: Casting from different dtypes, Auto Inferencing Dtype Of (make-tensor 1))
 - [ ] Parallelize the computation node by lparallel.
 - [ ] Let View APIs Support :indices :tflist (with cmp operations, bit-matrix)
 - [ ] Eliminate Bugs
@@ -62,5 +62,12 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
 - [ ] Optimized Sparse Matrix
 - [ ] FP16 Matrix
+
+# Basics
+
+### AbstractTensor
+
+### What is build
+
 
 

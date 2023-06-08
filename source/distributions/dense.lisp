@@ -1,9 +1,10 @@
 
 (in-package :cl-waffe2/distributions)
 
-
-
+;; ======================================================
 ;; Ref: https://dl.acm.org/doi/pdf/10.1145/359460.359482
+;; ======================================================
+
 (define-with-typevar-dense (beta-bb u) (a0 a b)
   (declare (optimize (speed 3) (safety 0))
 	   (type u a0)
@@ -123,7 +124,11 @@
 	  (/ w (+ b w))
 	  (/ b (+ b w))))))
 
+;; Fixed Seed
+;; Ziggurat
 
+
+;; randn
 ;; chisquare
 ;; gamma
 ;; etc...

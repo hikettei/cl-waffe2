@@ -36,36 +36,36 @@
 (define-impl (AddNode :device LispTensor)
 	     :forward ((self x y)
 		       (let ((adder (matrix-add (dtype x))))
-		       `(,@(call-with-view
-			    #'(lambda (x-view
-				       y-view)
-				`(funcall ,adder
-			 	  (tensor-vec ,x)
-				  (tensor-vec ,y)
-				  ,(offset-of x-view 0)
-				  ,(offset-of y-view 0)
-				  ,(size-of x-view 0)
-				  ,(stride-of x-view 0)
-				  ,(stride-of y-view 0)))
-			    `(,x ,y))
-			 ,x))))
-	     
+			 `(,@(call-with-view
+			      #'(lambda (x-view
+					 y-view)
+				  `(funcall ,adder
+			 		    (tensor-vec ,x)
+					    (tensor-vec ,y)
+					    ,(offset-of x-view 0)
+					    ,(offset-of y-view 0)
+					    ,(size-of x-view 0)
+					    ,(stride-of x-view 0)
+					    ,(stride-of y-view 0)))
+			      `(,x ,y))
+			   ,x))))
+
 (define-impl (SubNode :device LispTensor)
 	     :forward ((self x y)
 		       (let ((subber (matrix-sub (dtype x))))
-		       `(,@(call-with-view
-			    #'(lambda (x-view
-				       y-view)
-				`(funcall ,subber
-			 	  (tensor-vec ,x)
-				  (tensor-vec ,y)
-				  ,(offset-of x-view 0)
-				  ,(offset-of y-view 0)
-				  ,(size-of x-view 0)
-				  ,(stride-of x-view 0)
-				  ,(stride-of y-view 0)))
-			    `(,x ,y))
-			 ,x))))
+			 `(,@(call-with-view
+			      #'(lambda (x-view
+					 y-view)
+				  `(funcall ,subber
+			 		    (tensor-vec ,x)
+					    (tensor-vec ,y)
+					    ,(offset-of x-view 0)
+					    ,(offset-of y-view 0)
+					    ,(size-of x-view 0)
+					    ,(stride-of x-view 0)
+					    ,(stride-of y-view 0)))
+			      `(,x ,y))
+			   ,x))))
 
 
 (define-impl (MulNode :device LispTensor)
@@ -120,7 +120,7 @@
 			   ,(stride-of x-view 0)))
 		     `(,x))
 		  ,x))))
-	     
+
 
 (define-impl (ScalarMul :device LispTensor)
 	     :forward
