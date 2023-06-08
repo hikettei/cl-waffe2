@@ -3,7 +3,7 @@
 
 **The project is still in the concept stage.**
 
-cl-waffe2 is a open-source project that provides a differentible matrix operationwhich is fairly extensible and strongly optimized by JIT Compiler.
+cl-waffe2 is a open-source project that provides a differentible matrix operation which is fairly extensible and strongly optimized by JIT Compiler.
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
@@ -73,16 +73,11 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 # At first glance
 
 ```lisp
+;; defines a node.
 (defnode (MatMulNode (myself &key transpose-a transpose-b)
 	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
 		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
-	  :backward ((self dout da db do)
-		     (declare (ignore do))
-		     (values
-		      (!matmul dout db :transpose-y (not (trans-b? self)))
-		      (!matmul da dout :transpose-x (not (trans-a? self)))
-		      nil))
 	  :documentation "(gemm 1.0 a b 0.0 c)"))
 
 (defun build-kernel ()
