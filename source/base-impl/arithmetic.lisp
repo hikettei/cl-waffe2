@@ -37,7 +37,7 @@ Let X and Y be a given arguments and both are matrix.
     ((self dout dx dy)
      (values
       (!div dout dy)
-      (!mul dout dx)))))
+      (!div (!mul dx (!mul -1 dout)) (!square dy))))))
 
 
 (macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
