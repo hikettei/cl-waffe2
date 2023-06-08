@@ -65,6 +65,9 @@
 	       (:file "distributions/dense")
 	       (:file "distributions/sparse")
 
+	       (:file "nn/package")
+	       (:file "optimizers/package")
+
 	       (:file "package")
 	       (:file "utils")
 
