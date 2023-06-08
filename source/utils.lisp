@@ -1,8 +1,8 @@
 
 (in-package :cl-waffe2)
 
-(defmacro with-build ((forward variables parameters) out &body body)
-  `(multiple-value-bind (,forward ,variables, parameters) (construct-forward ,out)
+(defmacro with-build ((forward backward variables parameters) out &body body)
+  `(multiple-value-bind (,forward ,backward ,variables, parameters) (build ,out)
      ,@body))
 
 (defmacro with-cpu (&body body)
@@ -27,6 +27,8 @@
 (defmacro with-row-major (&body body)
   `(let ((*default-order* :row))
      ,@body))
+
+;; Broadcast_Auto shouldn't be modular, all the nodes defined in cl-waffe2, should work under all combines of config.
 
 (defmacro with-config ((&key
 			  ;; TO ADD:

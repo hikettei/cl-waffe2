@@ -9,19 +9,21 @@
    :cl-waffe2/base-impl
    :cl-waffe2/distributions
    :cl-waffe2/backends.cpu
-   :cl-waffe2/backends.lisp))
+   :cl-waffe2/backends.lisp)
+  (:export
+   #:with-config
+   #:with-dtype
+   #:with-column-major
+   #:with-row-major
+   #:with-cpu
+   ;;#:with-cuda
+   #:with-build))
 
+(in-package :cl-waffe2)
 
-;; ./backends/cpu/
-;; ./backends/cuda/
-;; ./backends/metal/
+;; Export Most Basic APIs?
 
-;; ./nn/
-;; ./optimizers
-;; ./distrivutions
-
-;; The Package cl-waffe2: APIのエクスポート
-;; 便利なマクロの定義
-;; Add: with-config macro.
 ;;
-
+;; :cl-waffe2/base-impl's all exported APIs
+;; :cl-waffe2/distributions
+;; :cl-waffe2/backends.lisp::CPUTensor, ScalarTensor etc..
