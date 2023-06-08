@@ -81,11 +81,11 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 	  :documentation "(gemm 1.0 a b 0.0 c)"))
 
 (define-impl (MatMulNode :device CPUTensor)
-    ... ;; Give a definition of MatmulNode when device=CPUTensor
+    ... ;; Give a implementation of MatmulNode when device=CPUTensor
     )
 
 (define-impl (MatMulNode :device LispTensor)
-    ... ;; Give a definition of MatmulNode when device=LispTensor
+    ... ;; Give a implementation of MatmulNode when device=LispTensor
    )
    
 (defun build-kernel ()
