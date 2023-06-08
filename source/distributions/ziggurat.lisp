@@ -38,16 +38,15 @@
 	       (declare (type u x))
 	       (+ (the u (* x (the u (funcall pdf x))))
 		  (the u (funcall cdf +inf))
-		  (- (the u (funcall cdf zero)))))
+		  (- (the u (funcall cdf x)))))
 	     (error-of (x)
 	       (declare (type u x))
 	       (let ((area (area-of x))
 		     (xi x))
 		 ;; Memo: pdfの値が(0.0, 1.0)にならない・・・
-		 (print area)
 		 (loop for i fixnum upfrom 1 below table-size
 		       do (progn
-			    (setq xi (print (the u (funcall ipd (print (+ (/ area xi) (funcall pdf xi)))))))
+			    (setq xi (the u (funcall ipd (print (+ (/ area xi) (funcall pdf xi))))))
 			    (when (< xi zero)
 			      (return-from error-of -inf))))
 		 ;; Check IsNAN? this is processing-system-dependant...
@@ -216,7 +215,7 @@
       #'(lambda (x) (* (sqrt (* 2 pi))
 		       0.5
 		       (+ 1 (erf (/ x (sqrt 2))))))
-      #'(lambda (x) (sqrt (* -2 (log x))))) ;; x = (0, 1) X -> +1, F -> 0 X -> -1, F -> ∞
+      #'(lambda (y) (sqrt (* -2 (log y))))) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
 
     ))
 
