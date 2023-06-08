@@ -70,4 +70,32 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 ### What is build
 
 
+# At first glance
+
+```lisp
+(defnode (MatMulNode (myself &key transpose-a transpose-b)
+	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
+	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
+		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+	  :backward ((self dout da db do)
+		     (declare (ignore do))
+		     (values
+		      (!matmul dout db :transpose-y (not (trans-b? self)))
+		      (!matmul da dout :transpose-x (not (trans-a? self)))
+		      nil))
+	  :documentation "(gemm 1.0 a b 0.0 c)"))
+
+(defun build-kernel ()
+  (with-devices (LispTensor)
+    (let ((result (forward (MatmulNode) a b))) ;; This part works with Lisp
+      (with-devices (CPUTensor)
+        (let ((result1 (forward (MatmulNode) a b))) ;; This part works with BLAS
+           (build (!sum result1)) ;; Applying JIT, waffe2 optimizes the computation node, memory-allocation, thread scheduling, etc...
+	   )))))
+
+(multiple-value-bind (fw bw vars params) (build-kernel)
+    (time (funcall fw))
+    (time (funcall bw)))
+...
+```
 
