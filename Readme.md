@@ -26,7 +26,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [x] Pre-Inspection of Shapes
 - [x] Fundamental APIs of view (Broadcasting, Slice, Indexing etc...)
 - [x] Obvious and Intuitive message of Shape-Error.
-- [x] A small DSL to write subscripts (:where pharse)
+- [x] A small DSL to write subscripts (i.e.: :where keyword)
 - [x] A fundamental of forward/backward, and JIT. (acceptor)
 - [x] Fundamental Dtypes
 - [x] Displaying Tensor's all element in a small area.
@@ -62,6 +62,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 - [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
 - [ ] Optimized Sparse Matrix
 - [ ] FP16 Matrix
+- [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512.
 
 # Basics
 

@@ -9,7 +9,6 @@
       #.(char-code #\T)
       #.(char-code #\N)))
 
-;; TODO: 2D Gemm
 ;; TODO: 1D Gemm -> Dot Product
 ;; TODO: Fix it.
 ;; TODO: Transpose Tensor.

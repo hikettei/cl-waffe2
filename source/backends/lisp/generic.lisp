@@ -52,3 +52,36 @@
 		      body))))
 	*available-dtype-list* *available-lisp-type*)))
 
+(defparameter *available-dtype-dense-list*
+  `(:double
+    :float))
+
+(defparameter *available-lisp-type-dense* (map 'list #'dtype->lisp-type *available-dtype-dense-list*))
+
+(defmacro define-with-typevar-dense ((function-name type-ident)
+				     (&rest args)
+				     &body
+				       body
+				     &aux
+				       (type-space (gensym "TYPE-KEY")))
+  `(progn
+     (defgeneric ,function-name (,type-space))
+
+     ,@(map
+	'list
+	#'(lambda (type-key type)
+	    `(defmethod ,function-name ((,type-space (eql ,type-key)))
+	       #'(lambda (,@args)
+		   ,@(map-tree
+		      #'(lambda (obj)
+			  (typecase obj
+			    (symbol
+			     (if (equal (symbol-name obj)
+					(symbol-name type-ident))
+				 type
+				 obj))
+			    (single-float
+			     (coerce obj type))
+			    (T obj)))
+		      body))))
+	*available-dtype-dense-list* *available-lisp-type-dense*)))
