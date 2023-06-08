@@ -64,6 +64,7 @@
 	       (:file "distributions/sampling")
 	       (:file "distributions/dense")
 	       (:file "distributions/sparse")
+	       (:file "distributions/ziggurat")
 
 	       (:file "nn/package")
 	       (:file "optimizers/package")
