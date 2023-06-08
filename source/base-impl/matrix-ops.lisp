@@ -7,6 +7,12 @@
 	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
 		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+	  :backward ((self dout da db do)
+		     (declare (ignore do))
+		     (values
+		      (!matmul dout db :transpose-y (not (trans-b? self)))
+		      (!matmul da dout :transpose-x (not (trans-a? self)))
+		      nil))
 	  :documentation ""))
 
 (defnode (LazyTransposeNode (myself)

@@ -56,20 +56,12 @@
 (define-impl (AddNode :device CPUTensor)
 	     :forward ((self x y)
 		       `(,@(expand-axpy-form x y)
-			 ,x))
-	     :backward ((self dout dx dy)
-			(values
-			 (!move dx dout)
-			 (!move dy dout))))
+			 ,x)))
 
 (define-impl (SubNode :device CPUTensor)
 	     :forward ((self x y)
 		       `(,@(expand-axpy-form x y :alpha -1.0)
-			 ,x))
-	     :backward ((self dout dx dy)
-			(values
-			 (!move dx dout)
-			 (!move dy (!mul -1.0 dout)))))
+			 ,x)))
 
 ;; MulNode/DivNode -> LispKernel
 
@@ -77,14 +69,5 @@
 	     :forward ((self x y)
 		       ;; X <- Y
 		       `(,@(expand-move-form x y)
-			 ,x))
-	     :backward ((self dout dx dy)
-			(declare (ignore dx))
-			(let ((dy-out
-				(if (and
-				     (eql (tensor-attribute dy) :chain)
-				     (movetensor-ignore-me self))
-				    dout
-				    (!copy dout))))
-			  (values dout dy-out))))
+			 ,x)))
 

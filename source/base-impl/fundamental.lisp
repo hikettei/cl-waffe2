@@ -5,6 +5,16 @@
 	  :where `(A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+	  :backward ((self dout dx dy)
+		     (declare (ignore dx))
+		     (let ((dy-out
+			     (if (and
+				  (eql (tensor-attribute dy) :chain)
+				  (movetensor-ignore-me self))
+				 dout
+				 (!copy dout))))
+		       ;; side eff
+		       (values dout dy-out)))
 	  :documentation "
 The Node MoveTensorNode must satisfy the following behaviours:
 

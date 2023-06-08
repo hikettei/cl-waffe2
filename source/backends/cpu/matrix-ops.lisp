@@ -82,11 +82,5 @@
 	      (let ((trans-a (trans-a? self))
 		    (trans-b (trans-b? self)))
 		`(,@(expand-gemm-form a b out :trans-a? trans-a :trans-b? trans-b)
-		  ,out)))
-	     :backward
-	     ((self dout da db do)
-	      (values
-	       (!matmul dout db :transpose-y (not (trans-b? self)))
-	       (!matmul da dout :transpose-x (not (trans-a? self)))
-	       do)))
+		  ,out))))
 

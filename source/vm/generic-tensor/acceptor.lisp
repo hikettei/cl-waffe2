@@ -324,3 +324,8 @@ Return:
 ;; REPL-Friendly-Utils:
 ;; (defnode ValueTensor
 ;; (defun value (tensor) )
+
+;; The definition of value node is dynamically changed and redefined.
+;; Forward  -> All The Previous Forward Steps
+;; Backward -> All The Previous Backward Steps.
+

@@ -119,10 +119,8 @@
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
 		     `(,x))
-		  ,x)))
-	     :backward
-	     ((self dout dx dy)
-	      (values (!move dx dout) (!move dy dout))))
+		  ,x))))
+	     
 
 (define-impl (ScalarMul :device LispTensor)
 	     :forward
@@ -138,10 +136,7 @@
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
 		     `(,x))
-		  ,x)))
-	     :backward
-	     ((self dout dx dy)
-	      (values (!mul dout dy) (!mul dout dx))))
+		  ,x))))
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
   (declare (optimize (speed 3))
@@ -176,15 +171,5 @@
 			       ,(size-of x-view 0)))
 			 `(,x ,y))
 		       ,x)
-		     ,y)))
-	     :backward ((self dout dx dy)
-			(declare (ignore dx))
-			(let ((dy-out
-				(if (and
-				     (eql (tensor-attribute dy) :chain)
-				     (movetensor-ignore-me self))
-				    dout
-				    (!copy dout))))
-			  ;; side eff
-			  (values dout dy-out))))
+		     ,y))))
 

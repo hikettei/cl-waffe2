@@ -40,11 +40,12 @@ Let X and Y be a given arguments and both are matrix.
       (!mul dout dx)))))
 
 
-(macrolet ((define-scalar-mat-node (name document1 document2)
+(macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
 	     `(progn
 		(export ',name)
 		(defnode (,name (myself)
 			  :where `(A[scal] B[~] -> B[~] where scal = 1)
+			  :backward ,backward
 			  :documentation ,(format nil
 						  "~a is a node which computes following operation element-wise.
 Let X be a given matrix and S be a given scalar.
@@ -52,12 +53,16 @@ Let X be a given matrix and S be a given scalar.
   (define-scalar-mat-node
       ScalarAddNode
     "ScalarAddNode"
-    "+")
+    "+"
+    ((self dout dx dy)
+     (values (!move dx dout) (!move dy dout))))
 
   (define-scalar-mat-node
       ScalarMulNode
     "ScalarMulNode"
-    "*"))
+    "*"
+    ((self dout dx dy)
+     (values (!mul dout dy) (!mul dout dx)))))
 ;; ===============================================================
 
 
