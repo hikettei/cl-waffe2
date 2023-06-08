@@ -19,6 +19,28 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ### Useful APIs
 
+# Structure
+
+Dependencies:
+```lisp
+cl-waffe2.asd (:serial = t)
+
+[The Most Basic APIs (AbstractNode/AbstractTensor/JIT Compiler/Subscript Parser)]
+1. ./source/vm/generic-tensor/
+   ./source/vm/nodes/ (They're partially co-dependence)
+
+[The Most Basic Nodes (AddNode/SubNode/Mathematical nodes etc...)]
+2. ./source/base-impl/
+
+[Implementations based on package (1.) (2.)]
+3. ./source/backends/cpu
+   ./source/backends/lisp
+   ./source/nn
+   ./source/optimizers
+   ./source/viz
+   etc...
+```
+
 # Workloads
 
 - [x] AbstractTensor
