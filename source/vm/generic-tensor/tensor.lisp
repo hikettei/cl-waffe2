@@ -13,6 +13,9 @@
 Default: `(cl-waffe2/vm.generic-tensor:CPUTensor)
 PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
+(defparameter *default-dtype* :float  "")
+(defparameter *default-order* :column "")
+
 (defun order-p (name)
   (declare (type keyword name))
   (or (eql name :column) (eql name :row)))
@@ -202,10 +205,10 @@ Note that this function is inlined.
 (defun make-tensor (shape-or-scalar
 		    &key
 		      (requires-grad nil)
-		      (dtype :float)
+		      (dtype *default-dtype*)
 		      (vec  nil)
 		      (view nil)
-		      (order :column)
+		      (order *default-order*)
 		      (initial-element))
   "Refering a first-priority of  *using-backends* (that is, a car part) to know what kernel to use, the function make-tensor creates and allocate a new matrix.
 
@@ -244,8 +247,8 @@ With regard to practical usage, the tutorials would be more helpful rather than 
 (defun make-input (shape
 		   named
 		   &key
-		     (dtype :float)
-		     (order :column))
+		     (dtype *default-dtype*)
+		     (order *default-order*))
   "Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
 WIth regard to practical usage, visit my tutorial.
 

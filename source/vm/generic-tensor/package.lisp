@@ -29,6 +29,8 @@
    #:view
    #:tensor-view
    #:detach
+   #:*default-dtype*
+   #:*default-order*
    )
 
   ;; Dtype API

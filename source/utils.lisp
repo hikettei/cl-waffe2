@@ -5,10 +5,6 @@
   `(multiple-value-bind (,forward ,variables, parameters) (construct-forward ,out)
      ,@body))
 
-;; TODO
-;; (defmacro with-config :DTYPE, DEVICE, etc..)
-
-
 (defmacro with-cpu (&body body)
   "TODO: Docstring"
   #+sbcl
@@ -18,21 +14,44 @@
   `(with-devices (LispTensor)
      ,@body))
 
-;; (defmacro with-cuda
+;; (defmacro with-cuda)
 
+(defmacro with-dtype (dtype &body body)
+  `(let ((*default-dtype* ,dtype))
+     ,@body))
 
-;;Add: numcl matmul
-(defun lin (weight x bias)
-  (!add (!matmul weight x) (!view bias t `(:broadcast ,(second (shape x))))))
+(defmacro with-column-major (&body body)
+  `(let ((*default-order* :column))
+     ,@body))
 
-;; !matmul with uniform-random...? (Can't cast)
-(defun test-lin ()
-  (with-cpu
-    (let ((x      (make-tensor `(100 100)))
-	  (weight (make-tensor `(100 100) :requires-grad t))
-	  (bias   (make-tensor `(100 1)   :requires-grad t)))
-      (multiple-value-bind (fw bw vars pms) (build (!sum (lin weight x bias)))
-	(time (funcall fw))
-	(time (funcall bw))
-	(grad weight)
-	))))
+(defmacro with-row-major (&body body)
+  `(let ((*default-order* :row))
+     ,@body))
+
+(defmacro with-config ((&key
+			  ;; TO ADD:
+			  ;; Use-Dtype
+			  ;; Matmul-Accuracy
+			  ;; 
+			  (device :cpu)
+			  (no-grad nil)
+			  (dtype :float)
+			  (order :column))
+		       &body
+			 body)
+  "Integrates all the annoying configs."
+  (declare (type (and keyword (member :cpu :cuda)) device)
+	   (type (and keyword (member :row :column)) order)
+	   (type keyword dtype))
+  `(,(case device
+       (:cpu 'with-cpu)
+       (:cuda 'with-cuda))
+    (,(if no-grad
+	  'with-no-grad
+	  'progn)
+     (,(case order
+	 (:column 'with-column-major)
+	 (:row    'with-row-major))
+      (with-dtype ,dtype
+	,@body)))))
+
