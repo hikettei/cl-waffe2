@@ -68,4 +68,9 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 		 y)
 	     out)))
 
+;; (defun !dot (a b))
 
+;; (defun !argmax)
+;; (defun !argmin)
+;; (defun !max)
+;; (defun !min)

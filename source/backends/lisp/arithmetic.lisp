@@ -48,9 +48,7 @@
 				  ,(stride-of x-view 0)
 				  ,(stride-of y-view 0)))
 			    `(,x ,y))
-			 ,x)))
-	     :backward ((self dout dx dy)
-			(values (!move dx dout) (!move dy dout))))
+			 ,x))))
 	     
 (define-impl (SubNode :device LispTensor)
 	     :forward ((self x y)
@@ -67,9 +65,7 @@
 				  ,(stride-of x-view 0)
 				  ,(stride-of y-view 0)))
 			    `(,x ,y))
-			 ,x)))
-	     :backward ((self dout dx dy)
-			(values (!move dx dout) (!move dy (!mul -1 dout)))))
+			 ,x))))
 
 
 (define-impl (MulNode :device LispTensor)
@@ -88,11 +84,7 @@
 					    ,(stride-of x-view 0)
 					    ,(stride-of y-view 0)))
 			      `(,x ,y))
-			   ,x)))
-	     :backward ((self dout dx dy)
-			(values
-			 (!mul dout dy)
-			 (!mul dout dx))))
+			   ,x))))
 
 
 (define-impl (DivNode :device LispTensor)
@@ -111,11 +103,7 @@
 					    ,(stride-of x-view 0)
 					    ,(stride-of y-view 0)))
 			      `(,x ,y))
-			   ,x)))
-	     :backward ((self dout dx dy)
-			(values
-			 (!div dy dout)
-			 (!mul dx dout))))
+			   ,x))))
 
 (define-impl (ScalarAdd :device LispTensor)
 	     :forward

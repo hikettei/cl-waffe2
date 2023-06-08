@@ -15,18 +15,29 @@
 
 ;; ===============================================================
 ;; Defnode Parts
-(macrolet ((define-arithmetic-node (name document1 document2)
+(macrolet ((define-arithmetic-node (name document1 document2 &optional backward)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defnode (,name (myself)
 			  :where `(A[~] B[~] -> A[~])
+			  :backward ,backward
 			  :documentation ,(format nil "~a is a node which computes following operation element-wise.
 Let X and Y be a given arguments and both are matrix.
    X <- X ~a Y" document1 document2))))))
-  (define-arithmetic-node AddNode "AddNode" "+")
-  (define-arithmetic-node SubNode "SubNode" "-")
-  (define-arithmetic-node MulNode "MulNode" "*")
-  (define-arithmetic-node DivNode "DivNode" "/"))
+  (define-arithmetic-node AddNode "AddNode" "+"
+    ((self dout dx dy)
+     (values (!move dx dout) (!move dy dout))))
+  (define-arithmetic-node SubNode "SubNode" "-"
+    ((self dout dx dy)
+     (values (!move dx dout) (!move dy (!mul -1 dout)))))
+  (define-arithmetic-node MulNode "MulNode" "*"
+    ((self dout dx dy)
+     (values (!mul dout dy) (!mul dout dx))))
+  (define-arithmetic-node DivNode "DivNode" "/"
+    ((self dout dx dy)
+     (values
+      (!div dout dy)
+      (!mul dout dx)))))
 
 
 (macrolet ((define-scalar-mat-node (name document1 document2)

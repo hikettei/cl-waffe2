@@ -66,6 +66,7 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 		    &key
 		      (where t)
 		      (slots nil)
+		      (backward nil)
 		      (documentation ""))
 		   &body constructor-body
 		   &aux (subscript-p  (gensym))
@@ -106,6 +107,17 @@ because it requires a slot for node itself.")
        (defclass ,abstract-name (AbstractNode)
 	 (,@slots)
 	 (:documentation ,documentation))
+       ,(when backward
+	  (let ((backward-self-name (caar backward))
+		(backward-args (cdar backward))
+		(backward-body (cdr backward))
+		(inputs (gensym "inputs"))
+		(impl-name abstract-name))
+	    `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
+	       (declare (type ,impl-name ,backward-self-name))
+	       (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
+		 (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
+		,@backward-body))))
        (defmethod print-object ((object ,abstract-name) stream)
 	 (format stream
 		 "<~a, :where ~a>"
@@ -166,7 +178,7 @@ backward's arguments are:"
 	(impl-name (subnode-name abstract-name device)))
 
     (eval-when (:compile-toplevel :load-toplevel :execute)
-      (assert (= (1- (length backward-args)) (length forward-args))
+      (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
 	      nil
 	      "Assertion Failed because the number of arguments of forward and backward, doesn't correspond.: ~a At ~a"
 	      backward-args
@@ -202,10 +214,13 @@ backward's arguments are:"
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
 	   ,@forward-body))
-       (defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
-	 (declare (type ,impl-name ,backward-self-name))
-	 (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
-	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
-	   ,@backward-body)))))
+
+       ;; Backward should be defined at either/both of defnode or/and define-impl. (defnode takes the precendence)
+       ,(when backward
+	  `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
+	     (declare (type ,impl-name ,backward-self-name))
+	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
+	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
+	       ,@backward-body))))))
 
 ;; (defmacro defmodule

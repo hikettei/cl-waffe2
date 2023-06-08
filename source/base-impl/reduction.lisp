@@ -70,3 +70,4 @@ This could be applied whenever the given axis is consisted of axes of list."
 		     else
 		       collect t))))))
 
+;; (defun !mean)
