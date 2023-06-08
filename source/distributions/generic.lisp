@@ -86,3 +86,42 @@
 		      body))))
 	*available-dtype-sparse-list* *available-lisp-type-sparse*)))
 
+
+(defparameter *available-dtype-list*
+  `(:double
+    :float
+    :uint32
+    :uint16
+    :uint8
+    :int32
+    :int16
+    :int8
+    :bit))
+
+(defparameter *available-lisp-type* (map 'list #'dtype->lisp-type *available-dtype-list*))
+
+(defmacro define-with-typevar ((function-name type-ident)
+			       (&rest args)
+			       &body
+				 body
+			       &aux
+				 (type-space (gensym "TYPE-KEY")))
+  `(progn
+     (defgeneric ,function-name (,type-space))
+
+     ,@(map
+	'list
+	#'(lambda (type-key type)
+	    `(defmethod ,function-name ((,type-space (eql ,type-key)))
+	       #'(lambda (,@args)
+		   ,@(map-tree
+		      #'(lambda (obj)
+			  (typecase obj
+			    (symbol
+			     (if (equal (symbol-name obj)
+					(symbol-name type-ident))
+				 type
+				 obj))
+			    (T obj)))
+		      body))))
+	*available-dtype-list* *available-lisp-type*)))
