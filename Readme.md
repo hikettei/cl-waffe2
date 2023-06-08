@@ -73,7 +73,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 # At first glance
 
 ```lisp
-;; defines a node.
+;; This form declares: General definition of MatMulNode.
 (defnode (MatMulNode (myself &key transpose-a transpose-b)
 	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
