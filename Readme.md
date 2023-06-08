@@ -80,6 +80,14 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
 	  :documentation "(gemm 1.0 a b 0.0 c)"))
 
+(define-impl (MatMulNode :device CPUTensor)
+    ... ;; Give a definition of MatmulNode when device=CPUTensor
+    )
+
+(define-impl (MatMulNode :device LispTensor)
+    ... ;; Give a definition of MatmulNode when device=LispTensor
+   )
+   
 (defun build-kernel ()
   (with-devices (LispTensor)
     (let ((result (forward (MatmulNode) a b))) ;; This part works with Lisp
