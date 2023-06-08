@@ -48,6 +48,7 @@
 	       (:file "backends/lisp/tensor")
 	       (:file "backends/lisp/generic")
 	       (:file "backends/lisp/arithmetic")
+	       (:file "backends/lisp/mathematics")
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
