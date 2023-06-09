@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/distributions)
 
+;; Not working well... T_T
+
 ;; = References ===============================================
 ;; https://andantesoft.hatenablog.com/entry/2023/04/30/183032
 ;; Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
@@ -16,9 +18,13 @@
 (defun ~= (x y)
   (declare (type number x y))
   (< (abs (- x y)) (typecase x
-		     (single-float 0.0001)
-		     (double-float 0.0000001)
+		     (single-float 1e-4)
+		     (double-float 1e-6)
 		     (T 0.001))))
+
+(defun ~=1e-1 (x y)
+  (declare (type number x y))
+  (< (abs (- x y)) 1e-1))
 
 ;; No Need To Optimize this function
 (define-with-typevar-dense (ziggurat-make-table u)
@@ -26,7 +32,9 @@
      cdf ;; Cumulative Distribution Function
      ipd ;; Inversed CDF
      &key
-     (table-size *table-size*)) ;; 2^n
+     (table-size *table-size*)
+     (use-x0)
+     (use-area)) ;; 2^n
   (declare ;;(optimize (safety 0)) ;; safety=0
 	   (type function pdf cdf ipd)
 	   (type fixnum table-size))
@@ -49,18 +57,17 @@
 	       ;; max(CDF(x)) ~= CDF(+inf)
 	       ;; PDF(x)x + CDF(+inf) - CDF(x)
 	       ;; Fix: ugly coerce
-	       (+ (* x (coerce (funcall pdf x) (quote u)))
-		  (coerce (funcall cdf +inf) (quote u))
-		  (- (coerce (funcall cdf x) (quote u)))))
+	       (+ (* x (funcall pdf x))
+		  (funcall cdf +inf)
+		  (- (funcall cdf x))))
 	     (error-of (x)
 	       (declare (type u x))
 	       (let ((area (area-of x))
 		     (xi x))
 		 ;; Area -> 0
-		 
 		 (loop for i fixnum upfrom 1 below table-size
 		       do (progn
-			    (setq xi (coerce (funcall ipd (+ (/ area xi) (funcall pdf xi))) (quote u)))
+			    (setq xi (funcall ipd (+ (/ area xi) (funcall pdf xi))))
 			    ;; Assertion, pdf >= 0
 			    (when (< xi zero)
 			      (return-from error-of -inf))))
@@ -70,14 +77,17 @@
       ;; Compute x0
       (let ((left  (coerce 2   (quote u)))
 	    (right (coerce 10  (quote u)))
-	    (mid   (coerce 6   (quote u)))
 	    (half  (coerce 0.5 (quote u)))
-	    (bit 1e-6)) ;; mid = 1/2(left+right)
-	(declare (type u left right mid half))
+	    (bit (/ 1 +inf))) ;; mid = 1/2(left+right)
+	(declare (type u left right half))
 	(loop named btree
 	      while t
-	      do (progn
-		   (setq mid (* half (+ left right)))
+	      do (let ((mid (* half (+ left right))))
+
+		   (when (and use-x0 use-area)
+		     (setq x0 use-x0)
+		     (setq x0-area use-area)
+		     (return-from btree))
 		   (cond
 		     ((and (~= left mid)
 			   (< mid right))
@@ -89,13 +99,9 @@
 		   (when (or (~= left mid)
 			     (~= right mid))
 		     (return-from btree))
-		   (print left) (print mid) (print right)
 		   (let ((left-error  (error-of left))
 			 (mid-error   (error-of mid))
 			 (right-error (error-of right)))
-		     (print left-error)
-		     (print mid-error)
-		     (print right-error)
 		     (cond
 		       ((not (= (signum left-error)
 				(signum mid-error)))
@@ -198,7 +204,8 @@
 			  (exp (* -0.5 x x)))
 		     (return-from sampling x)))))))
 
-(defun erf1 (x &aux (inf 10000.0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
+#|
+(defun erf (x &aux (inf 2.0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
   "Error function."
   (if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
       (signum x)
@@ -209,34 +216,17 @@
 	      while t
 	      for i fixnum upfrom 0
 	      do (let ((elm (*
-			     (if (or (= i 0) (= i 1))
+			     (if (evenp i)
 				 1
 				 -1)
 			     (expt x (+ (* 2 i) 1))
 			     (/ (* fct (+ (* 2 i) 1))))))
-		   (when (= (+ elm sum) sum)
+		   (when (~=1e-1 (+ elm sum) sum)
 		     (return-from itr))
 		   (incf sum elm)
 		   (setq fct (* fct (+ i 1)))))
 	(* sum erf))))
-
-(defun erf2 (x &aux (inf 10000.0))
-  (if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
-      (signum x)
-      (let* ((sum 0.0)
-             (factorial 1.0)
-             (i 0))
-        (loop while t do
-          (let* ((element (/ (* (if (oddp i) -1 1)
-                                (expt x (+ (* 2 i) 1)))
-                             (* factorial (+ (* 2 i) 1)))))
-            (if (= (+ sum element) sum)
-                (return sum)
-                (progn
-                  (setq sum (+ sum element))
-                  (setq factorial (* factorial (+ i 1)))
-                  (setq i (+ i 1)))))))))
-
+|#
 
 ;; Fix: Erf関数の精度が原因で正規分布X
 ;; expotential -> ziggurat
@@ -246,29 +236,33 @@
 ;; chisquare -> ziggurat
 ;; normal -> mgl-mat? numcl?
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (macrolet ((define-ziggurat-sampler (name pdf cdf ipd)
-	       `(defun ,name (dtype &key (table-size *table-size*))
+  (macrolet ((define-ziggurat-sampler (name pdf cdf ipd &optional use-x0 use-area)
+	       `(defun ,name (dtype &key (table-size *table-size*) &aux (type (dtype->lisp-type dtype)))
 		  (let ((sampler (ziggurat-make-table dtype)))
-		    (multiple-value-bind (rx ry ir) (funcall sampler ,pdf ,cdf ,ipd :table-size table-size)
+		    (multiple-value-bind (rx ry ir)
+			(funcall sampler ,pdf ,cdf ,ipd
+				 :table-size table-size
+				 :use-x0
+				 (if ,use-x0
+				     (coerce ,use-x0 type))
+				 :use-area
+				 (if ,use-area
+				     (coerce ,use-area type)))
 		      (let ((generator (make-ziggurat-sampler dtype)))
 			
 			#'(lambda ()
 			    (funcall generator rx ry ir table-size))))))))
 
-    ;; FixMe
-    (define-ziggurat-sampler make-normal-sampler
-	#'(lambda (x) (exp (- (/ (* x x) 2)))) ;; PDF, -1/2*x^2/sqrt(2pi)
-;;      '(lambda (x) (* (sqrt (* 2 pi))
-;;		       0.5
-;;		       (1+ (erf (/ x (sqrt 2))))))
-      #'(lambda (x) (/ (1+ (erf (/ x (sqrt 2)))) 2))
-      #'(lambda (y) (sqrt (* -2.0 (log y))))) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
-
-    
     (define-ziggurat-sampler make-randn-sampler ;; PDF, -1/2*x^2/sqrt(2pi)
-	#'(lambda (x) (/ (exp (- (/ (* x x) 2))) (sqrt (* 2 pi))))
-      #'(lambda (x) (/ (1+ (erf (/ x (sqrt 2)))) 2))
-      #'(lambda (y) (sqrt (* -2.0 (log y))))) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
+	;;	#'(lambda (x) (/ (exp (- (/ (* x x) 2))) (sqrt (* 2 pi))))
+	#'(lambda (x) (exp (- (/ (* x x) 2)))) ;; PDF, -1/2*x^2/sqrt(2pi)
+      #'(lambda (x) (* (sqrt (* 2 pi))
+		       0.5
+		       (1+ (erf (/ x (sqrt 2))))))
+      #'(lambda (y) (sqrt (* -2.0 (log y))))
+      3.6541528853613281
+      0.0049286732339721695
+      ) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
     (define-ziggurat-sampler make-expotential-sampler
 	#'(lambda (x) (exp (- x)))
       #'(lambda (x) (- 1 (exp (- x))))
