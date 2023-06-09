@@ -11,6 +11,11 @@
 (defparameter *table-size* 256)
 ;; Generates a table.
 ;; TODD: Implement Modified Ziggurat
+
+(defun ~= (x y)
+  (< (- x y) 0.0000001))
+
+;; No Need To Optimize
 (define-with-typevar-dense (ziggurat-make-table u)
     (pdf ;; Proability Density Function (Lambda)
      cdf ;; Cumulative Distribution Function
@@ -36,6 +41,8 @@
     (declare (type (simple-array u (*)) rectangle-X rectangle-Y irr))
     (labels ((area-of (x)
 	       (declare (type u x))
+	       ;; max(CDF(x)) ~= CDF(+inf)
+	       ;; PDF(x)x + CDF(+inf) - CDF(x)
 	       (+ (the u (* x (the u (funcall pdf x))))
 		  (the u (funcall cdf +inf))
 		  (- (the u (funcall cdf x)))))
@@ -46,30 +53,32 @@
 		 ;; Memo: pdfの値が(0.0, 1.0)にならない・・・
 		 (loop for i fixnum upfrom 1 below table-size
 		       do (progn
-			    (setq xi (the u (funcall ipd (print (+ (/ area xi) (funcall pdf xi))))))
+			    (setq xi (the u (funcall ipd (+ (/ area xi) (funcall pdf xi)))))
+			    ;; Assertion, pdf >= 0
 			    (when (< xi zero)
 			      (return-from error-of -inf))))
 		 ;; Check IsNAN? this is processing-system-dependant...
 		 xi)))
 
       ;; Compute x0
-      (let ((left  (coerce 2  (quote u)))
-	    (right (coerce 10 (quote u)))
-	    (mid   (coerce 6  (quote u)))) ;; mid = 1/2(left+right)
-	(declare (type u left right mid))
+      (let ((left  (coerce 2   (quote u)))
+	    (right (coerce 10  (quote u)))
+	    (mid   (coerce 6   (quote u)))
+	    (half  (coerce 0.5 (quote u)))) ;; mid = 1/2(left+right)
+	(declare (type u left right mid half))
 	(loop named btree
 	      while t
 	      do (progn
-		   (setq mid (the u (* 0.5 (the u (* left right)))))
+		   (setq mid (* half (+ left right)))
 		   (cond
 		     ((and (= left mid)
 			   (< mid right))
-		      (incf mid))
+		      (setq mid (1+ left)))
 		     ((and (= right mid)
 			   (< left mid))
-		      (decf mid))
-		     ((and (= left mid)
-			   (= right mid))
+		      (setq mid (1- right)))
+		     ((and (~= left mid)
+			   (~= right mid))
 		      (return-from btree)))
 		   (let ((left-error  (error-of left))
 			 (mid-error   (error-of mid))
@@ -86,6 +95,8 @@
 	(setq x0 right)
 	(setq x0-area (area-of x0)))
 
+      ;; (print x0)
+      ;; (print x0-area)
       (setf (aref rectangle-X 0) (/ x0-area (the u (funcall pdf x0))))
       (setf (aref rectangle-X 1) x0)
 
@@ -118,6 +129,7 @@
 	      rectangle-Y
 	      irr))))
 
+;; Optimize It First. Parallelize
 (define-with-typevar-dense (make-ziggurat-sampler u) (rx ry ir table-size)
   (declare ;;(optimize (speed 3))
 	   (type (simple-array u (*)) rx ry ir)
@@ -125,12 +137,11 @@
   (loop named sampling
 	while t
 	do (let* ((zero (coerce 0 (quote u)))
-		  (u  (random most-positive-fixnum))
-		  (u1 (- u 1)) ;; u1f = [-1.0, 1.0)
+		  (u    (random most-positive-fixnum))
+		  (u1   (- u 1)) ;; u1f = [-1.0, 1.0)
 		  (u1f (coerce
-			(the fixnum
-			     (/ (ash u1 -10)
-				(ash 1 53)))
+			(/ (ash u1 -10)
+			   (ash 1 53))
 			(quote u)))
 		  (i (random (1- table-size))))
 	     (declare (type fixnum u1)
@@ -200,22 +211,27 @@
 	  (- 1 (erfccheb x))
 	  (- (erfccheb x) 1))))
 
+;; Fix: Erf関数の精度が原因で正規分布X
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (macrolet ((define-ziggurat-sampler (name pdf cdf ipd)
 	       `(defun ,name (dtype &key (table-size *table-size*))
 		  (let ((sampler (ziggurat-make-table dtype)))
 		    (multiple-value-bind (rx ry ir) (funcall sampler ,pdf ,cdf ,ipd :table-size table-size)
-		      (let ((generator (funcall (make-ziggurat-sampler dtype) rx ry ir table-size)))
-			#'(lambda (i)
-			    (declare (ignore i))
-			    (funcall generator))))))))
+		      (let ((generator (make-ziggurat-sampler dtype)))
+			
+			#'(lambda ()
+			    (funcall generator rx ry ir table-size))))))))
 
     (define-ziggurat-sampler make-normal-sampler
-	#'(lambda (x) (exp (* -1 x x 0.5)))
+	#'(lambda (x) (exp (* -1.0 x x 0.5)))
       #'(lambda (x) (* (sqrt (* 2 pi))
 		       0.5
-		       (+ 1 (erf (/ x (sqrt 2))))))
+		       (1+ (erf (/ x (sqrt 2))))))
       #'(lambda (y) (sqrt (* -2 (log y))))) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
+    (define-ziggurat-sampler make-expotential-sampler
+	#'(lambda (x) (exp (- x)))
+      #'(lambda (x) (- 1 (exp (- x))))
+      #'(lambda (y) (- (log y))))
 
     ))
 
