@@ -13,7 +13,11 @@
 ;; TODD: Implement Modified Ziggurat
 
 (defun ~= (x y)
-  (< (- x y) 0.0000001))
+  (declare (type number x y))
+  (< (- x y) (typecase x
+	       (single-float 0.0001)
+	       (double-float 0.000001)
+	       (T 0.001))))
 
 ;; No Need To Optimize
 (define-with-typevar-dense (ziggurat-make-table u)
@@ -203,13 +207,38 @@
              (setq dd tmp))
     (* tt (exp (+ (* -1 z z) (* 0.5 (+ (aref cof 0) (* ty d))) (- dd))))))
 
-(defun erf (x &aux (inf 1000000))
+(defun erf (x &aux (inf 6.5d0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
   "Error function."
   (if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
       (signum x)
       (if (> x 0)
 	  (- 1 (erfccheb x))
 	  (- (erfccheb x) 1))))
+
+;; erfでもいい気がする
+(defun erf1 (x &aux (inf 10000.0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
+  "Error function."
+  (if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
+      (signum x)
+      (let ((erf (/ 2 (sqrt pi)))
+	    (sum 0)
+	    (fct 1))
+	(loop named itr
+	      while t
+	      for i fixnum upfrom 0
+	      do (let ((elm (*
+			     (if (or (= i 0) (= i 1))
+				 1
+				 -1)
+			     (expt x (+ (* 2 i) 1))
+			     (/ (* fct (+ (* 2 i) 1))))))
+		   (when (= (+ elm sum) sum)
+		     (return-from itr))
+		   (incf sum elm)
+		   (setq fct (* fct (+ i 1)))))
+	(* sum erf))))
+		   
+      
 
 ;; Fix: Erf関数の精度が原因で正規分布X
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -223,11 +252,11 @@
 			    (funcall generator rx ry ir table-size))))))))
 
     (define-ziggurat-sampler make-normal-sampler
-	#'(lambda (x) (exp (* -1.0 x x 0.5)))
+	#'(lambda (x) (exp (* -1.0 x x 0.5))) ;; PDF, -1/2*x^2/sqrt(2pi)
       #'(lambda (x) (* (sqrt (* 2 pi))
 		       0.5
 		       (1+ (erf (/ x (sqrt 2))))))
-      #'(lambda (y) (sqrt (* -2 (log y))))) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
+      #'(lambda (y) (sqrt (* -2.0 (log y))))) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
     (define-ziggurat-sampler make-expotential-sampler
 	#'(lambda (x) (exp (- x)))
       #'(lambda (x) (- 1 (exp (- x))))
