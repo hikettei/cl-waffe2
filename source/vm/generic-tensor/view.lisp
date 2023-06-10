@@ -616,9 +616,11 @@ Example:
 		     (make-viewinstruction
 		      `(nth ,k ,offsets)
 		      (nth target-dim (shape tensor))
-		      (let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
+		      (let ((stride (nth target-dim (tensor-stride tensor)))
+			    (view (subscript-view (nth target-dim (tensor-view tensor)))))
 			;; TODO: multiply (nth n strides) and stepby
-			(compute-stepby view)))))))
+			(lazy* stride
+			       (compute-stepby view))))))))
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 ;; TODO: at-least-dim=2
