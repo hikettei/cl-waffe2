@@ -143,7 +143,7 @@ because it requires a slot for node itself.")
 	   ,@constructor-body
 	   (the ,abstract-name ,(car constructor-arguments)))))))
 
-
+;; TODO: Docs
 (defmacro define-impl ((abstract-name
 			&key
 			  (device t))
@@ -156,6 +156,11 @@ because it requires a slot for node itself.")
   "Through the macro define-impl, the behaviour of nodes are described.
 
 Follow these constraints:
+
+Memo: forward must return: a list (to be jit-compiled)
+                           a abstracttensor (embedded in the computation node)
+
+      backward must return a values of computation nodes
 
 1. Arguments must be this format:
    Forward  -> (node input-tensor1 input-tensor2 ...)

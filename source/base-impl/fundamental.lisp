@@ -82,9 +82,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 ;; We can also add: Proceed-Auto
 
 (defnode (ProceedNode (myself)
-	  :where `(A[~] -> A[~])
-	  :slots ((forward :accessor proceed-forward)
-		  (backward :accessor proceed-backward))
+	  :where `(A[~] -> B[~])
+	  :slots ((backward :accessor proceed-backward)
+		  (result   :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
 
 (define-impl (ProceedNode :device t)
@@ -93,17 +93,21 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 		       (multiple-value-bind (fw bw vars params) (build x)
 			 (declare (ignore vars params))
 			 ;; Vars/Params will be tracked by other build.
-			 (setf (proceed-forward self)  fw)
 			 (setf (proceed-backward self) bw)
-			 `(,(print (funcall fw)))))
+			 (setf (proceed-result self) (funcall fw))
+			 `(progn ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
 			(let ((bw (proceed-backward self)))
 			  (values
 			   (with-instant-kernel dout
-			       `(funcall ,bw))))))
+			     `(and
+			       (funcall ,bw)
+			       ;; Delete Gradients.
+			       (!scalar-mul 0.0 ,dout)))))))
 
 ;; Optimize: Compile-Speeed
+;; TODO: ProceedNode for several outputs
 (defun proceed (tensor)
   "The function proceed invokes special node, ProceedNode, which takes all the previous computation node before tensor, returning the result of it.
 The backward is created with the previous node.
@@ -111,4 +115,14 @@ The backward is created with the previous node.
 This function will be useful especially when debugging on REPL.
 
 Also, using (with-dynamically-mode) will invoke this function every time forward invoked."
-  (forward (ProceedNode) tensor))
+  (let* ((node (ProceedNode))
+	 ;; Previous Node is already compiled, so detach tensor from nodes.
+	 (out (forward node tensor)))
+    
+    ;; Cut off previous backwards
+    (setf (tensor-backward tensor) nil)
+
+    ;; Out is still unallocated, so set the result.
+    (embody-actual-tensor out (proceed-result node))
+    out))
+

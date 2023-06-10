@@ -69,6 +69,7 @@ Here's a list of reports.
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node &rest inputs))
 
+;; Enhancement: A[~] -> B[~] <- replace A with input-name.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
@@ -87,7 +88,7 @@ Here's a list of reports.
       
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
-	
+
 	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
 	  ;; Enhancement
 	  ;; CALL-VIEW-AND-CONTINUE

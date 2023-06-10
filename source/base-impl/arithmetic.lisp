@@ -217,6 +217,7 @@ Note that the operation is automatically replaced into in-place operation."
 (defun scalartensor-p (tensor)
   (subtypep (class-of tensor) 'cl-waffe2/vm.generic-tensor:ScalarTensor))
 
+;; BugFix
 (macrolet ((define-arith-function (name
 				   invertor
 				   scalar-and-scalar-operation

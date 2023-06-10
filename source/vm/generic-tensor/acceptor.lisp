@@ -286,6 +286,10 @@ Return:
   ;; first past-dy = 1.0
 
   ;; Get a backward node.
+
+  (when (null (tensor-backward toplevel))
+    (return-from explore-backwards))
+  
   (let* ((outs (apply
 		;; (backward self dout dx dy dz ...)
 		#'cl-waffe2/vm.nodes::backward
