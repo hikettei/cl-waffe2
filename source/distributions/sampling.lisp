@@ -19,17 +19,18 @@ function ... lambda(i) where i = index"
 
   ;; TODO: Coerce into their type.
   ;; TODO: double
-  (typecase (tensor-vec tensor)
-    (simple-array
-     (funcall (simple-array-sample! (dtype tensor))
-	      (apply #'* (shape tensor))
-	      (tensor-vec tensor)
-	      function))
-    (T
-     (loop for i fixnum
-	   upfrom 0
-	     below (apply #'* (shape tensor))
-	   do (setf (vref (the simple-array (tensor-vec tensor)) i) (funcall function i))))))
+  (maybe-with-lparallel
+    (typecase (tensor-vec tensor)
+      (simple-array
+       (maybe-pfuncall (simple-array-sample! (dtype tensor))
+		       (apply #'* (shape tensor))
+		       (tensor-vec tensor)
+		       function))
+      (T
+       (loop for i fixnum
+	     upfrom 0
+	       below (apply #'* (shape tensor))
+	     do (setf (vref (the simple-array (tensor-vec tensor)) i) (funcall function i)))))))
 
 ;; TODO: AddDoc distribution sampler.
 (macrolet ((define-initializer-function (function-name
@@ -76,6 +77,15 @@ Tensor[Index] = a*Index + b")
 	  (declare (ignore i))
 	  (funcall sampler alpha a b)))
     "The function beta samples beta distributions using this algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482")
+
+  (define-initializer-function
+      randn
+      ()
+    (let* ((sampler (get-randn-sampler (dtype tensor))))
+      #'(lambda (i)
+	  (declare (ignore i))
+	  (funcall sampler)))
+    "The function randn samples the gaussian distributions using ziggurat algorithm.")
 
   )
 

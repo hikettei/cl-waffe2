@@ -6,7 +6,9 @@
   (:export
    #:*num-cores*
    #:with-num-cores
-   #:multithread-p))
+   #:multithread-p
+   #:maybe-with-lparallel
+   #:maybe-pfuncall))
 
 (in-package :cl-waffe2/threads)
 
@@ -19,6 +21,16 @@
      ,@body))
 
 (defun multithread-p ()
-  (not (= *num-cores* 1)))
+  (not (<= *num-cores* 1)))
 
+(defmacro maybe-with-lparallel (&body body)
+  `(let ((*kernel* (if (multithread-p)
+		       (make-kernel *num-cores*)
+		       nil)))
+     ,@body))
+
+(defmacro maybe-pfuncall (function &rest args)
+  `(if (multithread-p)
+       (pfuncall ,function ,@args)
+       (funcall ,function ,@args)))
 

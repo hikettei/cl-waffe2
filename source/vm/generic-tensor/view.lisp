@@ -617,11 +617,13 @@ Example:
 		      `(nth ,k ,offsets)
 		      (nth target-dim (shape tensor))
 		      (let ((view (subscript-view (nth target-dim (tensor-view tensor)))))
+			;; TODO: multiply (nth n strides) and stepby
 			(compute-stepby view)))))))
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
 ;; TODO: at-least-dim=2
 ;; TODO: View, (1 10 -1)
+;; TODO: Support Row-Major by multiplying them strides to stride-of
 (defun call-with-view (function
 		       tensors
 		       &key
