@@ -46,10 +46,7 @@
 				   (aref rx i))))
     (values rx ry irr)))
 
-;; Optimize It First. Parallelize
-;; Only the case for normal dist
-;; ????
-(define-with-typevar-dense (make-gaussian-sampler u) (rx ry ir table-size)
+(define-with-typevar-dense (make-gaussian-generator u) (rx ry ir table-size)
   (declare (optimize (speed 3) (safety 0))
    (type (simple-array u (*)) rx ry ir)
    (type fixnum table-size))
@@ -86,31 +83,39 @@
 			  (exp (* -0.5 x x)))
 			 (return x))))))))
 
-#|
-(defun erf (x &aux (inf 2.0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
-"Error function."
-(if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
-(signum x)
-(let ((erf (/ 2 (sqrt pi)))
-(sum 0.0)
-(fct 1.0))
-(loop named itr
-while t
-for i fixnum upfrom 0
-do (let ((elm (*
-(if (evenp i)
-1
--1)
-(expt x (+ (* 2 i) 1))
-(/ (* fct (+ (* 2 i) 1))))))
-(when (~=1e-1 (+ elm sum) sum)
-(return-from itr))
-(incf sum elm)
-(setq fct (* fct (+ i 1)))))
-(* sum erf))))
-|#
+(define-with-typevar-dense (make-expotential-generator u) (rx ry ir table-size)
+  (declare (optimize (speed 3) (safety 0))
+   (type (simple-array u (*)) rx ry ir)
+   (type fixnum table-size))
+  (let ((one  (coerce 0.9999999 (quote u)))
+	(two  (coerce 2 (quote u)))
+	(tail (coerce 0 (quote u))))
+    (declare (type u one two tail))
+    (loop while t
+	  ;; Proceed with double-first at first
+	  do (let* ((u1f (random one)) ;; [0, 1)
+		    (i   (random table-size)))
+	       (declare (type u u1f)
+			(type fixnum i))
+	       (when (< (abs u1f)
+			(aref ir i))
+		 (return (+ tail (* u1f (aref rx i)))))
 
-;; Fix: Erf関数の精度が原因で正規分布X
+	       (if (= i 0)
+		   (let ((x0 (aref rx 1)))
+		     (incf tail x0))
+		   (let ((x (* u1f (aref rx i)))
+			 (y (- (random two) one)))
+		     (declare (type u x y))
+		     (if (<=
+			  (+ (aref ry (1- i))
+			     (* y
+				(-
+				 (aref ry i)
+				 (aref ry (1- i)))))
+			  (exp (- x)))
+			 (return (+ tail x)))))))))
+
 ;; expotential -> ziggurat
 ;; Randn -> ziggurat
 ;; gamma -> ziggurat
@@ -132,21 +137,21 @@ do (let ((elm (*
       #'(lambda (y) (sqrt (* -2.0 (log y))))
       3.6541528853613281d0
       0.0049286732339721695d0
-      make-gaussian-sampler)
+      make-gaussian-generator)
     
     (define-ziggurat-sampler make-expotential-sampler
       #'(lambda (x) (exp (- x)))
       #'(lambda (y) (- (log y)))
       7.6971174701310288d0
       0.0039496598225815527d0
-      make-gaussian-sampler)))
+      make-expotential-generator)))
 
 
 (defun test ()
   (let ((f (make-randn-sampler :float))
 	(mean 0.0)
 	(m2   0.0)
-	(n 100000000))
+	(n 100000))
     (loop for i fixnum upfrom 1 below n
 	  do (let* ((res (funcall f))
 		    (delta (- res mean)))
