@@ -1,214 +1,90 @@
 
 (in-package :cl-waffe2/distributions)
 
-;; HELPME: Ziggurat Not Working Well... T_T
-
 ;; = References ===============================================
 ;; https://andantesoft.hatenablog.com/entry/2023/04/30/183032
 ;; Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
 ;; https://marui.hatenablog.com/entry/2023/01/23/194507
 ;; ============================================================
 
-;; TODO: Optimize
-;; TODO: Embedding Constant Table Into the code.
 (defparameter *table-size* 256)
-;; Generates a table.
-;; TODD: Implement Modified Ziggurat
 
-(defun ~= (x y)
-  (declare (type number x y))
-  (< (abs (- x y)) (typecase x
-		     (single-float 1e-4)
-		     (double-float 1e-6)
-		     (T 0.001))))
+(define-with-typevar-dense (make-ziggurat-table u) (pdf ipd r v)
+  (declare ;;(optimize (safety 0))
+	   (type function pdf ipd)
+	   (type double-float r v))
+  (let ((r (coerce r (quote u))) ;; x0
+	(v (coerce v (quote u))) ;; area0
+	(rx (make-array *table-size* :element-type  (quote u)))
+	(ry (make-array *table-size* :element-type  (quote u)))
+	(irr (make-array *table-size* :element-type (quote u)))
+	(zero (coerce 0 (quote u))))
+    (declare (type u r v)
+	     (type fixnum *table-size*))
+    
+    (setf (aref rx 0)
+	  (/ v (the u (funcall pdf r))))
 
-(defun ~=1e-1 (x y)
-  (declare (type number x y))
-  (< (abs (- x y)) 1e-1))
+    (setf (aref rx 1) r)
 
-;; No Need To Optimize this function
-(define-with-typevar-dense (ziggurat-make-table u)
-    (pdf ;; Proability Density Function (Lambda)
-     cdf ;; Cumulative Distribution Function
-     ipd ;; Inversed CDF
-     &key
-     (table-size *table-size*)
-     (use-x0)
-     (use-area)) ;; 2^n
-  (declare ;;(optimize (safety 0)) ;; safety=0
-	   (type function pdf cdf ipd)
-	   (type fixnum table-size))
+    (loop for i fixnum upfrom 2 below *table-size*
+	  do (setf (aref rx i)
+		   (the u
+			(funcall ipd (+ (/ v (aref rx (1- i)))
+					(funcall pdf (aref rx (1- i)))))))
+	  if (< (aref rx i) zero)
+	    do (error "xi < 0, parameters may be wrong"))
 
-  (let* ((zero (coerce 0 (quote u)))
-	 (+inf (typecase zero
-		 (single-float most-positive-single-float)
-		 (double-float most-positive-double-float)))
-	 (-inf (typecase zero
-		 (single-float most-negative-single-float)
-		 (double-float most-negative-double-float)))
-	 (x0)
-	 (x0-area)
-	 (rectangle-X (make-array table-size :element-type (quote u)))
-	 (rectangle-Y (make-array table-size :element-type (quote u)))
-	 (irr (make-array table-size :element-type (quote u))))
-    (declare (type (simple-array u (*)) rectangle-X rectangle-Y irr))
-    (labels ((area-of (x)
-	       (declare (type u x))
-	       ;; max(CDF(x)) ~= CDF(+inf)
-	       ;; PDF(x)x + CDF(+inf) - CDF(x)
-	       ;; Fix: ugly coerce
-	       (+ (* x (funcall pdf x))
-		  (funcall cdf +inf)
-		  (- (funcall cdf x))))
-	     (error-of (x)
-	       (declare (type u x))
-	       (let ((area (area-of x))
-		     (xi x))
-		 ;; Area -> 0
-		 (loop for i fixnum upfrom 1 below table-size
-		       do (progn
-			    (setq xi (funcall ipd (+ (/ area xi) (funcall pdf xi))))
-			    ;; Assertion, pdf >= 0
-			    (when (< xi zero)
-			      (return-from error-of -inf))))
-		 ;; Check IsNAN? this is processing-system-dependant...
-		 xi)))
-
-      ;; Compute x0
-      (let ((left  (coerce 2   (quote u)))
-	    (right (coerce 10  (quote u)))
-	    (half  (coerce 0.5 (quote u)))
-	    (bit (/ 1 +inf))) ;; mid = 1/2(left+right)
-	(declare (type u left right half))
-	(loop named btree
-	      while t
-	      do (let ((mid (* half (+ left right))))
-
-		   (when (and use-x0 use-area)
-		     (setq x0 use-x0)
-		     (setq x0-area use-area)
-		     (return-from btree))
-		   (cond
-		     ((and (~= left mid)
-			   (< mid right))
-		      (setq mid (+ left bit)))
-		     ((and (~= right mid)
-			   (< left mid))
-		      (setq mid (- right bit))))
-		   
-		   (when (or (~= left mid)
-			     (~= right mid))
-		     (return-from btree))
-		   (let ((left-error  (error-of left))
-			 (mid-error   (error-of mid))
-			 (right-error (error-of right)))
-		     (cond
-		       ((not (= (signum left-error)
-				(signum mid-error)))
-			(setq right mid))
-		       ((not (= (signum right-error)
-				(signum mid-error)))
-			(setq left mid))
-		       (T
-			(error "Something went wrong when making ziggurat-table!"))))))
-	(when (not (and use-x0 use-area))
-	  (setq x0 right)
-	  (setq x0-area (area-of x0))))
-
-      (setf (aref rectangle-X 0) (/ x0-area (the u (funcall pdf x0))))
-      (setf (aref rectangle-X 1) x0)
-
-      (loop for i fixnum upfrom 2 below table-size
-	    do (let ((xi (the u
-			      (funcall ipd
-				       (the u
-					    (+ (/ x0-area (aref rectangle-X (1- i)))
-					       (the u (funcall pdf (aref rectangle-X (1- i))))))))))
-		 (setf (aref rectangle-x i) xi)
-		 (assert (> xi zero)
-			 nil
-			 "Asertion Failed with xi > 0, xi=~a, Parameters could be wrong..."
-			 xi)))
-
-      (loop for i fixnum upfrom 0 below table-size
-	    if (= (1+ i) table-size)
-	      do (setf (aref rectangle-Y i) (the u (funcall pdf zero)))
-	    else
-	      do (setf (aref rectangle-Y i) (the u (funcall pdf (aref rectangle-X (1+ i))))))
-
-      (loop for i fixnum upfrom 0 below table-size
-	    if (= (1+ i) table-size)
-	      do (setf (aref irr i) zero)
-	    else
-	      do (setf (aref irr i) (/ (aref rectangle-X (1+ i))
-				       (aref rectangle-X i))))
-      
-      (values rectangle-X
-	      rectangle-Y
-	      irr))))
+    (loop for i fixnum upfrom 0 below (1- *table-size*)
+	  if (= (1+ i) *table-size*)
+	    do (setf (aref ry i) (the u (funcall pdf zero)))
+	  else
+	    do (setf (aref ry i) (the u (funcall pdf (aref rx (1+ i))))))
+    
+    (loop for i fixnum upfrom 0 below (1- *table-size*)
+	  do (setf (aref irr i) (/ (aref rx (1+ i))
+				   (aref rx i))))
+    (values rx ry irr)))
 
 ;; Optimize It First. Parallelize
 ;; Only the case for normal dist
 ;; ????
-(define-with-typevar-dense (make-ziggurat-sampler u) (rx ry ir table-size)
-  (declare ;;(optimize (safety 0))
+(define-with-typevar-dense (make-gaussian-sampler u) (rx ry ir table-size)
+  (declare (optimize (speed 3) (safety 0))
    (type (simple-array u (*)) rx ry ir)
-   (type fixnum))
-  (let* ((zero (coerce 0 (quote u)))
-	 (one  (coerce 1 (quote u)))
-	 (two  (coerce 2 (quote u)))
-	 (+inf (typecase zero
-		 (single-float most-positive-single-float)
-		 (double-float most-positive-double-float)))
-	 (bit (/ 1 +inf)))
-    (loop named sampling
-	  while t
-	  do (let* ((u1  (random most-positive-fixnum))
-		    (u1f (- (random (- two bit)) one))
-		    (i (logand u1 (random (1- table-size)))))
-	       (declare (type fixnum u1)
-			(type u u1f))
-
+   (type fixnum table-size))
+  (let ((one (coerce 0.9999999 (quote u)))
+	(two (coerce 2 (quote u))))
+    (loop while t
+	  ;; Proceed with double-first at first
+	  do (let* ((u1f (- (random two) one)) ;; [-1, 1)
+		    (i   (random table-size)))
+	       (declare (type u u1f)
+			(type fixnum i))
 	       (when (< (abs u1f)
 			(aref ir i))
-		 (return-from sampling (the u (* u1f (aref rx i)))))
+		 (return (* u1f (aref rx i))))
 
-	       ;; 
-	       (print i)
 	       (if (= i 0)
-		   (loop with sp u = zero
-			 with tp u = zero
-			 with x0 u = (aref rx 1)
-			 while (> (the u (* sp sp)) (the u (+ tp tp)))
-			 do (and
-			     (setq sp (-
-				       (/
-					(log (- 1
-						(/
-						 (ash (random most-positive-fixnum) -11)
-						 (ash 1 53)))
-					     x0))))
-			     (setq tp (-
-				       (/
-					(log (- 1
-						(/
-						 (ash (random most-positive-fixnum) -11)
-						 (ash 1 53)))
-					     x0)))))
-			 finally
-			    (return-from sampling
-			      (* (+ x0 sp)
-				 (if (< u1 0) -1 1))))
+		   (let ((s  two)
+			 (t1 one)
+			 (x0 (aref rx 1)))
+		     ;; Iter Until out of range
+		     (loop while (> (* s s) (* t1 t1))
+			   do (and
+			       (setq s  (- (/ (log (- 1 (random one))) x0)))
+			       (setq t1 (/ (log (- 1 (random one))) x0)))))
 		   (let ((x (* u1f (aref rx i)))
-			 (y (/ (ash (random most-positive-fixnum) -11)
-			       (ash 1 53))))
-		     (when (<=
-			    (+ (* y (-
-				     (aref ry i)
-				     (aref ry (1- i))))
-			       (aref ry (1- i)))
-			    (exp (* -0.5 x x)))
-		       (return-from sampling x))))))))
+			 (y (- (random two) one)))
+		     (declare (type u x y))
+		     (if (<=
+			  (+ (aref ry (1- i))
+			     (* y
+				(-
+				 (aref ry i)
+				 (aref ry (1- i)))))
+			  (exp (* -0.5 x x)))
+			 (return x))))))))
 
 #|
 (defun erf (x &aux (inf 2.0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
@@ -242,36 +118,39 @@ do (let ((elm (*
 ;; chisquare -> ziggurat
 ;; normal -> mgl-mat? numcl?
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (macrolet ((define-ziggurat-sampler (name pdf cdf ipd &optional use-x0 use-area)
-	       `(defun ,name (dtype &key (table-size *table-size*) &aux (type (dtype->lisp-type dtype)))
-		  (let ((sampler (ziggurat-make-table dtype)))
+  (macrolet ((define-ziggurat-sampler (name pdf ipd r v sampler1)
+	       `(defun ,name (dtype)
+		  (let ((sampler (make-ziggurat-table dtype)))
 		    (multiple-value-bind (rx ry ir)
-			(funcall sampler ,pdf ,cdf ,ipd
-				 :table-size table-size
-				 :use-x0
-				 (if ,use-x0
-				     (coerce ,use-x0 type))
-				 :use-area
-				 (if ,use-area
-				     (coerce ,use-area type)))
-		      (let ((generator (make-ziggurat-sampler dtype)))
-			
+			(funcall sampler ,pdf ,ipd ,r ,v)
+		      (let ((generator (,sampler1 dtype)))
 			#'(lambda ()
-			    (funcall generator rx ry ir table-size))))))))
+			    (funcall generator rx ry ir *table-size*))))))))
 
     (define-ziggurat-sampler make-randn-sampler ;; PDF, -1/2*x^2/sqrt(2pi)
-	#'(lambda (x) (exp (- (/ (* x x) 2)))) ;; PDF, -1/2*x^2/sqrt(2pi)
-      #'(lambda (x) (* (sqrt (* 2 pi))
-		       0.5
-		       (1+ (erf (/ x (sqrt 2))))))
+      #'(lambda (x) (exp (- (/ (* x x) 2.0))))
       #'(lambda (y) (sqrt (* -2.0 (log y))))
-      3.6541528853613281
-      0.0049286732339721695
-      ) ;; y = (0, 1) y -> +0, F -> 0 y -> -0, F -> ∞
+      3.6541528853613281d0
+      0.0049286732339721695d0
+      make-gaussian-sampler)
+    
     (define-ziggurat-sampler make-expotential-sampler
-	#'(lambda (x) (exp (- x)))
-      #'(lambda (x) (- 1 (exp (- x))))
-      #'(lambda (y) (- (log y))))
+      #'(lambda (x) (exp (- x)))
+      #'(lambda (y) (- (log y)))
+      7.6971174701310288d0
+      0.0039496598225815527d0
+      make-gaussian-sampler)))
 
-    ))
 
+(defun test ()
+  (let ((f (make-randn-sampler :float))
+	(mean 0.0)
+	(m2   0.0)
+	(n 100000000))
+    (loop for i fixnum upfrom 1 below n
+	  do (let* ((res (funcall f))
+		    (delta (- res mean)))
+	       (incf mean (/ delta i))
+	       (incf m2   (* delta (- res mean)))))
+    (values mean (/ m2 (- n 2)))))
+	       
