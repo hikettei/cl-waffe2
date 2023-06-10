@@ -23,7 +23,8 @@
    #:!sum
    #:!move
    #:!copy
-   #:!view)
+   #:!view
+   #:proceed)
   (:export
    :node-x
    :node-y))

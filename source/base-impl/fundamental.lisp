@@ -69,3 +69,46 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
     ;; Update Chains
     (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)))
 
+;; TODO
+
+;; REPL-Friendly-Utils:
+;; (defnode ValueTensor
+;; (defun value (tensor) )
+
+;; The definition of value node is dynamically changed and redefined.
+;; Forward  -> All The Previous Forward Steps
+;; Backward -> All The Previous Backward Steps.
+
+;; We can also add: Proceed-Auto
+
+(defnode (ProceedNode (myself)
+	  :where `(A[~] -> A[~])
+	  :slots ((forward :accessor proceed-forward)
+		  (backward :accessor proceed-backward))
+	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
+
+(define-impl (ProceedNode :device t)
+	     :save-for-backward (nil)
+	     :forward ((self x)
+		       (multiple-value-bind (fw bw vars params) (build x)
+			 (declare (ignore vars params))
+			 ;; Vars/Params will be tracked by other build.
+			 (setf (proceed-forward self)  fw)
+			 (setf (proceed-backward self) bw)
+			 `(,(print (funcall fw)))))
+	     :backward ((self dout dx)
+			(declare (ignore dx))
+			(let ((bw (proceed-backward self)))
+			  (values
+			   (with-instant-kernel dout
+			       `(funcall ,bw))))))
+
+;; Optimize: Compile-Speeed
+(defun proceed (tensor)
+  "The function proceed invokes special node, ProceedNode, which takes all the previous computation node before tensor, returning the result of it.
+The backward is created with the previous node.
+
+This function will be useful especially when debugging on REPL.
+
+Also, using (with-dynamically-mode) will invoke this function every time forward invoked."
+  (forward (ProceedNode) tensor))
