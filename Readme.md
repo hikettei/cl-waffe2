@@ -56,7 +56,7 @@ cl-waffe2.asd (:serial = t)
 - [x] Pruning the rebundant computation node.
 - [ ] Precompute the constant-node.
 - [x] Basic Arithmetic Operation (+ - * /, and gemm)
-- [ ] Support both column and row major ordering.
+- [x] Support both column and row major ordering.
 - [ ] Sampling distributions (dense)
 - [ ] Sampling distributions (sparse)
 - [ ] Establish Specification About Dtype APIs, (e.g.: Casting from different dtypes, Auto Inferencing Dtype Of (make-tensor 1))

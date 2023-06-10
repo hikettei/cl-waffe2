@@ -124,9 +124,6 @@
 	  (/ w (+ b w))
 	  (/ b (+ b w))))))
 
-;; https://andantesoft.hatenablog.com/entry/2023/04/30/183032
-
-
 ;; randn
 ;; chisquare
 ;; gamma

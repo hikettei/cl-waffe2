@@ -9,6 +9,8 @@
 
 (defparameter *table-size* 256)
 
+;; FIXME: Pointer Coercion of double-float
+;; Could be optimized much more, by using ash/logand
 (define-with-typevar-dense (make-ziggurat-table u) (pdf ipd r v)
   (declare ;;(optimize (safety 0))
 	   (type function pdf ipd)
@@ -53,9 +55,10 @@
   (let ((one (coerce 0.9999999 (quote u)))
 	(two (coerce 2 (quote u))))
     (loop while t
+	  ;; Ugly: using (random) for several times.
 	  ;; Proceed with double-first at first
 	  do (let* ((u1f (- (random two) one)) ;; [-1, 1)
-		    (i   (random table-size)))
+		    (i   (random table-size))) ;; ugly part
 	       (declare (type u u1f)
 			(type fixnum i))
 	       (when (< (abs u1f)
@@ -94,7 +97,7 @@
     (loop while t
 	  ;; Proceed with double-first at first
 	  do (let* ((u1f (random one)) ;; [0, 1)
-		    (i   (random table-size)))
+		    (i   (random table-size))) ;; ugly
 	       (declare (type u u1f)
 			(type fixnum i))
 	       (when (< (abs u1f)
@@ -124,6 +127,11 @@
 ;; normal -> mgl-mat? numcl?
 ;; orthogonal -> SVD is needed...
 
+;; =========================================================================
+;; First-time-call  -> there's a little overhead because creates lut
+;; Second-time-call -> No overhead
+;; To reduce memory-space, the LUT won't be created until the distribution at specified dtype IS BEING SAMPLED.
+;; =========================================================================
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (macrolet ((define-ziggurat-sampler (getter-name name pdf ipd r v sampler1)
 	       (let ((params (loop for dtype in `(:float :double)
