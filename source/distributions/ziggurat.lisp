@@ -122,24 +122,42 @@
 ;; beta -> beta-bc + beta-cc
 ;; chisquare -> ziggurat
 ;; normal -> mgl-mat? numcl?
+;; orthogonal -> SVD is needed...
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (macrolet ((define-ziggurat-sampler (name pdf ipd r v sampler1)
-	       `(defun ,name (dtype)
-		  (let ((sampler (make-ziggurat-table dtype)))
-		    (multiple-value-bind (rx ry ir)
-			(funcall sampler ,pdf ,ipd ,r ,v)
-		      (let ((generator (,sampler1 dtype)))
-			#'(lambda ()
-			    (funcall generator rx ry ir *table-size*))))))))
+  (macrolet ((define-ziggurat-sampler (getter-name name pdf ipd r v sampler1)
+	       (let ((params (loop for dtype in `(:float :double)
+				   collect (symb '* getter-name (intern (symbol-name dtype)) '*))))
+		 `(progn
+		    (defun ,name (dtype)
+		      (let ((sampler (make-ziggurat-table dtype)))
+			(multiple-value-bind (rx ry ir)
+			    (funcall sampler ,pdf ,ipd ,r ,v)
+			  (let ((generator (,sampler1 dtype)))
+			    #'(lambda ()
+				(funcall generator rx ry ir *table-size*))))))
 
-    (define-ziggurat-sampler make-randn-sampler ;; PDF, -1/2*x^2/sqrt(2pi)
+		    ,@(loop for p in params
+			    collect `(defparameter ,p nil))
+		    
+		    (defun ,getter-name (dtype)
+		      (case dtype
+			,@(loop for pname in params
+				for dtype in `(:float :double)
+				collect `(,dtype
+					  (if (null ,pname)
+					      (setf ,pname (,name ,dtype))
+					      ,pname)))))))))
+
+    (define-ziggurat-sampler get-randn-sampler
+      randnmake-randn-sampler ;; PDF, -1/2*x^2/sqrt(2pi)
       #'(lambda (x) (exp (- (/ (* x x) 2.0))))
       #'(lambda (y) (sqrt (* -2.0 (log y))))
       3.6541528853613281d0
       0.0049286732339721695d0
       make-gaussian-generator)
     
-    (define-ziggurat-sampler make-expotential-sampler
+    (define-ziggurat-sampler get-expotential-sampler
+      make-expotential-sampler
       #'(lambda (x) (exp (- x)))
       #'(lambda (y) (- (log y)))
       7.6971174701310288d0
@@ -147,15 +165,3 @@
       make-expotential-generator)))
 
 
-(defun test ()
-  (let ((f (make-randn-sampler :float))
-	(mean 0.0)
-	(m2   0.0)
-	(n 100000))
-    (loop for i fixnum upfrom 1 below n
-	  do (let* ((res (funcall f))
-		    (delta (- res mean)))
-	       (incf mean (/ delta i))
-	       (incf m2   (* delta (- res mean)))))
-    (values mean (/ m2 (- n 2)))))
-	       

@@ -19,8 +19,10 @@
 
 (defparameter *available-lisp-type-sparse* (map 'list #'dtype->lisp-type *available-dtype-sparse-list*))
 
-(defun symb (&rest inputs)
-  (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun symb (&rest inputs)
+    (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
+
 
 (defun map-tree (fn tree)
   (let ((tree (funcall fn tree)))

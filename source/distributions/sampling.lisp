@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/distributions)
 
+;; Xavier/Xe/He, Orthogonal.
+
 (define-with-typevar (simple-array-sample! u) (size array function)
   (declare (optimize (speed 3))
 	   (type (simple-array u (*)) array)
