@@ -223,4 +223,35 @@ backward's arguments are:"
 	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	       ,@backward-body))))))
 
-;; (defmacro defmodule
+(defmacro with-instant-kernel (tensor &body body)
+  "Creates a instant kernel.
+Usage:
+
+1. Embedding for building-time.
+
+(setq a (randn `(10 10)))
+(with-instant-kernel a
+    (print a)) ;; -> (print a) is evaluated
+
+2. Embedding for compile-time.
+
+(setq a (randn `(10 10)))
+(with-instant-kernel a
+    `(print ,a)) ;; -> (print a) isn't evaluated
+
+(funcall (build *)) ;; -> (print a) will be evaluated.
+"
+  (let ((instant-name (gensym "InstantKernel")))
+    `(progn
+       (defnode (,instant-name (myself)
+		 :where `(A[~] -> A[~])))
+       (define-impl (,instant-name :device t)
+		    :forward ((self ,tensor)
+			      `(progn
+				 ,,@body
+				 ,,tensor))
+		    :backward ((self dout dx)
+			       (values dout)))
+       (forward (,instant-name) ,tensor))))
+
+

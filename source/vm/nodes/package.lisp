@@ -25,7 +25,8 @@
    #:forward
    #:backward
    #:node-passed-p
-   #:ignore-shape-error)
+   #:ignore-shape-error
+   #:with-instant-kernel)
 
   (:export
    #:*no-grad*
