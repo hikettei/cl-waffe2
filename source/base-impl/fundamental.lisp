@@ -105,7 +105,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			     `(and
 			       (funcall ,bw)
 			       ;; Delete Gradients.
-			       (!scalar-mul 0.0 ,dout)))))))
+			       (!mul 0 ,dout)))))))
 
 ;; Optimize: Compile-Speeed
 ;; TODO: ProceedNode for several outputs
