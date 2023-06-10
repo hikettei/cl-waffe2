@@ -75,4 +75,3 @@
 
   (define-math-impl LogENode log t)
   )
-

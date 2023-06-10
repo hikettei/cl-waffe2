@@ -11,38 +11,67 @@
   (dotimes (i size)
     (setf (aref array i) (funcall function i))))
 
-(defun initialize-vec! (tensor function)
+(defun initialize-vec! (tensor
+			function
+			&key (keep-order? nil))
   "
-function ... lambda(i) where i = index"
+function ... lambda(i) where i = index
+If keep-order = t, forcibly it uses mref (with computing strides). This option is important for fast sampling distributions.
+"
   (declare (type AbstractTensor tensor)
 	   (type function function))
 
   ;; TODO: Coerce into their type.
   ;; TODO: double
   (maybe-with-lparallel
-    (typecase (tensor-vec tensor)
-      (simple-array
+    (cond
+      ((and (typep (tensor-vec tensor) 'simple-array)
+	    (not keep-order?))
+       ;; The fastest case: the type of tensor-vec is already known.
+       ;; Continue with ignoring strides
        (maybe-pfuncall (simple-array-sample! (dtype tensor))
 		       (apply #'* (shape tensor))
 		       (tensor-vec tensor)
 		       function))
-      (T
+      ((or (not keep-order?) (eql (order tensor) :column))
+       ;; The second fastest case: the type of tensor-vec isn't known but we can access it element by element each other.
+       ;; Continue with ignoring strides
        (loop for i fixnum
 	     upfrom 0
 	       below (apply #'* (shape tensor))
-	     do (setf (vref (the simple-array (tensor-vec tensor)) i) (funcall function i)))))))
+	     do (setf (vref tensor i) (maybe-pfuncall function i))))
+      (T
+       ;; The slowest case: We have to access tensor-vec's element with considering strides...
+
+       (let ((count 0))
+	 (labels ((explore (rest-dim subscripts)
+		    (if (= rest-dim (1- (length (shape tensor))))
+			(dotimes (i (nth rest-dim (shape tensor)))
+			  (apply
+			   #'(setf mref)
+			   (maybe-pfuncall function count)
+			   tensor
+			   `(,@subscripts ,i))
+			  (incf count))
+			(dotimes (i (nth rest-dim (shape tensor)))
+			  (explore
+			   (1+ rest-dim)
+			   `(,@subscripts ,i))))))
+	   (explore 0 nil)))))))
 
 ;; TODO: AddDoc distribution sampler.
 (macrolet ((define-initializer-function (function-name
 					 (&rest args)
 					 initializer-lambda
-					 document)
+					 document
+					 &optional keep-order?)
+	     ;; Set t if use the position of element in the tensor.
 	     `(progn
 		(export ',function-name)
 		(defun ,function-name (shape-or-scalar ,@args &rest initargs &key &allow-other-keys)
 		  ,document
 		  (let ((tensor (apply #'make-tensor shape-or-scalar initargs)))
-		    (initialize-vec! tensor ,initializer-lambda)
+		    (initialize-vec! tensor ,initializer-lambda :keep-order? ,keep-order?)
 		    tensor)))))
   
   (define-initializer-function
@@ -61,7 +90,8 @@ function ... lambda(i) where i = index"
 	  (b (coerce b (dtype->lisp-type (dtype tensor)))))
       #'(lambda (i) (step-ax+b a i b)))
     "The function ax+b samples the new tensor following this sequence:
-Tensor[Index] = a*Index + b")
+Tensor[Index] = a*Index + b"
+    t)
 
   (define-initializer-function
       beta

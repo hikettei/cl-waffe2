@@ -297,7 +297,8 @@ Whether you cares about performance or not, this function shouldn't be used igno
 	      (apply #'+
 		     (map 'list
 			  #'(lambda (stride s view shape)
-			      (* stride (compute-stepby (subscript-view view)) (+ s (compute-visible-start-idx (subscript-view view) shape))))
+			      (* stride (compute-stepby (subscript-view view))
+				 (+ s (compute-visible-start-idx (subscript-view view) shape))))
 			  (tensor-stride tensor)
 			  subscripts
 			  (tensor-view tensor)
