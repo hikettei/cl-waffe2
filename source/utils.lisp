@@ -36,13 +36,15 @@
 
 (defmacro with-config ((&key
 			  ;; TO ADD:
-			  ;; Use-Dtype
+			  ;; Global Dtype
+			  ;; (sin uint8) -> Global Float Dtype
 			  ;; Matmul-Accuracy
 			  ;; 
 			  (device :cpu)
 			  (no-grad nil)
 			  (dtype :float)
-			  (order :column))
+			  (order :column)
+			  (num-cores 1))
 		       &body
 			 body)
   "Integrates all the annoying configs."
@@ -59,5 +61,8 @@
 	 (:column 'with-column-major)
 	 (:row    'with-row-major))
       (with-dtype ,dtype
-	,@body)))))
+	(with-num-cores (,num-cores)
+	  ,@body))))))
 
+
+;; TODO: Add set-config for REPL.

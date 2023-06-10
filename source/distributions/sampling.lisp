@@ -21,8 +21,6 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
   (declare (type AbstractTensor tensor)
 	   (type function function))
 
-  ;; TODO: Coerce into their type.
-  ;; TODO: double
   (maybe-with-lparallel
     (cond
       ((and (typep (tensor-vec tensor) 'simple-array)
@@ -60,6 +58,7 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 	   (explore 0 nil)))))))
 
 ;; TODO: AddDoc distribution sampler.
+;; BASIC Format: (distribution-name shape (If Any, arguments for distribution) &rest make-tensor's keywords...)
 (macrolet ((define-initializer-function (function-name
 					 (&rest args)
 					 initializer-lambda
@@ -68,9 +67,9 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 	     ;; Set t if use the position of element in the tensor.
 	     `(progn
 		(export ',function-name)
-		(defun ,function-name (shape-or-scalar ,@args &rest initargs &key &allow-other-keys)
+		(defun ,function-name (shape ,@args &rest initargs &key &allow-other-keys)
 		  ,document
-		  (let ((tensor (apply #'make-tensor shape-or-scalar initargs)))
+		  (let ((tensor (apply #'make-tensor shape initargs)))
 		    (initialize-vec! tensor ,initializer-lambda :keep-order? ,keep-order?)
 		    tensor)))))
   
