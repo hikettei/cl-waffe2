@@ -112,6 +112,7 @@ Here's a list of reports.
       ;; Memo: Sharing Allocated memory between f and b
       ;; can be realised with self ...
       ;; recompute grad
+      
       (let* ((forward-form (call-next-method))
 	     (next-tensor
 	       (loop for shape in out-state
@@ -120,6 +121,7 @@ Here's a list of reports.
 		     ;; Make -> ScalarTensor if shape = (1)
 		     collect (let* ((next-tensor
 				      (make-input shape nil
+						  :scalar-p (out-scalar-p node)
 						  :dtype (dtype (nth (or extend-from 0) inputs))
 						  :order (order (nth (or extend-from 0) inputs))))
 				    (state (make-statecontainer

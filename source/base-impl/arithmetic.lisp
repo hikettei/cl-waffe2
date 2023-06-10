@@ -51,15 +51,15 @@ Let X and Y be a given arguments and both are matrix.
 Let X be a given matrix and S be a given scalar.
     X <- scalar ~a X" document1 document2))))))
   (define-scalar-mat-node
-      ScalarAddNode
-    "ScalarAddNode"
+      ScalarAdd
+    "ScalarAdd"
     "+"
     ((self dout dx dy)
      (values (!move dx dout) (!move dy dout))))
 
   (define-scalar-mat-node
-      ScalarMulNode
-    "ScalarMulNode"
+      ScalarMul
+    "ScalarMul"
     "*"
     ((self dout dx dy)
      (values (!mul dout dy) (!mul dout dx)))))
@@ -116,10 +116,10 @@ Note that the operation is automatically replaced into in-place operation."
 		  ,document
 		  (forward (,node-name) scalar (!copy x))))))
   (define-scalar-mat-node-caller
-      !scalar-add ScalarAddNode
+      !scalar-add ScalarAdd
     "X += scalar")
   (define-scalar-mat-node-caller
-      !scalar-mul ScalarMulNode
+      !scalar-mul ScalarMul
     "X *= scalar"))
 
 (with-export !scalar-sub
@@ -138,6 +138,7 @@ Note that the operation is automatically replaced into in-place operation."
 
 (macrolet ((define-sas-node (name)
 	     `(defnode (,name (myself)
+			:out-scalar-p t
 			:where `(A[scal] B[scal] -> A[scal] where scal = 1)))))
   (define-sas-node ScalarAndScalarAdd)
   (define-sas-node ScalarAndScalarSub)
@@ -215,9 +216,9 @@ Note that the operation is automatically replaced into in-place operation."
 
 
 (defun scalartensor-p (tensor)
-  (subtypep (class-of tensor) 'cl-waffe2/vm.generic-tensor:ScalarTensor))
+  (or (equal (shape tensor) `(1))
+      (subtypep (class-of tensor) 'cl-waffe2/vm.generic-tensor:ScalarTensor)))
 
-;; BugFix
 (macrolet ((define-arith-function (name
 				   invertor
 				   scalar-and-scalar-operation

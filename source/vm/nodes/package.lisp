@@ -26,6 +26,7 @@
    #:backward
    #:node-passed-p
    #:ignore-shape-error
+   #:out-scalar-p
    #:with-instant-kernel)
 
   (:export

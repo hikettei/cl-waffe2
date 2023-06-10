@@ -65,6 +65,7 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 		   (&rest constructor-arguments)
 		    &key
 		      (where t)
+		      (out-scalar-p nil)
 		      (slots nil)
 		      (backward nil)
 		      (documentation ""))
@@ -105,7 +106,8 @@ because it requires a slot for node itself.")
 			    slots)))
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (defclass ,abstract-name (AbstractNode)
-	 (,@slots)
+	 (,@slots
+	  (out-scalar-p :initform ,out-scalar-p :accessor out-scalar-p))
 	 (:documentation ,documentation))
        ,(when backward
 	  (let ((backward-self-name (caar backward))
@@ -230,8 +232,6 @@ backward's arguments are:"
 
 
 ;; TODO: with-embedding-lisp as a alias of this macro.
-;; FixME: This violates the coding rule because using defun in defun dynamically (If with-instant-kernel isn't called at toplevel).
-
 
 (defnode (InstantKernelNode (myself call-form)
 	  :slots ((call-form :initarg :call-form :type function :reader instant-call-form))

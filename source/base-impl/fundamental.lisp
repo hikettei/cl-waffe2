@@ -95,6 +95,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			 ;; Vars/Params will be tracked by other build.
 			 (setf (proceed-backward self) bw)
 			 (setf (proceed-result self) (funcall fw))
+			 (setf (out-scalar-p self) (scalartensor-p x))
 			 `(progn ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))

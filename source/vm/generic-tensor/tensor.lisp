@@ -247,6 +247,7 @@ With regard to practical usage, the tutorials would be more helpful rather than 
 (defun make-input (shape
 		   named
 		   &key
+		     (scalar-p nil)
 		     (dtype *default-dtype*)
 		     (order *default-order*))
   "Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
@@ -259,7 +260,8 @@ Input:
     - order (as it is)"
   (declare (type list shape)
 	   (type (or null keyword) named))
-  (make-instance (car *using-backend*)
+  (make-instance (if scalar-p 'ScalarTensor (car *using-backend*))
+		 :scalar-p scalar-p
 		 :dtype dtype
 		 :order order
 		 :shape shape
@@ -340,6 +342,11 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
+  (when (and (numberp (vec input-tensor))
+	     (numberp (vec actual-tensor)))
+    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
+    (return-from embody-actual-tensor t))
+  
   (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
 	
@@ -421,6 +428,7 @@ Note that view is only created for Tensors, not a Scalar.
 	      "")
 	  (let ((state (tensor-state tensor)))
 	    (if state
+		;; TODO: Update vec-state
 		(format nil "~%  :vec-state [~(~a~)]" (statecontainer-state state))
 		""))
 	  (if (and (eql (tensor-facet tensor) :input)

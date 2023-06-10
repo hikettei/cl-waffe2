@@ -13,3 +13,7 @@
   (setf (slot-value tensor 'orig-shape)    `(1)
 	(slot-value tensor 'visible-shape) `(1)))
 
+(defmethod vref ((tensor ScalarTensor) index)
+  (declare (ignore index))
+  (tensor-vec tensor))
+

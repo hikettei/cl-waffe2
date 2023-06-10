@@ -24,9 +24,9 @@
   (not (<= *num-cores* 1)))
 
 (defmacro maybe-with-lparallel (&body body)
-  `(let ((*kernel* (if (multithread-p)
-		       (make-kernel *num-cores*)
-		       nil)))
+  `(let ((*kernel* (or *kernel* (if (multithread-p)
+				    (make-kernel *num-cores*)
+				    nil))))
      ,@body))
 
 (defmacro maybe-pfuncall (function &rest args)
