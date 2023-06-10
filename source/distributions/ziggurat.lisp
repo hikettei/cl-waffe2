@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/distributions)
 
-;; Not working well... T_T
+;; HELPME: Ziggurat Not Working Well... T_T
 
 ;; = References ===============================================
 ;; https://andantesoft.hatenablog.com/entry/2023/04/30/183032
@@ -111,8 +111,9 @@
 			(setq left mid))
 		       (T
 			(error "Something went wrong when making ziggurat-table!"))))))
-	(setq x0 right)
-	(setq x0-area (area-of x0)))
+	(when (not (and use-x0 use-area))
+	  (setq x0 right)
+	  (setq x0-area (area-of x0))))
 
       (setf (aref rectangle-X 0) (/ x0-area (the u (funcall pdf x0))))
       (setf (aref rectangle-X 1) x0)
@@ -139,93 +140,98 @@
 	    if (= (1+ i) table-size)
 	      do (setf (aref irr i) zero)
 	    else
-	      do (setf (aref irr i) (/ (aref rectangle-X i)
-				       (aref rectangle-X (1+ i)))))
+	      do (setf (aref irr i) (/ (aref rectangle-X (1+ i))
+				       (aref rectangle-X i))))
       
       (values rectangle-X
 	      rectangle-Y
 	      irr))))
 
 ;; Optimize It First. Parallelize
+;; Only the case for normal dist
+;; ????
 (define-with-typevar-dense (make-ziggurat-sampler u) (rx ry ir table-size)
-  (declare ;;(optimize (speed 3))
-	   (type (simple-array u (*)) rx ry ir)
-	   (type fixnum))
-  (loop named sampling
-	while t
-	do (let* ((zero (coerce 0 (quote u)))
-		  (u    (random most-positive-fixnum))
-		  (u1   (- u 1)) ;; u1f = [-1.0, 1.0)
-		  (u1f (coerce
-			(/ (ash u1 -10)
-			   (ash 1 53))
-			(quote u)))
-		  (i (random (1- table-size))))
-	     (declare (type fixnum u1)
-		      (type u u1f))
+  (declare ;;(optimize (safety 0))
+   (type (simple-array u (*)) rx ry ir)
+   (type fixnum))
+  (let* ((zero (coerce 0 (quote u)))
+	 (one  (coerce 1 (quote u)))
+	 (two  (coerce 2 (quote u)))
+	 (+inf (typecase zero
+		 (single-float most-positive-single-float)
+		 (double-float most-positive-double-float)))
+	 (bit (/ 1 +inf)))
+    (loop named sampling
+	  while t
+	  do (let* ((u1  (random most-positive-fixnum))
+		    (u1f (- (random (- two bit)) one))
+		    (i (logand u1 (random (1- table-size)))))
+	       (declare (type fixnum u1)
+			(type u u1f))
 
-	     (when (< (abs u1f)
-		      (aref ir i))
-	       (return-from sampling (the u (* u1f (aref rx i)))))
+	       (when (< (abs u1f)
+			(aref ir i))
+		 (return-from sampling (the u (* u1f (aref rx i)))))
 
-	     (if (= i 0)
-		 (loop with sp u = zero
-		       with tp u = zero
-		       with x0 u = (aref rx 1)
-		       while (> (* sp sp) (+ tp tp))
-		       do (and
-			   (setq sp (-
-				     (/
-				      (log (- 1
-					      (/
-					       (ash (random most-positive-fixnum) -11)
-					       (ash 1 53)))
-					   x0))))
-			   (setq tp (-
-				     (/
-				      (log (- 1
-					      (/
-					       (ash (random most-positive-fixnum) -11)
-					       (ash 1 53)))
-					   x0)))))
-		       finally
-			  (return-from sampling
-			    (* (+ x0 sp)
-			       (if (< u1 0) -1 1))))
-		 (let ((x (* u1f (aref rx i)))
-		       (y (coerce (/ (ash (random most-positive-fixnum) -11)
-				     (ash 1 53))
-				  (quote u))))
-		   (when (<=
-			  (+ (* y (-
-				   (aref ry i)
-				   (aref ry (1- i))))
-			     (aref ry (1- i)))
-			  (exp (* -0.5 x x)))
-		     (return-from sampling x)))))))
+	       ;; 
+	       (print i)
+	       (if (= i 0)
+		   (loop with sp u = zero
+			 with tp u = zero
+			 with x0 u = (aref rx 1)
+			 while (> (the u (* sp sp)) (the u (+ tp tp)))
+			 do (and
+			     (setq sp (-
+				       (/
+					(log (- 1
+						(/
+						 (ash (random most-positive-fixnum) -11)
+						 (ash 1 53)))
+					     x0))))
+			     (setq tp (-
+				       (/
+					(log (- 1
+						(/
+						 (ash (random most-positive-fixnum) -11)
+						 (ash 1 53)))
+					     x0)))))
+			 finally
+			    (return-from sampling
+			      (* (+ x0 sp)
+				 (if (< u1 0) -1 1))))
+		   (let ((x (* u1f (aref rx i)))
+			 (y (/ (ash (random most-positive-fixnum) -11)
+			       (ash 1 53))))
+		     (when (<=
+			    (+ (* y (-
+				     (aref ry i)
+				     (aref ry (1- i))))
+			       (aref ry (1- i)))
+			    (exp (* -0.5 x x)))
+		       (return-from sampling x))))))))
 
 #|
 (defun erf (x &aux (inf 2.0)) ;; x -> 6.5d0, erf(x) -> 1.0d0
-  "Error function."
-  (if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
-      (signum x)
-      (let ((erf (/ 2 (sqrt pi)))
-	    (sum 0.0)
-	    (fct 1.0))
-	(loop named itr
-	      while t
-	      for i fixnum upfrom 0
-	      do (let ((elm (*
-			     (if (evenp i)
-				 1
-				 -1)
-			     (expt x (+ (* 2 i) 1))
-			     (/ (* fct (+ (* 2 i) 1))))))
-		   (when (~=1e-1 (+ elm sum) sum)
-		     (return-from itr))
-		   (incf sum elm)
-		   (setq fct (* fct (+ i 1)))))
-	(* sum erf))))
+"Error function."
+(if (or (> x inf) (< x (- inf)) (= x 0)) ;; If x is enough large, treated as +inf
+(signum x)
+(let ((erf (/ 2 (sqrt pi)))
+(sum 0.0)
+(fct 1.0))
+(loop named itr
+while t
+for i fixnum upfrom 0
+do (let ((elm (*
+(if (evenp i)
+1
+-1)
+(expt x (+ (* 2 i) 1))
+(/ (* fct (+ (* 2 i) 1))))))
+(when (~=1e-1 (+ elm sum) sum)
+(return-from itr))
+(incf sum elm)
+(setq fct (* fct (+ i 1)))))
+(* sum erf))))
 |#
 
 ;; Fix: Erf関数の精度が原因で正規分布X
@@ -254,7 +260,6 @@
 			    (funcall generator rx ry ir table-size))))))))
 
     (define-ziggurat-sampler make-randn-sampler ;; PDF, -1/2*x^2/sqrt(2pi)
-	;;	#'(lambda (x) (/ (exp (- (/ (* x x) 2))) (sqrt (* 2 pi))))
 	#'(lambda (x) (exp (- (/ (* x x) 2)))) ;; PDF, -1/2*x^2/sqrt(2pi)
       #'(lambda (x) (* (sqrt (* 2 pi))
 		       0.5
