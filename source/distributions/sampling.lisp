@@ -87,5 +87,14 @@ Tensor[Index] = a*Index + b")
 	  (funcall sampler)))
     "The function randn samples the gaussian distributions using ziggurat algorithm.")
 
+  (define-initializer-function
+      expotential
+      ()
+    (let ((sampler (get-expotential-sampler (dtype tensor))))
+      #'(lambda (i)
+	  (declare (ignore i))
+	  (funcall sampler)))
+    "The function expotential samples the expotential distribution using ziggurat algorithm.")
+
   )
 

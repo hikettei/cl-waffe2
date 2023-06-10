@@ -71,7 +71,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Basic APIs for both LispTensor and CPUTensor.
 - [ ] Formulate specifications of nodes.
 - [ ] Use Cl/CD
-- [ ] REPL-Friendly Node, (value tensor)
+- [ ] REPL-Friendly Node, (value tensor). with-dynamically-mode, set-config
 - [ ] ascognitious
 - [ ] node debugtools
 - [ ] Clarify runtime error.
