@@ -4,7 +4,7 @@
 ;; Implement: Matmul/Dot/ArgMax/ArgMin
 
 (defnode (MatMulNode (myself &key transpose-a transpose-b)
-	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
+	  :where (A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
 		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
 	  :backward ((self dout da db do)
@@ -16,7 +16,7 @@
 	  :documentation ""))
 
 (defnode (LazyTransposeNode (myself)
-	  :where `(A[~ i j] -> A[~ j i])
+	  :where (A[~ i j] -> A[~ j i])
 	  :documentation "LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.
 
 Internally, This Node Returns The Given A itself but taking transpose of A's shape.

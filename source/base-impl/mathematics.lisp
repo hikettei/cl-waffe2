@@ -15,7 +15,7 @@
 		(export ',node-name)
 		(export ',defun-name)
 		(defnode (,node-name (myself)
-			  :where `(X[~] OUT[~] -> OUT[~])
+			  :where (X[~] OUT[~] -> OUT[~])
 			  :backward ,backward
 			  :documentation
 			  ,(format nil "The node ~(~a~) takes X as an argument, applying a ~(~a~) function into each element and writes the result into out.
@@ -177,7 +177,7 @@ SideEffects:
   
 (export '(ExptNode !expt))
 (defnode (ExptNode (myself)
-	  :where `(X[~] OUT[~] N[scal] -> OUT[~] where scal = 1)
+	  :where (X[~] OUT[~] N[scal] -> OUT[~] where scal = 1)
 	  :backward ((self dout x out n)
 		     (declare (ignore out))
 		     (values

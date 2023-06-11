@@ -6,11 +6,11 @@
 ;; After Implementing Tensor
 
 (defnode (Bijective-Function (myself)
-	  :where `([x y] [x y] -> [x y])
+	  :where ([x y] [x y] -> [x y])
 	  :documentation "Bijective-Function has a one-to-one correspondence."))
 
 (defnode (Transpose-Function (myself)
-	  :where `([x y] -> [y x])
+	  :where ([x y] -> [y x])
 	  :documentation "x y -> y x"))
 
 

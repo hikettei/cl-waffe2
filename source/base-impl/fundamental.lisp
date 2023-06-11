@@ -2,7 +2,7 @@
 (in-package :cl-waffe2/base-impl)
 
 (defnode (MoveTensorNode (myself)
-	  :where `(A[~] B[~] -> A[~])
+	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  :backward ((self dout dx dy)
@@ -40,8 +40,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (defnode (ViewTensorNode (myself subscripts result before)
 	  :slots ((subscripts :initarg :subscripts))
-	  :where `(A[result] B[before] -> A[result]
-			     where before = ',before result = ',result))
+	  :where (A[result] B[before] -> A[result]))
   (setf (ignore-shape-error myself) t))
 
 (define-impl (ViewTensorNode)
@@ -82,7 +81,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 ;; We can also add: Proceed-Auto
 
 (defnode (ProceedNode (myself)
-	  :where `(A[~] -> B[~])
+	  :where (A[~] -> B[~])
 	  :slots ((backward :accessor proceed-backward)
 		  (result   :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))

@@ -311,10 +311,12 @@ Because : The actual ~ath argument given has a shape of ~a.
 ;; signifcantly slow compilation...
 ;; Optimize Me...
 ;; TODO: call it when defnode is called
+;; Rewrite this program...
 (defun create-subscript-p (subscripts
 			   &key
 			     (macroexpand nil)
 			     (fixed nil)
+			     (return-body nil)
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
 			     (undetermined-shape-tmp (gensym "UD"))
@@ -401,7 +403,7 @@ Rule4: ~は一度のみ使える
 			 &aux
 			   (,all-conditions)
 			   (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
-		(declare (optimize (speed 0) (safety 0) (debug 0) (compilation-speed 3))
+		(declare (optimize (speed 1) (compilation-speed 3))
 			 #+sbcl(sb-ext:muffle-conditions cl:style-warning sb-ext:compiler-note)
 			 )
 		  ;; previous-suscriptsから次のSubscriptsを作成
@@ -593,8 +595,10 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			 (reverse ,all-conditions))))))))
       (when macroexpand
 	(print body))
-      
-      (values (compile nil body)
+
+      (values (if return-body
+		  body
+		  (compile nil body))
 	      (map 'list
 		   #'(lambda (sym)
 		       (position sym (the list input-names) :test #'symbol-eq))

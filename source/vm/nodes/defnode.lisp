@@ -71,7 +71,9 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	      (princ abstract-node out)
 	      (princ '- out)
 	      (princ device out))
-	    'cl-waffe2/vm.nodes.facets-tmp)))
+	    'cl-waffe2/vm.nodes.facets-tmp))
+  (defun tmp-gensym ()
+    (intern (symbol-name (symb '* (gensym "C") '*)) 'cl-waffe2/vm.nodes.facets-tmp)))
 
 (defun determine-facet-of-nodes (abstract-name devices)
   (declare (type list devices)
@@ -88,6 +90,13 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 		      :node abstract-name))))
 
   (error 'node-not-found :node abstract-name))
+
+
+(defmacro subscript (where &key (fixed nil))
+  (multiple-value-bind (body states) (create-subscript-p `,where :fixed fixed :return-body t)
+    `(values
+      (eval ,body)
+      ',states)))
 
 (defmacro defnode ((abstract-name
 		   (self &rest constructor-arguments)
@@ -230,6 +239,8 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 					   (find :initarg slots))
 					slots))
 			    slots)))
+    ;; where-static-p -> T,   the phase where isn't used
+    ;; where-static-p -> NIL, the phase where is used
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (defclass ,abstract-name (AbstractNode)
 	 (,@slots
@@ -254,8 +265,8 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
        ;; Backends are modular
        (defun ,abstract-name (,@(cdr constructor-arguments))
 	 ,documentation
-	 (let* ((,subscript-p  (multiple-value-list (create-subscript-p ,where)))
-		(,subscript-p1 (multiple-value-list (create-subscript-p ,where :fixed t))) ;; subscript-p without ~
+	 (let* ((,subscript-p  (multiple-value-list (subscript ,where)))
+		(,subscript-p1 (multiple-value-list (subscript ,where :fixed t))) ;; subscript-p without ~
 		(,(car constructor-arguments)
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend*)
@@ -358,7 +369,7 @@ save-for-backward's behaviour
 
 (defnode (InstantKernelNode (myself call-form)
 	  :slots ((call-form :initarg :call-form :type function :reader instant-call-form))
-	  :where `(A[~] -> A[~])
+	  :where (A[~] -> A[~])
 	  :documentation ""))
 
 (define-impl (InstantKernelNode :device t)

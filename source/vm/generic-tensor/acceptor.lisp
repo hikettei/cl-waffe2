@@ -104,7 +104,6 @@
      symbols-changed)
     t))
 
-
 (defun state-reset! (tensor)
   "Resets tensor's result to get next round output."
   (declare (type AbstractTensor tensor))
@@ -189,6 +188,7 @@ Return:
 			(construct-backward toplevel :macroexpand macroexpand-backward))))
       (let ((body `(lambda ()
 		     (declare (optimize (speed 3)))
+		     ;;(mapc #'result-reset! ',(remove-duplicates *node-parameters-tmp* :key #'tensor-vec))
 		     (mapc #'state-reset! ',(remove-duplicates *node-parameters-tmp*))
 		     (funcall ,body))))
 	(when macroexpand-forward

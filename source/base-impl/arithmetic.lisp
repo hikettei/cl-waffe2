@@ -19,7 +19,7 @@
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defnode (,name (myself)
-			  :where `(A[~] B[~] -> A[~])
+			  :where (A[~] B[~] -> A[~])
 			  :backward ,backward
 			  :documentation ,(format nil "~a is a node which computes following operation element-wise.
 Let X and Y be a given arguments and both are matrix.
@@ -44,7 +44,7 @@ Let X and Y be a given arguments and both are matrix.
 	     `(progn
 		(export ',name)
 		(defnode (,name (myself)
-			  :where `(A[scal] B[~] -> B[~] where scal = 1)
+			  :where (A[scal] B[~] -> B[~] where scal = 1)
 			  :backward ,backward
 			  :documentation ,(format nil
 						  "~a is a node which computes following operation element-wise.
@@ -139,7 +139,7 @@ Note that the operation is automatically replaced into in-place operation."
 (macrolet ((define-sas-node (name)
 	     `(defnode (,name (myself)
 			:out-scalar-p t
-			:where `(A[scal] B[scal] -> A[scal] where scal = 1)))))
+			:where (A[scal] B[scal] -> A[scal] where scal = 1)))))
   (define-sas-node ScalarAndScalarAdd)
   (define-sas-node ScalarAndScalarSub)
   (define-sas-node ScalarAndScalarMul)
