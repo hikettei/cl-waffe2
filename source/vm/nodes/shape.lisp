@@ -309,6 +309,8 @@ Because : The actual ~ath argument given has a shape of ~a.
 ;; Fix: subscript = [shape] where shape = `(1 2 3)
 ;; => ndimension doesn't match. (Currently avoided by using ~)
 ;; signifcantly slow compilation...
+;; Optimize Me...
+;; TODO: call it when defnode is called
 (defun create-subscript-p (subscripts
 			   &key
 			     (macroexpand nil)
@@ -357,7 +359,7 @@ Rule4: ~は一度のみ使える
 			out-state
 			let-binding)
       (parse-subscript subscripts :fixed fixed)
-
+    (declare (optimize (speed 3)))
     ;; [~ a b] [a b ~]
     ;; [~ a b] [~ k b] let k = (/ b 2)
     ;; boundp
@@ -377,18 +379,18 @@ Rule4: ~は一度のみ使える
     ;; [~ x y] [~ x y] -> [~ x y] with (5 1 2) (1 1 2) is NG
 
     (let* ((least-required-dims (loop for s in first-state
-				      collect (length (remove '~ s :test #'symbol-eq))))
+				      collect (length (the list (remove '~ s :test #'symbol-eq)))))
 	   ;; (1 2 3) for [x y] is invaild on the other hand (1 2 3) for [~ x y] is ok.
 	   (max-required-dims (loop for s in first-state
-				    if (find '~ s :test #'symbol-eq)
+				    if (find '~ (the list s) :test #'symbol-eq)
 				      collect -1
 				    else
-				      collect (length s)))
-	   (out-omit-p (if (find '~ (flatten out-state) :test #'symbol-eq)
+				      collect (length (the list s))))
+	   (out-omit-p (if (find '~ (the list (flatten out-state)) :test #'symbol-eq)
 			   t
 			   nil))
 	   (~symbol (or (find '~
-			      (flatten (list first-state))
+			      (the list (flatten (list first-state)))
 			      :test #'symbol-eq)
 			'~))
 	   ;; If ~ syntax inn't used in out-state, Anything is ok as ~.
@@ -399,8 +401,9 @@ Rule4: ~は一度のみ使える
 			 &aux
 			   (,all-conditions)
 			   (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
-		(declare (optimize (compilation-speed 3))
-			 #+sbcl(sb-ext:muffle-conditions cl:style-warning sb-ext:compiler-note))
+		(declare (optimize (speed 0) (safety 0) (debug 0) (compilation-speed 3))
+			 #+sbcl(sb-ext:muffle-conditions cl:style-warning sb-ext:compiler-note)
+			 )
 		  ;; previous-suscriptsから次のSubscriptsを作成
 		  ;; If any, return error condition
 		  ;; "Return: (values next-state condition)"
@@ -479,7 +482,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			    `(progn
 			       ,(format nil "[DEBUG] For: ~a" (nth i first-state))
 			       ,@(loop with shape = `(nth ,i ,previous-subscripts)
-				       with pos1 = (or (position '~ subscript :test #'symbol-eq) (length subscript)) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
+				       with pos1 = (or (position '~ (the list subscript) :test #'symbol-eq) (length subscript)) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
 				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
 				       
 				       for nth-arg fixnum upfrom 0
@@ -594,6 +597,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
       (values (compile nil body)
 	      (map 'list
 		   #'(lambda (sym)
-		       (position sym input-names :test #'symbol-eq))
+		       (position sym (the list input-names) :test #'symbol-eq))
 		   output-names)))))
 
