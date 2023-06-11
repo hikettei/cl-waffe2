@@ -68,7 +68,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Add Test Cases
 - [ ] Give a strong features to cl-waffe2/viz
 - [ ] Prepare documentations and examples
-- [ ] Basic APIs for both LispTensor and CPUTensor.
+- [ ] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS)
 - [ ] Formulate specifications of nodes.
 - [ ] Use Cl/CD
 - [ ] REPL-Friendly Node, (Implemented as proceed function), with-dynamically-mode, set-config
@@ -87,6 +87,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512.
 - [ ] (After released v1.0) cl-waffe2 for coalton.
 - [ ] cl-waffe2/linalg, SVD
+- [ ] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
 # Basics
 
 ### AbstractTensor
@@ -124,5 +125,19 @@ cl-waffe2.asd (:serial = t)
     (time (funcall fw))
     (time (funcall bw)))
 ...
+```
+
+# Basic Workflow
+
+```lisp
+;; proceed is a little slow way (because it includes compile-time) but useful for debugging (define-by-run style)
+(proceed (!add 1.0 1.0))
+
+;; Fastest Way (define-and-run style)
+(with-build (forward backward variables parameters) (!add 1.0 1.0)
+    (funcall forward)
+    (funcall backward)
+    ...
+    )
 ```
 
