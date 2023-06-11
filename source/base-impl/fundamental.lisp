@@ -38,9 +38,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			 :order (order tensor))))
     (!move out tensor)))
 
-(defnode (ViewTensorNode (myself subscripts result before)
+(defnode (ViewTensorNode (myself subscripts result1 before1)
 	  :slots ((subscripts :initarg :subscripts))
-	  :where (A[result] B[before] -> A[result]))
+	  :where (A[result] B[before] -> A[result] where result = result1 before = before1))
   (setf (ignore-shape-error myself) t))
 
 (define-impl (ViewTensorNode)
