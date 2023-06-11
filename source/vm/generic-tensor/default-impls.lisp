@@ -9,7 +9,7 @@
 
 (defmethod initialize-instance :before ((tensor ScalarTensor) &rest initargs &key &allow-other-keys)
   (declare (ignore initargs))
-  
+
   (setf (slot-value tensor 'orig-shape)    `(1)
 	(slot-value tensor 'visible-shape) `(1)))
 

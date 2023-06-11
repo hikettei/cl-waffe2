@@ -26,6 +26,7 @@
    #:vref
    #:grad
    #:order
+   #:scalar-p
    #:view
    #:tensor-view
    #:detach

@@ -26,14 +26,38 @@ Note that until (tensor-vec) is called, x is never allocated.
 
 The option ignore-me can be accessed by the function (movetensor-ignore-me MoveTensorNode)"))
 
+(defnode (MoveScalarTensorNode (myself)
+	  :out-scalar-p t
+	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
+	  :backward ((self dout dx dy)
+		     (declare (ignore dx))
+		     (let ((dy-out
+			     (if (and
+				  (eql (tensor-attribute dy) :chain)
+				  (movetensor-ignore-me self))
+				 dout
+				 (!copy dout))))
+		       (values dout dy-out)))))
 
+(define-impl (MoveScalarTensorNode :device ScalarTensor)
+	     :forward ((self x y)
+		       `(setf (tensor-vec ,x) (tensor-vec ,y))))
+
+;; Modottara yaru
+;; MoveScalarTensorNode
+;; ScalarTensor, And FIX Acceptor
+;; TODO: Move For Scalar
 (defun !move (place tensor)
   "TODO: DOCSTRING"
-  (forward (MoveTensorNode) place tensor))
+  (if (and (scalar-p place)
+	   (scalar-p place))
+      (forward (MoveScalarTensorNode) place tensor)
+      (forward (MoveTensorNode) place tensor)))
 
 (defun !copy (tensor)
   "TODO: DOCSTRING"
   (let ((out (make-input (shape tensor) nil
+			 :scalar-p (out-scalar-p tensor)
 			 :dtype (dtype tensor)
 			 :order (order tensor))))
     (!move out tensor)))

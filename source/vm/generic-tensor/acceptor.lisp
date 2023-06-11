@@ -207,10 +207,14 @@ Return:
 
   ;; out-scalar -> backward -> Each Parameters
 
-  (let* ((out (make-tensor (shape out-scalar)
+  (let* ((out (if (scalar-p out-scalar)
+		  (make-tensor 1
+			       :dtype (dtype out-scalar)
+			       :order (order out-scalar))
+		  (make-tensor (shape out-scalar)
 			   :dtype (dtype out-scalar)
 			   :order (order out-scalar)
-			   :initial-element 1))
+			   :initial-element 1)))
 	 (body `(lambda ()
 		  ,(explore-backwards out-scalar out)
 		  t)))

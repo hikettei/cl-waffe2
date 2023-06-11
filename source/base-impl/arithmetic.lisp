@@ -169,7 +169,7 @@ Note that the operation is automatically replaced into in-place operation."
 			   ,x)))
 	     :backward ((self dout dx dy)
 			(declare (ignore dx dy))
-			(values dout (!sas-mul -1 dout))))
+			(values dout (!mul -1 dout))))
 
 (define-impl (ScalarAndScalarMul :device ScalarTensor)
 	     :forward ((self x y)
@@ -194,7 +194,7 @@ Note that the operation is automatically replaced into in-place operation."
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!mul (!sas-div 1 dy) dout)
+			(values (!mul (!div 1 dy) dout)
 				(!mul dx dout))))
 
 (defun !sas-add (x y)

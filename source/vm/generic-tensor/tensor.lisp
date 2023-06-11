@@ -33,7 +33,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
 
    ;; Is it scalar?
-   (scalar-p :initarg :scalar-p :initform nil)
+   (scalar-p :initarg :scalar-p :initform nil :reader scalar-p)
 
    ;; vec container
    (vec :initarg :vec :initform nil :reader vec :writer write-vec)
@@ -379,7 +379,8 @@ Note that view is only created for Tensors, not a Scalar.
   (let ((subscripts
 	  (loop for s in subscripts collect (force-list s))))
     (when (typep tensor 'ScalarTensor)
-      (format t ":BROADCAST IS IGNORED for scalar input (TODO)")
+      (if subscripts
+	  (format t ":BROADCAST IS IGNORED for scalar input (TODO)"))
       (return-from view tensor))
 
     (make-instance (car *using-backend*)
