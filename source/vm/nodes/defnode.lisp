@@ -248,7 +248,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 		,@backward-body))))
        (defmethod print-object ((object ,abstract-name) stream)
 	 (format stream
-		 "<~a, :where ~a>"
+		 "<Node: ~a ~a>"
 		 (class-name (class-of object))
 		 ',where))
        ;; Backends are modular

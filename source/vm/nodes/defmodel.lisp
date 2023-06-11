@@ -4,7 +4,7 @@
 ;; Section: Creating a Module (A set of nodes).
 
 (defclass Composite ()
-  nil
+  ((model-id :initform (gensym "W") :reader model-id))
   (:documentation "Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.
 
 In cl-waffe2, All models should be a subtype of this class, and shall return a forward propagation computation node using the **call** function.
@@ -163,4 +163,13 @@ With regard to practical usage, visit my tutorial.
 	  (function `(define-forward-function ,name ,on-call->))
 	  (list     `(define-forward-function ,name #'(lambda ,@on-call->))))
        t)))
+
+;; TODO: Print-Object like cl-waffe
+(defmethod print-object ((model Composite) stream)
+  (format stream
+	  "<Composite: ~a{~a}(
+    (TODO: Find out parameters)
+    )"
+	  (class-name (class-of model))
+	  (model-id model)))
 
