@@ -12,6 +12,8 @@
 ;; TODO: 1D Gemm -> Dot Product
 ;; TODO: Fix it.
 ;; TODO: Transpose Tensor.
+;; FixME: view isn't working at 1d/2d
+;; FixME: support row-major with gemm
 (defun expand-gemm-form (a b out &key trans-a? trans-b?)
   "[M N] @ [N K] -> [M K]"
   (let ((dtype (dtype out)))
@@ -21,16 +23,18 @@
        (call-with-view
 	#'(lambda (a-view b-view c-view)
 	    ;; Lazy-Eval when size=symbol.
-	    (let ((lda (stride-of a-view 0))
-		  (ldb (stride-of b-view 0))
-		  (ldc (stride-of c-view 0)))
+	    (let ((lda (size-of a-view 0))
+		  (ldb (size-of b-view 0))
+		  (ldc (size-of c-view 0)))
+	      ;; [10 12] @ [12 13]
+	      ;; [M K] @ [K N]
 	      ;; a-view = [A.views[n-1], A.views[n]]
 	      `(blas-sgemm
 		,(trans->c trans-a?)
 		,(trans->c trans-b?)
 		,(size-of a-view 0)
-		,(size-of a-view 1)
 		,(size-of b-view 1)
+		,(size-of a-view 1)
 		1.0 ;; alpha
 		(tensor-ptr ,a :offset ,(offset-of a-view 0)) ;; a
 		,lda ;; LDA
@@ -45,18 +49,18 @@
        (call-with-view
 	#'(lambda (a-view b-view c-view)
 	    ;; Lazy-Eval when size=symbol.
-	    (let ((lda (stride-of a-view 0))
-		  (ldb (stride-of b-view 0))
-		  (ldc (stride-of c-view 0)))
+	    (let ((lda (size-of a-view 0))
+		  (ldb (size-of b-view 0))
+		  (ldc (size-of c-view 0)))
 	      ;; a-view = [A.views[n-1], A.views[n]]
 	      `(blas-dgemm
 		,(trans->c trans-a?)
 		,(trans->c trans-b?)
 		,(size-of a-view 0)
-		,(size-of a-view 1)
 		,(size-of b-view 1)
+		,(size-of a-view 1)
 		1.0d0 ;; alpha
-		(tensor-ptr ,a :offset ,(offset-of a-view 0)) ;; a
+		(tensor-ptr ,a :ogffset ,(offset-of a-view 0)) ;; a
 		,lda ;; LDA
 		(tensor-ptr ,b :offset ,(offset-of b-view 0)) ;; B
 		,ldb ;; LDB
