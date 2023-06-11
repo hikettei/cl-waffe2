@@ -57,7 +57,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 (defun !copy (tensor)
   "TODO: DOCSTRING"
   (let ((out (make-input (shape tensor) nil
-			 :scalar-p (out-scalar-p tensor)
+			 :scalar-p (scalar-p tensor)
 			 :dtype (dtype tensor)
 			 :order (order tensor))))
     (!move out tensor)))

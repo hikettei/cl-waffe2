@@ -56,7 +56,7 @@ cl-waffe2.asd (:serial = t)
 - [x] Pruning the rebundant computation node.
 - [ ] Precompute the constant-node.
 - [x] Basic Arithmetic Operation (+ - * /, and gemm)
-- [x] Support both column and row major ordering.
+- [ ] Support both column and row major ordering. (Support row-major gemm)
 - [ ] Sampling distributions (dense)
 - [ ] Sampling distributions (sparse)
 - [ ] Establish Specification About Dtype APIs, (e.g.: Casting from different dtypes, Auto Inferencing Dtype Of (make-tensor 1))
@@ -88,7 +88,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] (After released v1.0) cl-waffe2 for coalton.
 - [ ] cl-waffe2/linalg, SVD
 - [ ] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
-- [ ] AOT Subscript-p
+- [x] AOT Subscript-p
 - [ ] optimize forward/backward
 - [ ] BugFix: !add x y <- x never resets.
 - [ ] optimize: incr vector ptr
