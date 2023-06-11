@@ -95,7 +95,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 (defmacro subscript (where &key (fixed nil))
   (multiple-value-bind (body states) (create-subscript-p `,where :fixed fixed :return-body t)
     `(values
-      (eval ,body)
+      ,body
       ',states)))
 
 (defmacro defnode ((abstract-name
