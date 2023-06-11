@@ -37,6 +37,7 @@
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
+	       (:file "vm/nodes/defmodel")
 
 	       
 	       (:file "base-impl/arithmetic")
@@ -68,6 +69,7 @@
 	       (:file "distributions/ziggurat")
 
 	       (:file "nn/package")
+	       (:file "nn/regression")
 	       (:file "optimizers/package")
 
 	       (:file "package")

@@ -62,7 +62,7 @@ backend-priority is described as: (Priority1 Priority2 ...)"
   (error 'node-not-found :node abstract-name))
 
 (defmacro defnode ((abstract-name
-		   (&rest constructor-arguments)
+		   (self &rest constructor-arguments)
 		    &key
 		      (where t)
 		      (out-scalar-p nil)
@@ -71,7 +71,8 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 		      (documentation ""))
 		   &body constructor-body
 		   &aux (subscript-p  (gensym))
-		        (subscript-p1 (gensym)))
+		     (subscript-p1 (gensym))
+		     (constructor-arguments `(,self ,@constructor-arguments)))
   "The macro defnode helps you to describe how nodes are working.
 
 abstract-name... The Common Name for your node.

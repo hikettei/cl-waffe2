@@ -30,6 +30,11 @@
    #:with-instant-kernel)
 
   (:export
+   #:defmodel
+   #:Composite
+   #:call)
+
+  (:export
    #:*no-grad*
    #:with-no-grad)
   

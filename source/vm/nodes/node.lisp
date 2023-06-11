@@ -185,5 +185,6 @@ Use the define-impl macro to give definitions for the node and forward them.
       (multiple-value-list (call-next-method)))))
 
 (defmethod backward ((node AbstractNode) &rest inputs)
+  (declare (ignore inputs))
   (error "Couldn't step backward because ~a backward is undefined." node))
 
