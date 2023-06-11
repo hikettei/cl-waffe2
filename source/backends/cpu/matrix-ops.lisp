@@ -17,6 +17,9 @@
 (defun expand-gemm-form (a b out &key trans-a? trans-b?)
   "[M N] @ [N K] -> [M K]"
   (let ((dtype (dtype out)))
+    (assert (eql (order a) :column)
+	    nil
+	    "Assertion Failed with (order a) = :column (TODO: Support)")
     (case dtype
       (:float
        ;; TODO: Check If The Tensor is continuous on memory.

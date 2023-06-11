@@ -21,14 +21,15 @@
 		 :element-type dtype
 		 :initial-element initial-element))))))
 
-
+;; could be optimized...
+(declaim (inline tensor-ptr))
 (defun tensor-ptr (tensor &key (offset 0))
   (declare (type CPUTensor tensor)
-	   (type fixnum offset)
-	   (optimize (speed 3)))
+	   (type fixnum offset))
   #+sbcl
   (let ((ptr (sb-sys:vector-sap (sb-ext:array-storage-vector (the (simple-array * (*)) (tensor-vec tensor))))))
-    (incf-pointer ptr (* (the fixnum (foreign-type-size (dtype tensor))) offset)))
+    (locally (declare (optimize (speed 1) (safety 0)))
+      (incf-pointer ptr (the fixnum (* (the fixnum (foreign-type-size (dtype tensor))) offset)))))
   #-(or sbcl)
   (error "CPUTensor requires SBCL!"))
 
