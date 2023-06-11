@@ -45,12 +45,9 @@
        (call-with-view
 	#'(lambda (a-view b-view c-view)
 	    ;; Lazy-Eval when size=symbol.
-	    (let ((lda (* `,(stride-of a-view 0)
-			  `,(size-of   a-view 1)))
-		  (ldb (* `,(stride-of b-view 0)
-			  `,(size-of   b-view 1)))
-		  (ldc (* `,(stride-of c-view 0)
-			  `,(size-of   c-view 1))))
+	    (let ((lda (stride-of a-view 0))
+		  (ldb (stride-of b-view 0))
+		  (ldc (stride-of c-view 0)))
 	      ;; a-view = [A.views[n-1], A.views[n]]
 	      `(blas-dgemm
 		,(trans->c trans-a?)
