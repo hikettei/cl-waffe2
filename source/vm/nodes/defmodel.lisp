@@ -57,6 +57,10 @@ In order to define your model with Composite, two methods are available.
 		    &body constructor-body)
   "defmodel is a macro used to describe the model of neural network with Composite class.
 
+Effects:
+   1. defines a class named **name**
+   2. defines a function named **name** with the constructor-arguments and constructor-body.
+
 Inputs:
   - name[Symbol]
     All models, and constructors for the model, are named after it.
@@ -75,7 +79,9 @@ Inputs:
 
   - on-call-> [One of: nil symbol-name function list]
     on-call-> is used to control the behaviour of *call* function.
-# Declare The structure of model.
+
+### Declare The structure of model.
+
 Example:
 (defmodel (ExampleLayer (self features)
                ;; Options/Utils Here,

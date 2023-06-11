@@ -3,7 +3,7 @@
 
 (defpackage :cl-waffe2/vm.nodes.facets-tmp)
 
-(defparameter *facet-monopoly-mode* nil "If t, only use devices with Priority1, otherwise an error will occur.")
+(defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
 (defun movetensor-p (node)
   (subtypep (class-of node) 'cl-waffe2/base-impl:MoveTensorNode))
@@ -17,8 +17,36 @@
   `(and list (satisfies list-of-abstracttensor-p)))
 
 (defmacro with-devices ((&rest backend-priority) &body body)
-  "Through the macro with-devices, the facet of nodes are declared.
-backend-priority is described as: (Priority1 Priority2 ...)"
+  "The macro with-devices declares the node's priority for the function *forward* to be used.
+
+Input:
+   - backend-priority
+     An list of device's name (e.g.: CPUTensor, LispTensor...)
+     Devices on the left have higher priority.
+
+Example:
+
+Let ATensor and BTensor be compatible (i.e.: pointers are the same type), and subclass of AbstractNode, and all the operations they have are as follows:
+
+1. ATensor has !add.
+2. BTensor has !mul.
+
+This code works:
+
+(setq a (make-tensor `(10 10))) ;; The tensor a is ATensor.
+
+;; (Priority1=ATensor Priority2=BTensor)
+(with-devices (ATensor BTensor)
+   (!add a (!mul a a)))
+
+ATensor doesn't have any implementation of !mul, but it does work. This is because cl-waffe2's compatible backend system.
+
+cl-waffe2's backend dispatching rule is following:
+
+If the priority 1 backend does not have an implementation of the specified operation, check if the priority 2 backend does, if it still does not have it, 3, 4... and so on.
+
+The order of priority would be `(,@backend-priority ScalarTensor t). (t is a special name, and it implys the implement works for all the backends.)
+"
   `(let ((*using-backend* ',backend-priority))
      (declare (type list *using-backend*))
      (mapc
@@ -73,27 +101,124 @@ backend-priority is described as: (Priority1 Priority2 ...)"
 		   &aux (subscript-p  (gensym))
 		     (subscript-p1 (gensym))
 		     (constructor-arguments `(,self ,@constructor-arguments)))
-  "The macro defnode helps you to describe how nodes are working.
+  "The macro defnode declares a generic definition of computation node named abstract-name.
 
-abstract-name... The Common Name for your node.
+In general, a computation node in cl-waffe2 is defined as:
+   1. An data structure with both of forward and backward propagation.
+   2. The shape of the matrix before and after the calculation is declared with :where option.
+   3. Have a per-device implementation of forward propagation (sometimes backward)
 
-Common Name
- |-> Sub Node(:backend = :cpu)
-  ...
+Effects:
+   - defines a class (extended AbstractNode) named abstract-name
+   - defines a constructor named abstract-name
 
+Inputs:
+   - abstract-name[symbol]
+   - (self &rest constructor-arguments)
+     The constructor will be defined as:
+     (defun ,abstract-name (self &rest constructor-arguments)
+           ,@construtor-body
+           self)
+   - slots[list] Describe here the slots node has. (the syntax is the same as defclass's slot.)
+   - where[list] Describe pointer movement and shape changes before and after an operation using a DSL with a special syntax.
+
+   - out-scalar-p [Boolean] Set t if the node returns a single ScalarTensor.
+   - backward [list, optional] declares the definition of backward. (See also: define-impl)
+
+   - documentation [String]
+   - constructor-body [body] describe here the behaviour of constructor.
+
+## How to use where phase?
+
+Place here a small DSL that describes the state of the tensor before and after the operation.
+
+The basic format is that:
+
+```
+NAME1[subscripts] NAME2[subscripts] ... -> NAME3[subscripts] NAME4[subscripts] ... where NAMEX = VALUE NAMEY = VALUE
+```
+
+It can be divided into three main parts.
+
+[Input-State] -> [Output-State] where [let-binding]
+
+(where [let-binding] can be omitted)
+
+The purpose of this DSL is to represent the shape of the tensor before and after the operation, using undefined symbols, and to identify them automatically.
+
+For Example, When writing a computation node representing the transpose of a two-dimensional matrix, :where phase can be:
+
+```
+A[a b] -> A[b a] ;; Corresponding with: (setq x (!transpose x))
+```
+
+The function !transpose receives x as a input, and Let X be 10*15 Tensor.
+
+The procedure is that:
+
+1. Refering Input-State, DSL determines all symbols (i.e.: a and b). (If you want to use arbitrary values, define them with let-binding.)
+
+2. Refering determined-symbols, calculates the shape of output-phase.
+
+3. Determine the pointer to use for the output tensor from the described pointer flow.
+   In this example, the flow is described as A -> A.
+
+Note that:
+  1. The flow of pointers are optional. (i.e.: [~] -> [~] is ok). However, View is no longer recalculated, which can cause bugs, so it is basically better to write it.
+
+  2. using list as let-binding (e.g.: where a = `(1 2 3)) is ok.
+  3. ~ is a special symbol, which means that there can be any number of dimensions in between, and the meaning of ~ will be the same in all subscripts. ~ could be determined as nil or list.
+
+### Example1
+
+The Operation is:
+
+```
+OUT <- OUT + A
+```
+
+In that case, write :where phase like:
+
+```
+(defnode (... :where `(OUT[a b] A[a b] -> OUT[a b]) ...))
+```
+
+Symbols like OUT, A, indicates what pointer the argument have.
+
+## Tips
+
+In order to simplify parameter initialisation, if the keyword name of the :initarg is the same as the keyword name of the argument, the initialisation code is automatically generated.
+
+(defnode (ExampleNode (self arg)
+            :slots ((arg :initarg :arg))))
+
+(slot-value (ExampleNode 10) 'arg) ;; => 10
+
+## Where to place backward?
+
+1.
 =================================================================
-Shaping Format:
+AddNode (defnode) <- Place Backward
+   |
+   |-> (AddNode :CPUTensor)  (define-impl)
+   |-> (AddNode :LispTensor) (define-impl)
+   |-> (AddNode :CUDATensor) (define-impl)
+=================================================================
 
-Ignore with t.
+2.
+=================================================================
+AddNode (defnode) <- Backward=nil
+   |
+   |-> (AddNode :CPUTensor)  (define-impl) <- place backward
+   |-> (AddNode :LispTensor) (define-impl) <- place backward
+   |-> (AddNode :CUDATensor) (define-impl) <- place backward
+=================================================================
 
+The definition of backward must be placed either of defnode or define-impl.
+Basically, if the defnode describes the backward, define-impl's backward is ignored.
+
+Depending on *using-backend*, the implementation to use is determined at node-building time. See also: with-devices.
 "
-  ;; TODO. Error when (length constructor-arguments) = 0 (no name for node)
-
-  (assert (not (= (length constructor-arguments) 0))
-	  nil
-	  "Assertion Failed because constructor-arguments must satisfy:
-(length constructor-arguments) > 0
-because it requires a slot for node itself.")
   
   (let ((initarg-slots (map 'list #'(lambda (slots)
 				      ;; Auto-Generated Constructor is Enabled Only When:
