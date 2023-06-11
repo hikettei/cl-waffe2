@@ -258,10 +258,6 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 (defun get-common-symbols (symbols)
   (remove-duplicates (flatten symbols) :test #'symbol-eq))
 
-(defun subscript-compatible-p (subscript-1 shape)
-
-  )
-
 (defun build-subscript-error-note (&key
 				     all-subscript
 				     determined-shape

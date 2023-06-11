@@ -286,22 +286,19 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 Follow these constraints:
 
 Memo: forward must return: a list (to be jit-compiled)
-                           a abstracttensor (embedded in the computation node)
-
       backward must return a values of computation nodes
 
 1. Arguments must be this format:
    Forward  -> (node input-tensor1 input-tensor2 ...)
-   Backward -> (node dy)
+   Backward -> (node dout dx dy)
 
    Other parameters should be given as constructor.
 
 Note:
 When device=t
-
 save-for-backward's behaviour
-
-backward's arguments are:"
+"
+  
   (let ((forward-self-name (caar forward))
 	(backward-self-name (caar backward))
 	(forward-args  (cdar forward))

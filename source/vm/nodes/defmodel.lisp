@@ -135,12 +135,12 @@ With regard to practical usage, visit my tutorial.
                 "
   (declare (type (or symbol function list null) on-call->))
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (prog1
-	 ;; E.g.: The case when we want to define LinearLayer Model...
-	 ;; defines LinearLayer class
-	 (defclass ,name (Composite)
-	   (,@slots)
-	   (:documentation ,(format nil "class, ~a" documentation)))
+     (progn
+       ;; E.g.: The case when we want to define LinearLayer Model...
+       ;; defines LinearLayer class
+       (defclass ,name (Composite)
+	 (,@slots)
+	 (:documentation ,(format nil "class, ~a" documentation)))
 
        ;; Creates a constructor named (linearlayer constructor-arguments)
        (defun ,name (,@constructor-arguments)
@@ -161,5 +161,6 @@ With regard to practical usage, visit my tutorial.
 	  (null nil)
 	  (symbol   `(define-forward-function ,name #',on-call->))
 	  (function `(define-forward-function ,name ,on-call->))
-	  (list     `(define-forward-function ,name #'(lambda ,@on-call->)))))))
+	  (list     `(define-forward-function ,name #'(lambda ,@on-call->))))
+       t)))
 
