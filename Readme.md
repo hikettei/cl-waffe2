@@ -88,6 +88,11 @@ cl-waffe2.asd (:serial = t)
 - [ ] (After released v1.0) cl-waffe2 for coalton.
 - [ ] cl-waffe2/linalg, SVD
 - [ ] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
+- [ ] AOT Subscript-p
+- [ ] optimize forward/backward
+- [ ] BugFix: !add x y <- x never resets.
+- [ ] optimize: incr vector ptr
+
 # Basics
 
 ### AbstractTensor

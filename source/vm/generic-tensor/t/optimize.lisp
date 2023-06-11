@@ -5,7 +5,7 @@
 
 
 (defnode (1DFunc (self)
-	  :where `(A[~] -> A[~])
+	  :where (A[~] -> A[~])
 	  :documentation ""))
 
 (define-impl (1DFunc :device cl-waffe2/backends.lisp:LispTensor)
