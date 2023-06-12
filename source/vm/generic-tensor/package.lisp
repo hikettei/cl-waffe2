@@ -28,6 +28,7 @@
    #:order
    #:scalar-p
    #:tensor-projected-p
+   #:tensor-flexible-p
    #:view
    #:tensor-view
    #:detach

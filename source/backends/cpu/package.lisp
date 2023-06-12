@@ -19,7 +19,7 @@
       (setf (gethash (car element) hash) (cdr element)))
     hash))
 
-#+sbcl(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor))
+#+sbcl(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor))
 
 ;; TODO: Delete this alert with *cl-waffe-never-use-blas* = t
 (defun could-not-find ()

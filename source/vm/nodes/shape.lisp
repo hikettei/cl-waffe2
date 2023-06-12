@@ -304,6 +304,13 @@ Because : The actual ~ath argument given has a shape of ~a.
 	     ,obj)))
 
 
+(defun shape-equal-1 (pos list1 list2)
+  (and (= (length list1)
+	  (length list2))
+       (shape-equal (nth pos list1) (nth pos list2))))
+
+(defun replace-nil (list)
+  (map 'list #'(lambda (l) (if l l '?)) list))
 
 ;; 二度とこのコード読みたくない
 ;; Fix: subscript = [shape] where shape = `(1 2 3)
@@ -541,21 +548,34 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							  ,all-conditions))
 						       (num-major-setq ,var (nth ,pos ,shape)))))
 				       else
-					 collect `(loop for ,pos fixnum
-							upfrom ,pos1
-							  below (- (length ,shape) ,pos2)
-							
-							do (progn
-							     (when (and ,out-omit-p
-									(not (null (nth ,pos ,undetermined-shape-tmp)))
-									(not (shape-equal (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))))
-							       ;; More details
-							       (push
-								(format
-								 nil
-								 "Couldn't idenfity ~~: ~~ is determined as ~a ~% butgot: ~a" (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape))
-								,all-conditions))
-							     (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
+					 collect
+				       `(loop for ,pos fixnum
+					      upfrom ,pos1
+						below (- (length ,shape) ,pos2)
+					      do (progn
+						   (when (and ,out-omit-p
+							      (not (null (nth ,pos ,undetermined-shape-tmp)))
+							      (not (shape-equal-1 ,pos ,undetermined-shape-tmp ,shape)))
+						     ;; More details
+						     ;; mismatch axes-originated.
+						     (if (= (length ,undetermined-shape-tmp) (length ,shape))
+							 (push
+							  (format
+							   nil
+							   "Couldn't idenfity ~~: ~~ is determined as ~a ~% butgot: ~a.~% Excepted ~~ = ~a, butgot: ~a"
+							   (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)
+							   (replace-nil ,undetermined-shape-tmp)
+							   ,shape)
+							  ,all-conditions)
+							 ;; the mismatch of dimehsions originated error.
+							 (push
+							  (format
+							   nil
+							   "The length of ~~ do not match.~%Excepted ~~ = ~a, butgot: ~a"
+							   (replace-nil ,undetermined-shape-tmp)
+							   ,shape)
+							  ,all-conditions)))
+						   (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
 		    
 		    (flet ((merge-and-determine (shapes names)
 			     (let ((out
@@ -602,5 +622,10 @@ Accordingly, the argument must satisfy: dimensions = ~a
 	      (map 'list
 		   #'(lambda (sym)
 		       (position sym (the list input-names) :test #'symbol-eq))
-		   output-names)))))
+		   output-names)
+	      (map 'list
+		   #'(lambda (s)
+		       ;; The first rank is broadcastable?
+		       (symbol-eq (car s) '~))
+		   first-state)))))
 

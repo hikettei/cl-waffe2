@@ -12,6 +12,7 @@
     :function-node1
     :reader abstractnode-node1
     :type (or null function)) ;; [x y] [y z] -> [z x], ~ is removed. If ~ isn't used at function-node, set nil
+   (uprank-state :initform nil :initarg :uprank-state :reader uprank-state :type list)
    (transmission-state :initarg :transmission-state :reader transmission-state :type list)
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
@@ -73,10 +74,10 @@ Here's a list of reports.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
-  (let* ((transition-function     (abstractnode-node node))
-	 (transition-function-sub (abstractnode-node1 node))
-	 (pointer-states      (transmission-state node))
-	 ;; What View To Use? modottara yaru.
+  (let* ((transition-function     (abstractnode-node node))  ;; original subscript
+	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
+	 (pointer-states      (transmission-state node)) ;; <- what ptr/view to use?
+	 (uprankable-list (uprank-state node))
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
@@ -85,7 +86,7 @@ Here's a list of reports.
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
 
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
-      
+
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
@@ -95,10 +96,43 @@ Here's a list of reports.
 	  ;; If error is not originated from ~.
 
 	  ;; The case when error continues...
-	  
+
 	  (if (and detected-errors-1
 		   (not (ignore-shape-error node)))
-	      (describe-problems node detected-errors inputs out-state)
+	      ;; There's no flexible tensor, then it is invaild.
+	      ;; If there's any flexible tensor, uprank it and try again.
+
+	      ;; The node is declared as uprankable
+	      ;;  A[~ x]   B[x]   -> B[x]
+	      ;; flexible normal
+	      (if (find t (mapcar #'(lambda (x y)
+				      (and (tensor-flexible-p x) y))
+				  inputs uprankable-list))
+		  ;; Update ranks and try again...
+		  (let* ((largest-axis (loop for i in input-states
+					     for tensor in inputs
+					     unless (tensor-flexible-p tensor)
+					       maximize (length i))))
+		    ;; The :where is...
+		    ;; [~ x y] <- it is ok to uprank
+		    ;; [x y]   <- it is ng to uprank
+		    (print largest-axis)
+		    (apply
+		     #'forward
+		     node
+		     (loop for input in inputs
+			   for uprankable in uprankable-list
+			   if (and (tensor-flexible-p input)
+				   uprankable)
+			     collect (let ((out (cl-waffe2/base-impl:!rankup
+						 input
+						 (- largest-axis (length (shape input))))))
+				       (setf (tensor-flexible-p out) nil)
+				       out)
+			   else
+			     collect input)))
+		  ;; Otherwise the operation was invaild.
+		  (describe-problems node detected-errors inputs out-state))
 	      (setq out-state out-state1))))
 
       ;; TODO: When Dynamic-Mode

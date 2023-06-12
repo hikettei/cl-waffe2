@@ -25,6 +25,8 @@
    #:!copy
    #:!view
    #:!reshape
+   #:!rankup
+   #:!flexible
    #:proceed
    #:proceed-time)
   (:export

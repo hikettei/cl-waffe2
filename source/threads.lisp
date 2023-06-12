@@ -21,7 +21,7 @@
      ,@body))
 
 (defun multithread-p ()
-  (not (<= *num-cores* 1)))
+  (not (<= (the fixnum *num-cores*) 1)))
 
 (defmacro maybe-with-lparallel (&body body)
   `(let ((*kernel* (or *kernel* (if (multithread-p)

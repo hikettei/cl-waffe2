@@ -52,7 +52,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
    (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
-   
+   (flexible-p :initform nil :accessor tensor-flexible-p :type boolean)
    (tensor-n-ref :initform 0 :accessor tensor-n-ref :type fixnum) ;; For optimizing
    (tensor-already-traced :initform nil :accessor tensor-traced-p :type boolean)
    
@@ -402,6 +402,21 @@ Note that view is only created for Tensors, not a Scalar.
 	 (out  (view tensor)))
     (apply #'view out view)))
 
+(defun render-shape (tensor)
+  "Returns a shape"
+  (let ((flexible-p (tensor-flexible-p tensor))
+	(shape      (shape tensor)))
+    (with-output-to-string (str)
+      (format str "(")
+      (when flexible-p
+	(format str "<1 x N> "))
+      (loop for i upfrom 0
+	    for s in shape
+	    do (format str "~a" s)
+	    unless (= i (1- (length shape))) ;; unless the last
+	      do (format str " "))
+      (format str ")"))))
+
 ;; TODO: Print ScalarTensor
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
@@ -417,13 +432,13 @@ Note that view is only created for Tensors, not a Scalar.
 	      (cond
 		((null (slot-value tensor 'projected-p))
 		 ;; Orig-Shape
-		 (format nil ":shape ~a" (shape tensor)))
+		 (format nil ":shape ~a" (render-shape tensor)))
 		(T
 		 ;; It has a view
 		 (format nil ":shape ~a -> :view ~a -> :visible-shape ~a"
 			 (slot-value tensor 'orig-shape)
 			 (slot-value tensor 'view)
-			 (shape tensor)))))
+			 (render-shape tensor)))))
 	  (if (eql (tensor-facet tensor) :input)
 	      (format nil ":named ~a" (tensor-name tensor))
 	      "")

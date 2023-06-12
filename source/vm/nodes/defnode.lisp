@@ -93,10 +93,11 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 
 
 (defmacro subscript (where &key (fixed nil))
-  (multiple-value-bind (body states) (create-subscript-p `,where :fixed fixed :return-body t)
+  (multiple-value-bind (body states uprankable) (create-subscript-p `,where :fixed fixed :return-body t)
     `(values
       ,body
-      ',states)))
+      ',states
+      ',uprankable)))
 
 ;; Broadcasting Semantic
 
@@ -276,6 +277,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 		   (determine-facet-of-nodes ',abstract-name *using-backend*)
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
+		   :uprank-state (third ,subscript-p)
 		   :transmission-state (second ,subscript-p) ;; (second subscript-p) == (second subscript-p1)
 		   ,@(loop for slot in initarg-slots
 			   if slot

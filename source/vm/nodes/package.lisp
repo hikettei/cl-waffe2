@@ -20,6 +20,7 @@
 		#:dtype
 		#:make-statecontainer
 		#:*no-grad*
+		#:tensor-flexible-p
 		#:with-no-grad)
   (:export
    #:forward

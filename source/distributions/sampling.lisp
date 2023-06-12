@@ -27,10 +27,10 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 	    (not keep-order?))
        ;; The fastest case: the type of tensor-vec is already known.
        ;; Continue with ignoring strides
-       (maybe-pfuncall (simple-array-sample! (dtype tensor))
-		       (apply #'* (shape tensor))
-		       (tensor-vec tensor)
-		       function))
+       (funcall (simple-array-sample! (dtype tensor))
+		(apply #'* (shape tensor))
+		(tensor-vec tensor)
+	        function))
       ((or (not keep-order?) (eql (order tensor) :column))
        ;; The second fastest case: the type of tensor-vec isn't known but we can access it element by element each other.
        ;; Continue with ignoring strides

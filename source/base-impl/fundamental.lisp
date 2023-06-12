@@ -1,6 +1,11 @@
 
 (in-package :cl-waffe2/base-impl)
 
+
+;; ===============================================================
+;; Copying APIs
+;; ===============================================================
+
 (defnode (MoveTensorNode (myself)
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
@@ -58,6 +63,11 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			 :order (order tensor))))
     (!move out tensor)))
 
+
+;; ===============================================================
+;; View APIs
+;; ===============================================================
+
 (defnode (ViewTensorNode (myself subscripts result1 before1)
 	  :slots ((subscripts :initarg :subscripts))
 	  :where (A[result] B[before] -> A[result] where result = result1 before = before1))
@@ -82,11 +92,13 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 		   (!move dx (apply #'!view dout inp-sub))
 		   out-sub))))))
 
+
 (defun !view (tensor &rest subscripts)
   "TODO: DOC"
   (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
     ;; Update Chains
     (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)))
+
 
 (defnode (ReshapeTensorNode (self before shape)
 	  :where (A[shape-before] B[shape-after] -> B[shape-after] where shape-before = before shape-after = shape)
@@ -104,22 +116,62 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			  (setf (tensor-vec ,y) (tensor-vec ,x))
 			  ,y)))
 
+;; ===============================================================
+;; Reshaping APIs
+;; ===============================================================
+
+(declaim (ftype (function (AbstractTensor &rest fixnum) AbstractTensor) !reshape))
 (defun !reshape (tensor &rest shapes)
   "Reshapes the tensor.
-TODO:DOCSTRING"
+TODO: DOC"
   (declare (type AbstractTensor tensor))
   (assert (= (apply #'* (shape tensor))
 	     (apply #'* shapes))
 	  nil
-	  "Total size doesn't match")
+	  "Reshaping failed because total size doesn't match.")
   (let ((result (make-input shapes nil
 			    :dtype (dtype tensor)
 			    :order (order tensor))))
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
-    (if (tensor-projected-p tensor)
-	(forward (ReshapeTensorNode (shape tensor) shapes) (!copy tensor) result)
-	(forward (ReshapeTensorNode (shape tensor) shapes) tensor result))))
+    (let ((result
+	    (if (tensor-projected-p tensor)
+		(forward (ReshapeTensorNode (shape tensor) shapes) (!copy tensor) result)
+		(forward (ReshapeTensorNode (shape tensor) shapes) tensor result))))
+      result)))
+
+
+;; The behaviour of ScalarTensor is ugly?
+
+;; (!sum tensor).shape   = (1)
+;; (make-tensor 1).shape = (1)
+
+;; TO ADD:
+;; The function ->scal Scalar`(1) -> Mat`(1)
+;; The function ->mat  Mat`(1) -> Scalar`(1)
+
+(declaim (ftype (function (AbstractTensor fixnum) AbstractTensor) !rankup))
+(defun !rankup (tensor ntimes)
+  "The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.
+
+If ntimes > 0, appends 1
+If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
+  (declare (type AbstractTensor tensor)
+	   (type fixnum ntimes))
+  (let ((shape (copy-list (shape tensor))))
+    (if (< ntimes 0)
+	(loop for i fixnum upfrom 0 below (abs ntimes)
+	      do (if (= (car shape) 1)
+		     (pop shape)
+		     (error "!rankup failed because it encountered a dimension which is not the equivalent to 1.")))
+	(loop for i fixnum upfrom 0 below ntimes
+	      do (push 1 shape)))
+    (apply #'!reshape tensor shape)))
+
+
+;; ===============================================================
+;; Proceed APIs
+;; ===============================================================
 
 ;; The definition of value node is dynamically changed and redefined.
 ;; Forward  -> All The Previous Forward Steps
@@ -165,7 +217,9 @@ The backward is created with the previous node.
 
 This function will be useful especially when debugging on REPL.
 
-Also, using (with-dynamically-mode) will invoke this function every time forward invoked."
+Also, using (with-dynamically-mode) will invoke this function every time forward invoked.
+
+If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation."
   (let* ((node (ProceedNode :measure-time measure-time))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out (forward node tensor)))
@@ -178,5 +232,26 @@ Also, using (with-dynamically-mode) will invoke this function every time forward
     out))
 
 (defun proceed-time (tensor)
-  "Proceed with time macro"
+  "An alias for (proceed tensor :measure-time t)"
   (proceed tensor :measure-time t))
+
+;; ===============================================================
+;; Broadcast APIs
+;; ===============================================================
+
+(defnode (Flexible-Rank-Node (myself)
+	  :where (A[~] -> A[~])
+	  :backward ((self dout dx)
+		     (declare (ignore dx))
+		     (values (!flexible dout)))))
+
+(define-impl (Flexible-Rank-Node :device t) :forward ((self x) `(progn ,x)))
+
+(defun !flexible (tensor)
+  "Tensor[X Y] -> Tensor[~ X Y]
+                         ↑ allow to add 1 here, if needed.
+   TODO: Docstring"
+  (let ((out (forward (Flexible-Rank-Node) tensor)))
+    (setf (tensor-flexible-p out) t)
+    out))
+
