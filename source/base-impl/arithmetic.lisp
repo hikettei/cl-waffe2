@@ -253,17 +253,17 @@ Note that the operation is automatically replaced into in-place operation."
 		       ;; X is scalar, Y is matrix.
 		       (,scalar-operation x y))
 		      ((scalar-p y)
-		       (,scalar-operation y (,invertor x)))
+		       (,scalar-operation y (,@invertor x)))
 		      (T
 		       (,matrix-operation x y))))))))
   (define-arith-function
-      !add + !sas-add !scalar-add !matrix-add)
+      !add (progn) !sas-add !scalar-add !matrix-add)
   (define-arith-function
-      !sub - !sas-sub !scalar-sub !matrix-sub)
+      !sub (!mul -1) !sas-sub !scalar-sub !matrix-sub)
   (define-arith-function
-      !mul * !sas-mul !scalar-mul !matrix-mul)
+      !mul (progn) !sas-mul !scalar-mul !matrix-mul)
   (define-arith-function
-      !div / !sas-div !scalar-div !matrix-div))
+      !div (!div 1) !sas-div !scalar-div !matrix-div))
 
 
 ;; ===============================================================
@@ -276,6 +276,11 @@ Note that the operation is automatically replaced into in-place operation."
 		(export ',name)
 		(defun ,name (A B)
 		  "TODO: Docstring"
+		  (declare (type AbstractTensor A B))
+		  (assert (or (not (scalar-p A))
+			      (not (scalar-p B)))
+			  nil
+			  "Assertion Failed with A and B both aren't scalar.")
 		  (forward (,matrix-operation) A B)))))
   (define-darith-function A+=B AddNode)
   (define-darith-function A-=B SubNode)
@@ -301,8 +306,8 @@ Note that the operation is automatically replaced into in-place operation."
 		(defun ,name (A scalar)
 		  "TODO: Docstring"
 		  (if (numberp scalar)
-		      (,broadcast (,op  scalar) A)
-		      (,broadcast (,op1 ,arg scalar) A))))))
+		      (,broadcast (,op  (number->stensor scalar A)) A)
+		      (,broadcast (,op1 ,arg (number->stensor scalar A)) A))))))
   (define-darith-function  A+=scal ScalarAdd)
   (define-darith-function1 A-=scal A+=scal - !mul -1)
   (define-darith-function  A*=scal ScalarMul)
