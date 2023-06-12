@@ -117,7 +117,12 @@ Here's a list of reports.
 			   (if (= largest-axis 0) ;; every inputs are flexible
 			       (loop for i in input-states
 				     maximize (length i))
-			       largest-axis)))
+			       largest-axis))
+			 (largest-axis-shape
+			   (shape
+			    (find largest-axis inputs
+				  :test #'=
+				  :key #'(lambda (x) (length (shape x)))))))
 		    ;; The :where is...
 		    ;; [~ x y] <- it is ok to apply uprank rule.
 		    ;; [x y]   <- it is ng to apply uprank rule.
@@ -129,16 +134,15 @@ Here's a list of reports.
 			     for uprankable in uprankable-list
 			     if (and (tensor-flexible-p input)
 				     uprankable)
-			       collect (let ((out (cl-waffe2/base-impl:!rankup
-						   input
-						   (- largest-axis (length (shape input))))))
-					 ;; Apply broadcasting into 1 (which is added by uprank rule)
-					 ;; X[12 10 10] BIAS[10]
-					 ;; BIAS[10]
-					 ;; -> BIAS[1 1 10]
-					 ;; -> BIAS[12 10 10]
-					 ;; TODO: broadcast N
-					 
+			       collect (let* ((rankup-n (- largest-axis (length (shape input))))
+					      (out (cl-waffe2/base-impl:!rankup
+						    input
+						    rankup-n))
+					      (subscripts (loop for i upfrom 0 below rankup-n
+								collect `(:broadcast ,(nth i largest-axis-shape))))
+					      (out (apply #'cl-waffe2/base-impl:!view out subscripts)))
+					 ;; Apply Broadcast to flexible axis
+					 ;; Avoid stackoverflow
 					 (setf (tensor-flexible-p out) nil)
 					 out)
 			     else
@@ -175,10 +179,8 @@ Here's a list of reports.
 					    :forward-n-out  (length out-state)
 					    :backward-n-out (length input-states))))
 
-			       ;; Move ga hikituganai...
 			       ;; Extend Views, Strides, Orig-Shapes, etc..
 
-			       
 			       (when extend-from
 				 ;; Detect Errors
 				 (let ((input (nth extend-from inputs)))

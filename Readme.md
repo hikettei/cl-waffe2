@@ -69,7 +69,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Add Test Cases
 - [ ] Give a strong features to cl-waffe2/viz
 - [ ] Prepare documentations and examples
-- [ ] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS)
+- [ ] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS, impelement it as NoBlasMatmulTensor because it is signifcantly slow)
 - [ ] Formulate specifications of nodes.
 - [ ] Use Cl/CD
 - [ ] ~~REPL-Friendly Node, (Implemented as proceed function)~~, with-dynamically-mode, set-config
