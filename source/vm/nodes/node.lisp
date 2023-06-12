@@ -112,10 +112,15 @@ Here's a list of reports.
 		  (let* ((largest-axis (loop for i in input-states
 					     for tensor in inputs
 					     unless (tensor-flexible-p tensor)
-					       maximize (length i))))
+					       maximize (length i)))
+			 (largest-axis
+			   (if (= largest-axis 0) ;; every inputs are flexible
+			       (loop for i in input-states
+				     maximize (length i))
+			       largest-axis)))
 		    ;; The :where is...
-		    ;; [~ x y] <- it is ok to uprank
-		    ;; [x y]   <- it is ng to uprank
+		    ;; [~ x y] <- it is ok to apply uprank rule.
+		    ;; [x y]   <- it is ng to apply uprank rule.
 		    (return-from forward
 		      (apply
 		       #'forward
@@ -127,6 +132,12 @@ Here's a list of reports.
 			       collect (let ((out (cl-waffe2/base-impl:!rankup
 						   input
 						   (- largest-axis (length (shape input))))))
+					 ;; Apply broadcasting into 1 (which is added by uprank rule)
+					 ;; X[12 10 10] BIAS[10]
+					 ;; BIAS[10]
+					 ;; -> BIAS[1 1 10]
+					 ;; -> BIAS[12 10 10]
+					 ;; TODO: broadcast N
 					 
 					 (setf (tensor-flexible-p out) nil)
 					 out)
