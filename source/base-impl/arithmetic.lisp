@@ -13,8 +13,18 @@
 ;;
 ;; general-purpose function: !add !sub !mul !div.
 
+;; Utils
+(defun number->stensor (scalar tensor)
+  "This function always returns ScalarTensor, whenever scalar is number or ScalarTensor. tensor[number or AbstractTensor] is used in order to determine the dtype of scalar."
+  (if (numberp scalar)
+      (make-tensor scalar :dtype (if (numberp tensor)
+				     (dtype-of tensor)
+				     (dtype tensor)))
+      scalar))
+
 ;; ===============================================================
 ;; Defnode Parts
+;; ===============================================================
 (macrolet ((define-arithmetic-node (name document1 document2 &optional backward)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -118,7 +128,8 @@ Note that the operation is automatically replaced into in-place operation."
 		(export ',name)
 		(defun ,name (scalar x)
 		  ,document
-		  (forward (,node-name) scalar (!copy x))))))
+		  (forward (,node-name)
+			   (number->stensor scalar x) (!copy x))))))
   (define-scalar-mat-node-caller
       !scalar-add ScalarAdd
     "X += scalar")
@@ -129,12 +140,12 @@ Note that the operation is automatically replaced into in-place operation."
 (with-export !scalar-sub
   (defun !scalar-sub (scalar x)
     "X -= scalar"
-    (!scalar-add (- scalar) x)))
+    (!scalar-add (!mul -1 (number->stensor scalar x)) x)))
 
 (with-export !scalar-div
   (defun !scalar-div (scalar x)
     "X /= scalar"
-    (!scalar-mul (/ scalar) x)))
+    (!scalar-mul (!div 1 (number->stensor scalar x)) x)))
 
 ;; ===============================================================
 ;; Scalar-And-Scalar Defnode And Functions.
@@ -201,18 +212,19 @@ Note that the operation is automatically replaced into in-place operation."
 			(values (!mul (!div 1 dy) dout)
 				(!mul dx dout))))
 
-(defun !sas-add (x y)
-  (forward (ScalarAndScalarAdd) x y))
-
-(defun !sas-sub (x y)
-  (forward (ScalarAndScalarSub) x y))
-
-(defun !sas-mul (x y)
-  (forward (ScalarAndScalarMul) x y))
-
-(defun !sas-div (x y)
-  (forward (ScalarAndScalarDiv) x y))
-
+(macrolet ((define-sas-op (name node-name)
+	     `(eval-when (:compile-toplevel :load-toplevel :execute)
+		(export ',name)
+		(defun ,name (x y)
+		  "TODO: Docstring"
+		  (forward (,node-name)
+			   (number->stensor x y)  ;; Returns X
+			   (number->stensor y x)) ;; Returns Y
+		  ))))
+  (define-sas-op !sas-add ScalarAndScalarAdd)
+  (define-sas-op !sas-sub ScalarAndScalarSub)
+  (define-sas-op !sas-mul ScalarAndScalarMul)
+  (define-sas-op !sas-div ScalarAndScalarDiv))
 
 ;; ===============================================================
 ;; Defines general-purpose functions.
@@ -231,20 +243,16 @@ Note that the operation is automatically replaced into in-place operation."
 		(export ',name)
 		(defun ,name (x y)
 		  "TODO: Document, Broadcast-auto"
-		  (let ((x (if (numberp x)
-			       (make-tensor x :dtype (dtype-of x))
-			       x))
-			(y (if (numberp y)
-			       (make-tensor y :dtype (dtype-of y))
-			       y)))
+		  (let ((x (number->stensor x y))  ;; Returns X
+			(y (number->stensor y x))) ;; Returns Y
 		    (cond
-		      ((and (scalartensor-p x)
-			    (scalartensor-p y))
+		      ((and (scalar-p x)
+			    (scalar-p y))
 		       (,scalar-and-scalar-operation x y))
-		      ((scalartensor-p x)
+		      ((scalar-p x)
 		       ;; X is scalar, Y is matrix.
 		       (,scalar-operation x y))
-		      ((scalartensor-p y)
+		      ((scalar-p y)
 		       (,scalar-operation y (,invertor x)))
 		      (T
 		       (,matrix-operation x y))))))))

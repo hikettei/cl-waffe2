@@ -225,7 +225,6 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 			 :scalar-p t
 			 :dtype (dtype matrix-tensor)))))
 
-;; Bug, scalar is returned
 (with-export ->mat
   (defun ->mat (scalar-tensor &key (dims 1))
     ""

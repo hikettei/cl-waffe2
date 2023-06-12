@@ -57,7 +57,7 @@ This could be applied whenever the given axis is consisted of axes of list."
     (let* ((out (or out (make-tensor shape
 				     :dtype (dtype tensor)
 				     :order (order tensor))))
-	   (out (A*=scal out 0.0))) ;; TODO: Replace this op with fill
+	   (out (A*=scal out 0))) ;; TODO: !mul is extravagance, replace this op with !fill
 
       (assert (equal (shape out) shape)
 	      nil

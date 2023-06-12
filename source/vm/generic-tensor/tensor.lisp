@@ -109,10 +109,14 @@ Note that this function is inlined.
       (vec tensor)
       (if (vec tensor) ;; add: equal size?
 	  (vec tensor)
-	  (let ((alloc (make-tensor
-			(shape tensor)
-			:dtype (dtype tensor)
-			:order (order tensor))))
+	  (let ((alloc (if (scalar-p tensor)
+			   (make-tensor
+			    0
+			    :dtype (dtype tensor))
+			   (make-tensor
+			    (shape tensor)
+			    :dtype (dtype tensor)
+			    :order (order tensor)))))
 	    (setf (tensor-vec tensor) (vec alloc))
 	    (vec tensor)))))
 
@@ -167,7 +171,7 @@ Note that this function is inlined.
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))
-    
+
     ;; Setup utils for collecting gradients.
     (when (getf initargs :requires-grad)
       (set-grad (make-tensor
@@ -235,7 +239,7 @@ With regard to practical usage, the tutorials would be more helpful rather than 
 		     :view view)
       (make-instance 'ScalarTensor
 		     :scalar-p t
-		     :vec shape-or-scalar
+		     :vec (coerce shape-or-scalar (dtype->lisp-type dtype))
 		     :shape nil
 		     :dtype dtype
 		     :requires-grad requires-grad
