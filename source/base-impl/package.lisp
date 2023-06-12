@@ -24,7 +24,9 @@
    #:!move
    #:!copy
    #:!view
-   #:proceed)
+   #:!reshape
+   #:proceed
+   #:proceed-time)
   (:export
    :node-x
    :node-y))

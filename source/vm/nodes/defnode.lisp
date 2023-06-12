@@ -98,6 +98,10 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
       ,body
       ',states)))
 
+;; Broadcasting Semantic
+
+;; ~ <- broadcastable axes
+;; ~ a b, ~ <- batch part, a b <- kernel part
 (defmacro defnode ((abstract-name
 		   (self &rest constructor-arguments)
 		    &key

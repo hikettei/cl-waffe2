@@ -105,7 +105,7 @@ cl-waffe2.asd (:serial = t)
 ```lisp
 ;; This form declares: General definition of MatMulNode.
 (defnode (MatMulNode (myself &key transpose-a transpose-b)
-	  :where `(A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
+	  :where (A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
 		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
 	  :documentation "(gemm 1.0 a b 0.0 c)"))

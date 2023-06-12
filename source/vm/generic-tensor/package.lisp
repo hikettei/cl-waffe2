@@ -27,6 +27,7 @@
    #:grad
    #:order
    #:scalar-p
+   #:tensor-projected-p
    #:view
    #:tensor-view
    #:detach

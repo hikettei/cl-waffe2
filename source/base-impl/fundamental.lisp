@@ -13,7 +13,6 @@
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout))))
-		       ;; side eff
 		       (values dout dy-out)))
 	  :documentation "
 The Node MoveTensorNode must satisfy the following behaviours:
@@ -43,9 +42,6 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	     :forward ((self x y)
 		       `(setf (tensor-vec ,x) (tensor-vec ,y))))
 
-;; Modottara yaru
-;; MoveScalarTensorNode
-;; ScalarTensor, And FIX Acceptor
 ;; TODO: Move For Scalar
 (defun !move (place tensor)
   "TODO: DOCSTRING"
@@ -92,11 +88,38 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
     ;; Update Chains
     (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)))
 
-;; TODO
+(defnode (ReshapeTensorNode (self before shape)
+	  :where (A[shape-before] B[shape-after] -> B[shape-after] where shape-before = before shape-after = shape)
+	  :slots ((before :initarg :before :reader reshapenode-shape))
+	  :backward ((self dout dx dy)
+		     (declare (ignore dx dy))
+		     (values (apply #'!reshape dout (reshapenode-shape self)) nil))
+	  :documentation "")
+  (setf (ignore-shape-error self) t))
 
-;; REPL-Friendly-Utils:
-;; (defnode ValueTensor
-;; (defun value (tensor) )
+(define-impl (ReshapeTensorNode :device t)
+	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
+	     :forward ((self x y)
+		       `(progn
+			  (setf (tensor-vec ,y) (tensor-vec ,x))
+			  ,y)))
+
+(defun !reshape (tensor &rest shapes)
+  "Reshapes the tensor.
+TODO:DOCSTRING"
+  (declare (type AbstractTensor tensor))
+  (assert (= (apply #'* (shape tensor))
+	     (apply #'* shapes))
+	  nil
+	  "Total size doesn't match")
+  (let ((result (make-input shapes nil
+			    :dtype (dtype tensor)
+			    :order (order tensor))))
+    ;; (!view tensor `(2 4) `(2 4)) -> Copy
+    ;; (!view tensor  0 t t t)
+    (if (tensor-projected-p tensor)
+	(forward (ReshapeTensorNode (shape tensor) shapes) (!copy tensor) result)
+	(forward (ReshapeTensorNode (shape tensor) shapes) tensor result))))
 
 ;; The definition of value node is dynamically changed and redefined.
 ;; Forward  -> All The Previous Forward Steps
@@ -104,9 +127,10 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 ;; We can also add: Proceed-Auto
 
-(defnode (ProceedNode (myself)
+(defnode (ProceedNode (myself &key (measure-time nil))
 	  :where (A[~] -> B[~])
-	  :slots ((backward :accessor proceed-backward)
+	  :slots ((measure-time :initarg :measure-time :reader measure-time-p)
+		  (backward :accessor proceed-backward)
 		  (result   :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
 
@@ -117,7 +141,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			 (declare (ignore vars params))
 			 ;; Vars/Params will be tracked by other build.
 			 (setf (proceed-backward self) bw)
-			 (setf (proceed-result self) (funcall fw))
+			 (if (measure-time-p self)
+			     (setf (proceed-result self) (time (funcall fw)))
+			     (setf (proceed-result self) (funcall fw)))
 			 (setf (out-scalar-p self) (scalartensor-p x))
 			 `(progn ,x)))
 	     :backward ((self dout dx)
@@ -126,20 +152,21 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			  (values
 			   (with-instant-kernel dout
 			     `(and
-			       (funcall ,bw)
+			       ,(if (measure-time-p self)
+				    `(time (funcall ,bw))
+				    `(funcall ,bw))
 			       ;; Delete Gradients.
 			       (!mul 0 ,dout)))))))
 
-;; Optimize: Compile-Speeed
 ;; TODO: ProceedNode for several outputs
-(defun proceed (tensor)
+(defun proceed (tensor &key (measure-time nil))
   "The function proceed invokes special node, ProceedNode, which takes all the previous computation node before tensor, returning the result of it.
 The backward is created with the previous node.
 
 This function will be useful especially when debugging on REPL.
 
 Also, using (with-dynamically-mode) will invoke this function every time forward invoked."
-  (let* ((node (ProceedNode))
+  (let* ((node (ProceedNode :measure-time measure-time))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out (forward node tensor)))
     
@@ -150,3 +177,6 @@ Also, using (with-dynamically-mode) will invoke this function every time forward
     (embody-actual-tensor out (proceed-result node))
     out))
 
+(defun proceed-time (tensor)
+  "Proceed with time macro"
+  (proceed tensor :measure-time t))
