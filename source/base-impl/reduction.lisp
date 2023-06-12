@@ -33,6 +33,7 @@ This could be applied whenever the given axis is consisted of axes of list."
 	 (dims  (length shape)))
 
     ;; Compute Reduction Size.
+    ;; Parse -1 -> 1 for example.
     (typecase axis
       (fixnum
        (if (< axis 0)
@@ -59,15 +60,8 @@ This could be applied whenever the given axis is consisted of axes of list."
       (assert (equal (shape out) shape)
 	      nil
 	      "!sum: Assertion Failed because the given out's shape is ~a, but excepted: ~a" (shape out) shape)
-      
-      (let ((out* (apply #'!view out view-args)))
-	(apply #'!view
-	       (forward (AddNode) out* tensor)
-	       (loop for v in view-args
-		     if (and (typep v 'list)
-			     (eql (car v) :broadcast))
-		       collect 0
-		     else
-		       collect t))))))
+
+      (multiple-value-bind (out* reverser) (apply #'!view out view-args)
+	(apply #'!view (A+=B out* tensor) reverser)))))
 
 ;; (defun !mean)

@@ -256,7 +256,7 @@ Note that the operation is automatically replaced into in-place operation."
 
 
 ;; ===============================================================
-;; Destructive Functions Family: A+=B
+;; Destructive Functions Family: A+=B A-=B A*=B A/=B
 ;; ===============================================================
 
 (macrolet ((define-darith-function (name
