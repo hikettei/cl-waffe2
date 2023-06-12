@@ -57,11 +57,14 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (defun !copy (tensor)
   "TODO: DOCSTRING"
-  (let ((out (make-input (shape tensor) nil
-			 :scalar-p (scalar-p tensor)
-			 :dtype (dtype tensor)
-			 :order (order tensor))))
-    (!move out tensor)))
+  (let* ((out (make-input (shape tensor) nil
+			  :scalar-p (scalar-p tensor)
+			  :dtype (dtype tensor)
+			  :order (order tensor)))
+	 (res (!move out tensor)))
+    ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
+    (setf (tensor-flexible-p res) (tensor-flexible-p tensor))
+    res))
 
 
 ;; ===============================================================

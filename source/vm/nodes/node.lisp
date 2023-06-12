@@ -116,21 +116,22 @@ Here's a list of reports.
 		    ;; The :where is...
 		    ;; [~ x y] <- it is ok to uprank
 		    ;; [x y]   <- it is ng to uprank
-		    (print largest-axis)
-		    (apply
-		     #'forward
-		     node
-		     (loop for input in inputs
-			   for uprankable in uprankable-list
-			   if (and (tensor-flexible-p input)
-				   uprankable)
-			     collect (let ((out (cl-waffe2/base-impl:!rankup
-						 input
-						 (- largest-axis (length (shape input))))))
-				       (setf (tensor-flexible-p out) nil)
-				       out)
-			   else
-			     collect input)))
+		    (return-from forward
+		      (apply
+		       #'forward
+		       node
+		       (loop for input in inputs
+			     for uprankable in uprankable-list
+			     if (and (tensor-flexible-p input)
+				     uprankable)
+			       collect (let ((out (cl-waffe2/base-impl:!rankup
+						   input
+						   (- largest-axis (length (shape input))))))
+					 
+					 (setf (tensor-flexible-p out) nil)
+					 out)
+			     else
+			       collect input))))
 		  ;; Otherwise the operation was invaild.
 		  (describe-problems node detected-errors inputs out-state))
 	      (setq out-state out-state1))))
