@@ -29,7 +29,7 @@
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defnode (,name (myself)
-			  :where (A[~ dim] B[~ dim] -> A[~ dim])
+			  :where (A[~] B[~] -> A[~])
 			  :backward ,backward
 			  :documentation ,(format nil "~a is a node which computes following operation element-wise.
 Let X and Y be a given arguments and both are matrix.

@@ -43,7 +43,7 @@ cl-waffe2.asd (:serial = t)
 
 # Workloads
 
-- [x] AbstractTensor
+- [x] Add Baseline: AbstractTensor
 - [x] Multiple Backends
 - [x] Pre-Inspection of Shapes
 - [x] Fundamental APIs of view (Broadcasting, Slice, Indexing etc...)
@@ -56,14 +56,15 @@ cl-waffe2.asd (:serial = t)
 - [x] Pruning the rebundant computation node.
 - [ ] Precompute the constant-node.
 - [x] Basic Arithmetic Operation (+ - * /, and gemm)
-- [ ] Support both column and row major ordering. (Support row-major gemm)
-- [ ] Sampling distributions (dense)
+- [ ] Support both column and row major ordering. (ignoring row-major gemm, it works)
+- [ ] Sampling distributions (dense) -> Add More: gamma, chisquare distribution.
 - [ ] Sampling distributions (sparse)
 - [ ] Establish Specification About Dtype APIs, (e.g.: Casting from different dtypes, Auto Inferencing Dtype Of (make-tensor 1))
 - [ ] Parallelize the computation node by lparallel.
 - [ ] Let View APIs Support :indices :tflist (with cmp operations, bit-matrix)
 - [ ] Eliminate Bugs
 - [ ] swapaxes/transpose
+- [ ] Add: !reshape with -1, unsqueeze, squeeze, repeat.
 - [ ] CUDA Backend (Also, metal backends etc could be realised)
 - [ ] Add Test Cases
 - [ ] Give a strong features to cl-waffe2/viz
@@ -71,14 +72,14 @@ cl-waffe2.asd (:serial = t)
 - [ ] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS)
 - [ ] Formulate specifications of nodes.
 - [ ] Use Cl/CD
-- [ ] REPL-Friendly Node, (Implemented as proceed function), with-dynamically-mode, set-config
+- [ ] ~~REPL-Friendly Node, (Implemented as proceed function)~~, with-dynamically-mode, set-config
 - [ ] ascognitious
 - [ ] node debugtools
-- [ ] Clarify runtime error.
+- [ ] Clarify runtime error, backward error
 - [ ] NN Features (Optimizers, etc...)
 - [ ] Train MLP
-- [ ] Optimize Memory-management.
-- [ ] Mathematical and Dense Operations (exp log sin cos etc...)
+- [ ] More clever Memory-management.
+- [x] Mathematical and Dense Operations (exp log sin cos etc...)
 - [ ] Operations like: argmax/argmin, reshape, transpose, swapaxes.
 - [ ] Optimize call-with-view, to minimize the number of using funcall. (i.e.: reshape (10 10) into (100) tensor)
 - [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
@@ -90,7 +91,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
 - [x] AOT Subscript-p
 - [ ] optimize forward/backward
-- [ ] BugFix: !add x y <- x never resets.
+- [x] BugFix: !add x y <- x never resets. (the definition of sum contributed to this problem)
 - [ ] optimize: incr vector ptr
 
 # Basics
