@@ -254,3 +254,21 @@ Note that the operation is automatically replaced into in-place operation."
   (define-arith-function
       !div / !sas-div !scalar-div !matrix-div))
 
+
+;; ===============================================================
+;; Destructive Functions Family: A+=B
+;; ===============================================================
+
+(macrolet ((define-darith-function (name
+				    matrix-operation)
+	     `(eval-when (:compile-toplevel :load-toplevel :execute)
+		(export ',name)
+		(defun ,name (A B)
+		  "TODO: Docstring"
+		  (forward (,matrix-operation) A B)))))
+  (define-darith-function A+=B AddNode)
+  (define-darith-function A-=B SubNode)
+  (define-darith-function A*=B MulNode)
+  (define-darith-function A/=B DivNode))
+
+

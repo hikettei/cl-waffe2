@@ -97,10 +97,22 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 
 (defun !view (tensor &rest subscripts)
-  "TODO: DOC"
-  (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts)))
+  "TODO: DOC
+
+Return:
+    - (values sliced-tensor broadcast-reverser)"
+  (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
+	(broadcast-reverser
+	  (loop for s in subscripts
+		if (and (listp s)
+			(eql (car s) :broadcast))
+		  collect 0
+		else
+		  collect t)))
     ;; Update Chains
-    (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)))
+    (values
+     (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)
+     broadcast-reverser)))
 
 
 (defnode (ReshapeTensorNode (self before shape)
@@ -169,6 +181,7 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 		     (error "!rankup failed because it encountered a dimension which is not the equivalent to 1.")))
 	(loop for i fixnum upfrom 0 below ntimes
 	      do (push 1 shape)))
+    ;; TODO: view broadcast
     (apply #'!reshape tensor shape)))
 
 
