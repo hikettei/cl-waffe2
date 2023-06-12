@@ -379,7 +379,8 @@ Note that view is only created for Tensors, not a Scalar.
   (let ((subscripts
 	  (loop for s in subscripts collect (force-list s))))
     (when (typep tensor 'ScalarTensor)
-      (if subscripts
+      (if (and subscripts
+	       (not (every #'(lambda (x) (eql t x)) subscripts)))
 	  (format t ":BROADCAST IS IGNORED for scalar input (TODO)"))
       (return-from view tensor))
 

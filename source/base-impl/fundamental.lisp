@@ -185,6 +185,57 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
     (apply #'!reshape tensor shape)))
 
 
+(defnode (Mat->ScalarNode (myself)
+	  :out-scalar-p t
+	  :where (Matrix[~ scal] Scalar[scal] -> Scalar[scal] where scal = 1)
+	  :backward ((self dout dm ds)
+		     (declare (ignore dm ds))
+		     (values
+		      (->mat dout)
+		      nil))))
+
+(defnode (Scalar->MatNode (myself)
+	  :where (Scalar[scal] Matrix[~ scal] -> Matrix[scal] where scal = 1)
+	  :backward ((self dout ds dm)
+		     (declare (ignore dm ds))
+		     (values (->scal dout) nil))))
+
+(define-impl (Mat->ScalarNode :device t)
+	     :forward ((self matrix scalar)
+		       `(progn
+			  (setf (tensor-vec ,scalar) (vref ,matrix 0))
+			  ,scalar)))
+
+(define-impl (Scalar->MatNode :device t)
+	     :forward ((self scalar matrix)
+		       `(progn
+			  (tensor-vec ,matrix) ;; Call Lazy-Allocate of matrix
+			  (setf (vref ,matrix 0) (tensor-vec ,scalar))
+			  ,matrix)))
+
+;; Add: Docstring
+;; Add: Shape Check
+(with-export ->scal
+  (defun ->scal (matrix-tensor)
+    ""
+    (forward (Mat->ScalarNode)
+	     (!reshape matrix-tensor 1)
+	     (make-input `(1)
+			 nil
+			 :scalar-p t
+			 :dtype (dtype matrix-tensor)))))
+
+;; Bug, scalar is returned
+(with-export ->mat
+  (defun ->mat (scalar-tensor &key (dims 1))
+    ""
+    (forward (Scalar->MatNode)
+	     scalar-tensor
+	     (make-input (make-list dims :initial-element 1) nil
+			 :dtype (dtype scalar-tensor)))))
+			
+		       
+
 ;; ===============================================================
 ;; Proceed APIs
 ;; ===============================================================
@@ -212,7 +263,8 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 			 (if (measure-time-p self)
 			     (setf (proceed-result self) (time (funcall fw)))
 			     (setf (proceed-result self) (funcall fw)))
-			 (setf (out-scalar-p self) (scalartensor-p x))
+			 ;; Tell cl-waffe2 VM the returned value's type
+			 (setf (out-scalar-p self) (scalar-p (proceed-result self)))
 			 `(progn ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
@@ -244,7 +296,9 @@ If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** f
     (setf (tensor-backward tensor) nil)
 
     ;; Out is still unallocated, so set the result.
-    (embody-actual-tensor out (proceed-result node))
+    (if (scalar-p out)
+	(setf (tensor-vec out) (tensor-vec (proceed-result node)))
+        (embody-actual-tensor out (proceed-result node)))
     out))
 
 (defun proceed-time (tensor)

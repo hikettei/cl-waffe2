@@ -55,16 +55,20 @@ Let X be a given matrix and S be a given scalar.
     "ScalarAdd"
     "+"
     ((self dout dx dy)
-     (values (!move dx dout) (!move dy dout))))
+     ;; dx <- scalar
+     ;; dy <- matrix
+     ;; A+=scal.view(A.shape),
+     (declare (ignore dx))
+     
+     (values (->scal (!sum dout)) (!move dy dout))))
 
   (define-scalar-mat-node
       ScalarMul
     "ScalarMul"
     "*"
     ((self dout dx dy)
-     (values (!mul dout dy) (!mul dout dx)))))
+     (values (->scal (!sum (!mul dout dy))) (!scalar-mul dx dout)))))
 ;; ===============================================================
-
 
 ;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.
 ;; Keep in mind: https://arxiv.org/pdf/1201.6035.pdf
@@ -216,8 +220,7 @@ Note that the operation is automatically replaced into in-place operation."
 
 
 (defun scalartensor-p (tensor)
-  (or (equal (shape tensor) `(1))
-      (subtypep (class-of tensor) 'cl-waffe2/vm.generic-tensor:ScalarTensor)))
+  (scalar-p tensor))
 
 (macrolet ((define-arith-function (name
 				   invertor
@@ -270,5 +273,31 @@ Note that the operation is automatically replaced into in-place operation."
   (define-darith-function A-=B SubNode)
   (define-darith-function A*=B MulNode)
   (define-darith-function A/=B DivNode))
+
+;; ===============================================================
+;; Destructive Functions Family: A+=scal A-=scal A*=scal A/=scal
+;; ===============================================================
+
+(macrolet ((define-darith-function (name
+				    matrix-operation)
+	     `(eval-when (:compile-toplevel :load-toplevel :execute)
+		(export ',name)
+		(defun ,name (A scalar)
+		  "TODO: Docstring"
+		  (if (numberp scalar)
+		      (forward (,matrix-operation) (make-tensor scalar) A)
+		      (forward (,matrix-operation) scalar A)))))
+	   (define-darith-function1 (name broadcast op op1 arg)
+	     `(eval-when (:compile-toplevel :load-toplevel :execute)
+		(export ',name)
+		(defun ,name (A scalar)
+		  "TODO: Docstring"
+		  (if (numberp scalar)
+		      (,broadcast (,op  scalar) A)
+		      (,broadcast (,op1 ,arg scalar) A))))))
+  (define-darith-function  A+=scal ScalarAdd)
+  (define-darith-function1 A-=scal A+=scal - !mul -1)
+  (define-darith-function  A*=scal ScalarMul)
+  (define-darith-function1 A/=scal A*=scal / !div 1))
 
 

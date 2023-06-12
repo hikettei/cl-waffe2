@@ -53,9 +53,11 @@ This could be applied whenever the given axis is consisted of axes of list."
 			     collect `(:broadcast ,s)))
        (setq shape (make-list dims :initial-element 1))))
 
-    (let ((out (or out (make-tensor shape
-			:dtype (dtype tensor)
-			:order (slot-value tensor 'cl-waffe2/vm.generic-tensor::order)))))
+    ;; Use Instead: make-input
+    (let* ((out (or out (make-tensor shape
+				     :dtype (dtype tensor)
+				     :order (order tensor))))
+	   (out (A*=scal out 0.0))) ;; TODO: Replace this op with fill
 
       (assert (equal (shape out) shape)
 	      nil
