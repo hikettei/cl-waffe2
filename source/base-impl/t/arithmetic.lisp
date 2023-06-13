@@ -31,9 +31,16 @@
 
 
 
+;; Backendごとのテスト
+;; ノード一つ一つの単位で順伝播逆伝播が動くかテスト
+
+;; vm/generic-tensorのテスト
+;; 複数のノードが重なってもちゃんと動くかテスト
+
 ;; Asita yaru
 ;; TODO: 1. Sum's test (fix: broadcast's backward)
 ;; TODO: 2. Tests on Mathematical Kernels
 ;; Is backward yuukou 複数のノード？
 
 
+;; TODO: Broadcasting for scalar-XXX

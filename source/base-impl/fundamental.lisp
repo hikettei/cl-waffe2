@@ -88,16 +88,23 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	     :backward
 	     ((self dout dx dy)
 	      ;; Div dout by apply #'* broadcast-size
-	      (let ((out-sub (tensor-view dy))
-		    (inp-sub (slot-value self 'subscripts)))
+	      (let* ((out-sub (tensor-view dy))
+		     (inp-sub (slot-value self 'subscripts))
+		     (res (apply
+			   #'!view
+			   (!move dx (apply #'!view dout inp-sub))
+			   out-sub))
+		     (broadcast-size 1))
+		(loop for sub in out-sub
+		      do (let ((sub (force-list sub)))
+			   (if (and (listp sub)
+				    (eql (car sub) :broadcast))
+			       (setq broadcast-size (* broadcast-size (second sub))))))
 		(values
 		 nil
-		 (!move
-		  dy
-		  (apply
-		   #'!view
-		   (!move dx (apply #'!view dout inp-sub))
-		   out-sub))))))
+		 (!move dy (if (= broadcast-size 1)
+			       res
+			       (!div res broadcast-size)))))))
 
 
 (defun !view (tensor &rest subscripts)
