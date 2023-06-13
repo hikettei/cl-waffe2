@@ -71,6 +71,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 ;; View APIs
 ;; ===============================================================
 
+;; Both !view and !reshape has the same format of arguments:
+;; (function tensor &rest args)
+
 (defnode (ViewTensorNode (myself subscripts result1 before1)
 	  :slots ((subscripts :initarg :subscripts))
 	  :where (A[result] B[before] -> A[result] where result = result1 before = before1))
@@ -135,18 +138,45 @@ Return:
 ;; Reshaping APIs
 ;; ===============================================================
 
-(declaim (ftype (function (AbstractTensor &rest fixnum) AbstractTensor) !reshape))
+(defun parse-reshape-args (before-shape after-shape)
+  "check after-shape is consisted of positive fixnum.
+shapes can contain t at once, this function also infers t."
+
+  (assert (<= (count t after-shape) 1)
+	  nil
+	  "!reshape: Assertion Failed because t only appears at once.")
+
+  (assert (every #'(lambda (x)
+		     (or (eql x t)
+			 (> x 0)))
+		 after-shape)
+	  nil
+	  "!reshape: Assertion Failed because shapes aren't consisted of positive fixnum.")
+
+  (let* ((without-t (loop for s in after-shape unless (eql s t) collect s))
+	 (t-inferred (/ (apply #'* before-shape) (apply #'* without-t))))
+    (loop for s in after-shape
+	  if (eql s t)
+	    collect t-inferred
+	  else
+	    collect s)))
+
+(declaim (ftype (function (AbstractTensor &rest (and (not null) (or boolean fixnum))) AbstractTensor) !reshape))
 (defun !reshape (tensor &rest shapes)
   "Reshapes the tensor.
 TODO: DOC"
   (declare (type AbstractTensor tensor))
-  (assert (= (apply #'* (shape tensor))
-	     (apply #'* shapes))
-	  nil
-	  "Reshaping failed because total size doesn't match.")
-  (let ((result (make-input shapes nil
-			    :dtype (dtype tensor)
-			    :order (order tensor))))
+  
+  (let* ((shapes (parse-reshape-args (shape tensor) shapes))
+	 (result (make-input shapes nil
+			     :dtype (dtype tensor)
+			     :order (order tensor))))
+
+    
+    (assert (= (apply #'* (shape tensor))
+	       (apply #'* shapes))
+	    nil
+	    "Reshaping failed because total size doesn't match.")
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
     (let ((result
@@ -155,15 +185,14 @@ TODO: DOC"
 		(forward (ReshapeTensorNode (shape tensor) shapes) tensor result))))
       result)))
 
+;; !squeeze/!unsqueeze
 
-;; The behaviour of ScalarTensor is ugly?
+;; TO ADD: (defun !lazy-reshape (tensor &rest shapes) ) reshape but can include symbol as shapes
 
+;; Memo:
+;; The behaviour of ScalarTensor is ugly? because...
 ;; (!sum tensor).shape   = (1)
 ;; (make-tensor 1).shape = (1)
-
-;; TO ADD:
-;; The function ->scal Scalar`(1) -> Mat`(1)
-;; The function ->mat  Mat`(1) -> Scalar`(1)
 
 (declaim (ftype (function (AbstractTensor fixnum) AbstractTensor) !rankup))
 (defun !rankup (tensor ntimes)
