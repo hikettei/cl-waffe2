@@ -27,8 +27,9 @@
   (define-arith-tester add-tester !add 11 1  1)
   (define-arith-tester sub-tester !sub 9  1 -1)
   (define-arith-tester mul-tester !mul 10 1 1)
-  (define-arith-tester div-tester !div 10 1 1))
+  (define-arith-tester div-tester !div 10 1 -1))
 
+;; TODO: Move to backends/cpu, backends/lisp
 (add-tester cl-waffe2/backends.lisp:LispTensor)
 (sub-tester cl-waffe2/backends.lisp:LispTensor)
 (mul-tester cl-waffe2/backends.lisp:LispTensor)
