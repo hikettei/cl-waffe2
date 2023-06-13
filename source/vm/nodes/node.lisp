@@ -1,6 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes)
-
+  
 (defclass AbstractNode ()
   ((function-node
     :initarg
@@ -24,12 +24,82 @@ AbstractNode must possess following:
    3. Variables (for building computation nodes)
 "))
 
-;; TODO: Under here.
+(defparameter *shape-error-when* (make-errorpoint :forward nil)
+  "This parameter indicates when the ShapeError occurred.
+*shape-error-when* is a type of ShapeErrorPoint")
+
+(deftype shape-checkpoint-state-t ()
+  `(and keyword (member :forward :backward :moving)))
+
+(defstruct (ShapeErrorPoint
+	    (:conc-name checkpoint-)
+	    (:constructor make-errorpoint (state node-at)))
+  (state state :type shape-checkpoint-state-t)
+  (node-at node-at :type (or null AbstractNode)))
+
+(defmacro with-shape-checkpoint ((state node) &body body)
+  "Updates checkpoint for shapeerror.
+   set node=nil to extend previous state's node"
+  `(let ((*shape-error-when* (make-errorpoint ,state
+					      (or ,node
+						  (checkpoint-node-at *shape-error-when*)))))
+     ,@body))
+
+
+;; Unused?
 (defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape)
   ""
   (funcall (abstractnode-node node) previous-shape))
 
+(defun describe-problem-at (error-node inputs outputs &aux (saved-state (checkpoint-node-at *shape-error-when*)))
+  (case (checkpoint-state *shape-error-when*)
+    (:forward
+     (format
+      nil
+      "Couldn't step forward because of shape-error.
+
+The operation was : ~a
+
+Input(s)            : ~a
+Predicted Output(s) : ~a"
+      error-node
+      (map 'list #'shape inputs)
+      outputs))
+    (:backward
+     (format
+      nil
+      "Shape-Error was detected during backward construction.
+
+When : building backward for ~a
+
+The operation was   : ~a
+
+Input(s)            : ~a
+Predicted Output(s) : ~a"
+      saved-state
+      error-node
+      (map 'list #'shape inputs)
+      outputs))
+    (:moving
+     (format
+      nil
+      "Attempted to construct backward, but the shape of inputs and gradients do not match.
+
+When : building backward for ~a
+The function backward returned a tensor with the shape of ~a.
+However, it should be ~a.
+
+== [Repeating The Same Contents] ==============================================
+The operation was: ~a
+"
+      ;; Saved-State should be MoveTensorNode...
+      saved-state
+      (shape (second inputs))
+      (shape (car    inputs))
+      error-node))))
+
 (defun describe-problems (error-node detected-errors inputs outputs)
+  "Creates a report of shape-error"
   ;; Enhancement:
   ;; Restart-Case
   ;; [Fix-Definition-And-Step]
@@ -38,20 +108,15 @@ AbstractNode must possess following:
   ;; Displays [pre-|post-]computation node
   ;; TODO: make it more intuitive....
   (shaping-error
-   "Couldn't step forward because of shape-error.
+   "~a
 
-At:     ~a
-Inputs:          ~a
-Excepted Output: ~a
 Here's a list of reports.
 
 1. ~a
 
 ~a
 ~a"
-   error-node
-   (map 'list #'shape inputs)
-   outputs
+   (describe-problem-at error-node inputs outputs)
    (car detected-errors)
    (if (cdr detected-errors)
        "Also, these reports could be helpful for you (calculated ignoring the first errors.)"

@@ -276,12 +276,16 @@ Return:
 		    
 		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,id)))))))))
 
+;; TODO
+;; Most of backward-error, occurs here
+;; So make it their log much clear.
 (defun !maybe-move (place tensor)
   "If previous node of tensor is MoveTensor, this function is ignored, otherwise do a !move"
   (when tensor
     (if (movetensor-p (tensor-backward tensor))
 	tensor
-	(cl-waffe2/base-impl:!move place tensor))))
+	(cl-waffe2/vm.nodes:with-shape-checkpoint (:moving nil)
+	    (cl-waffe2/base-impl:!move place tensor)))))
 
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
@@ -293,37 +297,39 @@ Return:
 
   (when (null (tensor-backward toplevel))
     (return-from explore-backwards))
-  
-  (let* ((outs (apply
-		;; (backward self dout dx dy dz ...)
-		#'cl-waffe2/vm.nodes::backward
-		(tensor-backward toplevel)
-		past-dy
-		;; detach from computation node by projecting into -> <t>.
-		(map 'list #'detach (tensor-variables toplevel))))
-	 (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
 
-    `(let* (,@(map 'list
-		   #'(lambda (tensor)
-		       `(,(tensor-id tensor) ,tensor))
-		   (tensor-variables toplevel))
-	    ,@(loop for tensor in outs
-		    if tensor
-		      collect `(,(tensor-id tensor) ,tensor)))
-       (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
-		(ignorable ,@(map 'list #'tensor-id (loop for o in outs if o collect o))))
-       
-       ,@(loop for out    in outs
-	       for tensor in (tensor-variables toplevel)
-	       if out
-		 collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
-			    (declare (ignorable ,(tensor-id out)))
-			    ,(if (slot-value tensor 'requires-grad)
-				 ;; !copy and add.
-				 `(add-grads ,(tensor-id tensor) ,(tensor-id out))
-				 (when (and
-					(tensor-state tensor)
-					(ancestor-param-p tensor))
-				   ;; Explore deeper if there's any params.
-				   (explore-backwards tensor out))))))))
+  ;; Record: at what node, the backward error was occured.
+  (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
+    (let* ((outs (apply
+		  ;; (backward self dout dx dy dz ...)
+		  #'cl-waffe2/vm.nodes::backward
+		  (tensor-backward toplevel)
+		  past-dy
+		  ;; detach from computation node by projecting into -> <t>.
+		  (map 'list #'detach (tensor-variables toplevel))))
+	   (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
+
+      `(let* (,@(map 'list
+		     #'(lambda (tensor)
+			 `(,(tensor-id tensor) ,tensor))
+		     (tensor-variables toplevel))
+	      ,@(loop for tensor in outs
+		      if tensor
+			collect `(,(tensor-id tensor) ,tensor)))
+	 (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
+		  (ignorable ,@(map 'list #'tensor-id (loop for o in outs if o collect o))))
+	 
+	 ,@(loop for out    in outs
+		 for tensor in (tensor-variables toplevel)
+		 if out
+		   collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
+			      (declare (ignorable ,(tensor-id out)))
+			      ,(if (slot-value tensor 'requires-grad)
+				   ;; !copy and add.
+				   `(add-grads ,(tensor-id tensor) ,(tensor-id out))
+				   (when (and
+					  (tensor-state tensor)
+					  (ancestor-param-p tensor))
+				     ;; Explore deeper if there's any params.
+				     (explore-backwards tensor out)))))))))
 

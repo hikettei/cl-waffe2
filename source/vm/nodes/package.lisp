@@ -28,7 +28,9 @@
    #:node-passed-p
    #:ignore-shape-error
    #:out-scalar-p
-   #:with-instant-kernel)
+   #:with-instant-kernel
+   #:with-shape-checkpoint
+   #:make-errorpoint)
 
   (:export
    #:defmodel

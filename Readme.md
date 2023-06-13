@@ -75,7 +75,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] ~~REPL-Friendly Node, (Implemented as proceed function)~~, with-dynamically-mode, set-config
 - [ ] ascognitious
 - [ ] node debugtools
-- [ ] Clarify runtime error, backward error
+- [x] Clarify runtime error, ~~backward error(OK)~~
 - [ ] NN Features (Optimizers, etc...)
 - [ ] Train MLP
 - [ ] More clever Memory-management.
@@ -88,7 +88,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512.
 - [ ] (After released v1.0) cl-waffe2 for coalton.
 - [ ] cl-waffe2/linalg, SVD
-- [ ] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
+- [x] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
 - [x] AOT Subscript-p
 - [ ] optimize forward/backward
 - [x] BugFix: !add x y <- x never resets. (the definition of sum contributed to this problem)

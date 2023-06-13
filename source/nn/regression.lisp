@@ -31,7 +31,7 @@
   ;; Init with Xavier
   (when use-bias?
     (setf (linear-bias self)
-	  (make-tensor `(1 ,out-features)
+	  (make-tensor `(,out-features)
 		       :requires-grad t))))
 
 (defmethod call-linear ((self LinearLayer) x)
@@ -42,7 +42,7 @@
 
 #|
 (defun test ()
-  (let ((x (randn `(100 784)))
+  (let ((x (randn `(100 784) :requires-grad t))
 	(layer1 (LinearLayer 784 512))
 	(layer2 (LinearLayer 512 128))
 	(layer3 (LinearLayer 128  10)))
@@ -56,6 +56,8 @@
 	  
 	  (time (print (funcall forward)))
 	  ;; Add? side effects. no effs on params
+	  ;;(time (funcall backward))
+	  ;;(print (grad x))
 	  (time (print (funcall forward)))
 	  ;;(sb-profile:report)
 	  ;;(sb-profile:unprofile "CL-WAFFE2/BACKENDS.CPU"
