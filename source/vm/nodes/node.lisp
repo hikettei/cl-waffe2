@@ -24,28 +24,6 @@ AbstractNode must possess following:
    3. Variables (for building computation nodes)
 "))
 
-(deftype shape-checkpoint-state-t ()
-  `(and keyword (member :forward :backward :moving)))
-
-(defstruct (ShapeErrorPoint
-	    (:conc-name checkpoint-)
-	    (:constructor make-errorpoint (state node-at)))
-  (state state :type shape-checkpoint-state-t)
-  (node-at node-at :type (or null AbstractNode)))
-
-(defparameter *shape-error-when* (make-errorpoint :forward nil)
-  "This parameter indicates when the ShapeError occurred.
-*shape-error-when* is a type of ShapeErrorPoint")
-
-(defmacro with-shape-checkpoint ((state node) &body body)
-  "Updates checkpoint for shapeerror.
-   set node=nil to extend previous state's node"
-  `(let ((*shape-error-when* (make-errorpoint ,state
-					      (or ,node
-						  (checkpoint-node-at *shape-error-when*)))))
-     ,@body))
-
-
 ;; Unused?
 (defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape)
   ""

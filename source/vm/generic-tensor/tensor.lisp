@@ -133,7 +133,7 @@ Note that this function is inlined.
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
-      (multiple-value-bind (fw bw vars params) (build (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode) (grad target) out))
+      (multiple-value-bind (fw bw vars params) (build (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype target)) (grad target) out))
 	(declare (ignore bw vars params))
 	#'(lambda (new-value)
 	    (assert (equal (shape new-value) shape)
