@@ -16,9 +16,10 @@
 	    (m (make-tensor `(100 100) :initial-element 1.0 :requires-grad t)))
 	(proceed-backward (!sum k))
 	(proceed-backward (!sum m :axis 0))
+	
 	(if (and
-	     (= (vref (grad k) 0) (/ 1 (* 100 100)))
-	     (= (vref (grad m) 0) (/ 1 100)))
+	     (equal (vref (grad k) 0) (float (/ 1 (* 100 100))))
+	     (equal (vref (grad m) 0) (float (/ 1 100))))
 	    t
 	    :backward)))))
 
