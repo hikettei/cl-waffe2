@@ -24,10 +24,6 @@ AbstractNode must possess following:
    3. Variables (for building computation nodes)
 "))
 
-(defparameter *shape-error-when* (make-errorpoint :forward nil)
-  "This parameter indicates when the ShapeError occurred.
-*shape-error-when* is a type of ShapeErrorPoint")
-
 (deftype shape-checkpoint-state-t ()
   `(and keyword (member :forward :backward :moving)))
 
@@ -36,6 +32,10 @@ AbstractNode must possess following:
 	    (:constructor make-errorpoint (state node-at)))
   (state state :type shape-checkpoint-state-t)
   (node-at node-at :type (or null AbstractNode)))
+
+(defparameter *shape-error-when* (make-errorpoint :forward nil)
+  "This parameter indicates when the ShapeError occurred.
+*shape-error-when* is a type of ShapeErrorPoint")
 
 (defmacro with-shape-checkpoint ((state node) &body body)
   "Updates checkpoint for shapeerror.

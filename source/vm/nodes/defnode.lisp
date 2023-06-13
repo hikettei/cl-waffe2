@@ -5,6 +5,20 @@
 
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
+(defparameter *node-reject-case-table* (make-hash-table))
+
+(defun node-compatible-p (node-name inputs)
+  (declare (type list inputs))
+  "the node is adopted when:
+reject-when=nil, or (apply reject-when inputs)=t"
+  (let ((table (gethash node-name *node-reject-case-table*)))
+    (or (null table)
+	(not (apply (the function table) inputs)))))
+
+(defun set-node-reject-case (node-name function)
+  (when function
+    (setf (gethash node-name *node-reject-case-table*) function)))
+
 (defun movetensor-p (node)
   (subtypep (class-of node) 'cl-waffe2/base-impl:MoveTensorNode))
 
@@ -75,13 +89,15 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
   (defun tmp-gensym ()
     (intern (symbol-name (symb '* (gensym "C") '*)) 'cl-waffe2/vm.nodes.facets-tmp)))
 
-(defun determine-facet-of-nodes (abstract-name devices)
-  (declare (type list devices)
+(defun determine-facet-of-nodes (abstract-name devices &rest inputs)
+  (declare (type list devices inputs)
 	   (type symbol abstract-name))
   ;; ScalarTensor is forced to use.
   (loop for device in `(,@devices ScalarTensor t)
 	do (let ((node-name (subnode-name abstract-name device)))
-	     (when (subtypep node-name abstract-name)
+	     (when (and
+		    (node-compatible-p node-name inputs)
+		    (subtypep node-name abstract-name))
 	       (return-from determine-facet-of-nodes
 		 node-name))
 
@@ -274,7 +290,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 		(,subscript-p1 (multiple-value-list (subscript ,where :fixed t))) ;; subscript-p without ~
 		(,(car constructor-arguments)
 		  (make-instance
-		   (determine-facet-of-nodes ',abstract-name *using-backend*)
+		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(cdr constructor-arguments))
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
 		   :uprank-state (third ,subscript-p)
@@ -288,10 +304,13 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 	   ,@constructor-body
 	   (the ,abstract-name ,(car constructor-arguments)))))))
 
-;; TODO: Docs
+;; TODO: Add Keyword:
+;; reject-when
+;; reject-dtype (:uint8 etc...)
 (defmacro define-impl ((abstract-name
 			&key
-			  (device t))
+			  (device t)
+			  (reject-p nil))
 		       &key
 			 save-for-backward
 			 forward
@@ -314,7 +333,12 @@ Memo: forward must return: a list (to be jit-compiled)
 Note:
 When device=t
 save-for-backward's behaviour
+
+reject-p = #'(lambda (&rest inputs) ~)
+Return t   -> reject
+Return nil -> ok
 "
+  (declare (type (or null function) reject-p))
   
   (let ((forward-self-name (caar forward))
 	(backward-self-name (caar backward))
@@ -338,6 +362,7 @@ save-for-backward's behaviour
 		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
 		 ',abstract-name
 		 ',device))
+       (set-node-reject-case ',impl-name ,reject-p)
        (defclass ,impl-name (,abstract-name)
 	 nil
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
@@ -369,54 +394,4 @@ save-for-backward's behaviour
 	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
 	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	       ,@backward-body))))))
-
-
-;; TODO: with-embedding-lisp as a alias of this macro.
-
-(defnode (InstantKernelNode (myself call-form)
-	  :slots ((call-form :initarg :call-form :type function :reader instant-call-form))
-	  :where (A[~] -> A[~])
-	  :documentation ""))
-
-(define-impl (InstantKernelNode :device t)
-	     :forward ((self x)
-		       (let ((result (funcall (instant-call-form self))))
-			 (typecase result
-			   (list result)
-			   (T `(,x)))))
-	     :backward ((self dout dx)
-			(declare (ignore dx))
-			(values dout)))
-
-(defmacro with-instant-kernel (tensor &body body)
-  "Creates an instant-kernel following tensor.
-
-This macro is used to embed condition-free Lisp code either in the process of creating a node or after it has been compiled.
-
-Use case:
-
-1. Embedding Lisp Code for building-time.
-
-(setq a (randn `(10 10)))
-(with-instant-kernel a
-    (print a)) ;; -> (print a) is evaluated
-
-2. Embedding Lisp Code for compile-time.
-
-(setq a (randn `(10 10)))
-(with-instant-kernel a
-    `(print ,a)) ;; -> (print a) isn't evaluated
-
-(funcall (build *)) ;; -> (print a) will be evaluated.
-
-Note that (equal (with-instant-kernel a) a) is NIL, that is, the returned value of this macro must be followed by a calculation node.
-
-If the return value of Body can be expanded as a macro, the values are compiled together at JIT compile time. Otherwise, the given tensor is returned as is.
-
-TODO: More simple description.
-"
-  (let ((kernel-name (gensym "InstantKernel")))
-    `(flet ((,kernel-name ()
-	      ,@body))
-       (forward (InstantKernelNode #',kernel-name) ,tensor))))
 

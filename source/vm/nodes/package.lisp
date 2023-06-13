@@ -47,7 +47,10 @@
    #:*facet-monopoly-mode*)
   (:export
    #:defnode
-   #:define-impl))
+   #:define-impl)
+  ;; Reject-p-utils
+  (:export
+   #:supported-dtypes-are))
 ;; Export: defnode define-impl
 
 (in-package :cl-waffe2/vm.nodes)

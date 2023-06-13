@@ -19,7 +19,6 @@
 	       (:file "vm/generic-tensor/utils")
 	       (:file "vm/generic-tensor/dtype")
 	       
-	       
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
 
@@ -39,6 +38,7 @@
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
 	       (:file "vm/nodes/defmodel")
+	       (:file "vm/nodes/utils")
 
 	       
 	       (:file "base-impl/arithmetic")
