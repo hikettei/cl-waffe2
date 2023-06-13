@@ -30,6 +30,9 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (deftype list-of-abstracttensor ()
   `(and list (satisfies list-of-abstracttensor-p)))
 
+(defun env-parameter-p (sym)
+  (equal (aref (symbol-name sym) 0) #\&))
+
 ;; FixME there must be much clever way to do this.
 (defun get-params (list)
   (delete-duplicates
@@ -38,7 +41,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
 	  collect (let ((sym (nth i list)))
 		    (typecase sym
 		      (symbol
-		       (if (find sym `(&optional &rest &key &aux))
+		       (if (env-parameter-p sym)
 			   nil
 			   sym))
 		      (list
