@@ -566,45 +566,25 @@ Return: List[SubScript]
 ;; Expands call-with-view
 ;; =======================================
 
+
+;; e.g: (view tensor `(0 2) t t) could be splitted into: `(0 2) * t*t times order
+(defun order-reductable-p (dim-start-from &rest tensors)
+  "`(t t t) -> t"
+  (flet ((not-reductable-p (tensor
+			    &aux
+			      (views
+			       (nthcdr dim-start-from (tensor-view tensor))))
+	   (or (scalar-p tensor) ;; tensor is scalar
+	       ;; at least one of (nthcdr dim-start-from (tensor-view tensor)) isn't T
+	       (some #'(lambda (v) 
+			 (not (eql (force-list v) t)))
+		     views))))
+    ;; If tensors are consisted of non-projected-tensor...?
+    (not (some #'not-reductable-p tensors))))
+
+
 ;; multf: A *= n
 (define-modify-macro multf (&optional (number 1)) *)
-
-;; FixMe: The case when tensor is a input.
-
-;; Fix IT
-(defun formulate-iternum (tensor)
-  "Considering the given tensor's view, the function formulate-iternum returns a new tensor with being reducted size.
-
-Example:
-  `(<T> <T> <T>) -> `(<3T>)"
-  (let ((result)
-	(views)
-	(endcp t))
-    (declare (type list result))
-    (mapc
-     #'(lambda (shape view size)
-	 (let ((start-idx (compute-visible-start-idx (force-list view) shape))
-	       (end-idx   (compute-visible-end-idx   (force-list view) shape)))
-	   (declare (type fixnum start-idx))
-	   
-	   (if (and (= start-idx 0)
-		    (equal end-idx shape))
-	       (progn
-		 (if endcp (push 1 result))
-		 (if endcp (push t views))
-		 (setf
-		  (nth (1- (length result)) result)
-		  (l*
-		   (nth (1- (length result)) result)
-		   size))
-		 (setq endcp t))
-	       (and (push size result)
-		    (push view views)
-		    (setq endcp nil)))))
-     (slot-value tensor 'orig-shape)
-     (tensor-view tensor)
-     (shape tensor))
-    (values result (reverse views))))
 
 (defun funcall-with-view (function tensors target-dim offsets rest-dims)
   (apply function
@@ -618,18 +598,15 @@ Example:
 		      (nth target-dim (shape tensor))
 		      (let ((stride (nth target-dim (tensor-stride tensor)))
 			    (view (subscript-view (nth target-dim (tensor-view tensor)))))
-			;; TODO: multiply (nth n strides) and stepby
 			(lazy* stride
 			       (compute-stepby view))))))))
 
 ;; :indices, :tflist -> wrap by call-with-view-ext*
-;; TODO: at-least-dim=2
-;; TODO: View, (1 10 -1)
-;; TODO: Support Row-Major by multiplying them strides to stride-of
 (defun call-with-view (function
 		       tensors
 		       &key
 			 (at-least-dim 1)
+			 (force-keep-order nil)
 		       &aux
 			 (shape (shape (car tensors)))
 			 (dims  (length shape)))
@@ -647,6 +624,20 @@ Example:
 	     (funcall-with-view function tensors target-dim offsets at-least-dim))
 	   (explore (rest-dim offsets &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim))
+
+	     ;; If the rest is `(t t t) ...
+	     ;; call-with-view-1dkernel is a form which specialized on 1d kernel.
+	     (when (and (not force-keep-order)
+		        (= at-least-dim 1) ;; only works when kernel-size=1
+			(apply #'order-reductable-p target-dim tensors) ;; check views
+			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
+	       (return-from explore
+		 (call-with-view-1dkernel
+		  function
+		  tensors
+		  offsets
+		  :dim-start-from target-dim)))
+		  
 	     (let* ((start-points (loop for tensor in tensors
 					collect
 					(compute-visible-start-idx
@@ -664,9 +655,9 @@ Example:
 
 	       (let ((stride-place (gensym "STRIDESTMP"))
 		     (old-offsets offsets)
-		     (loop-name (gensym "LOOP"))
-		     (out (gensym "OUT"))
-		     (offsets (gensym "Offsets")))
+		     (loop-name   (gensym "LOOP"))
+		     (out         (gensym "OUT"))
+		     (offsets     (gensym "Offsets")))
 		 `(let ((,stride-place (list ,@(loop for tensor in tensors
 						     collect (nth target-dim (tensor-stride tensor)))))
 			(,offsets (copy-list ,old-offsets)))
@@ -741,3 +732,32 @@ Example:
 	     dims
 	     offset-place))))))
 
+;; call-with-view dedicated to tensors with view = `(... t t)
+(defun call-with-view-1dkernel (function
+				tensors
+				offset-place
+				&key
+				  (dim-start-from 0))
+  ;; At-least-dim = 1
+  (let* ((size-list (mapcar #'(lambda (tensor &aux (s (shape tensor)) (v (tensor-view tensor)))
+				(loop for i upfrom dim-start-from below (length s)
+				      unless (eql (force-list (nth i v)) t)
+					do (error "Internal Error: call-with-view-1dkernel is only applied to view=t axes.")
+				      collect (nth i s)))
+			    tensors))
+	 (sizes (map 'list #'(lambda (x) (apply #'lazy-mulup x)) size-list)))
+
+    ;; sizes (for exmaple) = ((100) (100))
+    ;; for element-wise operation, whenever row/column major, set stride=1
+
+    (apply
+     function
+     (loop for tensor in tensors
+	   for k upfrom 0
+	   collect (let ((view (make-viewinstruction
+				`(nth ,k ,offset-place)
+				(nth k sizes)
+				1)))
+		     (list view))))))
+
+	   

@@ -438,7 +438,6 @@ Note that view is only created for Tensors, not a Scalar.
       (T
        :wait-for-reset))))
 
-;; TODO: Print ScalarTensor
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
 	  "{~a[~(~a~)] ~a ~a ~a

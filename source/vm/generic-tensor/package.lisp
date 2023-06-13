@@ -60,7 +60,8 @@
    #:stride-of
    #:size-of
    #:offset-of
-   #:compute-visible-shape)
+   #:compute-visible-shape
+   #:force-list)
   ;; APIs for StateContainer
   (:export
    #:statecontainer

@@ -5,11 +5,26 @@
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
+(defun compose (&rest fns)
+  (if fns
+      (let ((fn1 (car (last fns)))
+            (fns (butlast fns)))
+        #'(lambda (&rest args)
+                   (reduce #'funcall fns
+                           :from-end t
+                           :initial-value (apply fn1 args))))
+      #'identity))
+
 (defun lazy* (x y)
   (if (and (typep x 'number)
 	   (typep y 'number))
       (* x y)
-      `(* ,x ,y)))
+      `(the fixnum (* (the fixnum ,x) (the fixnum ,y)))))
+
+(defun lazy-mulup (&rest args)
+  (let ((res 1))
+    (dolist (arg args) (setq res (lazy* res arg)))
+    res))
 
 (declaim (ftype (function (list) list)
 		column-major-calc-strides

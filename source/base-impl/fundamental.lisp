@@ -194,6 +194,11 @@ TODO: DOC"
 ;; (!sum tensor).shape   = (1)
 ;; (make-tensor 1).shape = (1)
 
+(with-export !flatten
+  (defun !flatten (tensor)
+    ""
+    (!reshape tensor t)))
+
 (declaim (ftype (function (AbstractTensor fixnum) AbstractTensor) !rankup))
 (defun !rankup (tensor ntimes)
   "The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.
@@ -352,4 +357,3 @@ If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** f
   (let ((out (forward (Flexible-Rank-Node) tensor)))
     (setf (tensor-flexible-p out) t)
     out))
-

@@ -81,7 +81,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] More clever Memory-management.
 - [x] Mathematical and Dense Operations (exp log sin cos etc...)
 - [ ] Operations like: argmax/argmin, reshape, transpose, swapaxes.
-- [ ] Optimize call-with-view, to minimize the number of using funcall. (i.e.: reshape (10 10) into (100) tensor)
+- [x] Optimize call-with-view, to minimize the number of using funcall. (i.e.: reshape (10 10) into (100) tensor)
 - [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
 - [ ] Optimized Sparse Matrix
 - [ ] FP16 Matrix

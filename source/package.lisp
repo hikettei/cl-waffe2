@@ -28,3 +28,7 @@
 ;; :cl-waffe2/base-impl's all exported APIs
 ;; :cl-waffe2/distributions
 ;; :cl-waffe2/backends.lisp::CPUTensor, ScalarTensor etc..
+
+;; TO ADD: cl-waffe2-repl-toplevel
+
+
