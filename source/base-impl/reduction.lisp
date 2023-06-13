@@ -2,30 +2,25 @@
 (in-package :cl-waffe2/base-impl)
 
 
+;;========================================================================
+;; !sum semantics:
+;; Let A be a 3 x 3 Tensor, the operation is to sum up A along axis=1.
+;; 1. Prepare A
+;; +++
+;; +++
+;; +++
+;; 2. Prepare A-out 3 * 1
+;; +++
+;; 3. Broadcast A-out along axis=1
+;; +++
+;; ---
+;; ---
+;; 4. Adds A and A-out element-wise.
+;; This could be applied whenever the given axis is consisted of axes of list.
+;;=========================================================================
+
 (defun !sum (tensor &key (axis t) (out nil))
-  "Sum up the given tensor along the axis.
-
-Semantics:
-Let A be a 3 x 3 Tensor, the operation is to sum up A along axis=1.
-
-1. Prepare A
-+++
-+++
-+++
-
-2. Prepare A-out 3 * 1
-+++
-
-3. Broadcast A-out along axis=1
-
-+++
----
----
-
-
-4. Adds A and A-out element-wise.
-
-This could be applied whenever the given axis is consisted of axes of list."
+  "Sum up the given tensor along the axis."
   (declare (type AbstractTensor tensor)
 	   (type (or t list fixnum) axis))
   (let* ((shape (copy-list (shape tensor)))
@@ -57,7 +52,7 @@ This could be applied whenever the given axis is consisted of axes of list."
     (let* ((out (or out (make-tensor shape
 				     :dtype (dtype tensor)
 				     :order (order tensor))))
-	   (out (A*=scal out 0))) ;; TODO: !mul is extravagance, replace this op with !fill
+	   (out (A*=scal out 0))) ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill
 
       (assert (equal (shape out) shape)
 	      nil
@@ -66,4 +61,5 @@ This could be applied whenever the given axis is consisted of axes of list."
       (multiple-value-bind (out* reverser) (apply #'!view out view-args)
 	(apply #'!view (A+=B out* tensor) reverser)))))
 
-;; (defun !mean)
+;; (defun !mean
+

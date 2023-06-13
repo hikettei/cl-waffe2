@@ -422,6 +422,22 @@ Note that view is only created for Tensors, not a Scalar.
 	      do (format str " "))
       (format str ")"))))
 
+(defun state-name (tensor state)
+  (declare (type StateContainer state))
+  (let ((f-exist-p (statecontainer-forward-result state))
+	(b-exist-p (statecontainer-backward-result state)))
+    (cond
+      ((subtypep (class-of (tensor-backward tensor))
+		 'cl-waffe2/base-impl::ProceedNode)
+       :computed)
+      ((and (null f-exist-p)
+	    (null b-exist-p))
+       :maybe-not-computed)
+      ((and (null b-exist-p))
+       :wait-for-backward)
+      (T
+       :wait-for-reset))))
+
 ;; TODO: Print ScalarTensor
 (defmethod print-object ((tensor AbstractTensor) stream)
   (format stream
@@ -450,7 +466,7 @@ Note that view is only created for Tensors, not a Scalar.
 	  (let ((state (tensor-state tensor)))
 	    (if state
 		;; TODO: Update vec-state
-		(format nil "~%  :vec-state [~(~a~)]" (statecontainer-state state))
+		(format nil "~%  :vec-state [~(~a~)]" (state-name tensor state))
 		""))
 	  (if (and (eql (tensor-facet tensor) :input)
 		   (null (vec tensor)))
