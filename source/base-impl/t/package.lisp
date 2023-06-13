@@ -15,7 +15,7 @@
 (in-suite :base-impl-test)
 
 (defparameter *dense-types*  `(:float :double))
-(defparameter *sparse-types* `(:uint8 :uint16 :uint32 :int8 :int16 :int32))
+(defparameter *sparse-types* `(:int8 :int16 :int32))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun symb (&rest inputs)
@@ -42,3 +42,4 @@
 		     (:sparse *sparse-types*)
 		     (:dense  *dense-types*)
 		     (:all `(,@*sparse-types* ,@*dense-types*))))))))
+

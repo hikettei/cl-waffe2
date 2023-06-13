@@ -106,6 +106,7 @@
 
 	       (:file "base-impl/t/package")
 	       (:file "base-impl/t/reduction")
+	       (:file "base-impl/t/arithmetic")
 
 	       (:file "backends/cpu/t/package")
 	       (:file "backends/cpu/t/arithmetic")

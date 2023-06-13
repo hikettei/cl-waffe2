@@ -401,11 +401,10 @@ Note that view is only created for Tensors, not a Scalar.
 		   :named (tensor-name tensor)
 		   :vec (vec tensor))))
 
-(defun detach (tensor)
+(defun detach! (tensor)
   "detach tensor from computation node."
-  (let* ((view (tensor-view tensor))
-	 (out  (view tensor)))
-    (apply #'view out view)))
+  (setf (tensor-backward tensor) nil)
+  tensor)
 
 (defun render-shape (tensor)
   "Returns a shape"

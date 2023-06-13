@@ -25,7 +25,7 @@
 	   (out2 (!add (!f out1) weight))
 	   (out3 (!add (!f out2) weight)))
       (multiple-value-bind (forward bw vars params) (build out3)
-	(viz-computation-node out3 "./assets/out1.dot")
+	;;(viz-computation-node out3 "./assets/out1.dot")
 	(embody-input vars :input (make-tensor `(100 100)))
 	(funcall forward)))))
 
@@ -41,7 +41,7 @@
 	   (out3 (!mul out1 out2)))
       
       (multiple-value-bind (forward bw vars params) (build out3)
-	(viz-computation-node out3 "./assets/out2.dot")
+	;;(viz-computation-node out3 "./assets/out2.dot")
 	(embody-input vars :input val)
 	(funcall forward)))))
 
@@ -52,7 +52,7 @@
 	   (z (!sum (!add x (!f (!f (!f (!f (!f (!f y))))))))))
 
       (multiple-value-bind (forward bw vars params) (build z)
-	(viz-computation-node z "./assets/out3.dot")
+	;;(viz-computation-node z "./assets/out3.dot")
 	(funcall forward)))))
 
 ;; TODO: Compare the results with no-optim ver.

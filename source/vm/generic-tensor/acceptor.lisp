@@ -264,6 +264,7 @@ Return:
 			 (,id ,toplevel))
 		    (declare (type AbstractTensor ,@out-places)
 			     (ignorable ,@out-places))
+		    
 		    ;; If toplevel isn't evaluated yet...
 		    ,(and
 		      (push toplevel *node-parameters-tmp*)
@@ -300,14 +301,18 @@ Return:
 
   ;; Record: at what node, the backward error was occured.
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
-    (let* ((outs (apply
+    (let* ((backwards-tmp (map 'list #'tensor-backward (tensor-variables toplevel)))
+	   (outs (apply
 		  ;; (backward self dout dx dy dz ...)
-		  #'cl-waffe2/vm.nodes::backward
+		  #'cl-waffe2/vm.nodes:backward
 		  (tensor-backward toplevel)
 		  past-dy
 		  ;; detach from computation node by projecting into -> <t>.
-		  (map 'list #'detach (tensor-variables toplevel))))
+		  (map 'list #'detach! (tensor-variables toplevel))))
 	   (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
+      (map 'list #'(lambda (tensor bw)
+		     (setf (tensor-backward tensor) bw))
+	   (tensor-variables toplevel) backwards-tmp)
 
       `(let* (,@(map 'list
 		     #'(lambda (tensor)

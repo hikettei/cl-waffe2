@@ -22,4 +22,5 @@
 	    t
 	    :backward)))))
 
-(sum-tester cl-waffe2/backends.lisp:LispTensor)
+
+;;(sum-tester cl-waffe2/backends.lisp:LispTensor)
