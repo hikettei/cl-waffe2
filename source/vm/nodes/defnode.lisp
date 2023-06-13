@@ -30,6 +30,23 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (deftype list-of-abstracttensor ()
   `(and list (satisfies list-of-abstracttensor-p)))
 
+;; FixME there must be much clever way to do this.
+(defun get-params (list)
+  (delete-duplicates
+   (flatten
+    (loop for i fixnum upfrom 0 below (length list)
+	  collect (let ((sym (nth i list)))
+		    (typecase sym
+		      (symbol
+		       (if (find sym `(&optional &rest &key &aux))
+			   nil
+			   sym))
+		      (list
+		       (if (= (length sym) 2)
+			   (car sym)
+			   (get-params sym)))))))))
+
+
 (defmacro with-devices ((&rest backend-priority) &body body)
   "The macro with-devices declares the node's priority for the function *forward* to be used.
 
@@ -290,7 +307,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 		(,subscript-p1 (multiple-value-list (subscript ,where :fixed t))) ;; subscript-p without ~
 		(,(car constructor-arguments)
 		  (make-instance
-		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(cdr constructor-arguments))
+		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(get-params (cdr constructor-arguments)))
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
 		   :uprank-state (third ,subscript-p)
@@ -338,7 +355,6 @@ reject-p = #'(lambda (&rest inputs) ~)
 Return t   -> reject
 Return nil -> ok
 "
-  (declare (type (or null function) reject-p))
   
   (let ((forward-self-name (caar forward))
 	(backward-self-name (caar backward))
@@ -362,7 +378,7 @@ Return nil -> ok
 		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
 		 ',abstract-name
 		 ',device))
-       (set-node-reject-case ',impl-name ,reject-p)
+       (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
        (defclass ,impl-name (,abstract-name)
 	 nil
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."

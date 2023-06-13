@@ -56,20 +56,26 @@ TODO: More simple description.
        (every #'keywordp list)))
 
 (defmacro supported-dtypes-are (nth &rest dtypes)
-  "The macro supported-dtype-are returns a predictor which returns nil if the nth argument's dtype is in dtypes, otherwise t.
+  "The macro supported-dtype-are returns a predictor which returns nil if the nth argument's keyword is in dtypes, otherwise t.
 
 This macro is useful when combined with define-impl/reject-p.
 
 For example, when your implementation only supports for :float :double, and wants to restrict the use of the node for other dtypes, this macro can be used like:
+
+(defnode (AnyNode (myself dtype))
+         ...)
 
 (define-impl (AnyNode :device CPUTensor
                       :reject-p (supported-dtype-are 0 :float :double))
 
     ...)
 
+(AnyNode :float)
+(AnyNode :uint8)
+
 This means: the first argument of :forward was the dtype of :float or :double, use AnyNode, otherwise, AnyNode is no longer available (use other nodes instead)."
   (declare (type (satisfies list-of-keywords-p) dtypes))
   `#'(lambda (&rest inputs)
-       (let ((dtype (dtype (nth ,nth inputs))))
+       (let ((dtype (nth ,nth inputs)))
 	 (not (find dtype ',dtypes)))))
 

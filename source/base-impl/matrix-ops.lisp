@@ -3,7 +3,7 @@
 
 ;; Implement: Matmul/Dot/ArgMax/ArgMin
 
-(defnode (MatMulNode (myself &key transpose-a transpose-b)
+(defnode (MatMulNode (myself dtype &key transpose-a transpose-b)
 	  :where (A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
 		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
@@ -64,8 +64,9 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
     ;; TODO: More Detailed Errors.
     (assert (= jx jy) nil "Assertion Failed with X[~~ i j] @ Y[~~ j k] -> C[~~ i k]. ~a and ~a" (shape x) (shape y))
 
-    (forward (MatmulNode :transpose-a transpose-x
-			 :transpose-b transpose-y)
+    (forward (MatmulNode (dtype x)
+	      :transpose-a transpose-x
+	      :transpose-b transpose-y)
 	     (if transpose-x
 		 (!t x)
 		 x)

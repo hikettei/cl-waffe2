@@ -28,7 +28,7 @@
 (macrolet ((define-arithmetic-node (name document1 document2 &optional backward)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defnode (,name (myself)
+		(defnode (,name (myself dtype)
 			  :where (A[~] B[~] -> A[~])
 			  :backward ,backward
 			  :documentation ,(format nil "~a is a node which computes following operation element-wise.
@@ -53,7 +53,7 @@ Let X and Y be a given arguments and both are matrix.
 (macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
 	     `(progn
 		(export ',name)
-		(defnode (,name (myself)
+		(defnode (,name (myself dtype)
 			  :where (A[scal] B[~] -> B[~] where scal = 1)
 			  :backward ,backward
 			  :documentation ,(format nil
@@ -97,7 +97,7 @@ Note that the operation is automatically replaced into in-place operation."
 			   (symbol-name name) ops prep)
 		  ;; Note: !copy is only needed when backward will be used.
 		  ;; FIXME: The usage of forward below seems a little tricky
-		  (forward (,node-name)
+		  (forward (,node-name (dtype x))
 			   (!copy x)
 			   (if *no-grad*
 			       y
@@ -128,7 +128,7 @@ Note that the operation is automatically replaced into in-place operation."
 		(export ',name)
 		(defun ,name (scalar x)
 		  ,document
-		  (forward (,node-name)
+		  (forward (,node-name (dtype x))
 			   (number->stensor scalar x) (!copy x))))))
   (define-scalar-mat-node-caller
       !scalar-add ScalarAdd
@@ -281,7 +281,7 @@ Note that the operation is automatically replaced into in-place operation."
 			      (not (scalar-p B)))
 			  nil
 			  "Assertion Failed with A and B both aren't scalar.")
-		  (forward (,matrix-operation) A B)))))
+		  (forward (,matrix-operation (dtype A)) A B)))))
   (define-darith-function A+=B AddNode)
   (define-darith-function A-=B SubNode)
   (define-darith-function A*=B MulNode)
@@ -298,8 +298,8 @@ Note that the operation is automatically replaced into in-place operation."
 		(defun ,name (A scalar)
 		  "TODO: Docstring"
 		  (if (numberp scalar)
-		      (forward (,matrix-operation) (make-tensor scalar) A)
-		      (forward (,matrix-operation) scalar A)))))
+		      (forward (,matrix-operation (dtype A)) (make-tensor scalar) A)
+		      (forward (,matrix-operation (dtype A)) scalar A)))))
 	   (define-darith-function1 (name broadcast op op1 arg)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)

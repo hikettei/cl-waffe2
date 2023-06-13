@@ -6,7 +6,7 @@
 ;; Copying APIs
 ;; ===============================================================
 
-(defnode (MoveTensorNode (myself)
+(defnode (MoveTensorNode (myself dtype)
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
@@ -53,7 +53,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
   (if (and (scalar-p place)
 	   (scalar-p place))
       (forward (MoveScalarTensorNode) place tensor)
-      (forward (MoveTensorNode) place tensor)))
+      (forward (MoveTensorNode (dtype place)) place tensor)))
 
 (defun !copy (tensor)
   "TODO: DOCSTRING"

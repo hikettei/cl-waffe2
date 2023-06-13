@@ -53,19 +53,21 @@
 	    (error "the dtype ~a is not supported. (TODO)" dtype))))
      `(,x ,y))))
 
-(define-impl (AddNode :device CPUTensor)
+(define-impl (AddNode :device CPUTensor
+	      :reject-p (supported-dtypes-are 0 :float :double))
 	     :forward ((self x y)
 		       `(,@(expand-axpy-form x y)
 			 ,x)))
 
-(define-impl (SubNode :device CPUTensor)
+(define-impl (SubNode :device CPUTensor
+	      :reject-p (supported-dtypes-are 0 :float :double))
 	     :forward ((self x y)
 		       `(,@(expand-axpy-form x y :alpha -1.0)
 			 ,x)))
 
 ;; MulNode/DivNode -> LispKernel
-
-(define-impl (MoveTensorNode :device CPUTensor)
+(define-impl (MoveTensorNode :device CPUTensor
+	      :reject-p (supported-dtypes-are 0 :float :double))
 	     :forward ((self x y)
 		       ;; X <- Y
 		       `(,@(expand-move-form x y)

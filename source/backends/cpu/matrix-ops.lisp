@@ -75,7 +75,8 @@
       (T
        (error "The dtype ~a isn't supported yet (TODO)." dtype)))))
 
-(define-impl (MatMulNode :device CPUTensor)
+(define-impl (MatMulNode :device CPUTensor
+			 :reject-p (supported-dtypes-are 0 :float :double))
 	     :save-for-backward (t t nil)
 	     :forward
 	     ((self a b out)
