@@ -29,8 +29,11 @@
   (define-arith-tester mul-tester !mul 10 1 1)
   (define-arith-tester div-tester !div 10 1 -1))
 
-;; TODO: Move to backends/cpu, backends/lisp
-(add-tester cl-waffe2/backends.lisp:LispTensor)
-(sub-tester cl-waffe2/backends.lisp:LispTensor)
-(mul-tester cl-waffe2/backends.lisp:LispTensor)
-(div-tester cl-waffe2/backends.lisp:LispTensor)
+
+
+;; Asita yaru
+;; TODO: 1. Sum's test (fix: broadcast's backward)
+;; TODO: 2. Tests on Mathematical Kernels
+;; Is backward yuukou 複数のノード？
+
+

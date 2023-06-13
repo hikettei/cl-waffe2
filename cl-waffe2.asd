@@ -108,6 +108,8 @@
 	       (:file "base-impl/t/reduction")
 	       (:file "base-impl/t/arithmetic")
 
+	       (:file "backends/lisp/t/package")
+	       
 	       (:file "backends/cpu/t/package")
 	       (:file "backends/cpu/t/arithmetic")
 	       
@@ -116,5 +118,7 @@
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
 		    (symbol-call :fiveam :run! :base-impl-test)
+		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
+		    
 		    ))
