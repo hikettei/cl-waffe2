@@ -104,6 +104,9 @@
 	       (:file "vm/nodes/t/shape")
 	       (:file "vm/nodes/t/nodes")
 
+	       (:file "base-impl/t/package")
+	       (:file "base-impl/t/reduction")
+
 	       (:file "backends/cpu/t/package")
 	       (:file "backends/cpu/t/arithmetic")
 	       
@@ -111,5 +114,6 @@
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
+		    (symbol-call :fiveam :run! :base-impl-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
 		    ))

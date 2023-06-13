@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-(defpackage :cl-waffe2/vm.nodes.facets-tmp)
+(defpackage :cl-waffe2/vm.nodes.facets-tmp (:use :cl))
 
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
@@ -30,6 +30,8 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (deftype list-of-abstracttensor ()
   `(and list (satisfies list-of-abstracttensor-p)))
 
+
+;; Is it ok?
 (defun env-parameter-p (sym)
   (equal (aref (symbol-name sym) 0) #\&))
 
@@ -105,9 +107,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	      (princ abstract-node out)
 	      (princ '- out)
 	      (princ device out))
-	    'cl-waffe2/vm.nodes.facets-tmp))
-  (defun tmp-gensym ()
-    (intern (symbol-name (symb '* (gensym "C") '*)) 'cl-waffe2/vm.nodes.facets-tmp)))
+	    'cl-waffe2/vm.nodes.facets-tmp)))
 
 (defun determine-facet-of-nodes (abstract-name devices &rest inputs)
   (declare (type list devices inputs)
@@ -374,8 +374,8 @@ Return nil -> ok
 	      backward-args
 	      abstract-name))
     
-    `(progn
-       (eval-when (:compile-toplevel :load-toplevel :execute)
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (progn
 	 (assert (or (eql ',device t) (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor))
 		 nil
 		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."

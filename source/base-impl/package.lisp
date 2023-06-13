@@ -28,7 +28,8 @@
    #:!rankup
    #:!flexible
    #:proceed
-   #:proceed-time)
+   #:proceed-time
+   #:proceed-backward)
   (:export
    :node-x
    :node-y))

@@ -87,6 +87,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 		 ,viewed-tensor))
 	     :backward
 	     ((self dout dx dy)
+	      ;; Div dout by apply #'* broadcast-size
 	      (let ((out-sub (tensor-view dy))
 		    (inp-sub (slot-value self 'subscripts)))
 		(values
@@ -337,6 +338,14 @@ If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** f
 (defun proceed-time (tensor)
   "An alias for (proceed tensor :measure-time t)"
   (proceed tensor :measure-time t))
+
+(defun proceed-backward (tensor)
+  "After calling proceed, call backward."
+  (declare (type AbstractTensor tensor))
+  (multiple-value-bind (fw bw vars params) (build tensor)
+    (declare (ignore vars params))
+    (funcall fw)
+    (funcall bw)))
 
 ;; ===============================================================
 ;; Broadcast APIs
