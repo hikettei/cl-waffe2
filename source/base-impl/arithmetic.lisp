@@ -70,14 +70,14 @@ Let X be a given matrix and S be a given scalar.
      ;; A+=scal.view(A.shape),
      (declare (ignore dx))
      
-     (values (->scal (!sum dout)) (!move dy dout))))
+     (values (->scal (!div (!sum dout) (apply #'* (shape dy)))) (!move dy dout))))
 
   (define-scalar-mat-node
       ScalarMul
     "ScalarMul"
     "*"
     ((self dout dx dy)
-     (values (->scal (!sum (!mul dout dy))) (!scalar-mul dx dout)))))
+     (values (->scal (!div (!sum (!mul dout dy)) (apply #'* (shape dy)))) (!scalar-mul dx dout)))))
 ;; ===============================================================
 
 ;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.

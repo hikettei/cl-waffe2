@@ -145,6 +145,15 @@ Note that this function is inlined.
 	    (funcall fw)
 	    nil)))))
 
+;; Fix: Scalar Gradient.
+(defun make-gradient-adder-scal (target)
+  #'(lambda (new-value)
+      (assert (numberp new-value)
+	      nil
+	      "Attempted to add a new grad but failed because the gradient isn't scalar")
+      (incf (tensor-vec (grad target)) new-value)
+      nil))
+
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p   (getf initargs :scalar-p))
 	(view       (getf initargs :view))
@@ -174,14 +183,22 @@ Note that this function is inlined.
 
     ;; Setup utils for collecting gradients.
     (when (getf initargs :requires-grad)
-      (set-grad (make-tensor
-		 (tensor-visible-shape tensor)
-		 :dtype (getf initargs :dtype)
-		 :requires-grad nil
-		 :order (getf initargs :order))
-		tensor)
-      (setf (gradient-adder tensor)
-	    (make-gradient-adder tensor (tensor-visible-shape tensor))))))
+      (if (scalar-p tensor)
+	  (set-grad (make-tensor 0
+				 :dtype (dtype tensor)
+				 :requires-grad nil)
+		    tensor)
+	  (set-grad (make-tensor
+		     (tensor-visible-shape tensor)
+		     :dtype (getf initargs :dtype)
+		     :requires-grad nil
+		     :order (getf initargs :order))
+		    tensor))
+      (if (scalar-p tensor)
+	  (setf (gradient-adder tensor)
+		(make-gradient-adder-scal tensor))
+	  (setf (gradient-adder tensor)
+		(make-gradient-adder tensor (tensor-visible-shape tensor)))))))
 
 (defmethod add-grads ((tensor AbstractTensor) new-value)
   "tensor's gradient += new-value"
