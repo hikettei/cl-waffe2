@@ -23,22 +23,22 @@ save-for-backward: ~a"
 				   node-name
 				   name
 				   save-for-backward)))
-		(defun ,defun-name (x &key (out nil))
+		(defun ,defun-name (x &key (-> nil))
 		  ,(format nil "The function ~(~a~) takes X as an argument, applying a ~(~a~) function into each element and writes the result into out.
 
 Inputs:
 - x   (AbstractTensor)
-- out (nil or AbstractTensor). If nil, a new tensor is allocated.
+- -> (nil or AbstractTensor). If nil, a new tensor is allocated.
 
 Return:
-- out (AbstractTensor)
+- -> (AbstractTensor)
 
 SideEffects:
-- out will be destructed."
+- -> will be destructed."
 			   defun-name
 			   name)
-		  (if out
-		      (forward (,node-name) x out)
+		  (if ->
+		      (forward (,node-name) x ->)
 		      (forward (,node-name) x (!copy x))))))))
 
   ;; define-elwise-node will define: nameNode, !name.
@@ -187,7 +187,7 @@ SideEffects:
 				       (!loge x)))))
 	  :documentation "The node ExptNode applies (expt N X) into each element, writing the result into out."))
 
-(defun !expt (n x &key (out nil))
+(defun !expt (n x &key (-> nil))
   "The function !expt applies (expt N X) into each element, writing the result into out.
 
 Inputs:
@@ -200,8 +200,8 @@ Output:
   (let ((n (if (numberp n)
 	       (make-tensor n)
 	       n)))
-    (if out
-	(forward (ExptNode) x out n)
+    (if ->
+	(forward (ExptNode) x -> n)
 	(forward (ExptNode) x (make-input (shape x) nil :dtype (dtype x) :order (order x)) n))))
 
 )
