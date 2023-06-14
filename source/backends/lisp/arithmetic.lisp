@@ -123,6 +123,7 @@
 
 
 (define-impl (ScalarMul :device LispTensor)
+	     :save-for-backward (t t)
 	     :forward
 	     ((self scalar x)
 	      (let ((multiplier (scalar-mul (dtype x))))

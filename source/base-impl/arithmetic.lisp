@@ -68,9 +68,9 @@ Let X be a given matrix and S be a given scalar.
      ;; dx <- scalar
      ;; dy <- matrix
      ;; A+=scal.view(A.shape),
-     (declare (ignore dx))
+     (declare (ignore dx dy))
      (values
-      (!div (->scal (!sum dout)) (apply #'* (shape dy)))
+      (->scal (!mean dout))
       dout)))
 
   (define-scalar-mat-node
@@ -80,9 +80,13 @@ Let X be a given matrix and S be a given scalar.
     ((self dout dx dy)
      ;; dx ... scalar
      ;; dy ... matrix
+     
+     ;; Bugfix: here
+     
      (values
-      (->scal (!div (!sum (!mul dout dy)) (apply #'* (shape dy))))
-      (!scalar-mul dx dout)))))
+      (->scal (!mean (!mul dout dy)))
+      (!mul dout dx)))))
+
 ;; ===============================================================
 
 ;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.
@@ -216,7 +220,7 @@ Note that the operation is automatically replaced into in-place operation."
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!sas-mul dout dy)
+			(values (!sas-div dout dy)
 				(!sas-div (!sas-mul dx (!sas-mul -1 dout)) (!square dy)))))
 
 (macrolet ((define-sas-op (name node-name)
