@@ -37,7 +37,7 @@
 					  t
 					  (if (eql result :backward)
 					      (error "the result of backward is invaild")
-					      (error "the reesult of forward is invaild"))))))))
+					      (error "the result of forward is invaild"))))))))
 		 ',(case op-type
 		     (:sparse *sparse-types*)
 		     (:dense  *dense-types*)

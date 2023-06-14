@@ -310,10 +310,8 @@ Return:
 		  ;; detach from computation node by projecting into -> <t>.
 		  (map 'list #'detach! (tensor-variables toplevel))))
 	   (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
-      (map 'list #'(lambda (tensor bw)
-		     (setf (tensor-backward tensor) bw))
-	   (tensor-variables toplevel) backwards-tmp)
 
+      ;; FixME: (!add k k) produces style-warning.
       `(let* (,@(map 'list
 		     #'(lambda (tensor)
 			 `(,(tensor-id tensor) ,tensor))
@@ -326,6 +324,7 @@ Return:
 	 
 	 ,@(loop for out    in outs
 		 for tensor in (tensor-variables toplevel)
+		 for bw in backwards-tmp
 		 if out
 		   collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
 			      (declare (ignorable ,(tensor-id out)))
@@ -336,5 +335,6 @@ Return:
 					  (tensor-state tensor)
 					  (ancestor-param-p tensor))
 				     ;; Explore deeper if there's any params.
+				     (setf (tensor-backward tensor) bw)
 				     (explore-backwards tensor out)))))))))
 

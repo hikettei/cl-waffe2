@@ -45,7 +45,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (define-impl (MoveScalarTensorNode :device ScalarTensor)
 	     :forward ((self x y)
-		       `(setf (tensor-vec ,x) (tensor-vec ,y))))
+		       `(progn
+			  (setf (tensor-vec ,x) (tensor-vec ,y))
+			  ,x)))
 
 ;; TODO: Move For Scalar
 (defun !move (place tensor)

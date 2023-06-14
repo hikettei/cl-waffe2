@@ -20,4 +20,10 @@
 (mul-tester LispTensor)
 (div-tester LispTensor)
 
+(scalar-add-tester LispTensor)
+(scalar-sub-tester LispTensor)
+(scalar-mul-tester LispTensor)
+(scalar-div-tester LispTensor)
+
 (sum-tester cl-waffe2/backends.lisp:LispTensor)
+

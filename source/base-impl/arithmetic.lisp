@@ -69,7 +69,6 @@ Let X be a given matrix and S be a given scalar.
      ;; dy <- matrix
      ;; A+=scal.view(A.shape),
      (declare (ignore dx))
-     
      (values (->scal (!div (!sum dout) (apply #'* (shape dy)))) (!move dy dout))))
 
   (define-scalar-mat-node
@@ -96,7 +95,7 @@ Side Effects: None.
 Note that the operation is automatically replaced into in-place operation."
 			   (symbol-name name) ops prep)
 		  ;; Note: !copy is only needed when backward will be used.
-		  ;; FIXME: The usage of forward below seems a little tricky
+		  ;; Note: The usage of forward below seems a little tricky
 		  (forward (,node-name (dtype x))
 			   (!copy x)
 			   (if *no-grad*

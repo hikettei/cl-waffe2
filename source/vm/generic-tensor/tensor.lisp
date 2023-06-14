@@ -148,10 +148,10 @@ Note that this function is inlined.
 ;; Fix: Scalar Gradient.
 (defun make-gradient-adder-scal (target)
   #'(lambda (new-value)
-      (assert (numberp new-value)
+      (assert (scalar-p new-value)
 	      nil
 	      "Attempted to add a new grad but failed because the gradient isn't scalar")
-      (incf (tensor-vec (grad target)) new-value)
+      (incf (tensor-vec (grad target)) (tensor-vec new-value))
       nil))
 
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
