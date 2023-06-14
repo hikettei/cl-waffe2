@@ -11,6 +11,15 @@
 ;;
 ;; ===============================================
 
+;; To Add: node-test-tools
+;; Testing:
+;;
+;; [X X X] <- <Nodes> <- Input
+;;    ↑ (Check) Is it correct?
+
+;; [1 1 1] -> <Nodes> -> Gradient
+;;                           ↑ (Check) Is it correct?
+
 ;; Memo:
 ;; Check that operations are correctly defined and executed, node by node.
 ;; Composite several nodes -> testing will be done at generic-tensor/t
