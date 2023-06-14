@@ -11,6 +11,12 @@
 
 (in-package :cl-waffe2/base-impl.test)
 
+;; Add:
+;; Testing Framework of all defnode
+;; Proceed/Reshape/Squeeze etc...
+;;
+;;
+
 (def-suite :base-impl-test)
 (in-suite :base-impl-test)
 

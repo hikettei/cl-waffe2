@@ -3,6 +3,17 @@
 
 (in-suite :base-impl-test)
 
+;; == Here, we provide testing framework. ========
+;;
+;; You can perform tests like:
+;; (sum-tester LispTensor)
+;; (mathematical-test-set LispTensor)
+;;
+;; ===============================================
+
+;; Memo:
+;; Check that operations are correctly defined and executed, node by node.
+;; Composite several nodes -> testing will be done at generic-tensor/t
 (macrolet ((define-arith-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
 		(let ((a (make-tensor `(100 100) :initial-element 10))
@@ -53,17 +64,12 @@
   (define-scalar-mat-tester scalar-add-tester !scalar-add 11 1 1)
   (define-scalar-mat-tester scalar-sub-tester !scalar-sub 10 1 -1)
   (define-scalar-mat-tester scalar-mul-tester !scalar-mul 10 10 10)
-  (define-scalar-mat-tester scalar-div-tester !scalar-div 10 10 -10)
-  )
+  (define-scalar-mat-tester scalar-div-tester !scalar-div 10 10 -10))
 
+;; Add: Tests on
+;; !matmul/!dot (<=> sum)
+;; !transposed matmul
+;; argmax/argmin/max/min
+;; einsum
+;;
 
-
-;; Backendごとのテスト
-;; ノード一つ一つの単位で順伝播逆伝播が動くかテスト
-
-;; vm/generic-tensorのテスト
-;; 複数のノードが重なってもちゃんと動くかテスト
-
-;; Asita yaru
-;; TODO: 1. Tests on Mathematical Kernels
-;; TODO: 2. Tests on scalar-XXX operations

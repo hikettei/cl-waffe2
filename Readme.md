@@ -93,7 +93,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] optimize forward/backward
 - [x] BugFix: !add x y <- x never resets. (the definition of sum contributed to this problem)
 - [ ] optimize: incr vector ptr
-
+- [ ] Fix: a ton of style warning
 # Basics
 
 ### AbstractTensor

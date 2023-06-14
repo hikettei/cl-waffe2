@@ -107,6 +107,7 @@
 	       (:file "base-impl/t/package")
 	       (:file "base-impl/t/reduction")
 	       (:file "base-impl/t/arithmetic")
+	       (:file "base-impl/t/mathematical")
 
 	       (:file "backends/lisp/t/package")
 	       
