@@ -44,10 +44,12 @@
 			  (if all-p
 			    t
 			    :backward)))))))))
-  (define-arith-tester add-tester !add 11 1  1)
-  (define-arith-tester sub-tester !sub 9  1 -1)
-  (define-arith-tester mul-tester !mul 10 1 1)
-  (define-arith-tester div-tester !div 10 1 -1))
+  (define-arith-tester add-tester  !add  11 1  1)
+  (define-arith-tester sub-tester  !sub  9  1 -1)
+  (define-arith-tester mul-tester  !mul  10 1 1)
+  (define-arith-tester div-tester  !div  10 1 -1)
+  (define-arith-tester move-tester !move 10 1 1)
+  )
 
 (macrolet ((define-scalar-mat-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
@@ -81,4 +83,27 @@
 ;; argmax/argmin/max/min
 ;; einsum
 ;;
+
+(macrolet ((define-ss-tester (name op lisp-op grad1 grad2)
+	     `(define-tester ,name :all
+		(let ((a (make-tensor 1 :requires-grad t))
+		      (b (make-tensor 1 :requires-grad t)))
+		  (let ((c (proceed (,op a b)))
+			(r (,lisp-op 1 1)))
+		    (when (= r (tensor-vec c))
+		      (proceed-backward (,op a b))
+		      (if (and (= (tensor-vec a) ,grad1)
+			       (= (tensor-vec b) ,grad2))
+			  t
+			  :backward)))))))
+  (define-ss-tester ss-add-tester !add + 1 1)
+  (define-ss-tester ss-sub-tester !sub - 1 -1)
+  (define-ss-tester ss-mul-tester !mul * 1 1)
+  (define-ss-tester ss-div-tester !div / 1 -1))
+			
+
+(ss-add-tester nil)
+(ss-sub-tester nil)
+(ss-mul-tester nil)
+(ss-div-tester nil)
 

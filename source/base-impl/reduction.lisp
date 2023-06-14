@@ -19,9 +19,10 @@
 ;; This could be applied whenever the given axis is consisted of axes of list.
 ;;=========================================================================
 
-(defun !sum (tensor &key (axis t) (out nil))
+(defun !sum (tensor &key (axis t) (-> nil) (keep-repeat nil))
   "Sum up the given tensor along the axis."
   (declare (type AbstractTensor tensor)
+	   (type boolean keep-repeat)
 	   (type (or t list fixnum) axis))
   (let* ((shape (copy-list (shape tensor)))
 	 (view-args (make-list (length shape) :initial-element t))
@@ -49,17 +50,40 @@
        (setq shape (make-list dims :initial-element 1))))
 
     ;; Use Instead: make-input
-    (let* ((out (or out (make-tensor shape
-				     :dtype (dtype tensor)
-				     :order (order tensor))))
+    (let* ((out (or -> (make-tensor shape
+				    :dtype (dtype tensor)
+				    :order (order tensor))))
 	   (out (A*=scal out 0))) ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill
 
       (assert (equal (shape out) shape)
 	      nil
 	      "!sum: Assertion Failed because the given out's shape is ~a, but excepted: ~a" (shape out) shape)
 
+      ;; Main Parts
       (multiple-value-bind (out* reverser) (apply #'!view out view-args)
-	(apply #'!view (A+=B out* tensor) reverser)))))
+	(if keep-repeat
+	    (A+=B out* tensor)
+	    (apply #'!view (A+=B out* tensor) reverser))))))
 
-;; (defun !mean
+(defun !mean (tensor &key (axis t) (-> nil) (keep-repeat nil))
+  ""
+  (let* ((result (!sum tensor :axis axis :-> -> :keep-repeat keep-repeat))
+	 (dims (length (shape tensor)))
+	 (reducted-elements 1))
+    
+    (typecase axis
+      (fixnum
+       (if (< axis 0)
+	   (setq axis (+ axis dims)))
+
+       (setq reducted-elements (nth axis (shape tensor))))
+      (list
+       (dolist (dim axis)
+	 (let ((tgt (if (< dim 0)
+			(+ dim dims)
+			dim)))
+	   (setq reducted-elements (* reducted-elements (nth tgt (shape tensor)))))))
+      (T (setq reducted-elements (apply #'* (shape tensor)))))
+
+    (!scalar-div reducted-elements result)))
 

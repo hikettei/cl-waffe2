@@ -70,6 +70,10 @@
 	      :reject-p (supported-dtypes-are 0 :float :double))
 	     :forward ((self x y)
 		       ;; X <- Y
-		       `(,@(expand-move-form x y)
-			 ,x)))
+		       `(progn
+			  (if (not (movetensor-ignore-me ,self))
+			      (progn
+				,(expand-move-form x y)
+				,x)
+			      ,y))))
 

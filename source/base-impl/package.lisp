@@ -21,6 +21,7 @@
    #:!t)
   (:export
    #:!sum
+   #:!mean
    #:!move
    #:!copy
    #:!view

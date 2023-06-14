@@ -11,14 +11,14 @@
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  :backward ((self dout dx dy)
-		     (declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout))))
-		       (values dout dy-out)))
+		       ;; X <- Y
+		       (values (!move dx dout) (!move dy dy-out))))
 	  :documentation "
 The Node MoveTensorNode must satisfy the following behaviours:
 
@@ -34,14 +34,13 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	  :out-scalar-p t
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
 	  :backward ((self dout dx dy)
-		     (declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout))))
-		       (values dout dy-out)))))
+		       (values (!move dx dout) (!move dy dy-out))))))
 
 (define-impl (MoveScalarTensorNode :device ScalarTensor)
 	     :forward ((self x y)
@@ -88,8 +87,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	      `(progn
 		 ,viewed-tensor))
 	     :backward
-	     ((self dout dx dy)
-	      ;; Div dout by apply #'* broadcast-size
+	     ((self dout dx dy) ;; (viewed-tensor old)
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
 		     (res (apply

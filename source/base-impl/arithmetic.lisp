@@ -69,14 +69,20 @@ Let X be a given matrix and S be a given scalar.
      ;; dy <- matrix
      ;; A+=scal.view(A.shape),
      (declare (ignore dx))
-     (values (->scal (!div (!sum dout) (apply #'* (shape dy)))) (!move dy dout))))
+     (values
+      (!div (->scal (!sum dout)) (apply #'* (shape dy)))
+      dout)))
 
   (define-scalar-mat-node
       ScalarMul
     "ScalarMul"
     "*"
     ((self dout dx dy)
-     (values (->scal (!div (!sum (!mul dout dy)) (apply #'* (shape dy)))) (!scalar-mul dx dout)))))
+     ;; dx ... scalar
+     ;; dy ... matrix
+     (values
+      (->scal (!div (!sum (!mul dout dy)) (apply #'* (shape dy))))
+      (proceed (!scalar-mul dx dout))))))
 ;; ===============================================================
 
 ;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.
@@ -139,12 +145,12 @@ Note that the operation is automatically replaced into in-place operation."
 (with-export !scalar-sub
   (defun !scalar-sub (scalar x)
     "X -= scalar"
-    (!scalar-add (!mul -1 (number->stensor scalar x)) x)))
+    (!scalar-add (!sas-mul -1 (number->stensor scalar x)) x)))
 
 (with-export !scalar-div
   (defun !scalar-div (scalar x)
     "X /= scalar"
-    (!scalar-mul (!div 1 (number->stensor scalar x)) x)))
+    (!scalar-mul (!sas-div 1 (number->stensor scalar x)) x)))
 
 ;; ===============================================================
 ;; Scalar-And-Scalar Defnode And Functions.
@@ -183,9 +189,10 @@ Note that the operation is automatically replaced into in-place operation."
 			   ,x)))
 	     :backward ((self dout dx dy)
 			(declare (ignore dx dy))
-			(values dout (!mul -1 dout))))
+			(values dout (!sas-mul -1 dout))))
 
 (define-impl (ScalarAndScalarMul :device ScalarTensor)
+	     :save-for-backward (t t)
 	     :forward ((self x y)
 		       (let ((t1 (dtype->lisp-type (dtype x)))
 			     (t2 (dtype->lisp-type (dtype y))))
@@ -196,9 +203,10 @@ Note that the operation is automatically replaced into in-place operation."
 					 (the ,t2 (tensor-vec ,y)))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!mul dy dout) (!mul dx dout))))
+			(values (!sas-mul dy dout) (!sas-mul dx dout))))
 
 (define-impl (ScalarAndScalarDiv :device ScalarTensor)
+	     :save-for-backward (t t)
 	     :forward ((self x y)
 		       (let ((t1 (dtype->lisp-type (dtype x)))
 			     (t2 (dtype->lisp-type (dtype y))))
@@ -208,8 +216,8 @@ Note that the operation is automatically replaced into in-place operation."
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!mul (!div 1 dy) dout)
-				(!mul dx dout))))
+			(values (!sas-mul dout dy)
+				(!sas-div (!sas-mul dx (!sas-mul -1 dout)) (!square dy)))))
 
 (macrolet ((define-sas-op (name node-name)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)

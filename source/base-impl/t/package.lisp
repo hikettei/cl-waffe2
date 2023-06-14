@@ -28,12 +28,15 @@
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
 (defmacro define-tester (name op-type &body body)
-  (declare (type (member :dense :sparse :all) op-type))
+  (declare (type (member :dense :sparse :all) op-type)
+	   #+sbcl(sb-ext:muffle-conditions cl:style-warning))
+  
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (export ',name)
      ;; You can use this macro for testing other backends, other dtypes.
      
      (defmacro ,name (backend)
+       #+sbcl(declare (sb-ext:muffle-conditions cl:style-warning))
        `(let ((*using-backend* '`(,,backend)))
 	  ,@(map 'list #'(lambda (dtype)
 			   `(test ,(symb ', name '- dtype '- backend)

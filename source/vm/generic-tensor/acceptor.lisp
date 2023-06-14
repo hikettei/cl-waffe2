@@ -280,6 +280,7 @@ Return:
 ;; TODO
 ;; Most of backward-error, occurs here
 ;; So make it their log much clear.
+;; Bug: Maybe this function doesn't work well.
 (defun !maybe-move (place tensor)
   "If previous node of tensor is MoveTensor, this function is ignored, otherwise do a !move"
   (when tensor

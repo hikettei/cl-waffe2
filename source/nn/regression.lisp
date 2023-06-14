@@ -40,6 +40,25 @@
    (linear-weight self)
    (linear-bias self)))
 
+;; softmax with broadcasting
+
+;; TMP
+;; exp(x1) + exp(x2) + ... / exp(x1 + x2 + ...)
+(defun !softmax (x)
+  (let* ((x1 (!sub x (!mean x  :axis 1 :keep-repeat t)))
+	 (z  (!sum   (!exp x1) :axis 1 :keep-repeat t)))
+    (!div (!exp x1) z)))
+
+;; with broadcasting...
+(defun !softmax1 (x)
+  (let* ((x (A-=B x (!mean x :axis 1 :keep-repeat t)))
+	 (z-out (make-tensor `(,@(butlast (shape x)) 1)))
+	 (subscripts `(,@(loop for i in (butlast (shape x))
+			       collect t)
+		       (:broadcast ,(car (last (shape x))))))
+	 ;; To Add: (!view zout :~ `(:broadcast 10))
+	 (z (!exp x :-> (apply #'!view z-out subscripts))))
+    (!div (!exp x) z)))
 #|
 (defun test ()
   (let ((x (randn `(100 784) :requires-grad t))
@@ -56,13 +75,12 @@
 	  
 	  (time (print (funcall forward)))
 	  ;; Add? side effects. no effs on params
-	  ;;(time (funcall backward))
-	  ;;(print (grad x))
+	  (time (funcall backward))
+	  (print (grad x))
 	  (time (print (funcall forward)))
 	  ;;(sb-profile:report)
 	  ;;(sb-profile:unprofile "CL-WAFFE2/BACKENDS.CPU"
 	;;		      "CL-WAFFE2/BACKENDS.LISP")
 
-	  )))))
-
+)))))
 |#
