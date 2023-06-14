@@ -72,7 +72,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS, impelement it as NoBlasMatmulTensor because it is signifcantly slow)
 - [ ] Formulate specifications of nodes.
 - [ ] Use Cl/CD
-- [ ] ~~REPL-Friendly Node, (Implemented as proceed function)~~, with-dynamically-mode, set-config
+- [ ] ~~REPL-Friendly Node, (Implemented as proceed function)~~, ~~with-dynamically-mode (no need to do this)~~, set-config
 - [ ] ascognitious
 - [ ] node debugtools
 - [x] Clarify runtime error, ~~backward error(OK)~~
@@ -85,7 +85,7 @@ cl-waffe2.asd (:serial = t)
 - [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
 - [ ] Optimized Sparse Matrix
 - [ ] FP16 Matrix
-- [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512.
+- [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512. It is not portable but written in C/C++ can called via cffi.
 - [ ] (After released v1.0) cl-waffe2 for coalton.
 - [ ] cl-waffe2/linalg, SVD
 - [x] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
@@ -94,6 +94,13 @@ cl-waffe2.asd (:serial = t)
 - [x] BugFix: !add x y <- x never resets. (the definition of sum contributed to this problem)
 - [ ] optimize: incr vector ptr
 - [ ] Fix: a ton of style warning
+
+```
+First goal  -> Establish a fundamental baseline
+Second Goal -> FastMathKernel (with AVX512, AVX2)
+            -> CUDA Backend
+	    -> Metal Backend
+```
 # Basics
 
 ### AbstractTensor
@@ -145,5 +152,50 @@ cl-waffe2.asd (:serial = t)
     (funcall backward)
     ...
     )
+
+(with-cpu ;; Enable OpenBLAS (SBCL Only)
+    (proceed-time (!matmul (randn `(100 100)) (randn `(100 100)))))
+
+Evaluation took:
+  0.000 seconds of real time
+  0.000414 seconds of total run time (0.000214 user, 0.000200 system)
+  100.00% CPU
+  648,996 processor cycles
+  13,712 bytes consed
+  
+{CPUTENSOR[float] :shape (100 100) :named ChainTMP17223 
+  :vec-state [computed]
+  ((17.255651     -3.376378     16.272533     ~ -5.504444     -14.3689165   7.757542)                     
+   (17.289797     -1.620785     17.486135     ~ 0.7822217     -4.4573364    12.874869)   
+                  ...
+   (-1.6861697    -1.5520506    17.231197     ~ 0.6825452     11.123798     13.602743)
+   (4.65967       5.521372      9.541072      ~ 6.7735586     28.779625     7.8665066))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> B[~])>}
 ```
+
+# References
+
+https://www.jsoftware.com/papers/RationalizedAPL.htm
+
+https://arxiv.org/pdf/1201.6035.pdf
+
+https://www.european-lisp-symposium.org/static/2018/heisig.pdf
+
+https://github.com/numpy/numpy/tree/main
+
+https://pytorch.org/
+
+https://github.com/melisgl/mgl-mat
+
+https://dl.acm.org/doi/pdf/10.1145/359460.359482
+
+https://andantesoft.hatenablog.com/entry/2023/04/30/183032
+
+Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
+
+https://marui.hatenablog.com/entry/2023/01/23/194507
+
+https://arxiv.org/abs/1912.01703
 

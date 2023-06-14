@@ -28,6 +28,14 @@
 ;; [1 1 1] -> <Mathematical Nodes> -> Gradient
 ;;                                       ↑ (Check) Is it correct?
 
+;;
+;; TODO:
+;; Tests of -> Scalar-And-Scalar Nodes
+;; Tests of -> All math kernels
+;; implement: expt node
+;; Test     -> reshape proceed viewnode's backward unsqueeze copy broadcast(flexible)
+;; Tests of -> ->scal, ->mat, 
+
 (macrolet ((define-mathematical-kernel-tester (name wf-op lisp-op bw-lisp)
 	     `(define-tester ,name :dense
 		(let ((a (make-tensor `(30 30) :initial-element 1)))
