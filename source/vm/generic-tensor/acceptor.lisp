@@ -312,6 +312,14 @@ Return:
 		  (map 'list #'detach! (tensor-variables toplevel))))
 	   (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
 
+      ;; should ends with MoveTensorNode
+      #|
+      (assert (every (compose #'movetensor-p #'tensor-backward)
+		     outs)
+	      nil
+      "Explore-Backwards: Assertion Failed because the nodes: ~a aren't ended with MoveTensorNode/MoveTensorScalarNode" (tensor-variables toplevel))
+      |#
+      
       ;; FixME: (!add k k) produces style-warning.
       `(let* (,@(map 'list
 		     #'(lambda (tensor)

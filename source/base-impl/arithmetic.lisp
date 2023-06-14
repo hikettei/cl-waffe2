@@ -82,7 +82,7 @@ Let X be a given matrix and S be a given scalar.
      ;; dy ... matrix
      (values
       (->scal (!div (!sum (!mul dout dy)) (apply #'* (shape dy))))
-      (proceed (!scalar-mul dx dout))))))
+      (!scalar-mul dx dout)))))
 ;; ===============================================================
 
 ;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.
