@@ -3,4 +3,8 @@
 
 (in-suite :test-backends-cpu)
 
+(add-tester CPUTensor)
+(sub-tester CPUTensor)
+
+(move-tester CPUTensor)
 

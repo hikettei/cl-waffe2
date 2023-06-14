@@ -19,6 +19,7 @@
 (sub-tester LispTensor)
 (mul-tester LispTensor)
 (div-tester LispTensor)
+(move-tester LispTensor)
 
 (scalar-add-tester LispTensor)
 (scalar-sub-tester LispTensor)

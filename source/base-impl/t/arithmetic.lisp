@@ -48,8 +48,7 @@
   (define-arith-tester sub-tester  !sub  9  1 -1)
   (define-arith-tester mul-tester  !mul  10 1 1)
   (define-arith-tester div-tester  !div  10 1 -1)
-  (define-arith-tester move-tester !move 10 1 1)
-  )
+  (define-arith-tester move-tester !move 1 1 1))
 
 (macrolet ((define-scalar-mat-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
@@ -99,8 +98,7 @@
   (define-ss-tester ss-add-tester !add + 1 1)
   (define-ss-tester ss-sub-tester !sub - 1 -1)
   (define-ss-tester ss-mul-tester !mul * 1 1)
-  (define-ss-tester ss-div-tester !div / 1 -1))
-			
+  (define-ss-tester ss-div-tester !div / -1 -1))
 
 (ss-add-tester nil)
 (ss-sub-tester nil)
