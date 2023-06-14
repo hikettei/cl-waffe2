@@ -52,11 +52,9 @@
 			      :backward)))))))))
   (define-scalar-mat-tester scalar-add-tester !scalar-add 11 1 1)
   (define-scalar-mat-tester scalar-sub-tester !scalar-sub 10 1 -1)
-  (define-scalar-mat-tester scalar-mul-tester !scalar-mul 10 1 1)
-  (define-scalar-mat-tester scalar-div-tester !scalar-div 10 1 -1)
+  (define-scalar-mat-tester scalar-mul-tester !scalar-mul 10 10 10)
+  (define-scalar-mat-tester scalar-div-tester !scalar-div 10 10 -10)
   )
-		  
-	     
 
 
 

@@ -13,6 +13,7 @@ exec ros -Q -- $0 "$@"
   (:use :cl))
 (in-package :ros.script.cl-waffe2-test.3893644947)
 
+#+sbcl(declaim (sb-ext:muffle-conditions cl:style-warning))
 (defun main (&rest argv)
   (declare (ignorable argv))
   (asdf:load-system :cl-waffe2)
