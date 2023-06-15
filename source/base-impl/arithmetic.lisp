@@ -42,13 +42,12 @@ Let X and Y be a given arguments and both are matrix.
      (values (!move dx dout) (!move dy (!mul -1 dout)))))
   (define-arithmetic-node MulNode "MulNode" "*"
     ((self dout dx dy)
-     (values (!mul dout dy) (!mul dout dx))))
+     (values (!move dx (!mul dout dy)) (!move dy (!mul dout (!copy dx))))))
   (define-arithmetic-node DivNode "DivNode" "/"
     ((self dout dx dy)
      (values
-      (!div dout dy)
-      (!div (!mul dx (!mul -1 dout)) (!square dy))))))
-
+      (!move dx (!div dout dy))
+      (!move dy (!div (!mul (!copy dx) (!mul -1 dout)) (!square dy)))))))
 
 (macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
 	     `(progn
@@ -80,12 +79,11 @@ Let X be a given matrix and S be a given scalar.
     ((self dout dx dy)
      ;; dx ... scalar
      ;; dy ... matrix
-     
-     ;; Bugfix: here
-     
+
+     ;; dx is destructed when dy is computed.
      (values
-      (->scal (!mean (!mul dout dy)))
-      (!mul dout dx)))))
+      (!move dx (->scal (!mean (!mul dx dout))))
+      (!move dy (!mul dout (!copy dx)))))))
 
 ;; ===============================================================
 
@@ -207,7 +205,7 @@ Note that the operation is automatically replaced into in-place operation."
 					 (the ,t2 (tensor-vec ,y)))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!sas-mul dy dout) (!sas-mul dx dout))))
+			(values (!move dx (!sas-mul dy dout)) (!sas-mul (!copy dx) dout))))
 
 (define-impl (ScalarAndScalarDiv :device ScalarTensor)
 	     :save-for-backward (t t)
@@ -220,8 +218,8 @@ Note that the operation is automatically replaced into in-place operation."
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!sas-div dout dy)
-				(!sas-div (!sas-mul dx (!sas-mul -1 dout)) (!square dy)))))
+			(values (!move dx (!sas-div dout dy))
+				(!sas-div (!sas-mul (!copy dx) (!sas-mul -1 dout)) (!square dy)))))
 
 (macrolet ((define-sas-op (name node-name)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
