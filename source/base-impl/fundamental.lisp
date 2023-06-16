@@ -120,7 +120,7 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			       (setq broadcast-size (* broadcast-size (second sub))))))
 		(values
 		 nil
-		 (!move dy (if (= broadcast-size 1)
+		 (!move dy (if t;(= broadcast-size 1)
 			       res
 			       (!div res broadcast-size)))))))
 

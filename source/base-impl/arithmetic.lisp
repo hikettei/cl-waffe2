@@ -82,8 +82,8 @@ Let X be a given matrix and S be a given scalar.
     ((self dout dx dy)
      (declare (ignore dx dy))
      (values
-      (->scal (!mean dout))
-      (!mul -1.0 dout))))
+      (->scal (!mul -1.0 (!mean dout)))
+      dout)))
 
   (define-scalar-mat-node
       ScalarMul
@@ -106,8 +106,7 @@ Let X be a given matrix and S be a given scalar.
      ;; dy ... matrix
      (values
       (->scal (!mean (!div dout dy)))
-      (!div (!mul dx (!mul -1 dout))
-	    (!square dy))))))
+      (!div (!mul dx (!mul -1 dout)) (!square dy))))))
 
 ;; ===============================================================
 ;; Defun Parts
