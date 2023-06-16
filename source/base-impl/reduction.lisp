@@ -85,5 +85,5 @@
 	   (setq reducted-elements (* reducted-elements (nth tgt (shape tensor)))))))
       (T (setq reducted-elements (apply #'* (shape tensor)))))
 
-    (!div result reducted-elements)))
+    (!scalar-div reducted-elements result)))
 

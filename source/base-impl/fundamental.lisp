@@ -111,18 +111,10 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 		     (res (apply
 			   #'!view
 			   (!move dx (apply #'!view dout inp-sub))
-			   out-sub))
-		     (broadcast-size 1))
-		(loop for sub in out-sub
-		      do (let ((sub (force-list sub)))
-			   (if (and (listp sub)
-				    (eql (car sub) :broadcast))
-			       (setq broadcast-size (* broadcast-size (second sub))))))
+			   out-sub)))
 		(values
 		 nil
-		 (!move dy (if t;(= broadcast-size 1)
-			       res
-			       (!div res broadcast-size)))))))
+		 (!move dy res)))))
 
 
 (defun !view (tensor &rest subscripts)

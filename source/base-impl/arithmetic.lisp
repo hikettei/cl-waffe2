@@ -105,8 +105,8 @@ Let X be a given matrix and S be a given scalar.
      ;; dx ... scalar
      ;; dy ... matrix
      (values
-      (->scal (!mean (!div dout dy)))
-      (!div (!mul dx (!mul -1 dout)) (!square dy))))))
+      (->scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))
+      (!div dout dx)))))
 
 ;; ===============================================================
 ;; Defun Parts
