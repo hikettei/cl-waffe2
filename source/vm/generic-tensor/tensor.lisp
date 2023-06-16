@@ -500,7 +500,7 @@ Note that view is only created for Tensors, not a Scalar.
 (defun set-save-for-backward (tensor)
   (let ((space (save-for-backward-space tensor)))
     (when (null space)
-      (multiple-value-bind (fw bw vars pms) (with-no-grad (build (cl-waffe2/base-impl:!copy-force tensor)))
+      (multiple-value-bind (fw bw vars pms) (let ((*no-grad* t)) (build (cl-waffe2/base-impl:!copy-force tensor)))
 	(declare (ignore bw vars pms))
 	(setf (save-for-backward-cloner tensor) fw)))
 

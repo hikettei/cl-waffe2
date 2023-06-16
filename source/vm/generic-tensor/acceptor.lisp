@@ -361,13 +361,10 @@ Return:
 			 if (and out mv?)
 			   collect
 			   (prog1 ;; var <- out
-			       (with-no-grad (compile-forward (cl-waffe2/base-impl:!move (detach! var) (detach! out))))
+			       (let ((*no-grad* t)) (compile-forward (cl-waffe2/base-impl:!move (detach! var) (detach! out))))
 			     (setf (detach-p var) nil
 				   (detach-p out) nil)))))
 
-      ;;(dolist (o outs)
-	;;(print-ast o)
-	;;(print "++++++++++"))
       ;; dx1 <- dx'
       ;; dy1 <- dy'
 
@@ -382,16 +379,15 @@ Return:
       "Explore-Backwards: Assertion Failed because the nodes: ~a aren't ended with MoveTensorNode/MoveTensorScalarNode" (tensor-variables toplevel))
       |#
 
-      (labels ((expand-backward-values (variables outs body)
+      (labels ((expand-backward-values (variables outs paramp body)
 		 (cond
 		   ((and (null variables)
 			 (null outs))
 		    body)
-		   ((and (car variables) (car outs))
+		   ((and (car variables) (car outs) (car paramp))
 		    `(let ((,(tensor-id (car outs)) (funcall ,(compile-forward (car outs)))))
-		       (declare (ignorable ,(tensor-id (car outs))))
-		       ,(expand-backward-values (cdr variables) (cdr outs) body)))
-		   (T (expand-backward-values (cdr variables) (cdr outs) body)))))
+		       ,(expand-backward-values (cdr variables) (cdr outs) (cdr paramp) body)))
+		   (T (expand-backward-values (cdr variables) (cdr outs) (cdr paramp) body)))))
 
 	;; Body
 	`(let*-ignorable
@@ -405,6 +401,7 @@ Return:
 	   ,(expand-backward-values
 	     (tensor-variables toplevel)
 	     outs
+	     (map 'list #'(lambda (x) (slot-value x 'requires-grad)) (tensor-variables toplevel))
 	     `(progn
 		,@(map 'list #'(lambda (v x) `(setq ,(tensor-id v) (funcall ,x)))
 		       (tensor-variables toplevel) movers)
@@ -419,4 +416,3 @@ Return:
 				    (setf (detach-p v) nil)
 				    (setf (detach-p o) nil)
 				    (explore-backwards v o))))))))))
-

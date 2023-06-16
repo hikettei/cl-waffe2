@@ -12,6 +12,7 @@
 (define-impl (InstantKernelNode :device t)
 	     :forward ((self x)
 		       (let ((result (funcall (instant-call-form self))))
+			 (setf (out-scalar-p self) (cl-waffe2/vm.generic-tensor:scalar-p x))
 			 (typecase result
 			   (list result)
 			   (T `(,x)))))
