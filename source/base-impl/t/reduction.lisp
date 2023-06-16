@@ -3,6 +3,11 @@
 
 (in-suite :base-impl-test)
 
+;; sum
+;; -> = view, α=broadcast_auto, β=0
+;; sum(x, out) = ->(->(out, α) += x, β)
+;; ∂/∂xsum(x, out) = (1/total-elements ... 1/total-elements)
+
 (define-tester sum-tester :dense
   (let ((a (make-tensor `(100 100 100) :initial-element 1.0)))
     (when

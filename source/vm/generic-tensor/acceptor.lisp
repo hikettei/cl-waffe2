@@ -299,17 +299,10 @@ Return:
 					    (shape place))
 					:dtype (dtype place)
 					:order (order place)))))
+	    ;; Forcibly moving them.
 	    (values (cl-waffe2/base-impl:!move place tensor) deterministic-p))))))
 
-(defun print-ast (tensor)
-  (when (and tensor (not (detach-p tensor)))
-    (print (tensor-backward tensor))
-    (mapc #'print-ast (tensor-variables tensor))))
-
-;; あとはSaveForBackwardが動いてないだけっぽい
-;; TODO
-;; save-for-backwardの動作確認
-;; explore-backwardの書き直し
+;; there remains to be improved (in term of compile-speed)
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
@@ -343,7 +336,7 @@ Return:
 		  ;; (backward self dout dx dy dz ...)
 		  #'cl-waffe2/vm.nodes:backward
 		  (tensor-backward toplevel)		  
-		  past-dy;(detach! past-dy)
+		   past-dy;;(detach! past-dy)
 		  (map 'list #'detach! (tensor-variables toplevel))))
 	   (moved-p-list)
 	   ;; Pruning unused nodes by exploring ancestor-param-p
@@ -365,10 +358,10 @@ Return:
 	   (movers (loop for var in (tensor-variables toplevel)
 			 for out in outs
 			 for mv? in moved-p-list
-			 if mv?
+			 if (and out mv?)
 			   collect
 			   (prog1 ;; var <- out
-			       (cl-waffe2/base-impl:!move (detach! var) (detach! out))
+			       (with-no-grad (compile-forward (cl-waffe2/base-impl:!move (detach! var) (detach! out))))
 			     (setf (detach-p var) nil
 				   (detach-p out) nil)))))
 
@@ -396,34 +389,34 @@ Return:
 		    body)
 		   ((and (car variables) (car outs))
 		    `(let ((,(tensor-id (car outs)) (funcall ,(compile-forward (car outs)))))
-		       ;;(print ,(tensor-id (car outs)))
+		       (declare (ignorable ,(tensor-id (car outs))))
 		       ,(expand-backward-values (cdr variables) (cdr outs) body)))
 		   (T (expand-backward-values (cdr variables) (cdr outs) body)))))
 
 	;; Body
-	`(let* (,@(map 'list
-		       #'(lambda (tensor)
-			   `(,(tensor-id tensor) ,tensor))
-		       (tensor-variables toplevel))
-		,@(loop for tensor in outs
-			if tensor
-			  collect `(,(tensor-id tensor) ,tensor)))
-	   (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
-		    (ignorable ,@(map 'list #'tensor-id (loop for o in outs if o collect o))))
+	`(let*-ignorable
+	     (,@(map 'list
+		     #'(lambda (tensor)
+			 `(,(tensor-id tensor) ,tensor))
+		     (tensor-variables toplevel))
+	      ,@(loop for tensor in outs
+		      if tensor
+			collect `(,(tensor-id tensor) ,tensor)))
 	   ,(expand-backward-values
 	     (tensor-variables toplevel)
 	     outs
 	     `(progn
-		,@(map 'list #'(lambda (v x) `(setq ,(tensor-id v) (funcall ,(compile-forward x))))
+		,@(map 'list #'(lambda (v x) `(setq ,(tensor-id v) (funcall ,x)))
 		       (tensor-variables toplevel) movers)
 		,@(loop for v  in (tensor-variables toplevel)
 			for o  in outs			
 			if (slot-value v 'requires-grad)
 			  collect `(add-grads ,v ,(tensor-id o))
 			if (and ;;(not (slot-value v 'requires-grad))
-				o
-				(tensor-state v))
+			    o
+			    (tensor-state v))
 			  collect (progn
 				    (setf (detach-p v) nil)
 				    (setf (detach-p o) nil)
 				    (explore-backwards v o))))))))))
+

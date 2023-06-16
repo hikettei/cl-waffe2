@@ -398,9 +398,7 @@ Return nil -> ok
 	       if (and state           ;; save-for-backward=t
 		       (not *no-grad*) ;; training-mode
 		       (cl-waffe2/vm.generic-tensor:ancestor-param-p input))
-		 do (progn;;let ((prev (tensor-backward input)))
-		      ;; (movetensor-p prev) maybe unnecessary case? (TODO)
-		      (set-save-for-backward input)))
+		 do (set-save-for-backward input))
 	 
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))

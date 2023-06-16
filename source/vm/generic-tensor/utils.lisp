@@ -48,3 +48,12 @@
 				   (nth (- i 1) shape))))
     strides))
 
+(defmacro let*-ignorable ((&rest forms) &body body)
+  (labels ((expand-forms (rest-forms)
+	     (if rest-forms
+	       `(let (,(car rest-forms))
+		  (declare (ignorable ,(caar rest-forms)))
+		  ,(expand-forms (cdr rest-forms)))
+	       `(progn ,@body))))
+    (expand-forms forms)))
+
