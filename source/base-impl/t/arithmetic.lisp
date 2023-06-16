@@ -46,8 +46,8 @@
 			    :backward)))))))))
   (define-arith-tester add-tester  !add  11 1  1)
   (define-arith-tester sub-tester  !sub  9  1 -1)
-  (define-arith-tester mul-tester  !mul  10 1 1)
-  (define-arith-tester div-tester  !div  10 1 -1)
+  (define-arith-tester mul-tester  !mul  10 1 10)
+  (define-arith-tester div-tester  !div  10 1 -10)
   (define-arith-tester move-tester !move 1 1 1))
 
 (macrolet ((define-scalar-mat-tester (name op result grad1 grad2)
@@ -71,10 +71,11 @@
 			  (if all-p
 			      t
 			      :backward)))))))))
+  ;; name function-name result grad-mat grad-scal
   (define-scalar-mat-tester scalar-add-tester !scalar-add 11 1 1)
-  (define-scalar-mat-tester scalar-sub-tester !scalar-sub 10 1 -1)
-  (define-scalar-mat-tester scalar-mul-tester !scalar-mul 10 10 10)
-  (define-scalar-mat-tester scalar-div-tester !scalar-div 10 10 -10))
+  (define-scalar-mat-tester scalar-sub-tester !scalar-sub 9  1 -1)
+  (define-scalar-mat-tester scalar-mul-tester !scalar-mul 10 1 10)
+  (define-scalar-mat-tester scalar-div-tester !scalar-div 10 1 -10))
 
 ;; Add: Tests on
 ;; !matmul/!dot (<=> sum)
@@ -98,10 +99,11 @@
   (define-ss-tester ss-add-tester !add + 1 1)
   (define-ss-tester ss-sub-tester !sub - 1 -1)
   (define-ss-tester ss-mul-tester !mul * 1 1)
-  (define-ss-tester ss-div-tester !div / -1 -1))
+  (define-ss-tester ss-div-tester !div / 1 -1))
 
 (ss-add-tester nil)
 (ss-sub-tester nil)
 (ss-mul-tester nil)
 (ss-div-tester nil)
 
+;; test !add !sub !mul !div
