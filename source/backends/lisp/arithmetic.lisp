@@ -26,7 +26,9 @@
 			(,f (aref x (+ offsetx (the fixnum (* incx i))))
 			    scalar))))))
   (define-scalar-func scalar-add +)
-  (define-scalar-func scalar-mul *))
+  (define-scalar-func scalar-sub -)
+  (define-scalar-func scalar-mul *)
+  (define-scalar-func scalar-div /))
 
 ;; Even on SBCL:
 ;; (disassemble (add-matrix :uint8)) <- Fails to SIMDify
@@ -121,6 +123,22 @@
 		     `(,x))
 		  ,x))))
 
+(define-impl (ScalarSub :device LispTensor)
+	     :forward
+	     ((self scalar x)
+	      (let ((subber (scalar-sub (dtype x))))
+		`(,@(call-with-view
+		     #'(lambda (x-view)
+			 `(funcall
+			   ,subber
+			   (tensor-vec ,x)
+			   (tensor-vec ,scalar)
+			   ,(offset-of x-view 0)
+			   ,(size-of x-view 0)
+			   ,(stride-of x-view 0)))
+		     `(,x))
+		  ,x))))
+
 
 (define-impl (ScalarMul :device LispTensor)
 	     :save-for-backward (t t)
@@ -131,6 +149,23 @@
 		     #'(lambda (x-view)
 			 `(funcall
 			   ,multiplier
+			   (tensor-vec ,x)
+			   (tensor-vec ,scalar)
+			   ,(offset-of x-view 0)
+			   ,(size-of x-view 0)
+			   ,(stride-of x-view 0)))
+		     `(,x))
+		  ,x))))
+
+(define-impl (ScalarDiv :device LispTensor)
+	     :save-for-backward (t t)
+	     :forward
+	     ((self scalar x)
+	      (let ((divider (scalar-div (dtype x))))
+		`(,@(call-with-view
+		     #'(lambda (x-view)
+			 `(funcall
+			   ,divider
 			   (tensor-vec ,x)
 			   (tensor-vec ,scalar)
 			   ,(offset-of x-view 0)

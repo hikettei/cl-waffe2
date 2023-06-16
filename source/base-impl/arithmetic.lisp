@@ -47,7 +47,6 @@ Let X and Y be a given arguments and both are matrix.
     ((self dout dx dy)
      ;; ∂/∂x = 1/x
      ;; ∂/∂y = -x/y^2
-     ;; Is dx/dy overwritten?
      (values
       (!div dout dy)
       (!div (!mul dx (!mul -1 dout))
@@ -75,6 +74,16 @@ Let X be a given matrix and S be a given scalar.
      (values
       (->scal (!mean dout))
       dout)))
+  
+  (define-scalar-mat-node
+      ScalarSub
+    "ScalarSub"
+    "-"
+    ((self dout dx dy)
+     (declare (ignore dx dy))
+     (values
+      (->scal (!mean dout))
+      (!mul -1.0 dout))))
 
   (define-scalar-mat-node
       ScalarMul
@@ -86,15 +95,23 @@ Let X be a given matrix and S be a given scalar.
 
      (values
       (->scal (!mean (!mul dy dout)))
-      (!mul dout dx)))))
+      (!mul dout dx))))
 
-;; ===============================================================
-
-;; 「!」 key can be hit in both the JP and EN sequences without breaking the home position.
-;; Keep in mind: https://arxiv.org/pdf/1201.6035.pdf
+  (define-scalar-mat-node
+      ScalarDiv
+    "ScalarDiv"
+    "/"
+    ((self dout dx dy)
+     ;; dx ... scalar
+     ;; dy ... matrix
+     (values
+      (->scal (!mean (!div dout dy)))
+      (!div (!mul dx (!mul -1 dout))
+	    (!square dy))))))
 
 ;; ===============================================================
 ;; Defun Parts
+;; ===============================================================
 (macrolet ((define-arithmetic-node-caller (name node-name ops prep)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -145,18 +162,14 @@ Note that the operation is automatically replaced into in-place operation."
       !scalar-add ScalarAdd
     "X += scalar")
   (define-scalar-mat-node-caller
+      !scalar-sub ScalarSub
+    "X -= scalar")
+  (define-scalar-mat-node-caller
       !scalar-mul ScalarMul
-    "X *= scalar"))
-
-(with-export !scalar-sub
-  (defun !scalar-sub (scalar x)
-    "X -= scalar"
-    (!scalar-add (!sas-mul -1 (number->stensor scalar x)) x)))
-
-(with-export !scalar-div
-  (defun !scalar-div (scalar x)
-    "X /= scalar"
-    (!scalar-mul (!sas-div 1 (number->stensor scalar x)) x)))
+    "X *= scalar")
+  (define-scalar-mat-node-caller
+      !scalar-div ScalarDiv
+    "X /= scalar"))
 
 ;; ===============================================================
 ;; Scalar-And-Scalar Defnode And Functions.

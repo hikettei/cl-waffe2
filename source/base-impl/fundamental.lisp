@@ -308,7 +308,7 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 (defnode (ProceedNode (myself &key (measure-time nil))
 	  :where (A[~] -> B[~])
 	  :slots ((measure-time :initarg :measure-time :reader measure-time-p)
-		  (backward :accessor proceed-backward)
+		  (backward :accessor proceed-backward-f)
 		  (result   :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
 
@@ -318,7 +318,7 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 		       (multiple-value-bind (fw bw vars params) (build x)
 			 (declare (ignore vars params))
 			 ;; Vars/Params will be tracked by other build.
-			 (setf (proceed-backward self) bw)
+			 (setf (proceed-backward-f self) bw)
 			 (if (measure-time-p self)
 			     (setf (proceed-result self) (time (funcall fw)))
 			     (setf (proceed-result self) (funcall fw)))
@@ -327,7 +327,7 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 			 `(progn ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
-			(let ((bw (proceed-backward self)))
+			(let ((bw (proceed-backward-f self)))
 			  (values
 			   (with-instant-kernel dout
 			     `(and
