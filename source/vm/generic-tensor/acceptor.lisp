@@ -247,9 +247,9 @@ Return:
   (let ((state     (tensor-state     toplevel))
 	(id        (tensor-id        toplevel))
 	(variables (tensor-variables toplevel)))
-    
-    (when (null state)
-      (return-from compile-forward #'(lambda () toplevel)))
+
+    (when (or (detach-p toplevel) (null state))
+      (return-from compile-forward (compile nil (lambda () toplevel))))
 
     (let ((next-states (map 'list #'compile-forward variables))
 	  (out-places  (map 'list #'tensor-id       variables)))
@@ -281,69 +281,149 @@ Return:
 ;; Most of backward-error, occurs here
 ;; So make it their log much clear.
 ;; Bug: Maybe this function doesn't work well.
-(defun !maybe-move (place tensor)
-  "If previous node of tensor is MoveTensor, this function is ignored, otherwise do a !move"
+(defun !maybe-move (place tensor &key (deterministic-p nil))
+  "Moves the result of backwards, into variables where it was (if deterministic).
+
+Return:
+    (values next-tensor moved-p)
+    moved-p ... If p, the tensor should be moved to the variable."
+  ;; If deterministic-p = t, do in-place.
   (when tensor
     (if (movetensor-p (tensor-backward tensor))
-	tensor
+	(values tensor nil);; the tensor is already copied?
 	(cl-waffe2/vm.nodes:with-shape-checkpoint (:moving nil)
-	    (cl-waffe2/base-impl:!move place tensor)))))
+	  (let ((place (if deterministic-p
+			   place ;; place=tensor.variables[n]
+			   (make-tensor (if (scalar-p place)
+					    0
+					    (shape place))
+					:dtype (dtype place)
+					:order (order place)))))
+	    (values (cl-waffe2/base-impl:!move place tensor) deterministic-p))))))
 
+(defun print-ast (tensor)
+  (when (and tensor (not (detach-p tensor)))
+    (print (tensor-backward tensor))
+    (mapc #'print-ast (tensor-variables tensor))))
+
+;; あとはSaveForBackwardが動いてないだけっぽい
+;; TODO
+;; save-for-backwardの動作確認
+;; explore-backwardの書き直し
 (defun explore-backwards (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
+  
   ;; g(t's dout dx dy dz...) -> [t-1]'s dout
   ;; first past-dy = 1.0
 
   ;; Get a backward node.
 
+  ;; ((self dout dx dy)
+  ;;   (values (kernel1) (kernel2)))
+  ;; Step1. dx.dy copy Step2 kernel2, kernel2, Step3 Move
+  ;; copy -> compile -> backward -> copy
+
+
+  ;; The problem is that:
+  ;; (values (!move dx (!mul dout dy)) (!move dx (!mul dout dy)))
+  ;; produces side effects
+  
   (when (null (tensor-backward toplevel))
     (return-from explore-backwards))
 
   ;; Record: at what node, the backward error was occured.
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
-    (let* ((backwards-tmp (map 'list #'tensor-backward (tensor-variables toplevel)))
+    ;; In order to restore tensors' backwards, keep them saving at backwards-tmp.
+    (let* ((ancestor-p-map (map 'list #'ancestor-param-p (tensor-variables toplevel)))
+	   (deterministic-n (count t ancestor-p-map :test #'(lambda (x y) (and x y))))
+	   (deterministic-p (<= deterministic-n 1))
+	   ;; Explore previous backwards of tensor-variables.
 	   (outs (apply
 		  ;; (backward self dout dx dy dz ...)
 		  #'cl-waffe2/vm.nodes:backward
-		  (tensor-backward toplevel)
-		  past-dy
-		  ;; detach from computation node by projecting into -> <t>.
+		  (tensor-backward toplevel)		  
+		  past-dy;(detach! past-dy)
 		  (map 'list #'detach! (tensor-variables toplevel))))
-	   (outs (map 'list #'!maybe-move (tensor-variables toplevel) outs)))
+	   (moved-p-list)
+	   ;; Pruning unused nodes by exploring ancestor-param-p
+	   ;; dy1 <- dx.grad
+	   (outs (loop for var in (tensor-variables toplevel)
+		       for out in outs
+		       for k upfrom 0
+		       if (ancestor-param-p var)
+			 collect
+			 (multiple-value-bind (res moved-p)
+			     (!maybe-move var out
+					  :deterministic-p (or deterministic-p
+							       (= k (1- deterministic-n))))
+			   (push moved-p moved-p-list)
+			   res)
+		       else
+			 collect nil
+		       finally (setq moved-p-list (reverse moved-p-list))))
+	   (movers (loop for var in (tensor-variables toplevel)
+			 for out in outs
+			 for mv? in moved-p-list
+			 if mv?
+			   collect
+			   (prog1 ;; var <- out
+			       (cl-waffe2/base-impl:!move (detach! var) (detach! out))
+			     (setf (detach-p var) nil
+				   (detach-p out) nil)))))
 
-      ;; should ends with MoveTensorNode
+      ;;(dolist (o outs)
+	;;(print-ast o)
+	;;(print "++++++++++"))
+      ;; dx1 <- dx'
+      ;; dy1 <- dy'
+
+      ;; dx <- dx1
+      ;; dy <- dy1
+		     
+      ;; all backwards' node should ends with MoveTensorNode
       #|
       (assert (every (compose #'movetensor-p #'tensor-backward)
 		     outs)
 	      nil
       "Explore-Backwards: Assertion Failed because the nodes: ~a aren't ended with MoveTensorNode/MoveTensorScalarNode" (tensor-variables toplevel))
       |#
-      
-      ;; FixME: (!add k k) produces style-warning.
-      `(let* (,@(map 'list
-		     #'(lambda (tensor)
-			 `(,(tensor-id tensor) ,tensor))
-		     (tensor-variables toplevel))
-	      ,@(loop for tensor in outs
-		      if tensor
-			collect `(,(tensor-id tensor) ,tensor)))
-	 (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
-		  (ignorable ,@(map 'list #'tensor-id (loop for o in outs if o collect o))))
-	 
-	 ,@(loop for out    in outs
-		 for tensor in (tensor-variables toplevel)
-		 for bw in backwards-tmp
-		 if out
-		   collect `(let ((,(tensor-id out) (funcall ,(compile-forward out))))
-			      (declare (ignorable ,(tensor-id out)))
-			      ,(if (slot-value tensor 'requires-grad)
-				   ;; !copy and add.
-				   `(add-grads ,(tensor-id tensor) ,(tensor-id out))
-				   (when (and
-					  (tensor-state tensor)
-					  (ancestor-param-p tensor))
-				     ;; Explore deeper if there's any params.
-				     (setf (tensor-backward tensor) bw)
-				     (explore-backwards tensor out)))))))))
 
+      (labels ((expand-backward-values (variables outs body)
+		 (cond
+		   ((and (null variables)
+			 (null outs))
+		    body)
+		   ((and (car variables) (car outs))
+		    `(let ((,(tensor-id (car outs)) (funcall ,(compile-forward (car outs)))))
+		       ;;(print ,(tensor-id (car outs)))
+		       ,(expand-backward-values (cdr variables) (cdr outs) body)))
+		   (T (expand-backward-values (cdr variables) (cdr outs) body)))))
+
+	;; Body
+	`(let* (,@(map 'list
+		       #'(lambda (tensor)
+			   `(,(tensor-id tensor) ,tensor))
+		       (tensor-variables toplevel))
+		,@(loop for tensor in outs
+			if tensor
+			  collect `(,(tensor-id tensor) ,tensor)))
+	   (declare (ignorable ,@(map 'list #'tensor-id (tensor-variables toplevel)))
+		    (ignorable ,@(map 'list #'tensor-id (loop for o in outs if o collect o))))
+	   ,(expand-backward-values
+	     (tensor-variables toplevel)
+	     outs
+	     `(progn
+		,@(map 'list #'(lambda (v x) `(setq ,(tensor-id v) (funcall ,(compile-forward x))))
+		       (tensor-variables toplevel) movers)
+		,@(loop for v  in (tensor-variables toplevel)
+			for o  in outs			
+			if (slot-value v 'requires-grad)
+			  collect `(add-grads ,v ,(tensor-id o))
+			if (and ;;(not (slot-value v 'requires-grad))
+				o
+				(tensor-state v))
+			  collect (progn
+				    (setf (detach-p v) nil)
+				    (setf (detach-p o) nil)
+				    (explore-backwards v o))))))))))

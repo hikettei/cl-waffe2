@@ -96,6 +96,7 @@
   :depends-on (:cl-waffe2 :fiveam)
   :components ((:file "vm/generic-tensor/t/package")
 	       (:file "vm/generic-tensor/t/forward")
+	       (:file "vm/generic-tensor/t/backward")
 	       (:file "vm/generic-tensor/t/view")
 	       (:file "vm/generic-tensor/t/optimize")
 	       

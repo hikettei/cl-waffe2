@@ -32,6 +32,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (defnode (MoveScalarTensorNode (myself)
 	  :out-scalar-p t
+	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+	  
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
 	  :backward ((self dout dx dy)
 		     (let ((dy-out
@@ -40,13 +43,16 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout))))
+		       ;; dx/dy never shares pointer, so just moving to dx/dy is enough i guess.
 		       (values (!move dx dout) (!move dy dy-out))))))
 
 (define-impl (MoveScalarTensorNode :device ScalarTensor)
 	     :forward ((self x y)
-		       `(progn
-			  (setf (tensor-vec ,x) (tensor-vec ,y))
-			  ,x)))
+		       `(if (not (movetensor-ignore-me ,self))
+			    (progn
+			      (setf (tensor-vec ,x) (tensor-vec ,y))
+			      ,x)
+			    ,y)))
 
 ;; TODO: Move For Scalar
 (defun !move (place tensor)
@@ -62,6 +68,18 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 			  :scalar-p (scalar-p tensor)
 			  :dtype (dtype tensor)
 			  :order (order tensor)))
+	 (res (!move out tensor)))
+    ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
+    (setf (tensor-flexible-p res) (tensor-flexible-p tensor))
+    res))
+
+(defun !copy-force (tensor)
+  "TODO: DOCSTRING"
+  (let* ((out (make-tensor (if (scalar-p tensor)
+			       0
+			       (shape tensor))
+			   :dtype (dtype tensor)
+			   :order (order tensor)))
 	 (res (!move out tensor)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (setf (tensor-flexible-p res) (tensor-flexible-p tensor))

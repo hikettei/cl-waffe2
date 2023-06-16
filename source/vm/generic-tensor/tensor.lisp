@@ -34,7 +34,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    ;; Is it scalar?
    (scalar-p :initarg :scalar-p :initform nil :reader scalar-p)
-
+   (detach-p :initform nil :accessor detach-p)
    ;; vec container
    (vec :initarg :vec :initform nil :reader vec :writer write-vec)
    (dtype :initform :float :initarg :dtype :reader dtype)
@@ -49,6 +49,11 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    (grad :initform nil :reader grad :writer set-grad)
    (gradient-adder :accessor gradient-adder)
+
+   (save-for-backward-space :initform nil :accessor save-for-backward-space)
+   (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
+
+   
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
    (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
@@ -161,7 +166,7 @@ Note that this function is inlined.
 	(orig-shape (getf initargs :shape)))
 
     ;; orig-shape = used to compute strides.
-    (setf (slot-value tensor 'orig-shape) orig-shape)
+    (setf (slot-value tensor 'orig-shape)  orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
     
     (cond
@@ -420,7 +425,7 @@ Note that view is only created for Tensors, not a Scalar.
 
 (defun detach! (tensor)
   "detach tensor from computation node."
-  (setf (tensor-backward tensor) nil)
+  (setf (detach-p tensor) t)
   tensor)
 
 (defun render-shape (tensor)
@@ -491,4 +496,18 @@ Note that view is only created for Tensors, not a Scalar.
 	  (tensor-facet tensor)
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
+
+(defun set-save-for-backward (tensor)
+  (let ((space (save-for-backward-space tensor)))
+    (when (null space)
+      (multiple-value-bind (fw bw vars pms) (with-no-grad (build (cl-waffe2/base-impl:!copy-force tensor)))
+	(declare (ignore bw vars pms))
+	(setf (save-for-backward-cloner tensor) fw)))
+
+    (setf (save-for-backward-space tensor)
+	  (funcall (save-for-backward-cloner tensor)))
+    t))
+
+(defun read-save-for-backward (tensor)
+  (save-for-backward-space tensor))
 

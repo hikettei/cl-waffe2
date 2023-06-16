@@ -42,12 +42,16 @@ Let X and Y be a given arguments and both are matrix.
      (values (!move dx dout) (!move dy (!mul -1 dout)))))
   (define-arithmetic-node MulNode "MulNode" "*"
     ((self dout dx dy)
-     (values (!move dx (!mul dout dy)) (!move dy (!mul dout (!copy dx))))))
+     (values (!mul dout dy) (!mul dout dx))))
   (define-arithmetic-node DivNode "DivNode" "/"
     ((self dout dx dy)
+     ;; ∂/∂x = 1/x
+     ;; ∂/∂y = -x/y^2
+     ;; Is dx/dy overwritten?
      (values
-      (!move dx (!div dout dy))
-      (!move dy (!div (!mul (!copy dx) (!mul -1 dout)) (!square dy)))))))
+      (!div dout dy)
+      (!div (!mul dx (!mul -1 dout))
+	    (!square dy))))))
 
 (macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
 	     `(progn
@@ -80,10 +84,9 @@ Let X be a given matrix and S be a given scalar.
      ;; dx ... scalar
      ;; dy ... matrix
 
-     ;; dx is destructed when dy is computed.
      (values
-      (!move dx (->scal (!mean (!mul dx dout))))
-      (!move dy (!mul dout (!copy dx)))))))
+      (->scal (!mean (!mul dy dout)))
+      (!mul dout dx)))))
 
 ;; ===============================================================
 
@@ -130,6 +133,7 @@ Note that the operation is automatically replaced into in-place operation."
     "divides"
     "by"))
 
+;; update docs
 (macrolet ((define-scalar-mat-node-caller (name node-name document)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -205,7 +209,8 @@ Note that the operation is automatically replaced into in-place operation."
 					 (the ,t2 (tensor-vec ,y)))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!move dx (!sas-mul dy dout)) (!sas-mul (!copy dx) dout))))
+			(values (!sas-mul dy dout)
+				(!sas-mul dx dout))))
 
 (define-impl (ScalarAndScalarDiv :device ScalarTensor)
 	     :save-for-backward (t t)
@@ -218,8 +223,13 @@ Note that the operation is automatically replaced into in-place operation."
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x)))
 	     :backward ((self dout dx dy)
-			(values (!move dx (!sas-div dout dy))
-				(!sas-div (!sas-mul (!copy dx) (!sas-mul -1 dout)) (!square dy)))))
+			;;
+			;; ∂/∂x = 1/y
+			;; ∂/∂y = -x/y^2
+			(values (!sas-div dout dy)
+				(!sas-div
+				 (!sas-mul dx (!sas-mul -1 dout))
+				 (!square dy)))))
 
 (macrolet ((define-sas-op (name node-name)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
@@ -227,8 +237,8 @@ Note that the operation is automatically replaced into in-place operation."
 		(defun ,name (x y)
 		  "TODO: Docstring"
 		  (forward (,node-name)
-			   (number->stensor x y)  ;; Returns X
-			   (number->stensor y x)) ;; Returns Y
+			   (!copy (number->stensor x y))  ;; Returns X
+			   (!copy (number->stensor y x))) ;; Returns Y
 		  ))))
   (define-sas-op !sas-add ScalarAndScalarAdd)
   (define-sas-op !sas-sub ScalarAndScalarSub)
@@ -321,5 +331,4 @@ Note that the operation is automatically replaced into in-place operation."
   (define-darith-function1 A-=scal A+=scal - !mul -1)
   (define-darith-function  A*=scal ScalarMul)
   (define-darith-function1 A/=scal A*=scal / !div 1))
-
 

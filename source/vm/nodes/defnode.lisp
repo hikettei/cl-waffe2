@@ -391,16 +391,16 @@ Return nil -> ok
        ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
-	 ;; Make a copy of tensors by coercing them into invoke MoveTensorNode
 	 ;; The copy is only needed when cl-waffe2 is used as deep learning framework. (i.e.: backward is called)
+
 	 (loop for input in ,inputs
 	       for state in ',save-for-backward
-	       if (and state
-		       *no-grad*
+	       if (and state           ;; save-for-backward=t
+		       (not *no-grad*) ;; training-mode
 		       (cl-waffe2/vm.generic-tensor:ancestor-param-p input))
-		 do (let ((prev (tensor-backward input)))
-		      (if (movetensor-p prev)
-			  (setf (cl-waffe2/base-impl:movetensor-save-for-backward prev) t))))
+		 do (progn;;let ((prev (tensor-backward input)))
+		      ;; (movetensor-p prev) maybe unnecessary case? (TODO)
+		      (set-save-for-backward input)))
 	 
 	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
@@ -410,7 +410,7 @@ Return nil -> ok
        ,(when backward
 	  `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
 	     (declare (type ,impl-name ,backward-self-name))
-	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
+	     (multiple-value-bind (,@backward-args) (apply #'values (map 'list #'(lambda (x) (or (read-save-for-backward x) x)) ,inputs))
 	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	       ,@backward-body))))))
 

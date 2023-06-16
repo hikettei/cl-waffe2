@@ -24,6 +24,7 @@
    #:!mean
    #:!move
    #:!copy
+   #:!copy-force
    #:!view
    #:!reshape
    #:!rankup

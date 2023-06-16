@@ -21,7 +21,9 @@
 		#:make-statecontainer
 		#:*no-grad*
 		#:tensor-flexible-p
-		#:with-no-grad)
+		#:with-no-grad
+		#:set-save-for-backward
+		#:read-save-for-backward)
   (:export
    #:forward
    #:backward
