@@ -3,16 +3,13 @@
 
 (in-suite :test-nodes)
 
-;; After Implementing Tensor
-
 (defnode (Bijective-Function (myself)
-	  :where ([x y] [x y] -> [x y])
+	  :where (A[x y] B[x y] -> A[x y])
 	  :documentation "Bijective-Function has a one-to-one correspondence."))
 
 (defnode (Transpose-Function (myself)
-	  :where ([x y] -> [y x])
+	  :where (A[x y] -> B[y x])
 	  :documentation "x y -> y x"))
-
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defclass MyBackend (AbstractTensor) nil)
@@ -27,7 +24,7 @@
 
 (define-impl (Transpose-Function :device CPUTensor)
 	     :forward ((self x)
-		       `(values ,x))
+		       `(progn ,x))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
 			(values dout)))
@@ -35,7 +32,7 @@
 
 (define-impl (Bijective-Function :device MyBackend-With-Impl)
 	     :forward ((self x)
-		       `(values ,x))
+		       `(progn ,x))
 	     :backward ((self dout dy)
 			(declare (ignore dy))
 			(values dout)))
@@ -53,7 +50,7 @@
     (typep (Bijective-Function) 'CL-WAFFE2/VM.NODES.FACETS-TMP::BIJECTIVE-FUNCTION-MYBACKEND-WITH-IMPL)))
 
 
-(test heuristic-backend-test
+(test heuristic-backend-dispatching-test
   (is (test-switch-backend1))
   (is (test-switch-backend2))
   (is (test-switch-backend3)))

@@ -124,15 +124,6 @@ Here's a list of reports.
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
-
-    #|
-    (if *no-grad*
-    (when (some #'cl-waffe2/vm.generic-tensor:scalar-p inputs)
-      
-      (print node)
-      (print inputs)
-      (print ancestor-param-p)
-      ))|#
     
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)

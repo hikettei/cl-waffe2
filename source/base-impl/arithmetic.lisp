@@ -265,6 +265,7 @@ Note that the operation is automatically replaced into in-place operation."
 (defun scalartensor-p (tensor)
   (scalar-p tensor))
 
+;; Test them:
 (macrolet ((define-arith-function (name
 				   invertor
 				   scalar-and-scalar-operation
