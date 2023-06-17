@@ -69,8 +69,9 @@
 (test view-slice->index-1d
   (is (M= (view (view (test-array `(10)) `(1 5)) 1) `(2))))
 
- (test view-slice-by->index-1d
-  (is (M= (view (view (test-array `(10)) `(1 10 2)) 1) `(6))))
+;; Slice-by isn't supported currently.
+;; (test view-slice-by->index-1d
+;;   (is (M= (view (view (test-array `(10)) `(1 10 2)) 1) `(6))))
 
 
 

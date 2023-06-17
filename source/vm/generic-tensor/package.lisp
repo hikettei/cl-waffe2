@@ -31,6 +31,7 @@
    #:tensor-flexible-p
    #:view
    #:tensor-view
+   #:viewtype
    #:detach
    #:*default-dtype*
    #:*default-order*

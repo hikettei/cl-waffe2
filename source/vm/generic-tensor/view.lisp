@@ -167,6 +167,9 @@
 		     `(abs (- ,end ,start)))))))
 
 (defun actual-shape (tensor)
+  (when (scalar-p tensor)
+    (return-from actual-shape `(1)))
+  
   (loop with view = (tensor-view tensor)
         for o in (original-shape tensor)
 	for i upfrom 0
@@ -597,7 +600,7 @@ Return: List[SubScript]
 		      `(nth ,k ,offsets)
 		      (nth target-dim (shape tensor))
 		      (let ((stride (nth target-dim (tensor-stride tensor)))
-			    (view (subscript-view (nth target-dim (tensor-view tensor)))))
+			    (view   (subscript-view (nth target-dim (tensor-view tensor)))))
 			(lazy* stride
 			       (compute-stepby view))))))))
 

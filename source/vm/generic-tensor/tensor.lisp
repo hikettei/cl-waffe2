@@ -111,7 +111,7 @@ Note that this function is inlined.
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
   (if (null (tensor-name tensor))
-      (vec tensor)
+      (vec tensor) ;; tensor is created by male-tensor
       (if (vec tensor) ;; add: equal size?
 	  (vec tensor)
 	  (let ((alloc (if (scalar-p tensor)

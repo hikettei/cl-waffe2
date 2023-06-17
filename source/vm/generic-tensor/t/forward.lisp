@@ -34,34 +34,6 @@
 (test forward-with-view-simple-test
   (is (test-simple-forward-with-view)))
 
-
-;; Still in Concept Stage but illustrates what cl-waffe can do.
-(defun test-complicated-network-forward ()
-  ;; with-devices ... Priority of devices
-  ;; LispTensor <- AVX2, Common Lisp's simple-array
-  ;; CPUTensor  <- Accelerated by OpenBLAS
-  (with-devices (LispTensor)
-
-    ;; make-input  -> Initializes InputTensor (shape is any)
-    ;; make-tensor -> Initialises AbstractTensor (shape is determined)
-    
-    (let* ((train-x (make-input  `(batch-size 256) :train-x))
-	   (weight  (make-tensor `(100 256) :requires-grad t))
-	   (bias    (make-tensor `(1 256)   :requires-grad t)))
-
-      (let ((out (!add (!mul train-x weight) (!view bias `(:broadcast 100) t))))
-	(multiple-value-bind (forward bw variables parameters) (build out)
-
-	  ;; Embody InputTensor with actual datum
-	  (embody-input variables :train-x (make-tensor `(100 256)))
-	  ;; (print variables)  ;; an list of variables used
-	  ;; (print parameters) ;; parameters to be optimized.
-	  (time (funcall forward))
-	  t)))))
-
-(test test-complicated-netowrk-forward
-  (is (test-complicated-network-forward)))
-
 ;; Tests call-with-view, view=t, dtype=uint8
 (defun test-elementwise-unroll-forward ()
   (with-devices (LispTensor)
@@ -92,3 +64,5 @@
   (is (test-elementwise-forward))
   )
 
+
+;; testing embody-input

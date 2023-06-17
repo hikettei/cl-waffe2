@@ -64,11 +64,24 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 (defun !copy (tensor)
   "TODO: DOCSTRING"
-  (let* ((out (make-input (shape tensor) nil
+  (let* ((out (make-input (actual-shape tensor) nil
 			  :scalar-p (scalar-p tensor)
 			  :dtype (dtype tensor)
 			  :order (order tensor)))
+	 (broadcasted-p)
+	 (broadcasts (loop for size in (shape tensor)
+			   for view in (tensor-view tensor)
+			   if (eql :broadcast (viewtype (force-list view)))
+			     collect (and
+				      (setq broadcasted-p t)
+				      `(:broadcast ,size))
+			   else
+			     collect t))
+	 (out (if broadcasted-p
+		  (apply #'!view out broadcasts)
+		  out))
 	 (res (!move out tensor)))
+    
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (setf (tensor-flexible-p res) (tensor-flexible-p tensor))
     res))
@@ -246,8 +259,8 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 		      (->mat dout)
 		      nil))))
 
-(defnode (Scalar->MatNode (myself)
-	  :where (Scalar[scal] Matrix[~ scal] -> Matrix[scal] where scal = 1)
+(defnode (Scalar->MatNode (myself out-shape)
+	  :where (Scalar[scal] Matrix[~ scal] -> Matrix[scal] where scal = out-shape)
 	  :backward ((self dout ds dm)
 		     (declare (ignore dm ds))
 		     (values (->scal dout) nil))))
@@ -280,11 +293,12 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 (with-export ->mat
   (defun ->mat (scalar-tensor &key (dims 1))
     ""
-    (forward (Scalar->MatNode)
-	     scalar-tensor
-	     (make-input (make-list dims :initial-element 1) nil
-			 :dtype (dtype scalar-tensor)))))
-			
+    (let ((out-shape (make-list dims :initial-element 1)))
+      (forward (Scalar->MatNode out-shape)
+	       scalar-tensor
+	       (make-input out-shape nil
+			   :dtype (dtype scalar-tensor))))))
+
 		       
 
 ;; ===============================================================
@@ -298,7 +312,7 @@ If ntimes < 0, reduces 1, if the axis=1, otherwise returns error."
 ;; We can also add: Proceed-Auto
 
 (defnode (ProceedNode (myself &key (measure-time nil))
-	  :where (A[~] -> B[~])
+	  :where (A[~] -> A[~])
 	  :slots ((measure-time :initarg :measure-time :reader measure-time-p)
 		  (backward :accessor proceed-backward-f)
 		  (result   :accessor proceed-result))

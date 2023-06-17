@@ -13,9 +13,9 @@
   `(with-devices (cl-waffe2/backends.lisp:LispTensor)
      (proceed ,tensor)))
 
-;; ==================================================
+;; =============================================================
 ;; Testing general-purpose arithmetic APIs: !add !sub !mul !div.
-;; ==================================================
+;; =============================================================
 
 (test test-add-form
   ;; Scalar And Scalar
@@ -110,5 +110,35 @@
 			  (make-tensor `(10 10) :initial-element 1.0)))
 	  0)
 	 1.0)))
+
+;; =============================================================
+;; Testing !reshape ->scal ->mat !unsqueeze !squeeze
+;; =============================================================
+
+;; Note: !view ... testing with !sum !mean
+
+(test reshaping-test
+  (is (equal (shape (!reshape (make-tensor `(10 10)) 100))
+	     `(100)))
+  (is (equal (shape (!reshape (make-tensor `(10 10)) t))
+	     `(100))))
+
+(test ->scal-test
+  (is (scalar-p (->scal (make-tensor `(1 1))))))
+
+(test ->mat-test
+  (is (equal `(1)   (shape (->mat (make-tensor 1.0)))))
+  (is (equal `(1 1) (shape (->mat (make-tensor 1.0) :dims 2)))))
+
+;; =============================================================
+;; Testing proceed proceed-backward
+;; =============================================================
+
+;; =============================================================
+;; Testing !flexible, broadcasting
+;; =============================================================
+
+(test flexible-test
+  (is (!add (make-tensor `(10 10)) (!flexible (make-tensor `(10))))))
 
 

@@ -207,6 +207,7 @@
 	   (type (simple-array u (*)) x out)
 	   (type fixnum offseto offsetx inco incx size))
   (dotimes (i size)
+    ;; out <- x
     (setf (aref out (+ offseto (the fixnum (* inco i))))
 	  (aref x   (+ offsetx (the fixnum (* incx i)))))))
 
