@@ -59,8 +59,17 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 				  :dtype (dtype x)
 				  :order (order x)))))
     
-    ;; TODO: More Detailed Errors.
-    (assert (= jx jy) nil "Assertion Failed with X[~~ i j] @ Y[~~ j k] -> C[~~ i k]. ~a and ~a" (shape x) (shape y))
+    (when (not (= jx jy))
+      (shaping-error
+       "!matmul failed because the last two shapes of the two given matrices are invaild.
+The operation is: A[~~ i j] B[~~ j k] C[~~ i k] -> C[~~ i k]
+                        ^      ^
+                     j doesn't match: ~a and ~a
+Shapes: A = ~a, B = ~a"
+       jx
+       jy
+       (shape x)
+       (shape y)))
 
     (forward (MatmulNode (dtype x)
 	      :transpose-a transpose-x

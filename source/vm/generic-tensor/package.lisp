@@ -38,6 +38,9 @@
    #:read-save-for-backward
    )
 
+  (:export
+   #:shaping-error)
+
   ;; Dtype API
   (:export
    #:dtype-t
