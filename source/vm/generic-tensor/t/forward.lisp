@@ -26,7 +26,7 @@
   (with-devices (LispTensor)
     (let ((out (!add (!view (make-tensor `(10 1)) t `(:broadcast 10))
 		     (make-tensor `(10 10)))))
-      (funcall (build out)))))
+      (proceed out))))
 
 (test test-forward
   (is (test-simple-forward)))

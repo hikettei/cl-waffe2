@@ -233,6 +233,8 @@ Output:
 	(forward (ExptNode) x -> n)
 	(forward (ExptNode) x (make-input (shape x) nil :dtype (dtype x) :order (order x)) n))))
 
+;; !pow
+
 )
 
 

@@ -49,7 +49,9 @@
 
   (let ((out (or out (make-input (shape tensor) nil
 				 :order (order tensor)
-				 :dtype (dtype tensor)))))
+				 :dtype (dtype tensor))))
+	(true-then  (coerce true-then (dtype->lisp-type (dtype tensor))))
+	(false-then (coerce false-then (dtype->lisp-type (dtype tensor)))))
     (forward (Where-Operation-Node condition true-then false-then)
 	     tensor
 	     out)))
@@ -67,7 +69,9 @@
 
   (let ((out (or out (make-input (shape tensor1) nil
 				 :order (order tensor1)
-				 :dtype (dtype tensor1)))))
+				 :dtype (dtype tensor1))))
+	(true-then  (coerce true-then  (dtype->lisp-type (dtype tensor1))))
+	(false-then (coerce false-then (dtype->lisp-type (dtype tensor1)))))
     (forward (Compare-Operation-Node condition true-then false-then)
 	     tensor1
 	     tensor2
