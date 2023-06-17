@@ -7,6 +7,7 @@
         :cl-waffe2
 	:cl-waffe2/base-impl
         :cl-waffe2/vm.generic-tensor
+	:cl-waffe2/distributions
         :cl-waffe2/vm.nodes))
 
 (in-package :cl-waffe2/base-impl.test)
@@ -51,4 +52,7 @@
 		     (:sparse *sparse-types*)
 		     (:dense  *dense-types*)
 		     (:all `(,@*sparse-types* ,@*dense-types*))))))))
+
+(defun M= (tensor1 tensor2)
+  (every #'= (tensor-vec tensor1) (tensor-vec tensor2)))
 

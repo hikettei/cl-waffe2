@@ -5,6 +5,7 @@
 
 (add-tester CPUTensor)
 (sub-tester CPUTensor)
-
 (move-tester CPUTensor)
+
+(matmul-test-set CPUTensor)
 

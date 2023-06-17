@@ -10,8 +10,8 @@
 	  :backward ((self dout da db do)
 		     (declare (ignore do))
 		     (values
-		      (!matmul dout db :transpose-y (not (trans-b? self)))
-		      (!matmul da dout :transpose-x (not (trans-a? self)))
+		      (!matmul dout (!t db))
+		      (!matmul (!t da) dout)
 		      nil))
 	  :documentation ""))
 
@@ -46,34 +46,28 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 		  (transpose-x nil)
 		  (transpose-y nil)
 		&aux
-		  (transpose-x (if (transposed-p x)
-				   nil
-				   transpose-x))
-		  (transpose-y (if (transposed-p y)
-				   nil
-				   transpose-y)))
+		  (x (if transpose-x (!t x) x))
+		  (y (if transpose-y (!t y) y))
+		  (transpose-x (transposed-p x))
+		  (transpose-y (transposed-p y)))
   "X[~ i j] @ Y[~ j k] -> C[~ i k]"
-  (let* ((i  (nth (if transpose-x 1 0) (last (shape x) 2)))
-	 (jx (nth (if transpose-x 0 1) (last (shape x) 2)))
-	 (jy (nth (if transpose-y 1 0) (last (shape y) 2)))
-	 (k  (nth (if transpose-y 0 1) (last (shape y) 2)))
+  (let* ((i  (nth 0 (last (shape x) 2)))
+	 (jx (nth 1 (last (shape x) 2)))
+	 (jy (nth 0 (last (shape y) 2)))
+	 (k  (nth 1 (last (shape y) 2)))
 	 (out (or out (make-input `(,@(butlast (shape x) 2) ,i ,k) nil
 				  :dtype (dtype x)
 				  :order (order x)))))
-
+    
     ;; TODO: More Detailed Errors.
     (assert (= jx jy) nil "Assertion Failed with X[~~ i j] @ Y[~~ j k] -> C[~~ i k]. ~a and ~a" (shape x) (shape y))
 
     (forward (MatmulNode (dtype x)
 	      :transpose-a transpose-x
 	      :transpose-b transpose-y)
-	     (if transpose-x
-		 (!t x)
-		 x)
-	     (if transpose-y
-		 (!t y)
-		 y)
-	     out)))
+	      x
+	      y
+	      out)))
 
 ;; (defun !dot (a b))
 

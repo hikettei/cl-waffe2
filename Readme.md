@@ -94,6 +94,7 @@ cl-waffe2.asd (:serial = t)
 - [x] BugFix: !add x y <- x never resets. (the definition of sum contributed to this problem)
 - [ ] optimize: incr vector ptr
 - [ ] Fix: a ton of style warning
+- [ ] lparallel -> optimized-memory-allocation -> fast-math kernel, fp8 fp16, uint4 etc...
 
 ```
 First goal  -> Establish a fundamental baseline

@@ -107,3 +107,47 @@
 (ss-div-tester nil)
 
 ;; test !add !sub !mul !div
+;; test proceed proceed-backward view reshape etc...
+
+(define-tester matmul-tester :dense
+  (let* ((a (ax+b `(3 3) 1 0 :order :column))
+ 	 (b (ax+b `(3 3) 1 0 :order :column))
+	 (result (proceed (!matmul a b))))
+    (when (every #'= (tensor-vec result) #(15.0 18.0 21.0 42.0 54.0 66.0 69.0 90.0 111.0))
+      t)))
+
+(define-tester transpose-matmul-tester :dense
+  (let* ((a (ax+b `(3 3) 1 0 :order :column))
+ 	 (b (ax+b `(3 3) 1 0 :order :column))
+	 (result (proceed (!matmul a b))))
+    (when (every #'= (tensor-vec result) #(15.0 18.0 21.0 42.0 54.0 66.0 69.0 90.0 111.0))
+      t)))
+
+(define-tester matmul-tester-mnk :dense
+  (let* ((a (ax+b `(3 4) 1 0 :order :column))
+	 (b (ax+b `(3 4) 1 0 :order :column)))
+    (every #'= (tensor-vec (proceed (!matmul a (!t b))))
+	   #(14.0 38.0 62.0 38.0 126.0 214.0 62.0 214.0 366.0))))
+
+(define-tester matmul-tester-mnk1 :dense
+  (let* ((a (ax+b `(3 4) 1 0 :order :column))
+	 (b (ax+b `(3 4) 1 0 :order :column)))
+    (every #'= (tensor-vec (proceed (!matmul (!t a) b)))
+	   #(80.0 92.0 104.0 116.0 92.0 107.0 122.0 137.0 104.0 122.0 140.0 158.0 116.0 137.0 158.0 179.0))))
+
+(define-tester matmul-both-transposed :dense
+  (let* ((a (ax+b `(3 3) 1 0 :order :column))
+ 	 (b (ax+b `(3 3) 1 0 :order :column))
+	 (result (proceed (!matmul (!t a) (!t b)))))
+    (when (every #'= (tensor-vec result) #(15.0 42.0 69.0 18.0 54.0 90.0 21.0 66.0 111.0))
+      t)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (export 'matmul-test-set)
+  (defmacro matmul-test-set (backend)
+    `(progn
+       (matmul-tester ,backend)
+       (transpose-matmul-tester ,backend)
+       (matmul-tester-mnk ,backend)
+       (matmul-tester-mnk1 ,backend)
+       (matmul-both-transposed ,backend))))

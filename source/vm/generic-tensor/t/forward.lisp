@@ -17,13 +17,13 @@
 
 
 (defun test-simple-forward ()
-  (with-single-device (LispTensor)
+  (with-devices (LispTensor)
     (let ((out (!add (make-tensor `(10 10))
 		     (make-tensor `(10 10)))))
       (funcall (build out)))))
 
 (defun test-simple-forward-with-view ()
-  (with-single-device (LispTensor)
+  (with-devices (LispTensor)
     (let ((out (!add (!view (make-tensor `(10 1)) t `(:broadcast 10))
 		     (make-tensor `(10 10)))))
       (funcall (build out)))))
