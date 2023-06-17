@@ -106,9 +106,6 @@
 (ss-mul-tester nil)
 (ss-div-tester nil)
 
-;; test !add !sub !mul !div
-;; test proceed proceed-backward view reshape etc...
-
 (define-tester matmul-tester :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
  	 (b (ax+b `(3 3) 1 0 :order :column))
@@ -151,3 +148,4 @@
        (matmul-tester-mnk ,backend)
        (matmul-tester-mnk1 ,backend)
        (matmul-both-transposed ,backend))))
+

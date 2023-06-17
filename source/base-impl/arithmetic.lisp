@@ -52,6 +52,12 @@ Let X and Y be a given arguments and both are matrix.
       (!div (!mul dx (!mul -1 dout))
 	    (!square dy))))))
 
+(defnode (InverseTensorNode (myself dtype)
+	  :where (A[~] -> A[~])
+	  :backward ((self dout dx)
+		     (values (!div (!mul -1 dout) (!square dx))))
+	  :documentation "A = 1/A"))
+
 (macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
 	     `(progn
 		(export ',name)
@@ -148,6 +154,15 @@ Note that the operation is automatically replaced into in-place operation."
     DivNode
     "divides"
     "by"))
+
+(with-export !inverse
+  (defun !inverse (tensor)
+    (let* ((X (if (numberp tensor)
+		  (make-tensor tensor)
+		  tensor)))
+      (if (scalar-p X)
+	  (!div 1 X)
+	  (forward (InverseTensorNode (dtype X)) (!copy X))))))
 
 ;; update docs
 (macrolet ((define-scalar-mat-node-caller (name node-name document)
@@ -261,13 +276,13 @@ Note that the operation is automatically replaced into in-place operation."
 ;; Defines general-purpose functions.
 ;; ===============================================================
 
-
 (defun scalartensor-p (tensor)
   (scalar-p tensor))
 
 ;; Test them:
 (macrolet ((define-arith-function (name
 				   invertor
+				   broadcast-op
 				   scalar-and-scalar-operation
 				   scalar-operation
 				   matrix-operation)
@@ -283,19 +298,28 @@ Note that the operation is automatically replaced into in-place operation."
 		       (,scalar-and-scalar-operation x y))
 		      ((scalar-p x)
 		       ;; X is scalar, Y is matrix.
-		       (,scalar-operation x y))
+		       ;; (!sub 1.0 (10 10))
+		       ;; (!div 1.0 (10 10))
+		       ;; Transform ->
+		       ;; -> (!add (- (10 10)) 1.0)
+		       ;; -> (!mul (/ (10 10)) 1.0)
+		       ,(if broadcast-op
+			    `(,broadcast-op x (,@invertor y))
+			    `(,scalar-operation x y)))
 		      ((scalar-p y)
-		       (,scalar-operation y (,@invertor x)))
+		       ;; (!sub (10 10) 1.0)
+		       ;; (!div (10 10) 1.0)
+		       (,scalar-operation y x))
 		      (T
 		       (,matrix-operation x y))))))))
   (define-arith-function
-      !add (progn) !sas-add !scalar-add !matrix-add)
+      !add (progn)           nil !sas-add !scalar-add !matrix-add)
   (define-arith-function
-      !sub (!mul -1) !sas-sub !scalar-sub !matrix-sub)
+      !sub (!scalar-mul -1) !add !sas-sub !scalar-sub !matrix-sub)
   (define-arith-function
-      !mul (progn) !sas-mul !scalar-mul !matrix-mul)
+      !mul (progn)          nil  !sas-mul !scalar-mul !matrix-mul)
   (define-arith-function
-      !div (!div 1) !sas-div !scalar-div !matrix-div))
+      !div (!inverse)       !mul !sas-div !scalar-div !matrix-div))
 
 
 ;; ===============================================================

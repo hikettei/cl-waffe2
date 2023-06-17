@@ -30,10 +30,21 @@
   (define-scalar-func scalar-mul *)
   (define-scalar-func scalar-div /))
 
+(define-with-typevar (matrix-inv u) (x offsetx size incx)
+  (declare (optimize (speed 3))
+	   (type (simple-array u (*)) x)
+	   (type fixnum offsetx size incx))
+  
+  (dotimes (i size)
+    (setf (aref x (+ offsetx (the fixnum (* incx i))))
+	  (/ 1 (aref x (+ offsetx (the fixnum (* incx i))))))))
+
 ;; Even on SBCL:
 ;; (disassemble (add-matrix :uint8)) <- Fails to SIMDify
 ;; (disassemble (add-matrix :float)) <- using addss (AVX2 Only?)
 ;; (disassemble (add-matrix :double)) <- using addsd (AVX2 Only?)
+
+;; define them with macrolet.
 
 (define-impl (AddNode :device LispTensor)
 	     :forward ((self x y)
@@ -106,6 +117,23 @@
 					    ,(stride-of y-view 0)))
 			      `(,x ,y))
 			   ,x))))
+
+
+(define-impl (InverseTensorNode :device LispTensor)
+	     :save-for-backward (t)
+	     :forward
+	     ((self x)
+	      (let ((inver (matrix-inv (dtype x))))
+		`(,@(call-with-view
+		     #'(lambda (x-view)
+			 `(funcall
+			   ,inver
+			   (tensor-vec ,x)
+			   ,(offset-of x-view 0)
+			   ,(size-of x-view 0)
+			   ,(stride-of x-view 0)))
+		     `(,x))
+		  ,x))))
 
 (define-impl (ScalarAdd :device LispTensor)
 	     :forward

@@ -78,7 +78,8 @@ Shapes: A = ~a, B = ~a"
 	      y
 	      out)))
 
-;; (defun !dot (a b))
+;; (defun !dot (a b)) == sum
+;; (defun einsum ), with keep using aot
 
 ;; (defun !argmax)
 ;; (defun !argmin)

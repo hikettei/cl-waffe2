@@ -15,6 +15,7 @@
    #:MulNode
    #:DivNode
    #:MatmulNode
+   #:InverseTensorNode
    #:trans-a?
    #:trans-b?
    #:!matmul
