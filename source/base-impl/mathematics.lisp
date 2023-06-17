@@ -117,7 +117,7 @@ SideEffects:
     ((self dout x out)
      (declare (ignore out))
      ;; ∂out/∂x tan(x) = 1/(cos(x)^2)
-     (values (!mul dout (!div 1 (!expt 2 (!cos x)))) nil)))
+     (values (!mul dout (!div 1 (!mul (!cos x) (!cos x)))) nil)))
 
   
   (define-elwise-node (sinh #'sinh)
@@ -137,7 +137,7 @@ SideEffects:
     ((self dout x out)
      (declare (ignore out))
      ;; ∂out/∂x tan(x) = 1/(cos(x)^2)
-     (values (!mul dout (!div 1 (!expt 2 (!cosh x)))) nil)))
+     (values (!mul dout (!div 1 (!mul (!cosh x) (!cosh x)))) nil)))
 
 
   (define-elwise-node (asin #'asin)

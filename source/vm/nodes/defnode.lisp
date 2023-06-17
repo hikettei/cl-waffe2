@@ -139,6 +139,8 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 
 ;; ~ <- broadcastable axes
 ;; ~ a b, ~ <- batch part, a b <- kernel part
+;; Enhancement: add keyword :no-grad which indicates the node doesn't have a implementation of backward.
+;; Enhancement: disassemble-me
 (defmacro defnode ((abstract-name
 		   (self &rest constructor-arguments)
 		    &key

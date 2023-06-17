@@ -1,18 +1,7 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;;
-;; TODO:
-;; 1. All View APIs
-;;    |-> parse-subscript, call-with-view
-;; 2. Optimize Call-With-View (by reshaping it).
-;;    e.g.: `(10 10 10) is reshaped into `(1000). for view=`(t t t)
-;;    ^-Offsetが0の次元は連結する
-;;    e.g.: `(t t t) should be regarded as `(3t), as long as they're continuous in memory
-;; 3. Prepare Documentations
-;; 4. Add: :tflist :indices
-
-(defparameter *unroll-threshold* 10 "Unroll if iternum falls below this threshold")
+(defparameter *unroll-threshold* 3 "Unroll if iternum falls below this threshold")
 
 ;; TO Add: ViewInstruction2D to implement matmul
 (defstruct (ViewInstruction

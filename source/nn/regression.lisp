@@ -67,7 +67,7 @@
 	(layer3 (LinearLayer 128  10)))
     (cl-waffe2:with-config (:device :cpu
 			    :no-grad nil)
-      (let ((f (!sum (call layer3 (!sin (call layer2 (!sin (call layer1 x))))))))
+      (let ((f (!softmax (call layer3 (!sin (call layer2 (!sin (call layer1 x))))))))
 	(multiple-value-bind (forward backward vars params) (build f)
 
 	  ;;(sb-profile:profile "CL-WAFFE2/BACKENDS.CPU"
@@ -84,3 +84,4 @@
 
 )))))
 |#
+  
