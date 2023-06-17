@@ -81,6 +81,58 @@ Shapes: A = ~a, B = ~a"
 ;; (defun !dot (a b)) == sum
 ;; (defun einsum ), with keep using aot
 
+(export '(ArgMax-Node ArgMin-Node !argmax !argmin))
+(defnode (ArgMax-Node (myself out-size)
+	  :where (A[~] OUT[out-size] -> OUT[out-size])
+	  :backward ((self dout da do)
+		     (declare (ignore dout da do))
+		     (values nil nil)))
+  (setf (ignore-shape-error myself) t))
+
+(defnode (ArgMin-Node (myself out-size)
+	  :where (A[~] OUT[out-size] -> OUT[out-size])
+	  :backward ((self dout da do)
+		     (declare (ignore dout da do))
+		     (values nil nil)))
+  (setf (ignore-shape-error myself) t))
+
+
+(defun !argmax (tensor &key (axis -1) (out nil))
+  "The function !argmax computes the indices of maximum values of all elements below the **axis** dimension in the given tensor.
+
+Input:  Tensor ( ... a b c)
+
+Return: AbstractTensor[uint32] ( ... a 1 1) If axis=-2"
+  (declare (type AbstractTensor tensor)
+	   (type fixnum axis))
+  (let* ((axis (if (< axis 0)
+		   (+ (length (shape tensor)) axis)
+		   axis))
+	 (out-shape (butlast (shape tensor) axis))
+	 (x   (apply #'!reshape tensor `(,@out-shape t)))
+	 (out (or out (make-input `(,@out-shape 1) nil
+				  :dtype :uint32
+				  :order (order tensor)))))
+    (forward (ArgMax-Node (shape out)) x out)))
+
+(defun !argmin (tensor &key (axis -1) (out nil))
+  "The function !argmin computes the indices of minimum values of all elements below the **axis** dimension in the given tensor.
+
+Input:  Tensor ( ... a b c)
+
+Return: AbstractTensor[uint32] ( ... a 1 1) If axis=-2"
+  (declare (type AbstractTensor tensor)
+	   (type fixnum axis))
+  (let* ((axis (if (< axis 0)
+		   (+ (length (shape tensor)) axis)
+		   axis))
+	 (out-shape (butlast (shape tensor) axis))
+	 (x   (apply #'!reshape tensor `(,@out-shape t)))
+	 (out (or out (make-input `(,@out-shape 1) nil
+				  :dtype :uint32
+				  :order (order tensor)))))
+    (forward (ArgMin-Node (shape out)) x out)))
+
 ;; (defun !argmax)
 ;; (defun !argmin)
 ;; (defun !max)

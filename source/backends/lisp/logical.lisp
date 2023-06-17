@@ -1,7 +1,8 @@
 
 (in-package :cl-waffe2/backends.lisp)
 
-;; should be optimized (is the function vectorized?)
+
+;; TODO: should be optimized (is the function vectorized?)
 (define-with-typevar (where-kernel u) (x y
 				       cond true-then false-then
 				       size offsetx offsety incx incy)
@@ -16,6 +17,7 @@
 	      true-then
 	      false-then))))
 
+;; TODO: Use AVX2? (should be realised on other backends?)
 (define-with-typevar (compare-kernel u) (x y out
 					 cond
 					 true-then false-then
