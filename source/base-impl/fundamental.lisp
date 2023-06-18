@@ -56,14 +56,29 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 ;; TODO: Move For Scalar
 (defun !move (place tensor)
-  "TODO: DOCSTRING"
+  "The function !move returns a node which moves tensor's visible elements into place's visible elements.
+
+Inputs:
+    - place[AbstractTensor] tensor to be overwritten.
+    - tensor[AbstractTensor] tensor to be referred.
+
+Output:
+    - Copied Tensor."
   (if (and (scalar-p place)
 	   (scalar-p place))
       (forward (MoveScalarTensorNode) place tensor)
       (forward (MoveTensorNode (dtype place)) place tensor)))
 
 (defun !copy (tensor)
-  "TODO: DOCSTRING"
+  "The function !copy returns a node which clones the tensor's visible area.
+Note that copying broadcasted tensor never increase memory size than it was, that is: the shape of copied tensor is actual shape of tensor, being broadcasted.
+
+!copy is originally intended to make a cache before calling destructive operation, and sometimes !copy operation is ignored. (i.e.: the copy is concluded to be useless). Therefore, the retuned AbstractTensor is InputTensor.
+
+If you want to ignore this behaviour, consider to use: !copy-force which never ignored, and broadcasted axes will be padded.
+
+Input:  Tensor[AbstractTensor]
+Output: Tensor[AbstractTensor]"
   (let* ((out (make-input (actual-shape tensor) nil
 			  :scalar-p (scalar-p tensor)
 			  :dtype (dtype tensor)
@@ -87,7 +102,9 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
     res))
 
 (defun !copy-force (tensor)
-  "TODO: DOCSTRING"
+  "The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
+
+This function is also used to create cognitious tensor."
   (let* ((out (make-tensor (if (scalar-p tensor)
 			       0
 			       (shape tensor))
@@ -131,7 +148,12 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 
 
 (defun !view (tensor &rest subscripts)
-  "TODO: DOC
+  "The function !view returns a node which changes a view of the given tensor.
+
+
+Example:
+    (!view tensor 0)
+       ...
 
 Return:
     - (values sliced-tensor broadcast-reverser)"
@@ -350,9 +372,7 @@ The backward is created with the previous node.
 
 This function will be useful especially when debugging on REPL.
 
-Also, using (with-dynamically-mode) will invoke this function every time forward invoked.
-
-If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation."
+If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes."
   (let* ((node (ProceedNode :measure-time measure-time))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out (forward node tensor)))
@@ -391,9 +411,12 @@ If measure-time=t, ProceedNode wraps with time macro when calling **COMPILED** f
 (define-impl (Flexible-Rank-Node :device t) :forward ((self x) `(progn ,x)))
 
 (defun !flexible (tensor)
-  "Tensor[X Y] -> Tensor[~ X Y]
-                         ↑ allow to add 1 here, if needed.
-   TODO: Docstring"
+  "The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.
+
+That is:
+Tensor = (10 10) -> [!flexible] -> Tensor' = (1 ... 1 10 10)
+                                                 ^ <1 x N>
+Note that added axes could be broadcasted automatically when the operation called with multiple arguments."
   (let ((out (forward (Flexible-Rank-Node) tensor)))
     (setf (tensor-flexible-p out) t)
     out))

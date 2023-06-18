@@ -20,7 +20,16 @@
 ;;=========================================================================
 
 (defun !sum (tensor &key (axis t) (-> nil) (keep-repeat nil))
-  "Sum up the given tensor along the axis."
+  "The function !sum return a node which computes the sum of tensor along the given axis.
+
+Input:
+    - tensor, a tensor to be reducted.
+    - axis[t or fixnum or list] the axis to be reducted.
+    - -> [AbstractTensor or nil] the place to write the result. If nil, creates a new tensor.
+    - keep-repeat[boolean] If t, the axis reducted is repeated.
+
+Return:
+    - out[AbstractTensor]"
   (declare (type AbstractTensor tensor)
 	   (type boolean keep-repeat)
 	   (type (or t list fixnum) axis))
@@ -50,7 +59,7 @@
        (setq shape (make-list dims :initial-element 1))))
 
     ;; Use Instead: make-input
-    (let* ((out (or -> (make-tensor shape
+    (let* ((out (or -> (make-tensor shape 
 				    :dtype (dtype tensor)
 				    :order (order tensor))))
 	   (out (A*=scal out 0))) ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill
@@ -66,7 +75,16 @@
 	    (apply #'!view (A+=B out* tensor) reverser))))))
 
 (defun !mean (tensor &key (axis t) (-> nil) (keep-repeat nil))
-  ""
+  "The function !mean return a node which computes the average of tensor along the given axis.
+
+Input:
+    - tensor, a tensor to be reducted.
+    - axis[t or fixnum or list] the axis to be reducted.
+    - -> [AbstractTensor or nil] the place to write the result. If nil, creates a new tensor.
+    - keep-repeat[boolean] If t, the axis reducted is repeated.
+
+Return:
+    - out[AbstractTensor]"
   (let* ((result (!sum tensor :axis axis :-> -> :keep-repeat keep-repeat))
 	 (dims (length (shape tensor)))
 	 (reducted-elements 1))
