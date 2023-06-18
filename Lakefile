@@ -17,3 +17,6 @@
 
 (task "test" ()
       (sh "ros ./roswell/cl-waffe2-test.ros"))
+
+(task "gendoc" ()
+      (sh "ros ./roswell/cl-waffe2-test.ros gendoc"))

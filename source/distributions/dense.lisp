@@ -124,9 +124,6 @@
 	  (/ w (+ b w))
 	  (/ b (+ b w))))))
 
-;; randn
-;; chisquare
 ;; gamma
-;; etc...
-
+;; dense
 

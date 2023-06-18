@@ -6,7 +6,7 @@ exec ros -Q -- $0 "$@"
 (progn ;;init forms
   (ros:ensure-asdf)
   (load #p"./cl-waffe2.asd")
-  #+quicklisp(ql:quickload '(:cl-waffe2) :silent t)
+  #+quicklisp(ql:quickload '(:cl-waffe2 :cl-waffe2/docs) :silent t)
   )
 
 (defpackage :ros.script.cl-waffe2-test.3893644947
@@ -16,7 +16,11 @@ exec ros -Q -- $0 "$@"
 ;; delete it in the future.
 #+sbcl(declaim (sb-ext:muffle-conditions cl:style-warning))
 (defun main (&rest argv)
-  (declare (ignorable argv))
-  (asdf:load-system :cl-waffe2)
-  (asdf:test-system :cl-waffe2))
+  (cond
+    ((equal (car argv) "gendoc")
+     (cl-waffe2.docs:generate)
+     )
+    (T
+     (asdf:load-system :cl-waffe2)
+     (asdf:test-system :cl-waffe2))))
 ;;; vim: set ft=lisp lisp:
