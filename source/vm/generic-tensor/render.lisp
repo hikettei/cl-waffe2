@@ -221,7 +221,7 @@ The result sequence MUST not over max-length.
       (loop for row in all-rows
             for row-index from 0
             do (when line-length-lock-p
-                 (dotimes (_ line-length)
+                 (dotimes (_ (1- line-length))
                    (princ "–" stream))
                  (format stream "~%"))
 
@@ -243,11 +243,10 @@ The result sequence MUST not over max-length.
             do (setq line-length-lock-p t)
                (format stream "~%")))))
 
-#|
+
 (defun test ()
   (let ((table (make-print-table)))
     (addrow! table (make-row `("NAME" ":train-x")))
     (addrow! table (make-row `("SIZE" "(BATCH_SIZE 784)")))
     (render-table table t)))
-|#
 

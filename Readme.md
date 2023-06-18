@@ -3,21 +3,17 @@
 
 **The project is still in the concept stage.**
 
+Things are subject to change.
+
 cl-waffe2 is a open-source project that provides a differentible matrix operation which is fairly extensible and strongly optimized by JIT Compiler.
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
-# Features
+# Goals
 
-### Safe and Static Shaping
-
-### View First.
-
-### Macro-Base JIT
-
-### All Tensors and Nodes are Generic.
-
-### Useful APIs
+1. One cl-waffe2 code, consisted of multiple backends, which consisted of small pieces of backends.
+2. Everything is lazy-evaluated, being compiled.
+3. defined-and-run, closer to defined-by-run APIs.
 
 # Structure
 
@@ -95,6 +91,7 @@ cl-waffe2.asd (:serial = t)
 - [ ] optimize: incr vector ptr
 - [ ] Fix: a ton of style warning
 - [ ] lparallel -> optimized-memory-allocation -> fast-math kernel, fp8 fp16, uint4 etc...
+- [ ] Add: Restarting
 
 ```
 First goal  -> Establish a fundamental baseline

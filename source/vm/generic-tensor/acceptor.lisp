@@ -30,26 +30,51 @@
   (variables variables :type list)
   (tmp-variables tmp-variables :type list))
 
+(defstruct (NodeParameters
+	    (:constructor make-node-parameters (parameters)))
+  (parameters parameters :type list))
+
 (defmethod print-object ((node NodeVariables) stream)
   (let ((syms (nodevariables-symbols node))
-	(vars (nodevariables-variables node)))
+	(vars (nodevariables-variables node))
+	(table (make-print-table)))
     (format
      stream
-     "{NodeVariables
-    - symbols
+     "+= [Computation Node Information] =======+
+
+Subscripts:
 ~a
-    - variables
+
+Variables
 ~a
-    - :n-tmp-variables ~a}"
+
+ - The number of tmp variables: ~a
++========================================+" ;; TODO: Print Number of Parameters
      (with-output-to-string (out)
-       (loop for k upfrom 0 below (length syms) by 2
-	     do (format out "     [~a -> ~a]~%" (nth k syms) (nth (1+ k) syms))))
+       (loop for k downfrom (length syms) to 0 by 2
+	     if (nth k syms)
+	       do (format out "     [~a -> ~a]~%" (nth k syms)
+			  (or (nth (1+ k) syms) "?"))))
+     
      (with-output-to-string (out)
-       (loop for k upfrom 0 below (length vars) by 2
-	     do (format out "     [~a -> ~a]~%" (nth k vars) (shape (nth (1+ k) vars)))))
+       (let ((first-row)
+	     (second-row))
+	 (push "NAMES" first-row)
+	 (push "SIZE"  second-row)
+	 (loop for k upfrom 0 below (length vars) by 2
+	       do (push (nth k vars) first-row)
+		  (push (shape (nth (1+ k) vars)) second-row))
+	 
+	 (mapc #'(lambda (n s)
+		   (addrow! table
+			    (make-row `(,(format nil "~a" n)
+					,(format nil "~a" s)))))
+	       (reverse first-row) (reverse second-row))
+	 (render-table table out)))
      (length (nodevariables-tmp-variables node)))))
 
-(defstruct (NodeParameters))
+(defmethod print-object ((params NodeParameters) stream)
+  (format stream "#S(NODEPARAMETERS~%    :PARAMETERS (omitted)~%    :ntensors ~a)" (length (nodeparameters-parameters params))))
 
 (defun embody-input (variables variable-name tensor)
   "(embody-input variables :a tensor)"
@@ -133,7 +158,7 @@
      forward
      backward
      vars
-     params)))
+     (make-node-parameters params))))
 
 (defun construct-variables-table (variables-list)
   "Returns variable-table where key and value is tensor's name and tensor's pointer."

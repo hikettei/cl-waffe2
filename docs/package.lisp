@@ -107,18 +107,21 @@
 (defparameter *target-dir* "./docs/scriba")
 
 (defun write-scr (filepath content)
-  (with-open-file (str filepath
+  (with-open-file (str (out-dir filepath)
                        :direction :output
                        :if-exists :supersede
                        :if-does-not-exist :create)
     (format str "~a" content)))
 
 (defun out-dir (name)
-  (format nil "~a/~a" *target-dir* name))
+  (format nil "~a/~a.scr" *target-dir* name))
 
 
 (defparameter *overview* "")
+(defparameter *setup* "")
+(defparameter *concept* "")
 
 (defun generate ()
+  (write-scr "overview" *overview*)
   
   )
