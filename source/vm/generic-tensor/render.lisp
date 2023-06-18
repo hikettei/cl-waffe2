@@ -173,3 +173,81 @@ The result sequence MUST not over max-length.
       (pprint-vector out tensor t indent)
       out)))
 
+
+;;TO ADD: Table Printer
+;;
+;; NAME  |    :train-x     |
+;; -----------------------------
+;; SHAPE |  (BATCH_SIZE N) |
+
+
+(defstruct (PrintTable
+            (:constructor make-print-table))
+  (rows nil :type list))
+
+(defstruct (TableRow
+            (:constructor make-row (elements)))
+  (elements elements :type list)
+  (maxlen   0 :type fixnum)
+  (midpoint 0 :type fixnum))
+
+(defun update-row-info! (row)
+  (setf (tablerow-maxlen row) (apply #'max (mapcar #'length (tablerow-elements row))))
+  (setf (tablerow-midpoint row) (floor (/ (tablerow-maxlen row) 2))))
+
+(defun addrow! (table row)
+  (declare (type PrintTable table)
+           (type TableRow row))
+
+  (update-row-info! row)
+  (setf (printtable-rows table) (append (printtable-rows table) (list row))))
+
+(defun render-table (table stream)
+  (declare (type PrintTable table))
+
+  (with-slots ((all-rows rows)) table
+    (let* ((num-cols (length (tablerow-elements (first all-rows))))
+           (col-widths (make-list num-cols :initial-element 0))
+           (line-length-lock-p nil)
+	   (line-length 0))
+
+      ;; Calculate column widths
+      (loop for row in all-rows
+            do (loop for i below num-cols
+                     do (let ((element (nth i (tablerow-elements row))))
+                          (setf (nth i col-widths) (max (length element) (nth i col-widths))))))
+
+      ;; Render table
+      (loop for row in all-rows
+            for row-index from 0
+            do (when line-length-lock-p
+                 (dotimes (_ line-length)
+                   (princ "–" stream))
+                 (format stream "~%"))
+
+            do (loop for col-index below num-cols
+                     for element in (tablerow-elements row)
+                     for width in col-widths
+                     do (let* ((diff (max 0 (- width (length element))))
+                               (left-pad (floor (/ diff 2)))
+                               (right-pad (- diff left-pad)))
+                          (dotimes (_ (1+ left-pad))
+                            (princ " " stream))
+                          (format stream "~a" element)
+                          (dotimes (_ (1+ right-pad))
+                            (princ " " stream))
+                          (princ "| " stream)
+			  (unless line-length-lock-p
+			    (incf line-length (+ 4 left-pad right-pad (length element))))))
+
+            do (setq line-length-lock-p t)
+               (format stream "~%")))))
+
+#|
+(defun test ()
+  (let ((table (make-print-table)))
+    (addrow! table (make-row `("NAME" ":train-x")))
+    (addrow! table (make-row `("SIZE" "(BATCH_SIZE 784)")))
+    (render-table table t)))
+|#
+
