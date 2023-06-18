@@ -148,6 +148,15 @@ Variables
 		(macroexpand-backward nil))
   "Return:
     (values forward backward variables parameters)"
+
+  (when (some #'symbolp (shape toplevel-tensor))
+    (node-compile-error
+     "Can't construct forward/backward code because the shape of toplevel-tensor should be determined by the end of nodes.
+
+The shape of toplevel-tensor: ~a
+
+Perhaps you're forgetting to call reducting APIs: !sum or !mean for example." (shape toplevel-tensor)))
+  
   (multiple-value-bind (forward vars params backward)
       (construct-forward toplevel-tensor
 			 :ignore-optimize ignore-optimize

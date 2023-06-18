@@ -35,3 +35,12 @@
 (defmacro shaping-error (content &rest args)
   `(error (make-condition 'Shaping-error
 			  :content (format nil ,content ,@args))))
+
+(define-condition node-compile-error (simple-error)
+  ((content :initarg :content))
+  (:report
+   (lambda (c s)
+     (format s "[cl-waffe2] Node-Compile-Error: ~a" (slot-value c 'content)))))
+
+(defmacro node-compile-error (content &rest args)
+  `(error (make-condition 'node-compile-error :content (format nil ,content ,@args))))
