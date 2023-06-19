@@ -430,14 +430,16 @@ Note that view is only created for Tensors, not a Scalar.
   "The function parameter calls (proceed tensor) first, and then returns the same tensor where require-grad = t."
   (declare (type AbstractTensor tensor))
   (let ((out (cl-waffe2/base-impl:proceed tensor)))
-    (make-tensor (if (scalar-p out)
-		     out
-		     (shape out))
-		 :requires-grad t
-		 :vec (vec out)
-		 :view (map 'list #'force-list (tensor-view out))
-		 :order (order out)
-		 :dtype (dtype out))))
+    (let ((res (make-tensor (if (scalar-p out)
+				out
+				(shape out))
+			    :requires-grad t
+			    :vec (vec out)
+			    :view (map 'list #'force-list (tensor-view out))
+			    :order (order out)
+			    :dtype (dtype out))))
+      (setf (tensor-vec res) (vec out))
+      res)))
 
 
 (defun render-shape (tensor)
