@@ -164,12 +164,36 @@ With regard to practical usage, visit my tutorial.
 	  (list     `(define-forward-function ,name #'(lambda ,@on-call->))))
        t)))
 
-;; TODO: Print-Object like cl-waffe
+(defmethod find-params ((model Composite))
+  (let ((names (map 'list #'c2mop:slot-definition-name (c2mop:class-slots (class-of model)))))
+    (loop for name in names
+	  if (and (subtypep (class-of (slot-value model name))
+			    'cl-waffe2/vm.generic-tensor:AbstractTensor)
+		  (slot-value (slot-value model name) 'cl-waffe2/vm.generic-tensor:requires-grad))
+	    collect (cons name (slot-value model name)))))
+
+(defmethod render-model-content ((model Composite))
+  (let* ((parameters (find-params model))
+	 (longest-name (1+ (loop for p in parameters
+				 maximize (length (symbol-name (car p)))))))
+    (when (null parameters)
+      (return-from render-model-content "()"))
+
+    (with-output-to-string (out)
+      (format out "(~%")
+      (dolist (p parameters)
+	(let* ((name  (symbol-name (car p)))
+	       (param (cdr p))
+	       (name-len (length name)))
+	  (format out "    ~a" name)
+	  (dotimes (i (- longest-name name-len)) (princ " " out))
+	  (format out "-> ~a~%" (shape param))))
+      (format out ")"))))
+
 (defmethod print-object ((model Composite) stream)
   (format stream
-	  "<Composite: ~a{~a}(
-    (TODO: Find out parameters)
-    )"
+	  "<Composite: ~a{~a}~a"
 	  (class-name (class-of model))
-	  (model-id model)))
+	  (model-id model)
+	  (render-model-content model)))
 

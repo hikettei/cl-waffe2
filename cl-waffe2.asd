@@ -12,7 +12,7 @@
   :description "Deep Learning Framework"
   :pathname "source"
   :serial t
-  :depends-on (:cl-ppcre :fiveam :alexandria :cffi :numcl :lparallel)
+  :depends-on (:cl-ppcre :fiveam :alexandria :cffi :numcl :lparallel :closer-mop)
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")

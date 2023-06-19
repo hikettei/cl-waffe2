@@ -37,7 +37,8 @@
   (:export
    #:defmodel
    #:Composite
-   #:call)
+   #:call
+   #:find-params)
 
   (:export
    #:*no-grad*

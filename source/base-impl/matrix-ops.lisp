@@ -78,8 +78,11 @@ Shapes: A = ~a, B = ~a"
 	      y
 	      out)))
 
-;; (defun !dot (a b)) == sum
-;; (defun einsum ), with keep using aot
+(defun !dot (x y)
+  ""
+  (!sum (!mul x y)))
+
+;; (defun einsum)
 
 (export '(ArgMax-Node ArgMin-Node !argmax !argmin))
 (defnode (ArgMax-Node (myself out-size)
