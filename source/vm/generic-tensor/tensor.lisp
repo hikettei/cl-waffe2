@@ -382,8 +382,6 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	 (tensor-view actual-tensor)))
   t)
 
-;; (defun reshape ())
-
 (defun view (tensor &rest subscripts)
   "The function view creates a view of given tensor.
 Note that the function *view* doesn't records ANY NODES, while the function *!view* does.
@@ -427,6 +425,20 @@ Note that view is only created for Tensors, not a Scalar.
   "detach tensor from computation node."
   (setf (detach-p tensor) t)
   tensor)
+
+(defun parameter (tensor)
+  "The function parameter calls (proceed tensor) first, and then returns the same tensor where require-grad = t."
+  (declare (type AbstractTensor tensor))
+  (let ((out (cl-waffe2/base-impl:proceed tensor)))
+    (make-tensor (if (scalar-p out)
+		     out
+		     (shape out))
+		 :requires-grad t
+		 :vec (vec out)
+		 :view (map 'list #'force-list (tensor-view out))
+		 :order (order out)
+		 :dtype (dtype out))))
+
 
 (defun render-shape (tensor)
   "Returns a shape"

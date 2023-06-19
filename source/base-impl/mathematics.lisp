@@ -5,6 +5,8 @@
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
+;; Memo: uint8 with sin, construct lut?
+
 ;; ==============================================================
 ;; F() -> G(X, OUT) Function Family
 ;; ==============================================================
