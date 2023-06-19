@@ -11,7 +11,6 @@
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  :backward ((self dout dx dy)
-		     (declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
@@ -19,7 +18,13 @@
 				 dout
 				 (!copy dout))))
 		       ;; X <- Y
-		       (values dout dy-out)))
+		       (values
+			(if (eql (tensor-attribute dx) :chain)
+			    (!move dx dout)
+			    dout)
+			(if (eql (tensor-attribute dy) :chain)
+			    (!move dy dy-out)
+			    dy-out))))
 	  :documentation "
 The Node MoveTensorNode must satisfy the following behaviours:
 
@@ -38,7 +43,6 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 	  
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
 	  :backward ((self dout dx dy)
-		     (declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
@@ -46,7 +50,13 @@ The option ignore-me can be accessed by the function (movetensor-ignore-me MoveT
 				 dout
 				 (!copy dout))))
 		       ;; dx/dy never shares pointer, so just moving to dx/dy is enough i guess.
-		       (values dout dy-out)))))
+		       (values
+			(if (eql (tensor-attribute dx) :chain)
+			    (!move dx dout)
+			    dout)
+			(if (eql (tensor-attribute dy) :chain)
+			    (!move dy dy-out)
+			    dy-out))))))
 
 (define-impl (MoveScalarTensorNode :device ScalarTensor)
 	     :forward ((self x y)
@@ -422,4 +432,3 @@ Note that added axes could be broadcasted automatically when the operation calle
   (let ((out (forward (Flexible-Rank-Node) tensor)))
     (setf (tensor-flexible-p out) t)
     out))
-

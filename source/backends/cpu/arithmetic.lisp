@@ -20,7 +20,7 @@
 	   (:double
 	    `(blas-daxpy
 	      ,(size-of y-view 0)
-	      ,alpha
+	      ,(coerce alpha 'double-float)
 	      (tensor-ptr ,y :offset ,(offset-of y-view 0))
 	      ,(stride-of y-view 0)
 	      (tensor-ptr ,x :offset ,(offset-of x-view 0))

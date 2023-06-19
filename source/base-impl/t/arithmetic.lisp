@@ -92,8 +92,8 @@
 			(r (,lisp-op 1 1)))
 		    (when (= r (tensor-vec c))
 		      (proceed-backward (,op a b))
-		      (if (and (= (tensor-vec a) ,grad1)
-			       (= (tensor-vec b) ,grad2))
+		      (if (and (= (tensor-vec (grad a)) ,grad1)
+			       (= (tensor-vec (grad b)) ,grad2))
 			  t
 			  :backward)))))))
   (define-ss-tester ss-add-tester !add + 1 1)
