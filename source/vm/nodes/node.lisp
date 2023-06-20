@@ -114,6 +114,7 @@ Here's a list of reports.
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node &rest inputs))
 
+;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
@@ -187,7 +188,6 @@ Here's a list of reports.
 								collect `(:broadcast ,(nth i largest-axis-shape))))
 					      (out (apply #'cl-waffe2/base-impl:!view out subscripts)))
 					 ;; Apply Broadcast to flexible axis
-					 ;; Avoid stackoverflow
 					 (setf (tensor-flexible-p out) nil)
 					 out)
 			     else

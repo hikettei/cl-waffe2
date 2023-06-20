@@ -6,9 +6,7 @@
 (defnode (MatMulNode (myself dtype &key transpose-a transpose-b)
 	  :where (A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
-		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?)
-		  (A :accessor matmul-orig-a)
-		  (B :accessor matmul-orig-b))
+		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
 	  ;; add slots: orig-a orig-b
 	  :backward ((self dout da db do)
 		     (declare (ignore do))
@@ -27,9 +25,7 @@ Internally, This Node Returns The Given A itself but taking transpose of A's sha
 If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then transpose will be done with NO overhead."))
 
 (define-impl (LazyTransposeNode :device t)
-	     :save-for-backward (t)
-	     :forward ((self x)
-		       `(progn ,x))
+	     :forward ((self x) `(progn ,x))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
 			(values dout)))
@@ -45,7 +41,7 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 ;; :=====================================:
 (defun !t (tensor)
   "Applies Lazy-Transpose to the given tensor"
-  ;;(forward (LazyTransposeNode) tensor)
+  ;; extend flexible?
   (extend-states (forward (LazyTransposeNode) tensor) tensor))
 
 (defun !matmul (x y

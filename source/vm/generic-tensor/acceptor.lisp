@@ -241,19 +241,20 @@ Return:
 
   ;; out-scalar -> backward -> Each Parameters
 
-  (let* ((out (if (scalar-p out-scalar)
-		  (make-tensor 1
-			       :dtype (dtype out-scalar)
-			       :order (order out-scalar))
-		  (make-tensor (shape out-scalar)
-			   :dtype (dtype out-scalar)
-			   :order (order out-scalar)
-			   :initial-element 1)))
-	 (body `(lambda ()
-		  ,(explore-backwards out-scalar out)
-		  t)))
-    (when macroexpand (print body))
-    (compile nil body)))
+  (with-no-grad
+    (let* ((out (if (scalar-p out-scalar)
+		    (make-tensor 1
+				 :dtype (dtype out-scalar)
+				 :order (order out-scalar))
+		    (make-tensor (shape out-scalar)
+				 :dtype (dtype out-scalar)
+				 :order (order out-scalar)
+				 :initial-element 1)))
+	   (body `(lambda ()
+		    ,(explore-backwards out-scalar out)
+		    t)))
+      (when macroexpand (print body))
+      (compile nil body))))
 
 (defun map-tree (fn tree)
   (let ((tree (funcall fn tree)))

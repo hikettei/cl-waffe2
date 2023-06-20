@@ -19,8 +19,6 @@
    #:trans-a?
    #:trans-b?
    #:!matmul
-   #:matmul-orig-a
-   #:matmul-orig-b
    #:transposed-p
    #:!t)
   (:export
