@@ -57,10 +57,9 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 			   `(,@subscripts ,i))))))
 	   (explore 0 nil)))))))
 
-;; TODO: AddDoc distribution sampler.
-;; BASIC Format: (distribution-name shape (If Any, arguments for distribution) &rest make-tensor's keywords...)
+;; AddDoc: A family of Initializer Function
 
-;; Export this macro as user-extensible macro at other name.?
+
 ;; TODO: Optimize -> coerce
 (macrolet ((define-initializer-function (function-name
 					 (&rest args)
@@ -84,9 +83,10 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
       #'(lambda (i)
 	  (declare (ignore i))
 	  (sample-uniform-random upfrom below)))
-    "The function uniform-random samples the uniform-random from the function (random n), returning the new tensor with the given shape.
+    "The function uniform-random is a family of initializer funtions, and samples matrices from uniform random distribution using Common Lisp's standard function, (random arg).
 
-Each element, x = [upfrom, below)")
+Input:
+    upfrom, below. Each elements of returned tensor is in the range of: [upfrom, below)")
   
   (define-initializer-function
       ax+b
@@ -94,8 +94,13 @@ Each element, x = [upfrom, below)")
     (let ((a (coerce a (dtype->lisp-type (dtype tensor))))
 	  (b (coerce b (dtype->lisp-type (dtype tensor)))))
       #'(lambda (i) (step-ax+b a i b)))
-    "The function ax+b samples the new tensor following this sequence:
-Tensor[Index] = a*Index + b"
+    "The function ax+b is a family of initializer functions, and samples matrices from arithmetic progression.
+
+Formula:
+    Tensor[i] = a*i + b.
+
+Input:
+    a, b - Coefficients of the above formula."
     t)
 
   (define-initializer-function
@@ -111,7 +116,14 @@ Tensor[Index] = a*Index + b"
       #'(lambda (i)
 	  (declare (ignore i))
 	  (funcall sampler alpha a b)))
-    "The function beta samples beta distributions using this algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482")
+    "The function beta is a family of initializer functions, and sample matrices from beta distribution.
+
+Reference:
+    I've referred to this paper, and algorithms.
+    Generating Beta Variates with Nonintegral Shape Parameters (R. C. H. Cheng University of Wales Institute of Science and Technology)
+    PDF: https://dl.acm.org/doi/pdf/10.1145/359460.359482
+
+Note: My implementation is unstable, being occurs floating-overflow constantly..., especially when min(alpha, beta) < 1.0 (i.e.: beta-bc)")
 
   (define-initializer-function
       normal
@@ -121,7 +133,16 @@ Tensor[Index] = a*Index + b"
       #'(lambda (i)
 	  (declare (ignore i))
 	  (coerce (cl-randist:random-normal-ziggurat mean stddev) (dtype->lisp-type (dtype tensor)))))
-    "normal dist")
+    "The function normal is a family of initializer functions, and samples matrices from normal distribution.
+
+The following library is used:
+    https://github.com/lvaruzza/cl-randist (seems to create ziggurat table with size=128)
+
+Input:
+    mean
+    stddev - Standard Deviation, σ.
+
+")
 
   (define-initializer-function
       randn
@@ -130,7 +151,14 @@ Tensor[Index] = a*Index + b"
       #'(lambda (i)
 	  (declare (ignore i))
 	  (funcall sampler)))
-    "The function randn samples the gaussian distributions using ziggurat algorithm.")
+    "The function randn is a family of initializer functions, and samples the gaussian distributions using ziggurat algorithm with table-size=256.
+
+I've referred following papers and articles to implement this.
+ = References ===============================================
+ https://andantesoft.hatenablog.com/entry/2023/04/30/183032
+ Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
+ https://marui.hatenablog.com/entry/2023/01/23/194507
+ ============================================================")
 
   (define-initializer-function
       expotential
@@ -139,7 +167,14 @@ Tensor[Index] = a*Index + b"
       #'(lambda (i)
 	  (declare (ignore i))
 	  (funcall sampler)))
-    "The function expotential samples the expotential distribution using ziggurat algorithm.")
+    "The function expotential is a family of initializer functions, and samples the expotential distribution using ziggurat algorithm with table-size=256.
+
+I've referred following papers and articles to implement this.
+ = References ===============================================
+ https://andantesoft.hatenablog.com/entry/2023/04/30/183032
+ Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
+ https://marui.hatenablog.com/entry/2023/01/23/194507
+ ============================================================")
 
   (define-initializer-function
       gamma
@@ -147,7 +182,11 @@ Tensor[Index] = a*Index + b"
     #'(lambda (i)
 	(declare (ignore i))
 	(sample-gamma (coerce k (dtype->lisp-type (dtype tensor)))))
-    "The function gamma samples the gamma distributions.")
+    "The function gamma is a family of initializer functions, and samples matrices from the gamma distribution.
+
+The following library is used to sample the dist.
+    https://github.com/lvaruzza/cl-randist
+")
 
   (define-initializer-function
       bernoulli
@@ -155,7 +194,10 @@ Tensor[Index] = a*Index + b"
     #'(lambda (i)
 	(declare (ignore i))
 	(coerce (sample-bernoulli p) (dtype->lisp-type (dtype tensor))))
-    "The bernoulli samples the bernoulli distributions.")
+    "The bernoulli is a family of initializer functions, and samples matrices from bernoulli distribution.
+
+Input:
+    p - Takes 1 with probability p and 0 with probalibity (1-p).")
 
   (define-initializer-function
       chisquare
@@ -163,19 +205,49 @@ Tensor[Index] = a*Index + b"
     #'(lambda (i)
 	(declare (ignore i))
 	(sample-gamma (coerce (/ df 2.0) (dtype->lisp-type (dtype tensor)))))
-    "The function chisquare samples the chisquare distribution."))
+    "The function chisquare is a family of initializer functions, and samples matrices from chisquare distributions.
+
+Input:
+    df - degree of freedom.
+
+The following library is used:
+    https://github.com/lvaruzza/cl-randist"))
 
 
 (defmacro define-tensor-initializer (function-name
 				     (&rest args)
 				     initializer-lambda
 				     document
-				     &optional keep-order?)
-  "defines a initializer function
+				     &key (keep-order? nil))
+  "define-tensor-initializer is a macro which is used to define a initializer function.
 
-keep-order? set t if you're going to using the position of element."
+Initializer function is a function whose argument follows this format:
+    (function-name shape [Initializer's Arguments] &rest initargs &key &allow-other-keys)
+
+Input:
+    function-name - the function is defined after this argument.
+    args          - Initializer's Arguments
+    initializer-lambda - A form to be expanded as the sampling function, which must return a function of #'(lambda (i) ...) where i is the index of element.
+    keep-order? - set t if the index is needed to sampling matrices.
+
+Example:
+
+(define-initializer-function
+    uniform-random
+    (upfrom below)
+  (let ((upfrom (coerce upfrom (dtype->lisp-type (dtype tensor))))
+	(below  (coerce below  (dtype->lisp-type (dtype tensor)))))
+    #'(lambda (i)
+	(declare (ignore i))
+	(sample-uniform-random upfrom below)))
+    \"\")
+
+(Note that new tensor is binded to tensor, being used to determined dtype etc...)
+
+"
   `(defun ,function-name (shape ,@args &rest initargs &key &allow-other-keys)
      ,document
      (let ((tensor (apply #'make-tensor shape initargs)))
        (initialize-vec! tensor ,initializer-lambda :keep-order? ,keep-order?)
        tensor)))
+

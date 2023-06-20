@@ -119,14 +119,6 @@
 			  (exp (- x)))
 			 (return (+ tail x)))))))))
 
-;; expotential -> ziggurat
-;; Randn -> ziggurat
-;; gamma -> ziggurat
-;; beta -> beta-bc + beta-cc
-;; chisquare -> ziggurat
-;; normal -> mgl-mat? numcl?
-;; orthogonal -> SVD is needed...
-
 ;; =========================================================================
 ;; First-time-call  -> there's a little overhead because creates lut
 ;; Second-time-call -> No overhead
