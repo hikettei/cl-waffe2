@@ -12,11 +12,10 @@
 	  ;; add slots: orig-a orig-b
 	  :backward ((self dout da db do)
 		     (declare (ignore do))
-		     (progn
-		       (values
-			(!matmul dout (!t db))
-			(!matmul (!t da) dout)
-			nil)))
+		     (values
+		      (!matmul dout (!t db))
+		      (!matmul (!t da) dout)
+		      nil))
 	  :documentation ""))
 
 (defnode (LazyTransposeNode (self)
@@ -49,7 +48,6 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
   ;;(forward (LazyTransposeNode) tensor)
   (extend-states (forward (LazyTransposeNode) tensor) tensor))
 
-;; On Backward or when transposed, Maybe The Result become 0.0 (BUG)
 (defun !matmul (x y
 		&key
 		  (out nil)
@@ -65,7 +63,12 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 	 (jx (nth 1 (last (shape x) 2)))
 	 (jy (nth 0 (last (shape y) 2)))
 	 (k  (nth 1 (last (shape y) 2)))
-	 (out (or out (make-input `(,@(butlast (shape x) 2) ,i ,k) nil
+	 ;; the way to make out's shape
+	 (larger-shape (if (> (length (shape x)) (length (shape y)))
+			   (shape x)
+			   (shape y)))
+	 ;; the longer dim's shape is adapted.
+	 (out (or out (make-input `(,@(butlast larger-shape 2) ,i ,k) nil
 				  :dtype (dtype x)
 				  :order (order x)))))
     
@@ -80,12 +83,13 @@ Shapes: A = ~a, B = ~a"
        jy
        (shape x)
        (shape y)))
+    
     (forward (MatmulNode (dtype x)
 	      :transpose-a transpose-x
 	      :transpose-b transpose-y)
 	      x
 	      y
-	      (!flexible out))))
+	      out))) ;; !flexible
 
 (defun !dot (x y)
   ""

@@ -651,6 +651,7 @@ Return: List[SubScript]
 				       (nth target-dim (slot-value tensor 'orig-shape)))))
 		    (axis-determined-p (every #'numberp end-points)))
 	       (declare (ignorable axis-determined-p))
+	       
 	       ;; When axis-determined-p is nil expand with loop for parts
 	       ;; is t -> Unroll
 
@@ -677,12 +678,12 @@ Return: List[SubScript]
 
 		    ,@(if (and axis-determined-p
 			       (<= (car end-points) *unroll-threshold*))
-			  (loop named iterator-loop
+			  (loop named iter-loop
 			        for nth fixnum upfrom 0 below (car end-points)
 				collect `(progn
 					   "[NOTE] Getting Next Round"
 					   ,(if (<= rest-dim at-least-dim)
-						(return-from iterator-loop (list (expand-with-function target-dim offsets)))
+						(return-from iter-loop (list (expand-with-function target-dim offsets)))
 						(explore
 						 (1- rest-dim)
 						 offsets))

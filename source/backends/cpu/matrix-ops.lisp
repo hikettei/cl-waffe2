@@ -36,8 +36,8 @@
 		   (b-view (if trans-b?
 			       (reverse b-view)
 			       b-view))
-		   (m (size-of c-view 0))
-		   (n (size-of c-view 1))
+		   (m   (size-of c-view 0))
+		   (n   (size-of c-view 1))
 		   (lda (size-of a-view 1))
 		   (ldb (size-of b-view 1))
 		   (ldc (size-of c-view 1)))

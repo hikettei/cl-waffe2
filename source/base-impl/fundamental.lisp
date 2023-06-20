@@ -141,8 +141,8 @@ This function is also used to create cognitious tensor."
 (define-impl (ViewTensorNode)
 	     :forward
 	     ((self viewed-tensor old)
-	      (declare (ignore old))
 	      `(progn
+		 (setf (tensor-vec ,viewed-tensor) (tensor-vec ,old))
 		 ,viewed-tensor))
 	     :backward
 	     ((self dout dx dy) ;; (viewed-tensor old)
@@ -193,9 +193,10 @@ Return:
 (define-impl (ReshapeTensorNode :device t)
 	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
 	     :forward ((self x y)
+		       (declare (ignore y))
 		       `(progn
-			  (setf (tensor-vec ,y) (tensor-vec ,x))
-			  ,y)))
+			  ;;(setf (tensor-vec ,y) (tensor-vec ,x))
+			  ,x)))
 
 ;; ===============================================================
 ;; Reshaping APIs

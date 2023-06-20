@@ -207,7 +207,7 @@ Here's a list of reports.
       ;; Memo: Sharing Allocated memory between f and b
       ;; can be realised with self ...
       ;; recompute grad
-      
+
       (let* ((forward-form (call-next-method))
 	     (next-tensor
 	       (loop for shape in out-state
