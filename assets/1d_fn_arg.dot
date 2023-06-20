@@ -1,0 +1,34 @@
+digraph computation_node {
+  node[shape="box" style="filled" color="black" penwidth="2"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP70424 [label = "ChainTMP70424
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE70461 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE70460 [label = "1DFUNC [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP70431 [label = "ChainTMP70431
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE70458 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE70457 [label = "1DFUNC [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP70443 [label = "ChainTMP70443
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE70455 [label = "Move" fillcolor="gray" style="filled, solid"];
+  ChainTMP70408 [label = "ChainTMP70408
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  ChainTMP70438 [label = "ChainTMP70438
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE70452 [label = "Move" fillcolor="gray" style="filled, solid"];
+  NODE70451 [label = "ADDNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE70452 -> NODE70451[weight=10];
+  ChainTMP70438 -> NODE70452[style="dashed"];
+  ChainTMP70408 -> NODE70452[style="dashed"];
+  NODE70455 -> NODE70451[weight=10];
+  ChainTMP70443 -> NODE70455[style="dashed"];
+  NODE70457 -> NODE70455[weight=10];
+  NODE70458 -> NODE70457[weight=10];
+  ChainTMP70431 -> NODE70458[style="dashed"];
+  NODE70460 -> NODE70458[weight=10];
+  NODE70461 -> NODE70460[weight=10];
+  ChainTMP70424 -> NODE70461[style="dashed"];
+  TENSOR -> NODE70461[style="dashed"];
+}

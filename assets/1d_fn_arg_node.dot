@@ -1,0 +1,75 @@
+digraph computation_node {
+  node[shape="box" style="filled" color="black" penwidth="2"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP69343 [label = "ChainTMP69343
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69393 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  NODE69391 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP69351 [label = "ChainTMP69351
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69389 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP69343 [label = "ChainTMP69343
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69386 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  NODE69384 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE69383 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP69359 [label = "ChainTMP69359
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69381 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP69343 [label = "ChainTMP69343
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69378 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  NODE69376 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  ChainTMP69351 [label = "ChainTMP69351
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69374 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  ChainTMP69343 [label = "ChainTMP69343
+(3 3)" fillcolor="#f0e68c" style="filled, solid"];
+  NODE69371 [label = "Move" fillcolor="gray" style="filled, solid"];
+  TENSOR [label = "TENSOR
+(3 3)" fillcolor="#f0f8ff" style="filled, solid"];
+  NODE69369 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE69368 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE69367 [label = "SINNODE [0]" fillcolor="#e6e6fa" style="filled, solid"];
+  NODE69368 -> NODE69367[penwidth="2"];
+  NODE69369 -> NODE69368[penwidth="2"];
+  TENSOR -> NODE69369[style="dashed"];
+  NODE69371 -> NODE69369[weight=10];
+  ChainTMP69343 -> NODE69371[style="dashed"];
+  TENSOR -> NODE69371[style="dashed"];
+  NODE69374 -> NODE69368[weight=10];
+  ChainTMP69351 -> NODE69374[style="dashed"];
+  NODE69376 -> NODE69374[weight=10];
+  TENSOR -> NODE69376[style="dashed"];
+  NODE69378 -> NODE69376[weight=10];
+  ChainTMP69343 -> NODE69378[style="dashed"];
+  TENSOR -> NODE69378[style="dashed"];
+  NODE69381 -> NODE69367[weight=10];
+  ChainTMP69359 -> NODE69381[style="dashed"];
+  NODE69383 -> NODE69381[weight=10];
+  NODE69384 -> NODE69383[penwidth="2"];
+  TENSOR -> NODE69384[style="dashed"];
+  NODE69386 -> NODE69384[weight=10];
+  ChainTMP69343 -> NODE69386[style="dashed"];
+  TENSOR -> NODE69386[style="dashed"];
+  NODE69389 -> NODE69383[weight=10];
+  ChainTMP69351 -> NODE69389[style="dashed"];
+  NODE69391 -> NODE69389[weight=10];
+  TENSOR -> NODE69391[style="dashed"];
+  NODE69393 -> NODE69391[weight=10];
+  ChainTMP69343 -> NODE69393[style="dashed"];
+  TENSOR -> NODE69393[style="dashed"];
+}
