@@ -241,20 +241,19 @@ Return:
 
   ;; out-scalar -> backward -> Each Parameters
 
-  (with-no-grad
-    (let* ((out (if (scalar-p out-scalar)
-		    (make-tensor 1
-				 :dtype (dtype out-scalar)
-				 :order (order out-scalar))
-		    (make-tensor (shape out-scalar)
-				 :dtype (dtype out-scalar)
-				 :order (order out-scalar)
-				 :initial-element 1)))
-	   (body `(lambda ()
-		    ,(explore-backwards out-scalar out)
-		    t)))
-      (when macroexpand (print body))
-      (compile nil body))))
+  (let* ((out (if (scalar-p out-scalar)
+		  (make-tensor 1
+			       :dtype (dtype out-scalar)
+			       :order (order out-scalar))
+		  (make-tensor (shape out-scalar)
+			       :dtype (dtype out-scalar)
+			       :order (order out-scalar)
+			       :initial-element 1)))
+	 (body `(lambda ()
+		  ,(explore-backwards out-scalar out)
+		  t)))
+    (when macroexpand (print body))
+    (compile nil body)))
 
 (defun map-tree (fn tree)
   (let ((tree (funcall fn tree)))
@@ -325,19 +324,20 @@ Return:
     (values next-tensor moved-p)
     moved-p ... If p, the tensor should be moved to the variable."
   ;; If deterministic-p = t, do in-place.
-  (when tensor
-    (if (movetensor-p (tensor-backward tensor))
-	(values tensor nil);; the tensor is already copied?
-	(cl-waffe2/vm.nodes:with-shape-checkpoint (:moving nil)
-	  (let ((place (if deterministic-p
-			   place ;; place=tensor.variables[n]
-			   (make-tensor (if (scalar-p place)
-					    0
-					    (shape place))
-					:dtype (dtype place)
-					:order (order place)))))
-	    ;; Forcibly moving them.
-	    (values (cl-waffe2/base-impl:!move place tensor) deterministic-p))))))
+  (with-no-grad
+    (when tensor
+      (if (movetensor-p (tensor-backward tensor))
+	  (values tensor nil);; the tensor is already copied?
+	  (cl-waffe2/vm.nodes:with-shape-checkpoint (:moving nil)
+	    (let ((place (if deterministic-p
+			     place ;; place=tensor.variables[n]
+			     (make-tensor (if (scalar-p place)
+					      0
+					      (shape place))
+					  :dtype (dtype place)
+					  :order (order place)))))
+	      ;; Forcibly moving them.
+	      (values (cl-waffe2/base-impl:!move place tensor) deterministic-p)))))))
 
 ;; there remains to be improved (in term of compile-speed)
 (defun explore-backwards (toplevel past-dy)

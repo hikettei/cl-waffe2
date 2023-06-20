@@ -27,8 +27,7 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 (define-impl (LazyTransposeNode :device t)
 	     :forward ((self x) `(progn ,x))
 	     :backward ((self dout dx)
-			(declare (ignore dx))
-			(values dout)))
+			(values (apply #'!reshape dout (shape dx)))))
 
 (defun transposed-p (tensor)
   "Return T if previous-node is LazyTransposeNode"

@@ -450,6 +450,15 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
   (setf (subscript-view after) 0)
   (step-subscript :t :index before after size))
 
+(defmethod step-subscript ((x (eql :broadcast))
+			   (y (eql :broadcast))
+			   before
+			   after
+			   size)
+  "Tensor[:broadcast 10][:broadcast 3]
+Changes the number of broadcasting."
+  (step-subscript :t :broadcast before after size))
+
 
 (defun preprocess-subscript (dim tensor size past-view subscript)
   (declare (type fixnum dim)
