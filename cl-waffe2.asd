@@ -140,9 +140,8 @@
   :description "Documentation Generator for cl-waffe2"
   :serial t
   :pathname "docs"
-  :depends-on (:codex :cl-ppcre)
+  :depends-on (:cl-ppcre)
   :components ((:file "package")
-	       (:file "introduction/overview")
 	       (:file "apis/reference")
 	       (:file "apis/distributions")
 	       ))
