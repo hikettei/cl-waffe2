@@ -15,8 +15,8 @@
 (defun step-linear (x weight &optional bias)
   "y = x[batch_size, dim2] @ weight[batch_size, dim1].T + bias"
   (if bias
-      (!add (!matmul x (!flexible weight)) (!flexible bias))
-      (!matmul x (!flexible weight))))
+      (!add (!matmul x (!t (!flexible weight))) (!flexible bias))
+      (!matmul x (!t (!flexible weight)))))
 
 ;; TODO: Print-Object
 (defmodel (LinearLayer (self in-features out-features &optional (use-bias? nil))
@@ -25,8 +25,7 @@
 	   :on-call-> call-linear
 	   :documentation "In-Features -> Out-Features")
   (setf (linear-weight self)
-	(randn `(,in-features ,out-features)
-	       :requires-grad t))
+	(parameter (!mul 0.01 (randn `(,out-features ,in-features)))))
 
   ;; Init with Xavier
   (when use-bias?
