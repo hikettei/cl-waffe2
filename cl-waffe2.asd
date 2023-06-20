@@ -143,6 +143,8 @@
   :depends-on (:codex :cl-ppcre)
   :components ((:file "package")
 	       (:file "introduction/overview")
-	       (:file "apis/reference")))
+	       (:file "apis/reference")
+	       (:file "apis/distributions")
+	       ))
 
 

@@ -121,7 +121,10 @@
 (defparameter *setup* "")
 (defparameter *concept* "")
 
+(defparameter *distributions* "")
+
 (defun generate ()
   (write-scr "overview" *overview*)
+  (write-scr "distributions" *distributions*)
   
   )
