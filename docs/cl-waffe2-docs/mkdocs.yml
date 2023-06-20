@@ -2,7 +2,7 @@ site_name: cl-waffe2 Documentation
 
 nav:
     - Home: index.md
-    - Tutorial: overview.md
+    - Tutorials: overview.md
     - cl-waffe2/distributions: distributions.md
 
 theme: readthedocs
