@@ -59,6 +59,9 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 
 ;; TODO: AddDoc distribution sampler.
 ;; BASIC Format: (distribution-name shape (If Any, arguments for distribution) &rest make-tensor's keywords...)
+
+;; Export this macro as user-extensible macro at other name.?
+;; TODO: Optimize -> coerce
 (macrolet ((define-initializer-function (function-name
 					 (&rest args)
 					 initializer-lambda
@@ -75,12 +78,15 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
   
   (define-initializer-function
       uniform-random
-      (upper)
-    (let ((upper (coerce upper (dtype->lisp-type (dtype tensor)))))
+      (upfrom below)
+    (let ((upfrom (coerce upfrom (dtype->lisp-type (dtype tensor))))
+	  (below  (coerce below  (dtype->lisp-type (dtype tensor)))))
       #'(lambda (i)
 	  (declare (ignore i))
-	  (random upper)))
-    "The function uniform-random samples the uniform-random from the function (random n), returning the new tensor with the given shape.")
+	  (sample-uniform-random upfrom below)))
+    "The function uniform-random samples the uniform-random from the function (random n), returning the new tensor with the given shape.
+
+Each element, x = [upfrom, below)")
   
   (define-initializer-function
       ax+b
@@ -108,6 +114,16 @@ Tensor[Index] = a*Index + b"
     "The function beta samples beta distributions using this algorithm: https://dl.acm.org/doi/pdf/10.1145/359460.359482")
 
   (define-initializer-function
+      normal
+      (mean stddev)
+    (let* ((mean (coerce mean 'double-float))
+	   (stddev (coerce stddev 'double-float)))
+      #'(lambda (i)
+	  (declare (ignore i))
+	  (coerce (cl-randist:random-normal-ziggurat mean stddev) (dtype->lisp-type (dtype tensor)))))
+    "normal dist")
+
+  (define-initializer-function
       randn
       ()
     (let* ((sampler (get-randn-sampler (dtype tensor))))
@@ -125,5 +141,41 @@ Tensor[Index] = a*Index + b"
 	  (funcall sampler)))
     "The function expotential samples the expotential distribution using ziggurat algorithm.")
 
-  )
+  (define-initializer-function
+      gamma
+      (k)
+    #'(lambda (i)
+	(declare (ignore i))
+	(sample-gamma (coerce k (dtype->lisp-type (dtype tensor)))))
+    "The function gamma samples the gamma distributions.")
 
+  (define-initializer-function
+      bernoulli
+      (p)
+    #'(lambda (i)
+	(declare (ignore i))
+	(coerce (sample-bernoulli p) (dtype->lisp-type (dtype tensor))))
+    "The bernoulli samples the bernoulli distributions.")
+
+  (define-initializer-function
+      chisquare
+      (df)
+    #'(lambda (i)
+	(declare (ignore i))
+	(sample-gamma (coerce (/ df 2.0) (dtype->lisp-type (dtype tensor)))))
+    "The function chisquare samples the chisquare distribution."))
+
+
+(defmacro define-tensor-initializer (function-name
+				     (&rest args)
+				     initializer-lambda
+				     document
+				     &optional keep-order?)
+  "defines a initializer function
+
+keep-order? set t if you're going to using the position of element."
+  `(defun ,function-name (shape ,@args &rest initargs &key &allow-other-keys)
+     ,document
+     (let ((tensor (apply #'make-tensor shape initargs)))
+       (initialize-vec! tensor ,initializer-lambda :keep-order? ,keep-order?)
+       tensor)))

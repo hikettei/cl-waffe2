@@ -124,6 +124,10 @@
 	  (/ w (+ b w))
 	  (/ b (+ b w))))))
 
+(defun sample-gamma (k)
+  (let ((ktype (type-of k)))
+    (coerce (cl-randist:random-gamma (coerce k 'double-float)) ktype)))
+
 ;; gamma
 ;; dense
 

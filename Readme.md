@@ -81,7 +81,7 @@ cl-waffe2.asd (:serial = t)
 - [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
 - [ ] Optimized Sparse Matrix
 - [ ] FP16 Matrix
-- [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512. It is not portable but written in C/C++ can called via cffi.
+- [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512. It is not portable but written in C/C++ can called via cffi. (use SLEEF?)
 - [ ] (After released v1.0) cl-waffe2 for coalton.
 - [ ] cl-waffe2/linalg, SVD
 - [x] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
