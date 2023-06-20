@@ -40,10 +40,14 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
   (subtypep (class-of (tensor-backward tensor)) 'LazyTransposeNode))
 
 
+;; :== The problem is that ==============:
+;;  !flexible(!t(x)).is_transposed? = NIL
+;;  !t(!flexible(x)).is_flexible?   = T
+;; :=====================================:
 (defun !t (tensor)
   "Applies Lazy-Transpose to the given tensor"
   ;;(forward (LazyTransposeNode) tensor)
-  (forward (LazyTransposeNode) tensor))
+  (extend-states (forward (LazyTransposeNode) tensor) tensor))
 
 ;; On Backward or when transposed, Maybe The Result become 0.0 (BUG)
 (defun !matmul (x y
@@ -76,13 +80,12 @@ Shapes: A = ~a, B = ~a"
        jy
        (shape x)
        (shape y)))
-    
     (forward (MatmulNode (dtype x)
 	      :transpose-a transpose-x
 	      :transpose-b transpose-y)
 	      x
 	      y
-	      out)))
+	      (!flexible out))))
 
 (defun !dot (x y)
   ""

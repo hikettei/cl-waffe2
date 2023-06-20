@@ -387,6 +387,8 @@ Rule4: ~は一度のみ使える
     ;; [~ x y] [~ x y] -> [x y] with (5 1 2) (1 1 2) is OK
     ;; [~ x y] [~ x y] -> [~ x y] with (5 1 2) (1 1 2) is NG
 
+    ;; arguments with ~, has the equivalent number of dimension.
+
     (let* ((least-required-dims (loop for s in first-state
 				      collect (length (the list (remove '~ s :test #'symbol-eq)))))
 	   ;; (1 2 3) for [x y] is invaild on the other hand (1 2 3) for [~ x y] is ok.
@@ -402,105 +404,158 @@ Rule4: ~は一度のみ使える
 			      (the list (flatten (list first-state)))
 			      :test #'symbol-eq)
 			'~))
+	   (flexdim-n (loop for input in first-state
+			    for k fixnum upfrom 0
+			    if (find '~ (the list (flatten input)) :test #'symbol-eq)
+			      collect k))
 	   ;; If ~ syntax inn't used in out-state, Anything is ok as ~.
 	   ;; Unless then, ~ must be used as the same meaning in all args.
 	   (common-symbols (get-common-symbols (list first-state out-state)))
 	   (body
 	     `(lambda (,previous-subscripts
-			 &aux
-			   (,all-conditions)
-			   (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
+		       &aux
+			 (,all-conditions)
+			 (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
 		(declare (optimize (speed 1) (compilation-speed 3))
 			 #+sbcl(sb-ext:muffle-conditions cl:style-warning sb-ext:compiler-note)
 			 )
-		  ;; previous-suscriptsから次のSubscriptsを作成
-		  ;; If any, return error condition
-		  ;; "Return: (values next-state condition)"
-		  ;; TODO: Judge At-Least dims and return error.
-		  ;; 1. Determine symbols, defined by let-binding
+		;; previous-suscriptsから次のSubscriptsを作成
+		;; If any, return error condition
+		;; "Return: (values next-state condition)"
+		;; TODO: Judge At-Least dims and return error.
+		;; 1. Determine symbols, defined by let-binding
+		
 
-		  (unless (= (length ,previous-subscripts)
-			     (length ',least-required-dims))
-		    (push
-		     (format nil "The function is declared as: ~a -> ~a
+		(unless (= (length ,previous-subscripts)
+			   (length ',least-required-dims))
+		  (push
+		   (format nil "The function is declared as: ~a -> ~a
 but the actual argument given was: ~a.
 => Check that the number of arguments is correct." ',first-state ',out-state ,previous-subscripts)
-		     ,all-conditions))
+		   ,all-conditions))
 
-		  (mapc
-		   #'(lambda (nth-arg declared act)
-		       (unless (<= declared (length act))
-			 (push
-			  (format
-			   nil
-			   "The number of dimensions must satisfy: dimensions >= ~a
+		,(when flexdim-n
+		   `(let ((dim)
+			  (accd))
+		      (loop for k in ',flexdim-n
+			    if (null dim)
+			      do (setq dim (length (nth k ,previous-subscripts)))
+			         (setq accd k)
+			    unless (= dim (length (nth k ,previous-subscripts)))
+			      do (push
+				  (format nil "The dimensions of the ~ath input do not match.
+Excepted Dimensions -> ~a (in accordance with ~ath input)
+Butgot              -> ~a (shape=~a)
+=> Consider using the function !flexible which enables broadcasting."
+					  k
+					  dim
+					  accd
+					  (length (nth k ,previous-subscripts))
+					  (nth k ,previous-subscripts))
+				  ,all-conditions))))
+			  
+		     
+		(mapc
+		 #'(lambda (nth-arg declared act)
+		     (unless (<= declared (length act))
+		       (push
+			(format
+			 nil
+			 "The number of dimensions must satisfy: dimensions >= ~a
 Because the function is declared as: ~a -> ~a.
 => However, the actual ~ath argument given was ~a."
-			   declared
-			   ',first-state
-			   ',out-state
-			   (1+ nth-arg)
-			   act)
-			  ,all-conditions)))
-		   (range 0 (length ,previous-subscripts))
-		   ',least-required-dims
-		   ,previous-subscripts)
+			 declared
+			 ',first-state
+			 ',out-state
+			 (1+ nth-arg)
+			 act)
+			,all-conditions)))
+		 (range 0 (length ,previous-subscripts))
+		 ',least-required-dims
+		 ,previous-subscripts)
 
-		  (mapc
-		   #'(lambda (nth-arg declared act)
-		       (unless (or (= declared -1)
-				   (= declared (length act)))
-			 (push
-			  (format
-			   nil
-			   "The ~ath argument is declared as: ~a
+		(mapc
+		 #'(lambda (nth-arg declared act)
+		     (unless (or (= declared -1)
+				 (= declared (length act)))
+		       (push
+			(format
+			 nil
+			 "The ~ath argument is declared as: ~a
 Accordingly, the argument must satisfy: dimensions = ~a
 => However, the actual ~ath argument given was ~a"
-			   (1+ nth-arg)
-			   (nth nth-arg ',first-state)
-			   declared
-			   (1+ nth-arg)
-			   act)
-			  ,all-conditions)))
-		   
-		   (range 0 (length ,previous-subscripts))
-		   ',max-required-dims
-		   ,previous-subscripts)
+			 (1+ nth-arg)
+			 (nth nth-arg ',first-state)
+			 declared
+			 (1+ nth-arg)
+			 act)
+			,all-conditions)))
+		 
+		 (range 0 (length ,previous-subscripts))
+		 ',max-required-dims
+		 ,previous-subscripts)
 
-				  
-		  (let* (,@(map 'list #'(lambda (x)
-					  `(,x))
-				common-symbols)
-			 ,@let-binding
-			 (,undetermined-shape-tmp
-			   (loop for s
-				 upfrom 0
-				   below
-				   (loop for p in ,previous-subscripts
-					 maximize (length p))
-				 collect nil)))
-		    (declare (ignorable ,@common-symbols))
-		    
-		    ;; TODO: When let-binding includes list, use it directly.
-		    
-		    ;; Identify Non-Determined Symbols
+		
 
-		    ,@(loop for i fixnum upfrom 0
-			    for subscript in first-state
-			    collect
-			    `(progn
-			       ,(format nil "[DEBUG] For: ~a" (nth i first-state))
-			       ,@(loop with shape = `(nth ,i ,previous-subscripts)
-				       with pos1 = (or (position '~ (the list subscript) :test #'symbol-eq) (length subscript)) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
-				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
-				       
-				       for nth-arg fixnum upfrom 0
-				       for var in subscript
-				       unless (symbol-eq var '~)
-					 collect `(cond
-						    ((< ,nth-arg ,pos1)
-						     ;; here, we can detect errors
-						     ;; ,var is determined and determined shapes doesn't match.
+		
+		(let* (,@(map 'list #'(lambda (x)
+					`(,x))
+			      common-symbols)
+		       ,@let-binding
+		       (,undetermined-shape-tmp
+			 (loop for s
+			       upfrom 0
+				 below
+				 (loop for p in ,previous-subscripts
+				       maximize (length p))
+			       collect nil)))
+		  (declare (ignorable ,@common-symbols))
+		  
+		  ;; TODO: When let-binding includes list, use it directly.
+		  
+		  ;; Identify Non-Determined Symbols
+
+		  ,@(loop for i fixnum upfrom 0
+			  for subscript in first-state
+			  collect
+			  `(progn
+			     ,(format nil "[DEBUG] For: ~a" (nth i first-state))
+			     ,@(loop with shape = `(nth ,i ,previous-subscripts)
+				     with pos1 = (or (position '~ (the list subscript) :test #'symbol-eq) (length subscript)) ;; when [a b ~ c d] and (1 2 3 4 5). the index of b
+				     with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0) ;; when [a b ~ c d] and (1 2 3 4 5), the index of c
+				     
+				     for nth-arg fixnum upfrom 0
+				     for var in subscript
+				     unless (symbol-eq var '~)
+				       collect `(cond
+						  ((< ,nth-arg ,pos1)
+						   ;; here, we can detect errors
+						   ;; ,var is determined and determined shapes doesn't match.
+						   (when (and (not (null ,var))
+							      (or
+							       ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
+							       (and (symbolp ,var)
+								    (symbolp (nth ,nth-arg ,shape)))
+							       (and (numberp ,var)
+								    (numberp (nth ,nth-arg ,shape))))
+							      (not
+							       (equal ,var (nth ,nth-arg ,shape))))
+						     (push
+						      (build-subscript-error-note
+						       :all-subscript ',subscripts
+						       :determined-shape (list ,@(map 'list #'(lambda (x) `(list ,@x)) first-state))
+						       :determined-out (list ,@(map 'list #'(lambda (x) `(list ,@x)) out-state))
+						       :symbol ',var
+						       :excepted ,var
+						       :but-got (nth ,nth-arg ,shape)
+						       :nth-argument ,nth-arg
+						       :target-shape ,shape)
+						      ,all-conditions))
+						   (num-major-setq ,var (nth ,nth-arg ,shape)))
+						  ((> (- (length ,shape) ,nth-arg) ,pos1)
+						   ;; here, we can detect errors
+						   
+						   (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
 						     (when (and (not (null ,var))
 								(or
 								 ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
@@ -509,7 +564,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 								 (and (numberp ,var)
 								      (numberp (nth ,nth-arg ,shape))))
 								(not
-								 (equal ,var (nth ,nth-arg ,shape))))
+								 (equal ,var (nth ,pos ,shape))))
 						       (push
 							(build-subscript-error-note
 							 :all-subscript ',subscripts
@@ -521,67 +576,42 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							 :nth-argument ,nth-arg
 							 :target-shape ,shape)
 							,all-conditions))
-						     (num-major-setq ,var (nth ,nth-arg ,shape)))
-						    ((> (- (length ,shape) ,nth-arg) ,pos1)
-						     ;; here, we can detect errors
-						     
-						     (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
-						       (when (and (not (null ,var))
-								  (or
-								   ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
-								   (and (symbolp ,var)
-									(symbolp (nth ,nth-arg ,shape)))
-								   (and (numberp ,var)
-									(numberp (nth ,nth-arg ,shape))))
-								  (not
-								   (equal ,var (nth ,pos ,shape))))
-							 (push
-							  (build-subscript-error-note
-							   :all-subscript ',subscripts
-							   :determined-shape (list ,@(map 'list #'(lambda (x) `(list ,@x)) first-state))
-							   :determined-out (list ,@(map 'list #'(lambda (x) `(list ,@x)) out-state))
-							   :symbol ',var
-							   :excepted ,var
-							   :but-got (nth ,nth-arg ,shape)
-							   :nth-argument ,nth-arg
-							   :target-shape ,shape)
-							  ,all-conditions))
-						       (num-major-setq ,var (nth ,pos ,shape)))))
-				       else
-					 collect
-				       `(loop for ,pos fixnum
-					      upfrom ,pos1
-						below (- (length ,shape) ,pos2)
-					      do (progn
-						   (when (and ,out-omit-p
-							      (not (null (nth ,pos ,undetermined-shape-tmp)))
-							      (not (shape-equal-1 ,pos ,undetermined-shape-tmp ,shape)))
-						     ;; More details
-						     ;; mismatch axes-originated.
-						     (if (= (length ,undetermined-shape-tmp) (length ,shape))
-							 (push
-							  (format
-							   nil
-							   "Couldn't idenfity ~~: ~~ is determined as ~a ~% butgot: ~a.~% Excepted ~~ = ~a, butgot: ~a"
-							   (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)
-							   (replace-nil ,undetermined-shape-tmp)
-							   ,shape)
-							  ,all-conditions)
-							 ;; the mismatch of dimehsions originated error.
-							 (push
-							  (format
-							   nil
-							   "The length of ~~ do not match.~%Excepted ~~ = ~a, butgot: ~a"
-							   (replace-nil ,undetermined-shape-tmp)
-							   ,shape)
-							  ,all-conditions)))
-						   (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
-		    
-		    (flet ((merge-and-determine (shapes names)
-			     (let ((out
-				     (map
-				      'list
-				      #'(lambda (s name)
+						     (num-major-setq ,var (nth ,pos ,shape)))))
+				     else
+				       collect
+				     `(loop for ,pos fixnum
+					    upfrom ,pos1
+					      below (- (length ,shape) ,pos2)
+					    do (progn
+						 (when (and ,out-omit-p
+							    (not (null (nth ,pos ,undetermined-shape-tmp)))
+							    (not (shape-equal-1 ,pos ,undetermined-shape-tmp ,shape)))
+						   ;; More details
+						   ;; mismatch axes-originated.
+						   (if (= (length ,undetermined-shape-tmp) (length ,shape))
+						       (push
+							(format
+							 nil
+							 "Couldn't idenfity ~~: ~~ is determined as ~a ~% butgot: ~a.~% Excepted ~~ = ~a, butgot: ~a"
+							 (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)
+							 (replace-nil ,undetermined-shape-tmp)
+							 ,shape)
+							,all-conditions)
+						       ;; the mismatch of dimehsions originated error.
+						       (push
+							(format
+							 nil
+							 "The length of ~~ do not match.~%Excepted ~~ = ~a, butgot: ~a"
+							 (replace-nil ,undetermined-shape-tmp)
+							 ,shape)
+							,all-conditions)))
+						 (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
+		  
+		  (flet ((merge-and-determine (shapes names)
+			   (let ((out
+				   (map
+				    'list
+				    #'(lambda (s name)
 
 					  ;; Use-priorities:
 					  ;; 1. [a b]

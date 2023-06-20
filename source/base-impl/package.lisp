@@ -47,3 +47,9 @@
      (export ',name)
      ,@body))
 
+(defun extend-states (result extend-from)
+  "the tensor returned keeps these status:
+   flexible-p
+   transposed-p"
+  (setf (tensor-flexible-p result) (tensor-flexible-p extend-from))
+  result)

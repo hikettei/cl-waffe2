@@ -118,9 +118,10 @@ Here's a list of reports.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
+  ;; TODO: Put warning when !t without matmul
   (let* ((transition-function     (abstractnode-node node))  ;; original subscript
 	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
-	 (pointer-states      (transmission-state node)) ;; <- what ptr/view to use?
+	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
@@ -128,13 +129,13 @@ Here's a list of reports.
     
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
-
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
 
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
 	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
+	  
 	  ;; Enhancement
 	  ;; CALL-VIEW-AND-CONTINUE
 	  ;; If error is not originated from ~.

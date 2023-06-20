@@ -605,11 +605,20 @@ Return: List[SubScript]
   (declare ;;(optimize (speed 3))
 	   (type function function)
 	   (type list tensors shape))
+
+  ;;(dolist (i tensors) (print (shape i)))
   
   (assert (every #'(lambda (tensor) (shape-equal-list (butlast (shape tensor) at-least-dim) (butlast shape at-least-dim))) tensors)
 	  nil
 	  "Assertion Failed because the number of shapes: ~a doesn't match."
 	  (map 'list #'shape tensors)) ;; ... (1)
+
+  (assert (every #'(lambda (tensor)
+		     (= (length (shape tensor))
+			(length (shape (car tensors)))))
+		 tensors)
+	  nil
+	  "call-with-view: Assertion Failed because the number of dimensions do not match. (Internal Error)")
 
   
   (labels ((expand-with-function (target-dim offsets)

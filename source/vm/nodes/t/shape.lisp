@@ -216,6 +216,11 @@
        `([x y] [x y]-> [x y])
        `((10 a) (10 b))))
 
+  ;; (!matmul (randn `(5 5 5)) (randn `(5 5))) passes...
+  (is (error-test-subscript
+       `([~ i j] [~ j k] [~ i k] -> [~ i k])
+       `((10 10 10) (10 10) (10 10))))
+
   ;; Should be added more... (After deciding specifications)
 
   )

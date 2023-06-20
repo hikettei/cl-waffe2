@@ -110,8 +110,7 @@ Output: Tensor[AbstractTensor]"
 	 (res (!move out tensor)))
     
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
-    (setf (tensor-flexible-p res) (tensor-flexible-p tensor))
-    res))
+    (extend-states res tensor)))
 
 (defun !copy-force (tensor)
   "The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
@@ -124,8 +123,7 @@ This function is also used to create cognitious tensor."
 			   :order (order tensor)))
 	 (res (!move out tensor)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
-    (setf (tensor-flexible-p res) (tensor-flexible-p tensor))
-    res))
+    (extend-states res tensor)))
 
 
 ;; ===============================================================
