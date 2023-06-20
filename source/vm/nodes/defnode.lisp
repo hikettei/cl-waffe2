@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-(defpackage :cl-waffe2/vm.nodes.facets-tmp (:use :cl))
-
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
 (defparameter *node-reject-case-table* (make-hash-table))
@@ -19,9 +17,6 @@ reject-when=nil, or (apply reject-when inputs)=t"
   (when function
     (setf (gethash node-name *node-reject-case-table*) function)))
 
-(defun movetensor-p (node)
-  (subtypep (class-of node) 'cl-waffe2/base-impl:MoveTensorNode))
-
 (defun list-of-abstracttensor-p (list)
   "Return t if LIST is non nil and contains only AbstractTensor."
   (and (consp list)
@@ -29,7 +24,6 @@ reject-when=nil, or (apply reject-when inputs)=t"
 
 (deftype list-of-abstracttensor ()
   `(and list (satisfies list-of-abstracttensor-p)))
-
 
 ;; Is it ok?
 (defun env-parameter-p (sym)

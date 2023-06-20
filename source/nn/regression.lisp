@@ -19,7 +19,7 @@
       (!matmul x (!t (!flexible weight)))))
 
 ;; TODO: Print-Object
-(defmodel (LinearLayer (self in-features out-features &optional (use-bias? nil))
+(defmodel (LinearLayer (self in-features out-features &optional (use-bias? t))
 	   :slots ((weights :accessor linear-weight)
 		   (bias    :initform nil :accessor linear-bias))
 	   :on-call-> call-linear

@@ -1,6 +1,8 @@
 
 (in-package :cl-user)
 
+(defpackage :cl-waffe2/vm.nodes.facets-tmp (:use :cl))
+
 (defpackage :cl-waffe2/vm.nodes
   (:use :cl :cl-ppcre :alexandria)
   (:import-from :cl-waffe2/vm.generic-tensor
@@ -14,6 +16,7 @@
 		#:tensor-view
 		#:make-tensor
 		#:make-input
+		#:movetensor-p
 		#:shaping-error
 		#:shape-equal
 		#:order

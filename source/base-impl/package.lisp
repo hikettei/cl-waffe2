@@ -7,6 +7,7 @@
 	:cl-waffe2/vm.nodes)
   (:export
    #:MoveTensorNode
+   #:MoveScalarTensorNode
    #:movetensor-ignore-me
    #:movetensor-save-for-backward)
   (:export

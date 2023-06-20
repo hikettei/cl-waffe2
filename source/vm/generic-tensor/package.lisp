@@ -76,6 +76,7 @@
    )
 
   (:export
+   #:movetensor-p
    #:shape-equal)
 
   (:export

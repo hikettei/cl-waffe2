@@ -80,3 +80,7 @@ This means: the first argument of :forward was the dtype of :float or :double, u
        (let ((dtype (nth ,nth inputs)))
 	 (not (find dtype ',dtypes)))))
 
+(defun invaild-t-usage-p (node inputs)
+  (and (some #'cl-waffe2/base-impl::transposed-p inputs)
+       (not (subtypep (class-of node) 'cl-waffe2/base-impl:MatmulNode))))
+
