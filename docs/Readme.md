@@ -4,6 +4,12 @@
 # Requirements
 
 ```lisp
-pip3.10 instlal mkdocs
-pip3.10 install markdown-katex
+$ pip3.10 instlal mkdocs
+$ pip3.10 install markdown-katex
+```
+
+# Run
+
+```lisp
+$ mkdocs serve
 ```

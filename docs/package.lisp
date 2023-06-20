@@ -56,6 +56,20 @@
   (let ((docstring (documentation object type)))
     (format *page-out-to* "~a" docstring)))
 
+(defun with-example (source)
+  (let ((result (eval (read-from-string source))))
+    (format *page-out-to*
+	    "
+### Example
+
+```lisp
+~a
+
+~a
+```
+"
+	    source result)))
+	   
 
 (defparameter *target-dir* "./docs/cl-waffe2-docs/docs")
 
