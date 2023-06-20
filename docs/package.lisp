@@ -19,7 +19,7 @@
 
 (in-package :cl-waffe2.docs)
 
-;; Utils for genearting documents
+;; Utils for generating markdown
 
 (defmacro with-page (title-binding-symbol
 		     title-name
@@ -33,15 +33,15 @@
 			&body body
 			&aux (output-to (gensym)))
   `(with-output-to-string (,output-to)
-     (format ,output-to "~%@begin(section)~%@title(~a)" ,title-name)
+     (format ,output-to "~% # ~a" ,title-name)
      (macrolet ((insert (content &rest args)
 		  `(format ,',output-to "~%~a" (format nil ,content ,@args)))
 		(b (content &rest args)
-		  `(format ,',output-to "~%@b(~a)" (format nil ,content ,@args)))
+		  `(format ,',output-to "~%**~a**" (format nil ,content ,@args)))
 		(image (url)
-		  `(princ (format nil "~%@image[src=\"~a\"]()" ,url) ,',output-to))
+		  `(princ (format nil "~%![image](~a)" ,url) ,',output-to))
 		(url (url name)
-		  `(princ (format nil "~%@link[uri=\"~a\"](~a)" ,url ,name) ,',output-to))
+		  `(princ (format nil "[~a](~a)" ,name ,url) ,',output-to))
 		(def (content)
 		  `(format ,',output-to "~%@begin(def)~%~a~%@end(def)" ,content))
 		(term (content)
@@ -104,7 +104,7 @@
      (format ,output-to "~%@end(section)")))
 
 
-(defparameter *target-dir* "./docs/scriba")
+(defparameter *target-dir* "./docs/cl-waffe2-docs/docs")
 
 (defun write-scr (filepath content)
   (with-open-file (str (out-dir filepath)
@@ -114,17 +114,12 @@
     (format str "~a" content)))
 
 (defun out-dir (name)
-  (format nil "~a/~a.scr" *target-dir* name))
+  (format nil "~a/~a.md" *target-dir* name))
 
-
-(defparameter *overview* "")
-(defparameter *setup* "")
-(defparameter *concept* "")
 
 (defparameter *distributions* "")
 
 (defun generate ()
-  (write-scr "overview" *overview*)
   (write-scr "distributions" *distributions*)
   
   )

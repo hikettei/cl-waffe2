@@ -1,0 +1,6 @@
+site_name: cl-waffe2 Documentation
+
+nav:
+    - Home: index.md
+    
+theme: readthedocs

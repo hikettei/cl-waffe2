@@ -4,17 +4,24 @@
 ;; Here, place the docs about initializer function's family
 
 ;; TODO: Insert Some Examples.
+;; サンプルコードを出力しながら書いていく
+;; こっちにドキュメントの本体を書く
+
+;; NewLine
 (with-page *distributions* "Distributions"
   (with-section "Samples matrices from distribution"
     (insert "In order to create new matrices from distribution, cl-waffe2 provides a package, @c(cl-waffe2/distributions).")
 
     (with-section "Common Format to the APIs"
-      (insert "All sampling functions are defined in the following format via @c(define-initializer-function) macro.")
+      (insert "All sampling functions are defined in the following format:
+
+
+via @c(define-tensor-initializer) macro.")
 
       (insert "@c((function-name shape [Optional Arguments] &rest args &keys &allow-other-keys))")
 
       (insert "@c(args) is a arguments which passed to make-tensor, accordingly, both of these functions are valid for example.")
-      (with-enum 
+      (with-enum
 	  (item "(normal `(10 10) 0.0 1.0 :dtype :double)")
           (item "(normal `(10 10) 0.0 1.0 :requires-grad t)"))))
 
@@ -27,7 +34,7 @@
 		   ,name)
 		  ,@body)))
 
-    (with-dist-doc "define-initializer-function" "macro")
+    (with-dist-doc "define-tensor-initializer" "macro")
 
     
     (with-dist-doc "ax+b" "function")

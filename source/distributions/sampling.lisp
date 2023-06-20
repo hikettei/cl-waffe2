@@ -89,7 +89,7 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
     "The function uniform-random is a family of initializer funtions, and samples matrices from uniform random distribution using Common Lisp's standard function, (random arg).
 
 Input:
-    upfrom, below. Each elements of returned tensor is in the range of: (upfrom<=x<below)") ;; HELPME: Scriba never smiles :) <- cant parse this, i wanna simply use: [upfrom, below)
+    upfrom, below. Each elements of returned tensor is in the range of:[upfrom, below)") ;; HELPME: Scriba never smiles :) <- cant parse this, i wanna simply use: [upfrom, below)
   
   (define-initializer-function
       ax+b
@@ -122,9 +122,12 @@ Input:
     "The function beta is a family of initializer functions, and sample matrices from beta distribution.
 
 Reference:
+
     I've referred to this paper, and algorithms.
+
     Generating Beta Variates with Nonintegral Shape Parameters (R. C. H. Cheng University of Wales Institute of Science and Technology)
     PDF: https://dl.acm.org/doi/pdf/10.1145/359460.359482
+
 
 Note: My implementation is unstable, being occurs floating-overflow constantly..., especially when min(alpha, beta) < 1.0 (i.e.: beta-bc)")
 
@@ -138,13 +141,14 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 	  (coerce (cl-randist:random-normal-ziggurat mean stddev) (dtype->lisp-type (dtype tensor)))))
     "The function normal is a family of initializer functions, and samples matrices from normal distribution.
 
+
 The following library is used:
     https://github.com/lvaruzza/cl-randist (seems to create ziggurat table with size=128)
+
 
 Input:
     mean
     stddev - Standard Deviation, σ.
-
 ")
 
   (define-initializer-function
@@ -156,12 +160,13 @@ Input:
 	  (funcall sampler)))
     "The function randn is a family of initializer functions, and samples the gaussian distributions using ziggurat algorithm with table-size=256.
 
+
 I've referred following papers and articles to implement this.
- = References ===============================================
  https://andantesoft.hatenablog.com/entry/2023/04/30/183032
  Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
- https://marui.hatenablog.com/entry/2023/01/23/194507
- ============================================================")
+
+
+ https://marui.hatenablog.com/entry/2023/01/23/194507")
 
   (define-initializer-function
       expotential
@@ -173,11 +178,11 @@ I've referred following papers and articles to implement this.
     "The function expotential is a family of initializer functions, and samples the expotential distribution using ziggurat algorithm with table-size=256.
 
 I've referred following papers and articles to implement this.
- = References ===============================================
  https://andantesoft.hatenablog.com/entry/2023/04/30/183032
  Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
- https://marui.hatenablog.com/entry/2023/01/23/194507
- ============================================================")
+
+
+ https://marui.hatenablog.com/entry/2023/01/23/194507")
 
   (define-initializer-function
       gamma
@@ -246,7 +251,6 @@ Example:
     \"\")
 
 (Note that new tensor is binded to tensor, being used to determined dtype etc...)
-
 "
   `(defun ,function-name (shape ,@args &rest initargs &key &allow-other-keys)
      ,document
