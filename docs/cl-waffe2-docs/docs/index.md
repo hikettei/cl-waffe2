@@ -25,6 +25,6 @@ The primary concepts and goals of this project is following
 
 1. One cl-waffe2 code, consisted of multiple and user-extensible backends, which consisted of small pieces of backends.
 
-2. Everything is lazy-evaluated, being compiled.
+2. Everything is lazy-evaluated, and compiled.
 
 3. defined-and-run, closer to defined-by-run APIs.

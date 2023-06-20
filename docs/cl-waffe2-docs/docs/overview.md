@@ -161,7 +161,66 @@ You can switch backends via `(with-devices (&rest devices) &body body)` macro se
     (!add (randn `(10 10)) (randn `(10 10))))
 ```
 
-## JIT Compile, In-place optimizations
+## JIT compile, In-place optimizing
+
+As I said `Everything is lazy-evaluated, and compiled`, JIT Compiling is a one of main idea of this project.
+
+Mainly, this produces two benefits.
+
+### Infinite number of Epochs, No Overheads of funcall.
+
+As all lisper know, there is a unignorable overhead when calling methods.
+
+```lisp
+(defmethod test-method ((a fixnum) (b fixnum))
+	(+ a b))
+
+(defmethod test-method ((a single-float) (b single-float))
+	(+ a b))
+
+(time (dotimes (i 100000000) (test-method 1.0 1.0)))
+Evaluation took:
+  0.560 seconds of real time
+  0.554936 seconds of total run time (0.551612 user, 0.003324 system)
+  99.11% CPU
+  1,291,693,656 processor cycles
+  0 bytes consed
+
+(defun test-fun (a b)
+	(declare (type single-float a b))
+	(+ a b))
+
+;; Also, defun can be inlined at the end.
+(time (dotimes (i 100000000) (test-fun 1.0 1.0)))
+Evaluation took:
+  0.298 seconds of real time
+  0.297827 seconds of total run time (0.296968 user, 0.000859 system)
+  100.00% CPU
+  688,686,522 processor cycles
+  0 bytes consed
+```
+
+In this project, which uses a large number of generic functions!, this overhead becomes non-negligible at every Epoch, especially when the matrix size is small.
+
+Therefore, we took the approach of defining a new function by cutting out the necessary operations from the lazy-evaluated nodes, part by part.
+
+;; cl-waffe2's benchmark
+
+```lisp
+(let ((f (build (!sin 1.0))))
+	(time (dotimes (i 100000) (funcall f))))
+
+;; Fix: tensor-reset!'s overhead...
+(defun test-f (x)
+    (sin (sin (sin (sin x)))))
+
+(time (dotimes (i 100000) (test-f 1.0)))
+```
+
+	
+### In-place optimizing
+
+...
 
 ## Broadcasting APIs, View APIs
 
