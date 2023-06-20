@@ -4,15 +4,11 @@
 ;; Here, place the docs about initializer function's family
 
 ;; TODO: Insert Some Examples.
-;; サンプルコードを出力しながら書いていく
-;; こっちにドキュメントの本体を書く
-
-;; NewLine
 (with-page *distributions* "Distributions"
-  (with-top "Samples matrices from distribution"
+  (with-section "Samples matrices from distribution"
     (insert "cl-waffe2 provides a package :cl-waffe2/distributions which is used to sample matrices from the distributions.")
 
-    (with-top "Common Format to the APIs"
+    (with-section "Common Format to the APIs"
       (insert "All sampling functions are defined in the following format via `define-tensor-initializer` macro.
 
 ```(function-name shape [Optional Arguments] &rest args &keys &allow-other-keys)```
@@ -27,7 +23,7 @@
 	"(ax+b `(10 10) 1 0 :dtype :uint8)")
 
       (macrolet ((with-dist-doc (name type &body body)
-		   `(with-top (symbol-name ,name)
+		   `(with-section (symbol-name ,name)
 		      (placedoc ,name ,type)
 		      ,@body)))
 

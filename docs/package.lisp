@@ -22,7 +22,7 @@
 ;; Utils for generating markdown
 
 (defparameter *page-out-to* nil)
-(defparameter *nest-n* 1)
+(defparameter *nest-n* 2)
 
 (defmacro with-page (title-binding-symbol
 		     title-name
@@ -30,7 +30,7 @@
 		       body)
   `(setq ,title-binding-symbol
 	 (with-output-to-string (*page-out-to*)
-	   (with-section ,title-name
+	   (with-top ,title-name
 	     ,@body))))
 
 (defmacro with-section (title-name &body body)
