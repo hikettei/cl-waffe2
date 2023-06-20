@@ -32,7 +32,7 @@
    #:view
    #:tensor-view
    #:viewtype
-   #:detach
+   #:detach!
    #:*default-dtype*
    #:*default-order*
    #:set-save-for-backward

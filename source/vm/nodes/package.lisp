@@ -32,7 +32,9 @@
    #:out-scalar-p
    #:with-instant-kernel
    #:with-shape-checkpoint
-   #:make-errorpoint)
+   #:make-errorpoint
+   #:node-local-variables
+   #:declare-local-variables)
 
   (:export
    #:defmodel

@@ -295,6 +295,8 @@ Return:
 		  (let* (,@(loop for f in next-states
 				 for p in out-places
 				 collect `(,p (funcall ,f)))
+			 ,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
+				 collect `(,(tensor-id v) ,v))
 			 (,id ,toplevel))
 		    (declare (type AbstractTensor ,@out-places)
 			     (ignorable ,@out-places))

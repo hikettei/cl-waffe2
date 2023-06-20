@@ -171,16 +171,16 @@ Note that this function is inlined.
     
     (cond
       ((eql (getf initargs :facet) :input)
-       (setf (tensor-stride tensor) (calc-strides orig-shape order))
-       (setf (tensor-view tensor)
-	     (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
-       (setf (tensor-visible-shape tensor)
-	     (compute-visible-shape orig-shape (tensor-view tensor)))
-       nil)
+       (when (not scalar-p)
+	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
+	 (setf (tensor-view tensor)
+	       (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+	 (setf (tensor-visible-shape tensor)
+	       (compute-visible-shape orig-shape (tensor-view tensor)))
+	 nil))
       (T
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
-	 ;; parse-view-subscripts <- safety 0...
 	 (setf (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
@@ -430,16 +430,9 @@ Note that view is only created for Tensors, not a Scalar.
   "The function parameter calls (proceed tensor) first, and then returns the same tensor where require-grad = t."
   (declare (type AbstractTensor tensor))
   (let ((out (cl-waffe2/base-impl:proceed tensor)))
-    (let ((res (make-tensor (if (scalar-p out)
-				out
-				(shape out))
-			    :requires-grad t
-			    :vec (vec out)
-			    :view (map 'list #'force-list (tensor-view out))
-			    :order (order out)
-			    :dtype (dtype out))))
-      (setf (tensor-vec res) (vec out))
-      res)))
+    (setf (tensor-facet out) :exist)
+    (setf (slot-value out 'requires-grad) t)
+    (view out)))
 
 
 (defun render-shape (tensor)

@@ -414,3 +414,7 @@ Return nil -> ok
 	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 	       ,@backward-body))))))
 
+(defun declare-local-variables (self &rest tensors)
+  ""
+  (setf (node-local-variables self) tensors))
+

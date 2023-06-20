@@ -2,7 +2,8 @@
 (in-package :cl-waffe2/vm.nodes)
   
 (defclass AbstractNode ()
-  ((function-node
+  ((local-variables :accessor node-local-variables :type list :initform nil)
+   (function-node
     :initarg
     :function-node
     :reader abstractnode-node

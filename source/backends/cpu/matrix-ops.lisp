@@ -16,7 +16,11 @@
 ;; FixME: support row-major with gemm
 (defun expand-gemm-form (a b out &key trans-a? trans-b?)
   "[M N] @ [N K] -> [M K]"
-  (let ((dtype (dtype out)))
+  (let ((dtype (dtype out))
+	(k (car (last (shape a))))
+	(kb (second (last (shape a) 2))))
+    (assert (= k kb) nil
+	    "expand-gemm-form: Assertion Failed with k = kb")
     (assert (eql (order a) :column)
 	    nil
 	    "Assertion Failed with (order a) = :column (TODO: Support)")
@@ -34,7 +38,6 @@
 			       b-view))
 		   (m (size-of c-view 0))
 		   (n (size-of c-view 1))
-		   (k (size-of a-view 1))
 		   (lda (size-of a-view 1))
 		   (ldb (size-of b-view 1))
 		   (ldc (size-of c-view 1)))
@@ -69,7 +72,6 @@
 			       b-view))
 		   (m (size-of c-view 0))
 		   (n (size-of c-view 1))
-		   (k (size-of a-view 1))
 		   (lda (size-of a-view 1))
 		   (ldb (size-of b-view 1))
 		   (ldc (size-of c-view 1)))

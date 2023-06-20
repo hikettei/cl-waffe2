@@ -6,16 +6,20 @@
 (defnode (MatMulNode (myself dtype &key transpose-a transpose-b)
 	  :where (A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
 	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
-		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?)
+		  (A :accessor matmul-orig-a)
+		  (B :accessor matmul-orig-b))
+	  ;; add slots: orig-a orig-b
 	  :backward ((self dout da db do)
 		     (declare (ignore do))
-		     (values
-		      (!matmul dout (!t db))
-		      (!matmul (!t da) dout)
-		      nil))
+		     (progn
+		       (values
+			(!matmul dout (!t db))
+			(!matmul (!t da) dout)
+			nil)))
 	  :documentation ""))
 
-(defnode (LazyTransposeNode (myself)
+(defnode (LazyTransposeNode (self)
 	  :where (A[~ i j] -> A[~ j i])
 	  :documentation "LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.
 
@@ -23,7 +27,8 @@ Internally, This Node Returns The Given A itself but taking transpose of A's sha
 
 If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then transpose will be done with NO overhead."))
 
-(define-impl (LazyTransposeNode)
+(define-impl (LazyTransposeNode :device t)
+	     :save-for-backward (t)
 	     :forward ((self x)
 		       `(progn ,x))
 	     :backward ((self dout dx)
@@ -34,10 +39,11 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
   "Return T if previous-node is LazyTransposeNode"
   (subtypep (class-of (tensor-backward tensor)) 'LazyTransposeNode))
 
+
 (defun !t (tensor)
   "Applies Lazy-Transpose to the given tensor"
+  ;;(forward (LazyTransposeNode) tensor)
   (forward (LazyTransposeNode) tensor))
-
 
 ;; On Backward or when transposed, Maybe The Result become 0.0 (BUG)
 (defun !matmul (x y
@@ -70,7 +76,7 @@ Shapes: A = ~a, B = ~a"
        jy
        (shape x)
        (shape y)))
-
+    
     (forward (MatmulNode (dtype x)
 	      :transpose-a transpose-x
 	      :transpose-b transpose-y)
