@@ -86,7 +86,8 @@
     (case type
       (:node (let* ((name (symbol-name (class-name (class-of (astnode-node node)))))
 		    (pos (or (position #\- name :test #'equal) (length name))))
-	       (if (equal "MOVETENSORNODE" (subseq name 0 pos))
+	       
+	       (if (movetensor-p (astnode-node node))
 		   (format nil "~a"
 			   (if (movetensor-ignore-me (astnode-node node))
 			       "(Deleted)"

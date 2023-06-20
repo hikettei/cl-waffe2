@@ -206,6 +206,8 @@ Therefore, we took the approach of defining a new function by cutting out the ne
 
 ;; cl-waffe2's benchmark
 
+TODO: Update This section
+
 ```lisp
 (let ((f (build (!sin 1.0))))
 	(time (dotimes (i 100000) (funcall f))))
@@ -220,10 +222,122 @@ Therefore, we took the approach of defining a new function by cutting out the ne
 	
 ### In-place optimizing
 
-...
+This is a usual function in cl-waffe2, which finds the sum of A and B.
+
+```lisp
+(!add a b)
+```
+
+But internally, the operation makes a copy not to produce side effects.
+
+```lisp
+(forward (AddNode) (!copy a) b)
+```
+
+Without making a copy, the value of A would be destructed instead of having to allocate extra memory.
+
+```lisp
+(let ((a (make-tensor `(3 3) :initial-element 1.0)))
+      (print a)
+      ;; {CPUTENSOR[float] :shape (3 3)  
+      ;;  ((1.0 1.0 1.0)
+      ;;   (1.0 1.0 1.0)
+      ;;   (1.0 1.0 1.0))
+      ;;  :facet :exist
+      ;;  :requires-grad NIL
+      ;;  :backward NIL}
+      ;; (eval A <- A + B)
+      (proceed (forward (AddNode :float) a (randn `(3 3))))
+      (print a)
+      ;; {CPUTENSOR[float] :shape (3 3)  
+      ;;  ((2.0100088   0.2906983   1.5334041)
+      ;;   (-0.50357413 2.389317    0.7051847)
+      ;;   (1.3005692   1.5925546   0.95498145))
+      ;;   :facet :exist
+      ;;   :requires-grad NIL
+      ;;   :backward NIL} )
+
+```
+
+Operations that do not allocate extra space are called **in-place** (or sometimes destructive operations?).
+
+Making operations in-place is a rational way to optimize your programs, but this is a trade-off with readability, because the coding style is more like a programming notation than a mathematical notation.
+
+Let's take another example.
+
+```math
+out = f(Input) + f(f(Tensor))
+```
+
+(TODO)
+
+```lisp
+(defnode (1DFunc (self)
+	  :where (A[~] -> A[~])))
+
+(define-impl (1DFunc :device LispTensor)
+	     :forward ((self x)
+	               `(progn ,x))
+	     :backward ((self dout dx) (values dout)))
+
+(defun f (tensor)
+    (forward (1DFunc) (!copy tensor)))
+```
+
+```lisp
+(let ((k (!add (make-input `(3 3) nil) (f (f (randn `(3 3) :requires-grad t))))))
+
+	(build k)
+        (cl-waffe2/viz:viz-computation-node k "assets/1d_fn_arg.dot"))
+```
+
+### Before Optimized Vs After Optimized.
+
+<img alt="bf" src="../../../assets/1d_fn_arg.png" width="45%">
+<img alt="bf" src="../../../assets/1d_fn_arg_optimized.png" width="45%">
+
+(TODO)
+
 
 ## Broadcasting APIs, View APIs
 
-## proceed
+!flexible
 
-## Shaping APIs
+!view
+
+## REPL-Friendly function, proceed
+
+Proceed
+
+Proceed-backward
+
+Proceed-time
+
+## Strong Shaping APIs
+
+syntax of :where pharse
+Shape Error Reports
+
+## Constructing networks with defnode/defmodel
+
+defnode
+
+defmodel
+
+call
+
+forward
+
+## Data Structures
+
+Parameter/Tensor/Input/ScalarTensor
+
+## Optimizing Parameters
+
+defoptimizer
+
+
+Tutorials Over!
+
+I'll keep my finger crossed.
+

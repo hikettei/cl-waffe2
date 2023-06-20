@@ -107,7 +107,7 @@ Input:
 The function ax+b is a family of initializer functions, and samples matrices from arithmetic progression.
 
 ```math
-out_i = ai + b
+out_n = an + b
 ```
 
 Inputs:
