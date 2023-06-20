@@ -57,8 +57,11 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 			   `(,@subscripts ,i))))))
 	   (explore 0 nil)))))))
 
-;; AddDoc: A family of Initializer Function
-
+;; TO ADD:
+;;
+;; Orthogonal
+;; Xe/He/Xavier
+;;
 
 ;; TODO: Optimize -> coerce
 (macrolet ((define-initializer-function (function-name
@@ -86,7 +89,7 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
     "The function uniform-random is a family of initializer funtions, and samples matrices from uniform random distribution using Common Lisp's standard function, (random arg).
 
 Input:
-    upfrom, below. Each elements of returned tensor is in the range of: [upfrom, below)")
+    upfrom, below. Each elements of returned tensor is in the range of: (upfrom<=x<below)") ;; HELPME: Scriba never smiles :) <- cant parse this, i wanna simply use: [upfrom, below)
   
   (define-initializer-function
       ax+b

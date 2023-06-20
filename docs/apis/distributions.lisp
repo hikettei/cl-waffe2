@@ -3,6 +3,7 @@
 
 ;; Here, place the docs about initializer function's family
 
+;; TODO: Insert Some Examples.
 (with-page *distributions* "Distributions"
   (with-section "Samples matrices from distribution"
     (insert "In order to create new matrices from distribution, cl-waffe2 provides a package, @c(cl-waffe2/distributions).")
@@ -33,11 +34,11 @@
     (with-dist-doc "beta" "function")
     (with-dist-doc "bernoulli" "function")
     (with-dist-doc "chisquare" "function")
-    
-    (with-dist-doc "gamma" "function")
     (with-dist-doc "expotential" "function")
-    (with-dist-doc "uniform-random" "function")
+    (with-dist-doc "gamma" "function")
     (with-dist-doc "normal" "function")
+    (with-dist-doc "uniform-random" "function")
     (with-dist-doc "randn" "function")
+    ;; TO Add: orthogonal
 
     ))
