@@ -17,11 +17,11 @@ All sampling functions are defined in the following format via `define-tensor-in
 (normal `(10 10) 0.0 1.0 :requires-grad t)
 
 {CPUTENSOR[float] :shape (10 10)  
-  ((0.7456925    -0.12480887  -0.66648304  ~ -1.953043    -0.4512363   -0.004740583)                    
-   (-0.16046755  -0.3302677   1.0588328    ~ 1.9249213    0.564188     -0.7019936)   
-                 ...
-   (1.983297     0.82934314   1.3093673    ~ 1.6259271    -0.098960966 0.7229355)
-   (-0.34786943  0.76567495   0.04240699   ~ -0.27339715  -1.6149684   -0.7784435))
+  ((-0.30981773   0.1800499     0.87657034    ~ -0.3955259    0.6856152     -1.4901918)                     
+   (2.0141904     1.3979158     -0.06529303   ~ 1.2665477     0.36337528    -0.60288626)   
+                  ...
+   (0.853793      -1.1144218    0.26502317    ~ -0.16750942   -0.5377397    -0.19937062)
+   (-1.5070121    1.5291011     1.2915905     ~ 0.006881155   0.41027498    -2.7653654))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -103,7 +103,7 @@ Example:
 The function ax+b is a family of initializer functions, and samples matrices from arithmetic progression.
 
 ```math
-out_i = ai + b
+out_n = an + b
 ```
 
 Inputs:
@@ -126,7 +126,7 @@ Inputs:
 ## BETA
 
 ```lisp
-(beta shape a b &rest initargs &key &allow-other-keys)
+(beta shape alpha beta &rest initargs &key &allow-other-keys)
 ```
 
 
@@ -147,9 +147,9 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 (beta `(3 3) 5.0 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.858944   0.8805997  0.9518481)
-   (0.71268797 0.6607856  0.52681404)
-   (0.8708286  0.800661   0.5508902))
+  ((0.47505245 0.9658835  0.78450173)
+   (0.8251704  0.78114927 0.9929733)
+   (0.93824697 0.9657648  0.85810274))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -158,7 +158,7 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 ## BERNOULLI
 
 ```lisp
-(bernoulli shape a b &rest initargs &key &allow-other-keys)
+(bernoulli shape p &rest initargs &key &allow-other-keys)
 ```
 The bernoulli is a family of initializer functions, and samples matrices from bernoulli distribution.
 
@@ -171,9 +171,9 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 (bernoulli `(3 3) 0.3)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.0 0.0 0.0)
+  ((1.0 0.0 0.0)
    (0.0 1.0 0.0)
-   (1.0 0.0 0.0))
+   (0.0 0.0 0.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -182,7 +182,7 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 ## CHISQUARE
 
 ```lisp
-(chisquare shape a b &rest initargs &key &allow-other-keys)
+(chisquare shape df &rest initargs &key &allow-other-keys)
 ```
 The function chisquare is a family of initializer functions, and samples matrices from chisquare distributions.
 
@@ -199,9 +199,9 @@ df - degree of freedom.
 (chisquare `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.034900386 0.8793329   0.4411704)
-   (0.17088014  0.2131625   0.71404016)
-   (0.44865698  0.24014412  0.01996298))
+  ((0.016261509 0.42444944  0.5302585)
+   (0.9098959   0.03130842  0.004192489)
+   (0.83072495  2.2460144   0.004460797))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -210,7 +210,7 @@ df - degree of freedom.
 ## EXPOTENTIAL
 
 ```lisp
-(expotential shape a b &rest initargs &key &allow-other-keys)
+(expotential shape &rest initargs &key &allow-other-keys)
 ```
 The function expotential is a family of initializer functions, and samples the expotential distribution using ziggurat algorithm with table-size=256.
 
@@ -228,9 +228,9 @@ The function expotential is a family of initializer functions, and samples the e
 (expotential `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.4298112  0.17550687 0.15535781)
-   (0.9162359  1.3475922  0.93689215)
-   (1.667534   2.4177542  5.238115))
+  ((0.5671421  1.3334886  0.1459437)
+   (0.27333507 0.26318368 0.6650454)
+   (0.33279544 0.5677758  0.7616031))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -239,7 +239,7 @@ The function expotential is a family of initializer functions, and samples the e
 ## GAMMA
 
 ```lisp
-(gamma shape a b &rest initargs &key &allow-other-keys)
+(gamma shape k &rest initargs &key &allow-other-keys)
 ```
 The function gamma is a family of initializer functions, and samples matrices from the gamma distribution.
 
@@ -253,9 +253,9 @@ The function gamma is a family of initializer functions, and samples matrices fr
 (gamma `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((1.7132338   0.9945405   2.730672)
-   (0.051700674 2.4354653   0.60248)
-   (1.1804351   0.6693382   0.05111584))
+  ((0.7807192   0.9634999   0.9834012)
+   (0.46188545  1.61346     0.014601253)
+   (1.1879153   0.19614582  0.69448864))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -264,7 +264,7 @@ The function gamma is a family of initializer functions, and samples matrices fr
 ## NORMAL
 
 ```lisp
-(normal shape a b &rest initargs &key &allow-other-keys)
+(normal shape mean stddev &rest initargs &key &allow-other-keys)
 ```
 The function normal is a family of initializer functions, and samples matrices from normal distribution.
 
@@ -297,7 +297,7 @@ stddev - Standard Deviation, σ.
 ## UNIFORM-RANDOM
 
 ```lisp
-(uniform-random shape a b &rest initargs &key &allow-other-keys)
+(uniform-random shape upfrom below &rest initargs &key &allow-other-keys)
 ```
 The function uniform-random is a family of initializer funtions, and samples matrices from uniform random distribution using Common Lisp's standard function, `(random arg)`.
 
@@ -310,9 +310,9 @@ Input:
 (uniform-random `(3 3) 2 4)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((3.241224  3.353865  3.832116)
-   (3.81248   2.212568  3.3526378)
-   (2.5252297 2.2479343 2.8328836))
+  ((3.716405  2.5896335 2.9824238)
+   (2.894271  2.5638955 3.8194795)
+   (3.8651137 2.1267598 2.5169172))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -321,7 +321,7 @@ Input:
 ## RANDN
 
 ```lisp
-(randn shape a b &rest initargs &key &allow-other-keys)
+(randn shape &rest initargs &key &allow-other-keys)
 ```
 The function randn is a family of initializer functions, and samples the gaussian distributions using ziggurat algorithm with table-size=256.
 
@@ -340,9 +340,9 @@ The function randn is a family of initializer functions, and samples the gaussia
 (randn `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((1.274335    0.7021459   1.0808352)
-   (0.09282719  -0.92819834 -0.8925472)
-   (-1.0325825  -0.18886112 0.9722022))
+  ((-1.3627635  -2.0040293  0.83575404)
+   (-0.07946848 -1.036927   -2.0722377)
+   (0.13998748  -0.8111847  -1.8342644))
   :facet :exist
   :requires-grad NIL
   :backward NIL}

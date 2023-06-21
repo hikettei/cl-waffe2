@@ -75,10 +75,13 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 		(defun ,function-name (shape ,@args &rest initargs &key &allow-other-keys)
 		  ,(format nil "
 ```lisp
-(~(~a~) shape a b &rest initargs &key &allow-other-keys)
+(~(~a~) shape ~(~a~)&rest initargs &key &allow-other-keys)
 ```
 ~a"
-			   (symbol-name function-name) document)
+			   (symbol-name function-name)
+			   (with-output-to-string (o)
+			     (dolist (arg args) (princ (symbol-name arg) o) (princ " " o)))
+			   document)
 		  (let ((tensor (apply #'make-tensor shape initargs)))
 		    (initialize-vec! tensor ,initializer-lambda :keep-order? ,keep-order?)
 		    tensor)))))
