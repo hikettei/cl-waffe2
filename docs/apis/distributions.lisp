@@ -22,7 +22,7 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 	"(ax+b `(10 10) 1 0 :dtype :uint8)")
 
       (macrolet ((with-dist-doc (name type &body body)
-		   `(with-section (symbol-name ,name)
+		   `(with-section (format nil "~(~a~)"(symbol-name ,name))
 		      (placedoc ,name ,type)
 		      ,@body)))
 

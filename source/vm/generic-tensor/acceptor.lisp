@@ -1,10 +1,14 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-(defparameter *no-grad* nil "TODO: DOC")
+(defparameter *no-grad* nil "If t, all operations don't create gradients.")
 
 (defmacro with-no-grad (&body body)
-  "TODO:DOC"
+  "```lisp
+(with-no-grad &body body)
+```
+
+Under this macro, all operations don't create any gradients."
   `(let ((*no-grad* t))
      ,@body))
 

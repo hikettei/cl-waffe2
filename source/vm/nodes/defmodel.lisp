@@ -11,21 +11,30 @@ In cl-waffe2, All models should be a subtype of this class, and shall return a f
 
 In order to define your model with Composite, two methods are available.
 
-1. Extend Composite Class (Slightly Complicated)
-  First, define your class with extending Composite Class.
+### Extend Composite Class (Slightly Complicated)
 
-  (defclass LinearModel (Composite)
-     ((weight ...) ; <- set parameters here.
-      (bias   ...))
-   Second, define forwarrd step with overriding call method.
-   (defmethod call ((model LinearModel) &rest inputs)
+First, define your class with extending Composite Class.
+
+```lisp
+(defclass LinearModel (Composite)
+   ((weight ...) ; <- set parameters here.
+    (bias   ...))
+```
+
+Second, define forwarrd step with overriding call method.
+
+```lisp
+(defmethod call ((model LinearModel) &rest inputs)
      ... )
+```
 
-   It should work like:
-   (call (make-instance 'LinearModel in-features out-features) args1 ...)
+It should work like:
 
-2. Using defmodel macro
-   The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
+```(call (make-instance 'LinearModel in-features out-features) args1 ...) ```
+
+### Using defmodel macro
+
+The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
 "))
 
 (defgeneric call (model &rest inputs) (:documentation "All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model."))
@@ -55,34 +64,49 @@ In order to define your model with Composite, two methods are available.
 		       (on-call-> nil)
 		       (documentation ""))
 		    &body constructor-body)
-  "defmodel is a macro used to describe the model of neural network with Composite class.
+  "
+```
+(defmodel ((name
+	     (self-name &rest constructor-arguments)
+		      &key
+		       (slots nil)
+		       (initargs)
+		       (on-call-> nil)
+		       (documentation \"\"))
+		    &body constructor-body)
+```
 
-Effects:
+defmodel is a macro used to describe the model of neural network with `Composite` class.
+
+### Effects
+
    1. defines a class named **name**
+
    2. defines a function named **name** with the constructor-arguments and constructor-body.
 
-Inputs:
-  - name[Symbol]
-    All models, and constructors for the model, are named after it.
-  - (self-name &rest constructor-arguments)
+
+### Inputs
+
+  1. name[Symbol]  All models, and constructors for the model, are named after it.
+  2. (self-name &rest constructor-arguments)
     The constructor function is defined as:
     (defun ,name (self-name ,@constructor-arguments)
        ...)
 
-  - slots ((slot-option1) (slot-option2) ...)
+  3. slots ((slot-option1) (slot-option2) ...)
     Parameters of the inherited Composite class. It has the same syntax as defclass slots
 
-  - initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...
+  4. initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...
     Unlike CL's structure, classes are tend to rebundant when writing the process of initializing slots. To make this simple, this argument was introduced. It works like a structure's constructor!
 
-  - documentation[String]
+  5. documentation[String]
 
-  - on-call-> [One of: nil symbol-name function list]
-    on-call-> is used to control the behaviour of *call* function.
+  6. `on-call->` [One of: nil symbol-name function list]
+     on-call-> is used to control the behaviour of *call* function.
 
-### Declare The structure of model.
+### Example
 
-Example:
+```lisp
 (defmodel (ExampleLayer (self features)
                ;; Options/Utils Here,
                :slots    ((param :initarg :param))
@@ -99,40 +123,50 @@ Example:
 ;; The model you created, works like:
 (let ((layer (ExampleLayer 10)))
     (call layer ...))
+```
 
 ### Describe Forward Propagation
 
-The option on-call-> can control the behaviour of *call* function.
+The option `on-call->` can control the behaviour of *call* function.
 
-on-call-> could be one of these case:
+`on-call->` could be one of these case:
 
-1. on-call-> is nil
-   cl-waffe2 calls the **call** function when doing forward propagation of the model.
+First case,  `on-call->` is nil:
 
-2. on-call-> is symbol-name
+  cl-waffe2 calls the **call** function when doing forward propagation of the model.
+
+Second case, `on-call->` is symbol-name:
+
    cl-waffe2 calls the specified function at on-call-> parameter, when doing forward propagation of the model.
+
    symbol-name could be also one of: method's name function's name.
 
-   For Example: set :on-call-> = call-example-layer which defined as:
+   For example, set `:on-call-> = call-example-layer` which defined as:
+
+```lisp
    (defmethod call-example-layer ((model ExampleLayer) x y)
        (print \"call-example-layer is used!\")
        ...)
+```
 
+
+```lisp
    (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
+```
 
    (Complex model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)
 
-3. on-call-> is function (i.e.: lambda)
+[Third case] `on-call->` is function (i.e.: lambda):
+
    cl-waffe2 calls the given lambda function as a forward propagation.
 
-4. on-call-> list
+[Fourth case] `on-call->` is a list:
+
    The List, should be this format.
-   ((arguments) body)
-   This argument is expanded into #'(lambda ,@on-call->) and works as well as 3.
 
+   `((arguments) body)`
 
-With regard to practical usage, visit my tutorial.
-                "
+   This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3."
   (declare (type (or symbol function list null) on-call->))
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (progn

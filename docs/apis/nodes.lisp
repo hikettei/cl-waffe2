@@ -9,10 +9,19 @@ This package can be divided into three main parts.
 1. Shaping APIs
 2. defnode  (Differentiable Operations)
 3. defmodel (Operations consisted of defnode)
+
+Note that there's a clear distinction between node and model.
+
+```lisp
+defnode  => called with `forward` 
+defmodel => called with `call`
+```
+
+Also, defnode is a fundamental unit of operation, while defmodel is consisted of a set of nodes.
 ")
 
   (macrolet ((with-doc (name type &body body)
-	       `(with-section (symbol-name ,name)
+	       `(with-section (format nil "~(~a~)" (symbol-name ,name))
 		  (placedoc ,name ,type)
 		  ,@body)))
     (with-section "Shaping APIs"
@@ -242,20 +251,225 @@ In conclusion, I believe introducing Subscript DSL produces two benefits:
 
 2. JIT Compiler can use a shape of given arguments in advance. (If only CL has a const-generics like Rust, Subscript DSL isn't needed anymore!).
 
-### Examples
+### Where Pharse
+
+With where pharse, you can put local variables like:
+
+```lisp
+;; Syntax is that: Symbol-Name = Expression
+
+A[i] B[j] -> C[k] where i = (1+ (random 1)) j = (1+ (random 1)) k = (1+ (random 1))
+```
 
 ### API: create-subscript-p
 
-(create-subscript-p ...)
-"))
+```(create-subscript-p subscripts &key macroexpand fixed return-body)```
 
+Inputs:
+
+1. macroexpand[Boolean] If t, displays the generated program.
+
+2. fixed[Boolean] If t, ~~ is ignored.
+
+3. return-body[Boolean] If t, the returned is S-exp.
+
+Outputs:
+
+`(values compiled-function To-Refer-Pointer-Idx Broadcastable_List)`
+
+Example: (TODO)
+
+"))
     
     (with-section "defnode"
+      (insert "
+```lisp
+(defnode ((abstract-name
+		   (self &rest constructor-arguments)
+		    &key
+		      (where t)
+		      (out-scalar-p nil)
+		      (slots nil)
+		      (backward nil)
+		      (documentation \"\"))
+		   &body constructor-body))
+```
+
+defnode is a macro which is used to define a subclass of `AbstractNode`.
+
+The defined class is named after `abstract-name`, which has:
+
+1. Subscript DSL
+
+2. Slots that are shared at forward/backward time.
+
+3. Generic definition of backward
+
+### Inputs
+
+1. `abstract-name` the class is named after it
+
+2. `where`  the place to put Subscript DSL
+
+3. `backward` the general definition of backward (Optional). Place S-expression here If you wanna ignore define-impl's backward, otherwise define-impl's one is used.
+
+4. `documentation` docstring
+
+5. `out-scalar-p` Set t If the returned tensor is ScalarTensor. This can be dynamically modified via the accessor `(out-scalar-p self)`.
+
+
+### Effects
+ 
+1. Defines a class named `abstract-name`
+
+2. Defines a function which is used to initialize the node named `abstract-name`
+
+### Useful Tips
+
+In order to simplify parameter initialisation, if the keyword name of the :initarg is the same as the keyword name of the argument, the initialisation code is automatically generated.
+
+```lisp
+(defnode (ExampleNode (self arg)
+            :slots ((arg :initarg :arg))))
+
+(slot-value (ExampleNode 10) 'arg) ;; => 10
+```
+
+### How and When to define backward?
+
+The backward follows this format:
+
+```lisp
+((self dout dx dy ... dn)
+ (values dx.grad dy.grad ... dn.grad))
+```
+
+`dout` is a previous node's gradient, and `dx dy ... dn` is a variables that used when forward. No guarantee that `dx dy ... dn` isn't being destructed due to in-place operation. If you need them in order to compute gradients, set `:save-for-backward (t t ... t)` at `define-impl` macro.
+
+Find the partial derivative of each variable according to the derivative of the composite function.
+
+The definition of backward must be placed either of defnode or define-impl.
+Basically, if the original defnode describes the backward, define-impl's backward is ignored.
+
+```lisp
+1.
+=================================================================
+AddNode (defnode) <- Place Backward
+   |
+   |-> (AddNode :CPUTensor)  (define-impl)
+   |-> (AddNode :LispTensor) (define-impl)
+   |-> (AddNode :CUDATensor) (define-impl)
+=================================================================
+
+2.
+=================================================================
+AddNode (defnode) <- Backward=nil
+   |
+   |-> (AddNode :CPUTensor)  (define-impl) <- place backward
+   |-> (AddNode :LispTensor) (define-impl) <- place backward
+   |-> (AddNode :CUDATensor) (define-impl) <- place backward
+=================================================================
+```
+
+Depending on `*using-backend*`, the implementation to use is determined at node-building time. See also: with-devices."))
+
+    (with-section "define-impl"
+      (insert "
+```lisp
+(define-impl ((abstract-name
+			&key
+			  (device t)
+			  (reject-p nil))
+		       &key
+			 save-for-backward
+			 forward
+			 backward)
+```
+
+Defines a implementation of AbstractNode of `device`.
+
+### Inputs
+
+1. `device` Set here symbol the impl working on. The symbol must be a subclass of `AbstractTensor`. If t, the impl has the highest priority assigned to all implementations.
+
+2. `reject-p[null or predicate]` Set here predicator, If the predicator is t, the implementation refures to be dispatched.
+
+3. `save-for-backward` The corresponding variable which is t will be made a copy when forward. (e.g.: `forward=(x y)` and `save-for-backward=(t nil)`, x is copied, y isn't copied.)
+
+4. `forward` Place the expanded lisp-code for forward propagation.
+
+5. `backward` Place the definition of backward as the same forward of `defnode` does.
+
+### Tips: reject-p
+
+One of the practical usage of reject-p is to restrict dtypes that implementation can handle.
+
+reject-p takes an function: #'(lambda (&rest inputs) ...) where inputs is `constructor-arguments` in defnode. (e.g.: `(AddNode :float)` -> `inputs=(list :float)`).
+
+`AddNode` for CPUTensor only supports dense matrix.
+
+```lisp
+(define-impl (AddNode :device CPUTensor
+	     :reject-p (supported-dtypes-are 0 :float :double))
+	     :forward ((self x y)
+		       `(,@(expand-axpy-form x y)
+			     ,x)))
+```
+
+The macro `supported-dtypes-are` returns an predicator which returns nil if the first argument is the equivalent to `:float` or `:double`.
+
+### forward/backward
+
+forward/backward is given as:
+
+```lisp
+((self &rest arguments)
+ body)
+```
+"))
+    
+    (with-section "forward"
+      (insert "```(forward node &rest inputs)```
+Step forward of the given `node`, node is a subclass of `AbstractNode`.
+
+Note that `forward` can't handle with `Composite`."))
+
+    (with-doc 'defmodel 'macro
 
       )
 
-    (with-section "defmodel"
+    (with-doc 'call 'function
+      (insert "~%~%`[generic-function]` (call model &rest inputs)"))
 
+    (with-doc 'with-devices 'macro
+      (insert "
+### Example
+
+```lisp
+(with-devices (LispTensor CPUTensor)
+   (!add a b))
+```"))
+
+    (with-section "Composite"
+      (insert
+       "
+[class] Composite
+
+~a"
+       (documentation (find-class 'Composite) 't)))
+
+    (with-section "AbstractNode"
+      (insert
+       "
+[class] AbstractNode
+
+~a"
+       (documentation (find-class 'AbstractNode) 't)))
+
+    (with-doc 'with-instant-kernel 'macro
       )
+
+    (with-doc 'declare-local-variables 'function
+      (insert "TODO"))
 
     ))

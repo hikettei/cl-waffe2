@@ -150,15 +150,18 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
   "The macro defnode declares a generic definition of computation node named abstract-name.
 
 In general, a computation node in cl-waffe2 is defined as:
+
    1. An data structure with both of forward and backward propagation.
    2. The shape of the matrix before and after the calculation is declared with :where option.
    3. Have a per-device implementation of forward propagation (sometimes backward)
 
 Effects:
+
    - defines a class (extended AbstractNode) named abstract-name
    - defines a constructor named abstract-name
 
 Inputs:
+
    - abstract-name[symbol]
    - (self &rest constructor-arguments)
      The constructor will be defined as:
@@ -167,7 +170,6 @@ Inputs:
            self)
    - slots[list] Describe here the slots node has. (the syntax is the same as defclass's slot.)
    - where[list] Describe pointer movement and shape changes before and after an operation using a DSL with a special syntax.
-
    - out-scalar-p [Boolean] Set t if the node returns a single ScalarTensor.
    - backward [list, optional] declares the definition of backward. (See also: define-impl)
 
@@ -177,59 +179,6 @@ Inputs:
 ## How to use where phase?
 
 Place here a small DSL that describes the state of the tensor before and after the operation.
-
-The basic format is that:
-
-```
-NAME1[subscripts] NAME2[subscripts] ... -> NAME3[subscripts] NAME4[subscripts] ... where NAMEX = VALUE NAMEY = VALUE
-```
-
-It can be divided into three main parts.
-
-[Input-State] -> [Output-State] where [let-binding]
-
-(where [let-binding] can be omitted)
-
-The purpose of this DSL is to represent the shape of the tensor before and after the operation, using undefined symbols, and to identify them automatically.
-
-For Example, When writing a computation node representing the transpose of a two-dimensional matrix, :where phase can be:
-
-```
-A[a b] -> A[b a] ;; Corresponding with: (setq x (!transpose x))
-```
-
-The function !transpose receives x as a input, and Let X be 10*15 Tensor.
-
-The procedure is that:
-
-1. Refering Input-State, DSL determines all symbols (i.e.: a and b). (If you want to use arbitrary values, define them with let-binding.)
-
-2. Refering determined-symbols, calculates the shape of output-phase.
-
-3. Determine the pointer to use for the output tensor from the described pointer flow.
-   In this example, the flow is described as A -> A.
-
-Note that:
-  1. The flow of pointers are optional. (i.e.: [~] -> [~] is ok). However, View is no longer recalculated, which can cause bugs, so it is basically better to write it.
-
-  2. using list as let-binding (e.g.: where a = `(1 2 3)) is ok.
-  3. ~ is a special symbol, which means that there can be any number of dimensions in between, and the meaning of ~ will be the same in all subscripts. ~ could be determined as nil or list.
-
-### Example1
-
-The Operation is:
-
-```
-OUT <- OUT + A
-```
-
-In that case, write :where phase like:
-
-```
-(defnode (... :where `(OUT[a b] A[a b] -> OUT[a b]) ...))
-```
-
-Symbols like OUT, A, indicates what pointer the argument have.
 
 ## Tips
 

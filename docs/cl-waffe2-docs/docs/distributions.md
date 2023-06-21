@@ -16,11 +16,11 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 (normal `(10 10) 0.0 1.0 :requires-grad t)
 
 {CPUTENSOR[float] :shape (10 10)  
-  ((-1.0678127   -0.7600967   -3.149325    ~ -1.1041394   -0.95959044  1.1566339)                    
-   (0.0075508086 1.008253     0.21608248   ~ 0.8089002    0.22774728   0.31731427)   
-                 ...
-   (0.40095544   -1.1705124   -1.2006091   ~ -0.22079284  1.9708866    1.2099546)
-   (0.48023966   0.5105414    0.76110506   ~ -0.15982263  -0.54544777  -1.6748044))
+  ((-0.17037201   -0.25068536   -1.9829224    ~ -0.34742555   1.1526974     -0.4854773)                     
+   (0.8215827     -0.13904004   2.510283      ~ -1.7632234    -0.07780107   -0.7547221)   
+                  ...
+   (-1.9249787    -0.49704638   -0.76903796   ~ -1.1425467    -1.2512361    -0.5259099)
+   (0.38214       1.3656324     0.018086404   ~ 0.2227446     -3.4234645    -1.4764647))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -42,7 +42,7 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
   :backward NIL}
 ```
 
-## DEFINE-TENSOR-INITIALIZER
+## define-tensor-initializer
 ```lisp
 (define-tensor-initializer (function-name (&rest args) initializer-lambda document &key (keep-order? nil)))
 ```
@@ -93,7 +93,7 @@ Example:
 
 (Note that new tensor is binded to tensor, being used to determined dtype etc...)
 
-## AX+B
+## ax+b
 
 ```lisp
 (ax+b shape a b &rest initargs &key &allow-other-keys)
@@ -122,7 +122,7 @@ Inputs:
   :backward NIL}
 ```
 
-## BETA
+## beta
 
 ```lisp
 (beta shape alpha beta &rest initargs &key &allow-other-keys)
@@ -146,15 +146,15 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 (beta `(3 3) 5.0 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.9752776  0.8173645  0.42511943)
-   (0.9087027  0.9638834  0.7639122)
-   (0.85662955 0.9619089  0.57034504))
+  ((0.6547747  0.97373605 0.88798136)
+   (0.66625863 0.9162457  0.9897759)
+   (0.86026496 0.6511763  0.8447613))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
 ```
 
-## BERNOULLI
+## bernoulli
 
 ```lisp
 (bernoulli shape p &rest initargs &key &allow-other-keys)
@@ -171,14 +171,14 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 
 {CPUTENSOR[float] :shape (3 3)  
   ((0.0 0.0 0.0)
-   (1.0 0.0 0.0)
-   (0.0 0.0 0.0))
+   (1.0 0.0 1.0)
+   (1.0 1.0 0.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
 ```
 
-## CHISQUARE
+## chisquare
 
 ```lisp
 (chisquare shape df &rest initargs &key &allow-other-keys)
@@ -198,15 +198,15 @@ df - degree of freedom.
 (chisquare `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.038785804  0.0032534464 0.07131988)
-   (0.061274357  0.18567316   0.08866747)
-   (2.7561092e-4 0.007799073  0.03039671))
+  ((0.0047970805 1.6246531e-4 1.3972543)
+   (0.094752535  2.1188583    1.8976997)
+   (0.00944982   0.93403417   0.025387313))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
 ```
 
-## EXPOTENTIAL
+## expotential
 
 ```lisp
 (expotential shape &rest initargs &key &allow-other-keys)
@@ -227,15 +227,15 @@ The function expotential is a family of initializer functions, and samples the e
 (expotential `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((1.6327817  1.303616   0.75828177)
-   (0.12049957 0.21326086 0.84404826)
-   (1.4862902  1.3675164  0.7701202))
+  ((0.064511426 0.92369187  0.28944802)
+   (0.8259025   1.053539    0.24083963)
+   (0.91072583  0.11080594  0.69543576))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
 ```
 
-## GAMMA
+## gamma
 
 ```lisp
 (gamma shape k &rest initargs &key &allow-other-keys)
@@ -252,15 +252,15 @@ The function gamma is a family of initializer functions, and samples matrices fr
 (gamma `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.7356884  2.9946074  1.5425653)
-   (0.7081258  0.74196655 1.9776571)
-   (0.55873626 0.64052224 0.44416034))
+  ((1.8249204  2.344391   1.7730393)
+   (1.005575   1.3271937  0.28734747)
+   (0.7824788  0.3454158  0.54067737))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
 ```
 
-## NORMAL
+## normal
 
 ```lisp
 (normal shape mean stddev &rest initargs &key &allow-other-keys)
@@ -293,7 +293,7 @@ stddev - Standard Deviation, σ.
   :backward NIL}
 ```
 
-## UNIFORM-RANDOM
+## uniform-random
 
 ```lisp
 (uniform-random shape upfrom below &rest initargs &key &allow-other-keys)
@@ -309,15 +309,15 @@ Input:
 (uniform-random `(3 3) 2 4)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((3.110113  3.1244433 3.146531)
-   (2.4354947 3.6516964 2.2915196)
-   (3.2593231 2.3456838 3.6053345))
+  ((3.873052  3.1237326 3.850279)
+   (2.0362096 2.4673016 2.382714)
+   (3.6836596 2.6237257 2.947835))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
 ```
 
-## RANDN
+## randn
 
 ```lisp
 (randn shape &rest initargs &key &allow-other-keys)
@@ -339,9 +339,9 @@ The function randn is a family of initializer functions, and samples the gaussia
 (randn `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((1.0805444   -1.9339327  -0.4770923)
-   (-0.23586425 0.030024163 0.67432094)
-   (-0.07382556 0.2947422   0.47240975))
+  ((1.1077718  -1.8332192 -0.3241972)
+   (0.128364   -1.151114  0.31596297)
+   (0.94753665 0.37101662 0.44188818))
   :facet :exist
   :requires-grad NIL
   :backward NIL}

@@ -20,8 +20,11 @@
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
 
 AbstractNode must possess following:
+
    1. Transimission State
+
    2. Slots (for passing forward/backward)
+
    3. Variables (for building computation nodes)
 "))
 

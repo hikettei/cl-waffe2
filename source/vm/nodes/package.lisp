@@ -43,12 +43,9 @@
   (:export
    #:defmodel
    #:Composite
+   #:AbstractNode
    #:call
    #:find-params)
-
-  (:export
-   #:*no-grad*
-   #:with-no-grad)
   
   (:export
    #:with-devices
