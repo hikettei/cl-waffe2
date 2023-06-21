@@ -13,8 +13,7 @@
 
 ```(function-name shape [Optional Arguments] &rest args &keys &allow-other-keys)```
 
-`Optional Arguments` will be passed to the function `make-tensor`, accordingly, both of these functions are valid for example.
-
+That is, arguments passed to the `make-tensor` function can also be passed directly to the initializer functions.
 ")
       (with-example
 	"(normal `(10 10) 0.0 1.0 :requires-grad t)")

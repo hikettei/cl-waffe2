@@ -84,8 +84,14 @@
   (format nil "~a/~a.md" *target-dir* name))
 
 (defparameter *distributions* "")
+(defparameter *generic-tensor* "")
+(defparameter *nodes* "")
+(defparameter *base-impl* "")
 
 (defun generate ()
+  (write-scr "generic-tensor" *generic-tensor*)
+  (write-scr "base-impl" *base-impl*)
+  (write-scr "nodes" *nodes*)
   (write-scr "distributions" *distributions*)
   
   )

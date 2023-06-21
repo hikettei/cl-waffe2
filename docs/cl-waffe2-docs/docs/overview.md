@@ -1,6 +1,95 @@
 
 # Concepts
 
+## Project Structure
+
+cl-waffe2 consists of the following systems.
+
+### Fundamental System
+
+```
+:cl-waffe2/vm.nodes
+:cl-waffe2/vm.generic-tensor
+```
+
+`:cl-waffe2/vm.nodes` provides a system on constructing networks (e.g.: `AbstractNode` and `defnode`, `Composite` and `defmodel` etc...), and management to shape (e.g.: `:where pharse`, `subscript` etc...).
+
+`:cl-waffe2/vm.generic-tensor` provides on the other hand a system on differentiable `AbstractTensor` (e.g.: `build` `make-tensor` `make-input` etc...)
+
+All other packages are built on this package.
+
+### Standard APIs
+
+```
+:cl-waffe2/base-impl
+```
+
+`:cl-waffe2/base-impl` provides a standard implementation for operations (e.g.: `!add` `proceed` `!view` etc...), including `defnode` definition and defun parts.
+
+### Standard Backends/Implemenetations
+
+```
+:cl-waffe2/backends.lisp
+:cl-waffe2/backends.cpu    
+```
+
+Both of them are standard implementation of `:cl-waffe2/base-impl` for CPU.
+
+As of this writing (2023/06/20), cl-waffe2 has a only impls for CPU, however, If only time and money would permit, I'm willing to implement CUDA/Metal Backends.
+
+:cl-waffe2/backends.lisp is `work enough` first, it is Portable (based on ANSI Common Lisp) and supports AVX2 but far from `full speed`.
+
+On the other hand :cl-waffe2/backends.cpu is accelerated by OpenBLAS (maybe MKL is ok) and other foreign backends, this is SBCL-Dependant and sometimes could be unsafe, but provides `full speed`.
+
+
+```
+:cl-waffe2/backends.fastmath (NOT IMPLEMENTED YET!)
+```
+
+(TODO)
+
+### Other Utils
+
+```
+:cl-waffe2 ;; Provides multi-threading APIs and config macros!
+:cl-waffe2/nn ;; Provides Basic neural-network Implementations.
+:cl-waffe2/optimizers ;; Provides Basic Optimizers
+:cl-waffe2/viz ;; Provides Vizualizing APIs
+etc...
+```
+
+### To Get Started!
+
+It is recommended to load the system to be used when defining the package.
+
+For Example:
+
+```lisp
+
+(in-package :cl-user)
+
+(defpackage :your-project-name
+    (:use :cl
+          :cl-waffe2
+	  :cl-waffe2/vm.generic-tensor
+	  :cl-waffe2/vm.nodes
+	  :cl-waffe2/base-impl
+	  :cl-waffe2/distributions
+	  :cl-waffe2/backends.lisp
+	  :cl-waffe2/backends.cpu
+	  :cl-waffe2/nn
+	  :cl-waffe2/optimizers
+	  :cl-waffe2/viz))
+
+(in-package :your-project-name)
+
+;; Your code follows...
+
+```
+
+cl-waffe2 does not cause name clashes with other libraries or existing functions.
+In addition, with regard to the function that generates the node is `!`, there is a rule that functions that create a node must start with `!` (ignoring the exception of the `proceed` function).
+
 ## Differentiable operations based on multiple backends
 
 All operations in cl-waffe2 can be performed in the following form.
