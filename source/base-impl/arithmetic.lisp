@@ -32,7 +32,9 @@
 			  :where (A[~] B[~] -> A[~])
 			  :backward ,backward
 			  :documentation ,(format nil "~a is a node which computes following operation element-wise.
+
 Let X and Y be a given arguments and both are matrix.
+
    X <- X ~a Y" document1 document2))))))
   (define-arithmetic-node AddNode "AddNode" "+"
     ((self dout dx dy)
@@ -66,7 +68,9 @@ Let X and Y be a given arguments and both are matrix.
 			  :backward ,backward
 			  :documentation ,(format nil
 						  "~a is a node which computes following operation element-wise.
+
 Let X be a given matrix and S be a given scalar.
+
     X <- scalar ~a X" document1 document2))))))
   (define-scalar-mat-node
       ScalarAdd

@@ -335,7 +335,8 @@ Whether you cares about performance or not, this function shouldn't be used igno
 
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.
 (defmethod vref ((tensor AbstractTensor) index)
-    "Only used for printing the tensor.
+  "vref is a generic-function to access tensor's vec.
+
 Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
 
 If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
@@ -427,7 +428,14 @@ Note that view is only created for Tensors, not a Scalar.
   tensor)
 
 (defun parameter (tensor)
-  "The function parameter calls (proceed tensor) first, and then returns the same tensor where require-grad = t."
+  "The function parameter computes all the previous nodes of the given tensor, returning the new tensor with requires-grad=t.
+
+Example:
+
+```lisp
+(parameter (randn `(3 3)))
+```"
+  
   (declare (type AbstractTensor tensor))
   (let ((out (cl-waffe2/base-impl:proceed tensor)))
     (setf (tensor-facet out) :exist)
