@@ -28,6 +28,7 @@
 		#:set-save-for-backward
 		#:read-save-for-backward)
   (:export
+   #:create-subscript-p
    #:forward
    #:backward
    #:node-passed-p

@@ -330,37 +330,10 @@ Because : The actual ~ath argument given has a shape of ~a.
 			     (all-conditions (gensym "Conds"))
 			     (pos (gensym "pos"))
 			     (undetermined-symbols (gensym "SYM")))
-  "
-If fixed is t, ignore ~.
-
-Memo:
-
+  "Creates a subscript-p function.
 Example:
  (create-subscript-p `([x y] -> [x y]))
  (funcall * `((1 1))) -> (values `((1 1)) NIL)
-
-In cl-waffe, all subscript is written in this format:
-
-Shape1 Shape2 ... -> Out-Shape1 Out-Shape2 where x = 1 y = 1. (the pharse where is optional.)
-
-ShapeN = [variable1 variable2 ...]
-
-variableN = ~ or symbol-name
-
-where a = fixnum/list is ok.
-
-Rule1:
-Outで~を使う -> 入力で使われる~は全て同一の形状
-また、次元が違うときは、入力の一番長いものを採用
-(let ((f (create-subscript-p `([~ x y] [~ x y] -> [~ x y]))))
-	 (time (funcall f `((1 3 3 2) (1 3 2)))))
--> ((1 3 3 2))
-
-Rule2: Outで~を使わない -> ~はなんでもおk
-
-Rule3: where x = 1かlocalのスコープで用いられていない添文は自動で割り当てられる
-
-Rule4: ~は一度のみ使える
 "
   (multiple-value-bind (input-names
 			output-names

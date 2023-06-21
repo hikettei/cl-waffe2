@@ -62,8 +62,9 @@ etc...
 
 It is recommended to load the system to be used when defining the package.
 
-For Example:
+Please pick up the packages that you need depending on your needs.
 
+For Example:
 ```lisp
 
 (in-package :cl-user)

@@ -144,6 +144,8 @@
   :components ((:file "package")
 	       (:file "apis/reference")
 	       (:file "apis/distributions")
+	       (:file "apis/docs")
+	       (:file "apis/generic-tensor")
 	       ))
 
 
