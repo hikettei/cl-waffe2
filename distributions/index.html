@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>cl-waffe2/distributions - cl-waffe2 Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "cl-waffe2/distributions";
+        var mkdocs_page_input_path = "distributions.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> cl-waffe2 Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../generic-tensor/">cl-waffe2/vm.generic-tensor</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl-nodes/">[Nodes] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/distributions</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#samples-matrices-from-distribution">Samples matrices from distribution</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#common-format-to-the-apis">Common Format to the APIs</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#define-tensor-initializer">define-tensor-initializer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#axb">ax+b</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#beta">beta</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#reference">Reference</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#bernoulli">bernoulli</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#chisquare">chisquare</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#references">References</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#expotential">expotential</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#references_1">References</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#gamma">gamma</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#references_2">References</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#normal">normal</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#reference_1">Reference</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_2">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_8">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#uniform-random">uniform-random</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_9">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#randn">randn</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#references_3">References</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_10">Example</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">cl-waffe2 Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>cl-waffe2/distributions</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css"
+  integrity="sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs"
+  crossorigin="anonymous" />
+
+<style type="text/css">
+    .katex img {
+      object-fit: fill;
+      padding: unset;
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: inherit;
+    }
+</style>
+<h1 id="distributions">Distributions</h1>
+<h2 id="samples-matrices-from-distribution">Samples matrices from distribution</h2>
+<p>cl-waffe2 provides a package :cl-waffe2/distributions which is used to sample matrices from the distributions.</p>
+<h2 id="common-format-to-the-apis">Common Format to the APIs</h2>
+<p>All sampling functions are defined in the following format via <code>define-tensor-initializer</code> macro.</p>
+<p><code>(function-name shape [Optional Arguments] &amp;rest args &amp;keys &amp;allow-other-keys)</code></p>
+<p>That is, arguments passed to the <code>make-tensor</code> function can also be passed directly to the initializer functions.</p>
+<h3 id="example">Example</h3>
+<pre><code class="language-lisp">(normal `(10 10) 0.0 1.0 :requires-grad t)
+
+{CPUTENSOR[float] :shape (10 10)  
+  ((-0.17037201   -0.25068536   -1.9829224    ~ -0.34742555   1.1526974     -0.4854773)                     
+   (0.8215827     -0.13904004   2.510283      ~ -1.7632234    -0.07780107   -0.7547221)   
+                  ...
+   (-1.9249787    -0.49704638   -0.76903796   ~ -1.1425467    -1.2512361    -0.5259099)
+   (0.38214       1.3656324     0.018086404   ~ 0.2227446     -3.4234645    -1.4764647))
+  :facet :exist
+  :requires-grad T
+  :backward NIL}
+</code></pre>
+<h3 id="example_1">Example</h3>
+<pre><code class="language-lisp">(ax+b `(10 10) 1 0 :dtype :uint8)
+
+{CPUTENSOR[uint8] :shape (10 10)  
+  ((0  1  2  ~ 7  8  9)          
+   (10 11 12 ~ 17 18 19)   
+       ...
+   (80 81 82 ~ 87 88 89)
+   (90 91 92 ~ 97 98 99))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="define-tensor-initializer">define-tensor-initializer</h2>
+<pre><code class="language-lisp">(define-tensor-initializer (function-name (&amp;rest args) initializer-lambda document &amp;key (keep-order? nil)))
+</code></pre>
+<p><code>define-tensor-initializer</code> is a macro which is used to define a initializer function.</p>
+<p>Initializer function is a function whose arguments follow this format:</p>
+<pre><code>(function-name shape &lt;Initializer's Arguments&gt; &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>Input:</p>
+<pre><code>function-name - the function is defined after this argument
+
+args          - Initializer's Arguments
+
+initializer-lambda - A form to be expanded as the sampling function, which must return a function of #'(lambda (i) ...) where i is the index of element.
+
+keep-order? - set t if the index is needed to sampling matrices.
+</code></pre>
+<p>Example:</p>
+<pre><code class="language-lisp">(define-initializer-function
+    uniform-random
+    (upfrom below)
+  (let ((upfrom (coerce upfrom (dtype-&gt;lisp-type (dtype tensor))))
+    (below  (coerce below  (dtype-&gt;lisp-type (dtype tensor)))))
+    #'(lambda (i)
+    (declare (ignore i))
+    (sample-uniform-random upfrom below)))
+    &quot;&quot;)
+
+(uniform-random `(10 10) 0.1 0.3 :requires-grad t)
+
+{CPUTENSOR[float] :shape (10 10)  
+  ((0.13149574  0.15135926  0.1569588   ~ 0.103781514 0.20610212  0.19365484)                   
+   (0.2638953   0.12672275  0.21630599  ~ 0.16542184  0.10228193  0.12928057)   
+                ...
+   (0.20429519  0.12252951  0.17538154  ~ 0.22072719  0.18642941  0.11027551)
+   (0.14372297  0.11097031  0.25514898  ~ 0.28739202  0.18398522  0.15176433))
+  :facet :exist
+  :requires-grad T
+  :backward NIL}
+</code></pre>
+<p>(Note that new tensor is binded to tensor, being used to determined dtype etc...)</p>
+<h2 id="axb">ax+b</h2>
+<pre><code class="language-lisp">(ax+b shape a b &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function ax+b is a family of initializer functions, and samples matrices from arithmetic progression.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><msub><mi>t</mi><mi>n</mi></msub><mo>=</mo><mi>a</mi><mi>n</mi><mo>+</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">
+out_n = an + b
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7651em;vertical-align:-0.15em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">an</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">b</span></span></span></span></span></p>
+<p>Inputs:</p>
+<pre><code>a, b - Coefficients of the above formula.
+</code></pre>
+<h3 id="example_2">Example</h3>
+<pre><code class="language-lisp">(ax+b `(3 3) 1.0 0.0)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((0.0 1.0 2.0)
+   (3.0 4.0 5.0)
+   (6.0 7.0 8.0))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="beta">beta</h2>
+<pre><code class="language-lisp">(beta shape alpha beta &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function beta is a family of initializer functions, and sample matrices from beta distribution.</p>
+<h3 id="reference">Reference</h3>
+<ol>
+<li>
+<p>Generating Beta Variates with Nonintegral Shape Parameters (R. C. H. Cheng University of Wales Institute of Science and Technology)</p>
+</li>
+<li>
+<p>https://dl.acm.org/doi/pdf/10.1145/359460.359482</p>
+</li>
+</ol>
+<p>Note: My implementation is unstable, being occurs floating-overflow constantly..., especially when min(alpha, beta) &lt; 1.0 (i.e.: beta-bc)</p>
+<h3 id="example_3">Example</h3>
+<pre><code class="language-lisp">(beta `(3 3) 5.0 1.0)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((0.6547747  0.97373605 0.88798136)
+   (0.66625863 0.9162457  0.9897759)
+   (0.86026496 0.6511763  0.8447613))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="bernoulli">bernoulli</h2>
+<pre><code class="language-lisp">(bernoulli shape p &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The bernoulli is a family of initializer functions, and samples matrices from bernoulli distribution.</p>
+<h3 id="inputs">Inputs</h3>
+<p>p - Takes 1 with probability p and 0 with probalibity (1-p).</p>
+<h3 id="example_4">Example</h3>
+<pre><code class="language-lisp">(bernoulli `(3 3) 0.3)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((0.0 0.0 0.0)
+   (1.0 0.0 1.0)
+   (1.0 1.0 0.0))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="chisquare">chisquare</h2>
+<pre><code class="language-lisp">(chisquare shape df &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function chisquare is a family of initializer functions, and samples matrices from chisquare distributions.</p>
+<h3 id="inputs_1">Inputs</h3>
+<p>df - degree of freedom.</p>
+<h3 id="references">References</h3>
+<p>https://github.com/lvaruzza/cl-randist</p>
+<h3 id="example_5">Example</h3>
+<pre><code class="language-lisp">(chisquare `(3 3) 1.0)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((0.0047970805 1.6246531e-4 1.3972543)
+   (0.094752535  2.1188583    1.8976997)
+   (0.00944982   0.93403417   0.025387313))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="expotential">expotential</h2>
+<pre><code class="language-lisp">(expotential shape &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function expotential is a family of initializer functions, and samples the expotential distribution using ziggurat algorithm with table-size=256.</p>
+<h3 id="references_1">References</h3>
+<ol>
+<li>
+<p>https://andantesoft.hatenablog.com/entry/2023/04/30/183032</p>
+</li>
+<li>
+<p>Marsaglia, G., &amp; Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.</p>
+</li>
+<li>
+<p>https://marui.hatenablog.com/entry/2023/01/23/194507</p>
+</li>
+</ol>
+<h3 id="example_6">Example</h3>
+<pre><code class="language-lisp">(expotential `(3 3))
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((0.064511426 0.92369187  0.28944802)
+   (0.8259025   1.053539    0.24083963)
+   (0.91072583  0.11080594  0.69543576))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="gamma">gamma</h2>
+<pre><code class="language-lisp">(gamma shape k &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function gamma is a family of initializer functions, and samples matrices from the gamma distribution.</p>
+<h3 id="references_2">References</h3>
+<ol>
+<li>https://github.com/lvaruzza/cl-randist</li>
+</ol>
+<h3 id="example_7">Example</h3>
+<pre><code class="language-lisp">(gamma `(3 3) 1.0)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((1.8249204  2.344391   1.7730393)
+   (1.005575   1.3271937  0.28734747)
+   (0.7824788  0.3454158  0.54067737))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="normal">normal</h2>
+<pre><code class="language-lisp">(normal shape mean stddev &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function normal is a family of initializer functions, and samples matrices from normal distribution.</p>
+<h3 id="reference_1">Reference</h3>
+<ol>
+<li>https://github.com/lvaruzza/cl-randist (seems to create ziggurat table with size=128)</li>
+</ol>
+<h3 id="inputs_2">Inputs</h3>
+<p>mean</p>
+<p>stddev - Standard Deviation, σ.</p>
+<h3 id="example_8">Example</h3>
+<pre><code class="language-lisp">(normal `(3 3) 1.0 0.0)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((1.0 1.0 1.0)
+   (1.0 1.0 1.0)
+   (1.0 1.0 1.0))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="uniform-random">uniform-random</h2>
+<pre><code class="language-lisp">(uniform-random shape upfrom below &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function uniform-random is a family of initializer funtions, and samples matrices from uniform random distribution using Common Lisp's standard function, <code>(random arg)</code>.</p>
+<p>Input:</p>
+<pre><code>upfrom, below. Each elements of returned tensor is in the range of: `[upfrom, below)`
+</code></pre>
+<h3 id="example_9">Example</h3>
+<pre><code class="language-lisp">(uniform-random `(3 3) 2 4)
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((3.873052  3.1237326 3.850279)
+   (2.0362096 2.4673016 2.382714)
+   (3.6836596 2.6237257 2.947835))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="randn">randn</h2>
+<pre><code class="language-lisp">(randn shape &amp;rest initargs &amp;key &amp;allow-other-keys)
+</code></pre>
+<p>The function randn is a family of initializer functions, and samples the gaussian distributions using ziggurat algorithm with table-size=256.</p>
+<h3 id="references_3">References</h3>
+<ol>
+<li>
+<p>https://andantesoft.hatenablog.com/entry/2023/04/30/183032</p>
+</li>
+<li>
+<p>Marsaglia, G., &amp; Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.</p>
+</li>
+<li>
+<p>https://marui.hatenablog.com/entry/2023/01/23/194507</p>
+</li>
+</ol>
+<h3 id="example_10">Example</h3>
+<pre><code class="language-lisp">(randn `(3 3))
+
+{CPUTENSOR[float] :shape (3 3)  
+  ((1.1077718  -1.8332192 -0.3241972)
+   (0.128364   -1.151114  0.31596297)
+   (0.94753665 0.37101662 0.44188818))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../base-impl-nodes/" class="btn btn-neutral float-left" title="[Nodes] cl-waffe2/base-impl"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../base-impl-nodes/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>[Functions] cl-waffe2/base-impl - cl-waffe2 Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "[Functions] cl-waffe2/base-impl";
+        var mkdocs_page_input_path = "base-impl.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> cl-waffe2 Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../generic-tensor/">cl-waffe2/vm.generic-tensor</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">[Functions] cl-waffe2/base-impl</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#function-matrix-add">[function] !matrix-add</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-matrix-sub">[function] !matrix-sub</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_1">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-matrix-mul">[function] !matrix-mul</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_2">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_2">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-matrix-div">[function] !matrix-div</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_3">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-inverse">[function] !inverse</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_4">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-scalar-add">[function] !scalar-add</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_5">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-scalar-sub">[function] !scalar-sub</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_6">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-scalar-mul">[function] !scalar-mul</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_7">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-scalar-div">[function] !scalar-div</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_8">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sas-add">[function] !sas-add</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_9">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sas-sub">[function] !sas-sub</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_10">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sas-mul">[function] !sas-mul</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_11">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sas-div">[function] !sas-div</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_12">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-add">[function] !add</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_13">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_4">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sub">[function] !sub</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_14">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_5">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-mul">[function] !mul</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_15">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_6">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-div">[function] !div</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_16">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_7">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-move">[function] !move</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes">nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_17">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#output">Output</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-copy">[function] !copy</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-copy-force">[function] !copy-force</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-reshape">[function] !reshape</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_18">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-view">[function] !view</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#subscripts">Subscripts</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#return">Return</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-flatten">[function] !flatten</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-rankup">[function] !rankup</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-scal">[function] -&gt;scal</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-mat">[function] -&gt;mat</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-proceed">[function] proceed</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_19">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-proceed-time">[function] proceed-time</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-proceed-backward">[function] proceed-backward</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#output_1">Output</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-flexible">[function] !flexible</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-abs">[function] !abs</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_20">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_1">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_8">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sign">[function] !sign</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_21">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_1">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_2">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_9">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sqrt">[function] !sqrt</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_22">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_2">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_3">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_10">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-square">[function] !square</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_23">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_3">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_4">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_11">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sin">[function] !sin</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_24">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_4">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_5">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_12">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-cos">[function] !cos</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_25">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_5">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_6">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_13">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-tan">[function] !tan</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_26">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_6">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_7">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_14">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-asin">[function] !asin</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_27">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_7">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_8">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_15">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-acos">[function] !acos</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_28">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_8">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_9">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_16">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-atan">[function] !atan</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_29">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_9">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_10">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_17">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sinh">[function] !sinh</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_30">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_10">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_11">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_18">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-cosh">[function] !cosh</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_31">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_11">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_12">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_19">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-tanh">[function] !tanh</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_32">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_12">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_13">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_20">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-asinh">[function] !asinh</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_33">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_13">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_14">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_21">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-acosh">[function] !acosh</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_34">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_14">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_15">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_22">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-atanh">[function] !atanh</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_35">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_15">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_16">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_23">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-exp">[function] !exp</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_36">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_16">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_17">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_24">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-log2">[function] !log2</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_37">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_17">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_18">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_25">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-log10">[function] !log10</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_38">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_18">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_19">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_26">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-loge">[function] !loge</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_39">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_19">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nodes_20">Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sideeffects_27">SideEffects</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sum">[function] !sum</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_40">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-mean">[function] !mean</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_41">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#return_1">Return</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-argmax">[function] !argmax</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_42">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_20">Returns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_43">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns_21">Returns</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-t">[function] !t</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#current-problem">Current Problem</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-matmul">[function] !matmul</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_44">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#lazy-transpose">Lazy-Transpose</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-dot">[function] !dot</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-where">[function] !where</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_45">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-where_1">[function] !where</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_46">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal">[function] a&gt;scal</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_47">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_1">[function] a&lt;scal</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_48">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_2">[function] a&gt;=scal</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_49">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_3">[function] a&lt;=scal</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_50">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab">[function] a&gt;b</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_51">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_1">[function] a&lt;b</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_52">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_2">[function] a&gt;=b</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_53">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_3">[function] a&lt;=b</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_54">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl-nodes/">[Nodes] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">cl-waffe2 Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>[Functions] cl-waffe2/base-impl</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css"
+  integrity="sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs"
+  crossorigin="anonymous" />
+
+<style type="text/css">
+    .katex img {
+      object-fit: fill;
+      padding: unset;
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: inherit;
+    }
+</style>
+<h1 id="basic-apis">Basic APIs</h1>
+<h2 id="function-matrix-add">[function] !matrix-add</h2>
+<pre><code class="language-lisp">(!matrix-add x y)
+</code></pre>
+<p>The function <code>!matrix-add</code> calls <code>ADDNODE</code> and adds X and Y element-wise, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mo>+</mo><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X + Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="inputs">Inputs</h3>
+<p><code>X</code> and <code>Y</code> must be a AbstractTensor (not a ScalarTensor), with the same shape.</p>
+<h3 id="sideeffects">SideEffects</h3>
+<p>None.</p>
+<h2 id="function-matrix-sub">[function] !matrix-sub</h2>
+<pre><code class="language-lisp">(!matrix-sub x y)
+</code></pre>
+<p>The function <code>!matrix-sub</code> calls <code>SUBNODE</code> and substracts X by Y element-wise, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mo>−</mo><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X - Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="inputs_1">Inputs</h3>
+<p><code>X</code> and <code>Y</code> must be a AbstractTensor (not a ScalarTensor), with the same shape.</p>
+<h3 id="sideeffects_1">SideEffects</h3>
+<p>None.</p>
+<h2 id="function-matrix-mul">[function] !matrix-mul</h2>
+<pre><code class="language-lisp">(!matrix-mul x y)
+</code></pre>
+<p>The function <code>!matrix-mul</code> calls <code>MULNODE</code> and multiplies X and Y element-wise, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mo>∗</mo><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X * Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="inputs_2">Inputs</h3>
+<p><code>X</code> and <code>Y</code> must be a AbstractTensor (not a ScalarTensor), with the same shape.</p>
+<h3 id="sideeffects_2">SideEffects</h3>
+<p>None.</p>
+<h2 id="function-matrix-div">[function] !matrix-div</h2>
+<pre><code class="language-lisp">(!matrix-div x y)
+</code></pre>
+<p>The function <code>!matrix-div</code> calls <code>DIVNODE</code> and divides X by Y element-wise, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mi mathvariant="normal">/</mi><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X / Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="inputs_3">Inputs</h3>
+<p><code>X</code> and <code>Y</code> must be a AbstractTensor (not a ScalarTensor), with the same shape.</p>
+<h3 id="sideeffects_3">SideEffects</h3>
+<p>None.</p>
+<h2 id="function-inverse">[function] !inverse</h2>
+<pre><code class="language-lisp">(!inverse tensor)
+</code></pre>
+<p>The function <code>!inverse</code> calls <code>InverseTensorNode</code>, and finds the inverse of the received Tensor/Scalar, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mn>1</mn><mi mathvariant="normal">/</mi><mi>X</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{1 / X}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord">1/</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span></span></span></span></span></span></p>
+<h3 id="inputs_4">Inputs</h3>
+<p>tensor[ScalarTensor/AbstractTensor/Number]</p>
+<h2 id="function-scalar-add">[function] !scalar-add</h2>
+<pre><code class="language-lisp">(!scalar-add scalar x)
+</code></pre>
+<p>The function !SCALAR-ADD computes following operation with calling <code>SCALARADD</code>, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mo>+</mo><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X + scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="inputs_5">Inputs</h3>
+<p><code>scalar</code> could be one of <code>ScalarTensor</code> or <code>number</code></p>
+<p><code>tensor</code> <code>AbstractTensor</code> (should not be a scalar)</p>
+<h2 id="function-scalar-sub">[function] !scalar-sub</h2>
+<pre><code class="language-lisp">(!scalar-sub scalar x)
+</code></pre>
+<p>The function !SCALAR-SUB computes following operation with calling <code>SCALARSUB</code>, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mo>−</mo><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X - scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="inputs_6">Inputs</h3>
+<p><code>scalar</code> could be one of <code>ScalarTensor</code> or <code>number</code></p>
+<p><code>tensor</code> <code>AbstractTensor</code> (should not be a scalar)</p>
+<h2 id="function-scalar-mul">[function] !scalar-mul</h2>
+<pre><code class="language-lisp">(!scalar-mul scalar x)
+</code></pre>
+<p>The function !SCALAR-MUL computes following operation with calling <code>SCALARMUL</code>, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mo>∗</mo><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X * scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="inputs_7">Inputs</h3>
+<p><code>scalar</code> could be one of <code>ScalarTensor</code> or <code>number</code></p>
+<p><code>tensor</code> <code>AbstractTensor</code> (should not be a scalar)</p>
+<h2 id="function-scalar-div">[function] !scalar-div</h2>
+<pre><code class="language-lisp">(!scalar-div scalar x)
+</code></pre>
+<p>The function !SCALAR-DIV computes following operation with calling <code>SCALARDIV</code>, returning a new tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>X</mi><mi mathvariant="normal">/</mi><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X_{copy}\gets{X / scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord">/</span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="inputs_8">Inputs</h3>
+<p><code>scalar</code> could be one of <code>ScalarTensor</code> or <code>number</code></p>
+<p><code>tensor</code> <code>AbstractTensor</code> (should not be a scalar)</p>
+<h2 id="function-sas-add">[function] !sas-add</h2>
+<p>The function !sas-add provides differentiable scalar-and-scalar operation.</p>
+<p>Calling a node <code>SCALARANDSCALARADD</code>, the function performs following operation:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>x</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>x</mi><mo>+</mo><mi>y</mi></mrow></mrow><annotation encoding="application/x-tex">
+x_{copy}\gets{x + y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span></span></span></p>
+<h3 id="inputs_9">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of: <code>ScalarTensor</code> or <code>number</code></p>
+<h2 id="function-sas-sub">[function] !sas-sub</h2>
+<p>The function !sas-sub provides differentiable scalar-and-scalar operation.</p>
+<p>Calling a node <code>SCALARANDSCALARSUB</code>, the function performs following operation:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>x</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>x</mi><mo>−</mo><mi>y</mi></mrow></mrow><annotation encoding="application/x-tex">
+x_{copy}\gets{x - y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span></span></span></p>
+<h3 id="inputs_10">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of: <code>ScalarTensor</code> or <code>number</code></p>
+<h2 id="function-sas-mul">[function] !sas-mul</h2>
+<p>The function !sas-mul provides differentiable scalar-and-scalar operation.</p>
+<p>Calling a node <code>SCALARANDSCALARMUL</code>, the function performs following operation:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>x</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>x</mi><mo>∗</mo><mi>y</mi></mrow></mrow><annotation encoding="application/x-tex">
+x_{copy}\gets{x * y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6597em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span></span></span></p>
+<h3 id="inputs_11">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of: <code>ScalarTensor</code> or <code>number</code></p>
+<h2 id="function-sas-div">[function] !sas-div</h2>
+<p>The function !sas-div provides differentiable scalar-and-scalar operation.</p>
+<p>Calling a node <code>SCALARANDSCALARDIV</code>, the function performs following operation:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>x</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>x</mi><mi mathvariant="normal">/</mi><mi>y</mi></mrow></mrow><annotation encoding="application/x-tex">
+x_{copy}\gets{x / y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span></span></span></span></span></span></p>
+<h3 id="inputs_12">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of: <code>ScalarTensor</code> or <code>number</code></p>
+<h2 id="function-add">[function] !add</h2>
+<pre><code class="language-lisp">(!add x y)
+</code></pre>
+<p>The function provides general-purpose arithmetic operation.</p>
+<p>Given type of tensors, this function dispatches these functions automatically:</p>
+<ol>
+<li>
+<p><code>!sas-add</code></p>
+</li>
+<li>
+<p><code>!scalar-add</code></p>
+</li>
+<li>
+<p><code>!matrix-add</code></p>
+</li>
+</ol>
+<h3 id="inputs_13">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of <code>AbstractTensor</code> <code>number</code> <code>ScalarTensor</code></p>
+<h3 id="sideeffects_4">SideEffects</h3>
+<p>None</p>
+<h2 id="function-sub">[function] !sub</h2>
+<pre><code class="language-lisp">(!sub x y)
+</code></pre>
+<p>The function provides general-purpose arithmetic operation.</p>
+<p>Given type of tensors, this function dispatches these functions automatically:</p>
+<ol>
+<li>
+<p><code>!sas-sub</code></p>
+</li>
+<li>
+<p><code>!scalar-sub</code></p>
+</li>
+<li>
+<p><code>!matrix-sub</code></p>
+</li>
+</ol>
+<h3 id="inputs_14">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of <code>AbstractTensor</code> <code>number</code> <code>ScalarTensor</code></p>
+<h3 id="sideeffects_5">SideEffects</h3>
+<p>None</p>
+<h2 id="function-mul">[function] !mul</h2>
+<pre><code class="language-lisp">(!mul x y)
+</code></pre>
+<p>The function provides general-purpose arithmetic operation.</p>
+<p>Given type of tensors, this function dispatches these functions automatically:</p>
+<ol>
+<li>
+<p><code>!sas-mul</code></p>
+</li>
+<li>
+<p><code>!scalar-mul</code></p>
+</li>
+<li>
+<p><code>!matrix-mul</code></p>
+</li>
+</ol>
+<h3 id="inputs_15">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of <code>AbstractTensor</code> <code>number</code> <code>ScalarTensor</code></p>
+<h3 id="sideeffects_6">SideEffects</h3>
+<p>None</p>
+<h2 id="function-div">[function] !div</h2>
+<pre><code class="language-lisp">(!div x y)
+</code></pre>
+<p>The function provides general-purpose arithmetic operation.</p>
+<p>Given type of tensors, this function dispatches these functions automatically:</p>
+<ol>
+<li>
+<p><code>!sas-div</code></p>
+</li>
+<li>
+<p><code>!scalar-div</code></p>
+</li>
+<li>
+<p><code>!matrix-div</code></p>
+</li>
+</ol>
+<h3 id="inputs_16">Inputs</h3>
+<p><code>x</code> <code>y</code> could be one of <code>AbstractTensor</code> <code>number</code> <code>ScalarTensor</code></p>
+<h3 id="sideeffects_7">SideEffects</h3>
+<p>None</p>
+<h2 id="function-move">[function] !move</h2>
+<pre><code class="language-lisp">(!move place tensor)
+</code></pre>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><mo>←</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">
+A\gets{B}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">A</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span></span></span></p>
+<p>The function !move returns a node which moves tensor's visible elements into place's visible elements.</p>
+<h3 id="nodes">nodes</h3>
+<p>one of: <code>MoveTensorNode</code> <code>ScalarTensorNode</code></p>
+<h3 id="inputs_17">Inputs</h3>
+<p><code>place[AbstractTensor]</code> tensor to be overwritten.</p>
+<p><code>tensor[AbstractTensor]</code> tensor to be referred.</p>
+<h3 id="output">Output</h3>
+<p>Unevaluated Copied Tensor.</p>
+<h2 id="function-copy">[function] !copy</h2>
+<pre><code class="language-lisp">(!copy tensor)
+</code></pre>
+<p>The function !copy returns a node which makes a copy the tensor's visible area.</p>
+<p>Note that: the function <code>!copy</code> never creates a new tensor larger than (tensor-vec tensor) has, (i.e.: copying broadcasted tensor will return broadcasted and copied tensor).</p>
+<p><code>!copy</code> is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns <code>InputTensor</code>, not <code>AbstractTensor</code>.</p>
+<p>See also: <code>!copy-force</code> never being ignored by compiler, and broadcasted axes will be padded.</p>
+<p>Input:  Tensor[AbstractTensor]
+Output: Tensor[AbstractTensor]</p>
+<h2 id="function-copy-force">[function] !copy-force</h2>
+<pre><code class="language-lisp">(!copy-force (tensor))
+</code></pre>
+<p>The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.</p>
+<p>This function is also used to adjust memory alignment of tensor.</p>
+<h2 id="function-reshape">[function] !reshape</h2>
+<pre><code>(!reshape tensor &amp;rest shapes)
+</code></pre>
+<p>Changes the shape of given tensor.</p>
+<p>Before and after the operation, the total elements of tensors must correspond.</p>
+<h3 id="inputs_18">Inputs</h3>
+<p><code>tensor</code> <code>AbstractTensor</code> but must not includes <code>symbol</code> in the shape.</p>
+<p><code>shapes</code> could be one of: fixnum <code>t</code>. <code>t</code> can be used at one, but the value of t is automatically inferenced.</p>
+<h2 id="function-view">[function] !view</h2>
+<pre><code class="language-lisp">(!view tensor &amp;rest subscripts)
+</code></pre>
+<p>The function !view returns a tensor which is applied lazy-evaluated view.</p>
+<p>For Example, let A be a 4x8 Matrix, and we gonna create a view of A that portrays <code>A[:, 2]</code>.</p>
+<pre><code>(!view A 2 t)
+
+     A                            B
+0 ++++++++                     --------
+1 ++++++++                     --------
+2 ++++++++ -&gt; [make a view] -&gt; ++++++++
+3 ++++++++                     --------
+</code></pre>
+<p>Here,</p>
+<ol>
+<li>
+<p><code>A</code> and <code>B</code> shares the pointer.</p>
+</li>
+<li>
+<p>Calling <code>(shape B)</code> returns <code>(1 8)</code>.</p>
+</li>
+</ol>
+<h3 id="subscripts">Subscripts</h3>
+<p>Subscripts are following:</p>
+<ol>
+<li>
+<p><code>t</code> all elements in the axis.</p>
+</li>
+<li>
+<p><code>fixnum</code> points out the specified index.</p>
+</li>
+<li>
+<p><code>(start end)</code> slices the area.</p>
+</li>
+<li>
+<p><code>(start end step-by)</code> slices the area by <code>step-by</code>. step-by can be a negative-fixnum. (Not tested)</p>
+</li>
+<li>
+<p><code>(:broadcast N-times)</code> broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.</p>
+</li>
+<li>
+<p><code>(:tflist ...)</code> (TODO)</p>
+</li>
+<li>
+<p><code>(:indices ...)</code> (TODO)</p>
+</li>
+</ol>
+<h3 id="return">Return</h3>
+<p><code>(values sliced-tensor broadcast-reverser)</code></p>
+<p>Tips: Applying <code>!view</code> again to the returned <code>sliced-tensor</code> with <code>broadcast-reverser</code> will remove broadcasts from the tensor.</p>
+<h2 id="function-flatten">[function] !flatten</h2>
+<pre><code>(!flatten tensor)
+</code></pre>
+<p>equivalent to the <code>(!reshape tensor t)</code></p>
+<h2 id="function-rankup">[function] !rankup</h2>
+<pre><code class="language-lisp">(!rankup tensor ntimes)
+</code></pre>
+<p>The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.</p>
+<ol>
+<li>
+<p>If <code>ntimes</code> &gt; 0, appends 1</p>
+</li>
+<li>
+<p>If <code>ntimes</code> &lt; 0, reduces 1, if the axis=1, otherwise returns error.</p>
+</li>
+</ol>
+<h2 id="function-scal">[function] -&gt;scal</h2>
+<pre><code>(-&gt;scal matrix-tensor)
+</code></pre>
+<p>The function -&gt;scal receives <code>matrix-tensor</code> with total-size = 1, returning a ScalarTensor.</p>
+<h2 id="function-mat">[function] -&gt;mat</h2>
+<pre><code>(-&gt;mat scalar-tensor &amp;key (dims 1))
+</code></pre>
+<p>The function -&gt;mat receives <code>ScalarTensor</code>, returning a matrix with the number of axis=dims.</p>
+<h2 id="function-proceed">[function] proceed</h2>
+<pre><code>(proceed tensor &amp;key (measure-time nil))
+</code></pre>
+<p>The function proceed invokes special node, <code>ProceedNode</code>, which takes all the previous computation node before tensor, returning the result of it.</p>
+<p>The backward is created with the previous node.</p>
+<p>This function will be useful especially when debugging on REPL.</p>
+<h3 id="inputs_19">Inputs</h3>
+<p>If <code>measure-time</code>=t, ProceedNode wraps with time macro when calling <strong>COMPILED</strong> forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes.</p>
+<h2 id="function-proceed-time">[function] proceed-time</h2>
+<pre><code>(proceed-time tensor)
+</code></pre>
+<p>An alias for (proceed tensor :measure-time t)</p>
+<h2 id="function-proceed-backward">[function] proceed-backward</h2>
+<pre><code>(proceed-backward tensor)
+</code></pre>
+<p>The function proceed-backward calls forward and backwrd of the tensor.</p>
+<h3 id="output_1">Output</h3>
+<p><code>T</code> (which indicates backward is succeed)</p>
+<h2 id="function-flexible">[function] !flexible</h2>
+<pre><code>(!flexible tensor)
+</code></pre>
+<p>The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.</p>
+<p>That is:</p>
+<pre><code>Tensor = (10 10) -&gt; [!flexible] -&gt; Tensor' = (1 ... 1 10 10)
+                                                 ^ &lt;1 x N&gt;
+</code></pre>
+<p>Note that added axes could be broadcasted automatically when the operation called with multiple arguments.</p>
+<h2 id="function-abs">[function] !abs</h2>
+<pre><code class="language-lisp">(!abs x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !abs takes <code>x</code> as an argument, applying a abs function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>b</mi><mi>s</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{abs(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">ab</span><span class="mord mathnormal">s</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_20">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_1">Nodes</h3>
+<p><code>SCALAR-ABSNODE</code> <code>ABSNODE</code></p>
+<h3 id="sideeffects_8">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-sign">[function] !sign</h2>
+<pre><code class="language-lisp">(!sign x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !sign takes <code>x</code> as an argument, applying a sign function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>g</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{sign(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_21">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_1">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_2">Nodes</h3>
+<p><code>SCALAR-SIGNNODE</code> <code>SIGNNODE</code></p>
+<h3 id="sideeffects_9">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-sqrt">[function] !sqrt</h2>
+<pre><code class="language-lisp">(!sqrt x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !sqrt takes <code>x</code> as an argument, applying a sqrt function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>s</mi><mi>q</mi><mi>r</mi><mi>t</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{sqrt(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">t</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_22">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_2">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_3">Nodes</h3>
+<p><code>SCALAR-SQRTNODE</code> <code>SQRTNODE</code></p>
+<h3 id="sideeffects_10">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-square">[function] !square</h2>
+<pre><code class="language-lisp">(!square x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !square takes <code>x</code> as an argument, applying a square function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>s</mi><mi>q</mi><mi>u</mi><mi>a</mi><mi>r</mi><mi>e</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{square(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal">u</span><span class="mord mathnormal">a</span><span class="mord mathnormal">re</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_23">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_3">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_4">Nodes</h3>
+<p><code>SCALAR-SQUARENODE</code> <code>SQUARENODE</code></p>
+<h3 id="sideeffects_11">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-sin">[function] !sin</h2>
+<pre><code class="language-lisp">(!sin x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !sin takes <code>x</code> as an argument, applying a sin function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{sin(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">in</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_24">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_4">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_5">Nodes</h3>
+<p><code>SCALAR-SINNODE</code> <code>SINNODE</code></p>
+<h3 id="sideeffects_12">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-cos">[function] !cos</h2>
+<pre><code class="language-lisp">(!cos x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !cos takes <code>x</code> as an argument, applying a cos function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>c</mi><mi>o</mi><mi>s</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{cos(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">cos</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_25">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_5">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_6">Nodes</h3>
+<p><code>SCALAR-COSNODE</code> <code>COSNODE</code></p>
+<h3 id="sideeffects_13">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-tan">[function] !tan</h2>
+<pre><code class="language-lisp">(!tan x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !tan takes <code>x</code> as an argument, applying a tan function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>t</mi><mi>a</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{tan(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_26">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_6">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_7">Nodes</h3>
+<p><code>SCALAR-TANNODE</code> <code>TANNODE</code></p>
+<h3 id="sideeffects_14">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-asin">[function] !asin</h2>
+<pre><code class="language-lisp">(!asin x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !asin takes <code>x</code> as an argument, applying a asin function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{asin(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">in</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_27">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_7">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_8">Nodes</h3>
+<p><code>SCALAR-ASINNODE</code> <code>ASINNODE</code></p>
+<h3 id="sideeffects_15">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-acos">[function] !acos</h2>
+<pre><code class="language-lisp">(!acos x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !acos takes <code>x</code> as an argument, applying a acos function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>c</mi><mi>o</mi><mi>s</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{acos(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">cos</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_28">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_8">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_9">Nodes</h3>
+<p><code>SCALAR-ACOSNODE</code> <code>ACOSNODE</code></p>
+<h3 id="sideeffects_16">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-atan">[function] !atan</h2>
+<pre><code class="language-lisp">(!atan x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !atan takes <code>x</code> as an argument, applying a atan function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>t</mi><mi>a</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{atan(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_29">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_9">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_10">Nodes</h3>
+<p><code>SCALAR-ATANNODE</code> <code>ATANNODE</code></p>
+<h3 id="sideeffects_17">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-sinh">[function] !sinh</h2>
+<pre><code class="language-lisp">(!sinh x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !sinh takes <code>x</code> as an argument, applying a sinh function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{sinh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">inh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_30">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_10">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_11">Nodes</h3>
+<p><code>SCALAR-SINHNODE</code> <code>SINHNODE</code></p>
+<h3 id="sideeffects_18">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-cosh">[function] !cosh</h2>
+<pre><code class="language-lisp">(!cosh x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !cosh takes <code>x</code> as an argument, applying a cosh function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>c</mi><mi>o</mi><mi>s</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{cosh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">cos</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_31">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_11">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_12">Nodes</h3>
+<p><code>SCALAR-COSHNODE</code> <code>COSHNODE</code></p>
+<h3 id="sideeffects_19">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-tanh">[function] !tanh</h2>
+<pre><code class="language-lisp">(!tanh x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !tanh takes <code>x</code> as an argument, applying a tanh function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{tanh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_32">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_12">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_13">Nodes</h3>
+<p><code>SCALAR-TANHNODE</code> <code>TANHNODE</code></p>
+<h3 id="sideeffects_20">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-asinh">[function] !asinh</h2>
+<pre><code class="language-lisp">(!asinh x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !asinh takes <code>x</code> as an argument, applying a asinh function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>s</mi><mi>i</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{asinh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">inh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_33">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_13">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_14">Nodes</h3>
+<p><code>SCALAR-ASINHNODE</code> <code>ASINHNODE</code></p>
+<h3 id="sideeffects_21">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-acosh">[function] !acosh</h2>
+<pre><code class="language-lisp">(!acosh x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !acosh takes <code>x</code> as an argument, applying a acosh function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>c</mi><mi>o</mi><mi>s</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{acosh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">cos</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_34">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_14">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_15">Nodes</h3>
+<p><code>SCALAR-ACOSHNODE</code> <code>ACOSHNODE</code></p>
+<h3 id="sideeffects_22">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-atanh">[function] !atanh</h2>
+<pre><code class="language-lisp">(!atanh x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !atanh takes <code>x</code> as an argument, applying a atanh function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>a</mi><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{atanh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_35">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_15">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_16">Nodes</h3>
+<p><code>SCALAR-ATANHNODE</code> <code>ATANHNODE</code></p>
+<h3 id="sideeffects_23">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-exp">[function] !exp</h2>
+<pre><code class="language-lisp">(!exp x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !exp takes <code>x</code> as an argument, applying a exp function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>e</mi><mi>x</mi><mi>p</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{exp(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="mord mathnormal">x</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_36">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_16">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_17">Nodes</h3>
+<p><code>SCALAR-EXPNODE</code> <code>EXPNODE</code></p>
+<h3 id="sideeffects_24">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-log2">[function] !log2</h2>
+<pre><code class="language-lisp">(!log2 x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !log2 takes <code>x</code> as an argument, applying a log2 function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mn>2</mn><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{log2(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord">2</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_37">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_17">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_18">Nodes</h3>
+<p><code>SCALAR-LOG2NODE</code> <code>LOG2NODE</code></p>
+<h3 id="sideeffects_25">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-log10">[function] !log10</h2>
+<pre><code class="language-lisp">(!log10 x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !log10 takes <code>x</code> as an argument, applying a log10 function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mn>10</mn><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{log10(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord">10</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_38">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_18">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_19">Nodes</h3>
+<p><code>SCALAR-LOG10NODE</code> <code>LOG10NODE</code></p>
+<h3 id="sideeffects_26">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-loge">[function] !loge</h2>
+<pre><code class="language-lisp">(!loge x &amp;key (-&gt; nil))
+</code></pre>
+<p>The function !loge takes <code>x</code> as an argument, applying a loge function into each element and writes the result into <code>-&gt;</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><msub><mi>T</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mi>e</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT_{copy}\gets{loge(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>(where <code>OUT</code> = <code>-&gt;</code>)</p>
+<h3 id="inputs_39">Inputs</h3>
+<p><code>x</code> [AbstractTensor or ScalarTensor or number]</p>
+<p><code>-&gt;</code> (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.</p>
+<h3 id="returns_19">Returns</h3>
+<p><code>-&gt;</code></p>
+<h3 id="nodes_20">Nodes</h3>
+<p><code>SCALAR-LOGENODE</code> <code>LOGENODE</code></p>
+<h3 id="sideeffects_27">SideEffects</h3>
+<p><code>-&gt;</code> is destructed.</p>
+<h2 id="function-sum">[function] !sum</h2>
+<pre><code>(!sum tensor &amp;key (axis t) (-&gt; nil) (keep-repeat nil))
+</code></pre>
+<p>The function !sum return a node which computes the sum of tensor along the given axis.</p>
+<h3 id="inputs_40">Inputs</h3>
+<p><code>tensor</code>, a tensor to be reducted.</p>
+<p><code>axis</code>[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)</p>
+<p><code>-&gt;</code> [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.</p>
+<p><code>keep-repeat</code>[boolean] If t, the axis reducted is repeated.</p>
+<p>Return:</p>
+<p><code>-&gt;</code>[AbstractTensor] the result.</p>
+<h2 id="function-mean">[function] !mean</h2>
+<pre><code>(!mean tensor &amp;key (axis t) (-&gt; nil) (keep-repeat nil))
+</code></pre>
+<p>The function !mean return a node which computes the average of tensor along the given axis.</p>
+<h3 id="inputs_41">Inputs</h3>
+<p><code>tensor</code>, a tensor to be reducted.</p>
+<p><code>axis</code>[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)</p>
+<p><code>-&gt;</code> [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.</p>
+<p><code>keep-repeat</code>[boolean] If t, the axis reducted is repeated.</p>
+<h3 id="return_1">Return</h3>
+<p><code>-&gt;</code>[AbstractTensor] the result.</p>
+<h2 id="function-argmax">[function] !argmax</h2>
+<pre><code>(!argmax tensor &amp;key (axis -1) (out nil))
+</code></pre>
+<p>The function !argmax computes the indices of maximum values of all elements below the <strong>axis</strong> dimension in the given tensor.</p>
+<h3 id="inputs_42">Inputs</h3>
+<p><code>tensor</code></p>
+<p><code>axis</code></p>
+<p><code>out</code></p>
+<h3 id="returns_20">Returns</h3>
+<p>AbstractTensor[uint32] with dimensions behind <code>axis</code> is replaced with 1.## [function] !argmin</p>
+<pre><code>(!argmin tensor &amp;key (axis -1) (out nil))
+</code></pre>
+<p>The function !argmin computes the indices of minimum values of all elements below the <strong>axis</strong> dimension in the given tensor.</p>
+<h3 id="inputs_43">Inputs</h3>
+<p><code>tensor</code></p>
+<p><code>axis</code></p>
+<p><code>out</code></p>
+<h3 id="returns_21">Returns</h3>
+<p>AbstractTensor[uint32] with dimensions behind <code>axis</code> is replaced with 1.</p>
+<h2 id="function-t">[function] !t</h2>
+<pre><code>(!t tensor)
+</code></pre>
+<p>Applies Lazy-Transpose to the given tensor.</p>
+<p>The function is matmul-dedicated, so cooperationg with other operations (e.g.: !add) will cause the wrong result. (Internally, it is the equivalent to calling <code>!reshape</code>)</p>
+<h3 id="current-problem">Current Problem</h3>
+<p>Inconsistency of operations:</p>
+<pre><code class="language-lisp">!flexible(!t(x)).is_transposed? = NIL
+!t(!flexible(x)).is_flexible?   = T
+</code></pre>
+<h2 id="function-matmul">[function] !matmul</h2>
+<pre><code class="language-lisp">(!matmul x y &amp;key (out nil) (transpose-x nil) (transpose-y nil))
+</code></pre>
+<p>Computing a matrix multiplication of X and Y, the function set the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>g</mi><mi>e</mi><mi>m</mi><mi>m</mi><mo stretchy="false">(</mo><mn>1.0</mn><mo separator="true">,</mo><mi>x</mi><mo separator="true">,</mo><mi>y</mi><mo separator="true">,</mo><mn>0.0</mn><mo separator="true">,</mo><mi>o</mi><mi>u</mi><mi>t</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{gemm(1.0, x, y, 0.0, out)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mord mathnormal">mm</span><span class="mopen">(</span><span class="mord">1.0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mclose">)</span></span></span></span></span></span></p>
+<h3 id="inputs_44">Inputs</h3>
+<p><code>transpose-x</code> <code>transpose-y</code> If t, the tensor is called with <code>(!t tensor)</code></p>
+<h3 id="lazy-transpose">Lazy-Transpose</h3>
+<p>Call the function <code>(!t tensor)</code> in advance to transpose the tensor without overheads.</p>
+<pre><code>(!matmul (!t (randn `(5 3))) (randn `(5 3)))
+</code></pre>
+<h2 id="function-dot">[function] !dot</h2>
+<pre><code>(!dot x y)
+</code></pre>
+<p>Finds a dot product of x and y. Unlike <code>numpy.dot</code>, <code>!dot</code> intentionally only supports computing the dot product of two 1D tensors with the same number of elements.</p>
+<pre><code class="language-lisp">(proceed (!dot (randn `(100)) (randn `(10 10))))
+{CPUTENSOR[float] :shape (1) -&gt; :view (&lt;0&gt;) -&gt; :visible-shape (1) :named ChainTMP115880 
+  :vec-state [computed]
+  (21.594929)
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<h2 id="function-where">[function] !where</h2>
+<pre><code>(!where tensor condition &amp;key (true-then 1) (false-then 0) (out nil))
+</code></pre>
+<p>The function !where returns a elements selected-from <code>true-then</code> or <code>false-then</code>, depending on condition.</p>
+<p>The operation is defined as:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.16em" columnspacing="1em"><mtr><mtd class ="mtr-glue"></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>o</mi><mi>u</mi><msub><mi>t</mi><mi>i</mi></msub><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.36em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>true-then</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi>c</mi><mi>o</mi><mi>n</mi><mi>d</mi><mi>i</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo stretchy="false">(</mo><msub><mi>X</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>false-then</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>otherwise</mtext></mstyle></mtd></mtr></mtable></mrow></mrow></mstyle></mtd><mtd class ="mtr-glue"></mtd><mtd class ="mml-eqn-num"></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{equation}
+  out_i=
+  \begin{cases}
+    \text{true-then} &amp; condition(X_i) \\
+    \text{false-then} &amp; \text{otherwise}
+  \end{cases}
+\end{equation}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">true-then</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">false-then</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">co</span><span class="mord mathnormal">n</span><span class="mord mathnormal">d</span><span class="mord mathnormal">i</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
+<p>(where X = tensor)</p>
+<h3 id="inputs_45">Inputs</h3>
+<p><code>out</code> place to set the result
+<code>condition</code> an funcallable function. (e.g.: #'evenp #'oddp etc...)</p>
+<h2 id="function-where_1">[function] !where</h2>
+<pre><code>(!compare tensor1 tensor2 condition &amp;key (true-then 1) (false-then 0) (out nil))
+</code></pre>
+<p>The function !compare returns a elements selected-from <code>true-then</code> or <code>false-then</code>, depending on condition.</p>
+<p>The operation is defined as:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.16em" columnspacing="1em"><mtr><mtd class ="mtr-glue"></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>o</mi><mi>u</mi><msub><mi>t</mi><mi>i</mi></msub><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.36em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>true-then</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi>c</mi><mi>o</mi><mi>n</mi><mi>d</mi><mi>i</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo stretchy="false">(</mo><msub><mi>X</mi><mi>i</mi></msub><mo separator="true">,</mo><msub><mi>Y</mi><mi>i</mi></msub><mo stretchy="false">)</mo></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>false-then</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>otherwise</mtext></mstyle></mtd></mtr></mtable></mrow></mrow></mstyle></mtd><mtd class ="mtr-glue"></mtd><mtd class ="mml-eqn-num"></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{equation}
+  out_i=
+  \begin{cases}
+    \text{true-then} &amp; condition(X_i, Y_i) \\
+    \text{false-then} &amp; \text{otherwise}
+  \end{cases}
+\end{equation}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">true-then</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">false-then</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">co</span><span class="mord mathnormal">n</span><span class="mord mathnormal">d</span><span class="mord mathnormal">i</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
+<p>(where X = tensor1, Y=tensor2)</p>
+<h3 id="inputs_46">Inputs</h3>
+<p><code>out</code> place to set the result
+<code>condition</code> an funcallable function. (e.g.: #'&gt; #'&lt; etc...)</p>
+<h2 id="function-ascal">[function] a&gt;scal</h2>
+<pre><code>(a&gt;scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&gt;scal sets <code>true-then</code> if the equation: <code>element &gt; scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_47">Inputs</h3>
+<p><code>A</code> AbstractTensor
+<code>scal</code> number (not a ScalarTensor)</p>
+<p>(TODO: ScalarTensor as scal)</p>
+<h2 id="function-ascal_1">[function] a&lt;scal</h2>
+<pre><code>(a&lt;scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&lt;scal sets <code>true-then</code> if the equation: <code>element &lt; scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_48">Inputs</h3>
+<p><code>A</code> AbstractTensor
+<code>scal</code> number (not a ScalarTensor)</p>
+<p>(TODO: ScalarTensor as scal)</p>
+<h2 id="function-ascal_2">[function] a&gt;=scal</h2>
+<pre><code>(a&gt;=scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&gt;=scal sets <code>true-then</code> if the equation: <code>element &gt;= scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_49">Inputs</h3>
+<p><code>A</code> AbstractTensor
+<code>scal</code> number (not a ScalarTensor)</p>
+<p>(TODO: ScalarTensor as scal)</p>
+<h2 id="function-ascal_3">[function] a&lt;=scal</h2>
+<pre><code>(a&lt;=scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&lt;=scal sets <code>true-then</code> if the equation: <code>element &lt;= scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_50">Inputs</h3>
+<p><code>A</code> AbstractTensor
+<code>scal</code> number (not a ScalarTensor)</p>
+<p>(TODO: ScalarTensor as scal)</p>
+<h2 id="function-ab">[function] a&gt;b</h2>
+<pre><code>(a&gt;b A B &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&gt;b sets <code>true-then</code> if the equation: <code>A &gt; B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_51">Inputs</h3>
+<p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
+<h2 id="function-ab_1">[function] a&lt;b</h2>
+<pre><code>(a&lt;b A B &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&lt;b sets <code>true-then</code> if the equation: <code>A &lt; B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_52">Inputs</h3>
+<p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
+<h2 id="function-ab_2">[function] a&gt;=b</h2>
+<pre><code>(a&gt;=b A B &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&gt;=b sets <code>true-then</code> if the equation: <code>A &gt;= B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_53">Inputs</h3>
+<p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
+<h2 id="function-ab_3">[function] a&lt;=b</h2>
+<pre><code>(a&lt;=b A B &amp;key (out nil) (true-then 1) (false-then 0))
+</code></pre>
+<p>The function a&lt;=b sets <code>true-then</code> if the equation: <code>A &lt;= B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
+<h3 id="inputs_54">Inputs</h3>
+<p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../generic-tensor/" class="btn btn-neutral float-left" title="cl-waffe2/vm.generic-tensor"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../base-impl-nodes/" class="btn btn-neutral float-right" title="[Nodes] cl-waffe2/base-impl">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../generic-tensor/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../base-impl-nodes/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

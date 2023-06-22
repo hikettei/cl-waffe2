@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>[Nodes] cl-waffe2/base-impl - cl-waffe2 Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "[Nodes] cl-waffe2/base-impl";
+        var mkdocs_page_input_path = "base-impl-nodes.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> cl-waffe2 Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../generic-tensor/">cl-waffe2/vm.generic-tensor</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">[Nodes] cl-waffe2/base-impl</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#node-addnode">[node] ADDNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-subnode">[node] SUBNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_1">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_1">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_1">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-mulnode">[node] MULNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_2">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_2">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_2">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-divnode">[node] DIVNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_3">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_3">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_3">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-inversetensornode">[node] INVERSETENSORNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_4">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_4">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_4">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalaradd">[node] SCALARADD</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_5">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_5">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_5">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalarsub">[node] SCALARSUB</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_6">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_6">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_6">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalarmul">[node] SCALARMUL</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_7">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_7">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_7">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalardiv">[node] SCALARDIV</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_8">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_8">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_8">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-movetensornode">[node] MOVETENSORNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_9">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constraints">Constraints</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_9">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_9">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-absnode">[node] ABSNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_10">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_10">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-absnode">[node] SCALAR-ABSNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_11">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_11">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-signnode">[node] SIGNNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_12">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_12">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-signnode">[node] SCALAR-SIGNNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_13">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_13">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-sqrtnode">[node] SQRTNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_14">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_14">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-sqrtnode">[node] SCALAR-SQRTNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_15">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_15">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-squarenode">[node] SQUARENODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_16">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_16">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-squarenode">[node] SCALAR-SQUARENODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_17">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_17">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-sinnode">[node] SINNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_18">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_18">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-sinnode">[node] SCALAR-SINNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_19">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_19">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-cosnode">[node] COSNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_20">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_20">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-cosnode">[node] SCALAR-COSNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_21">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_21">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-tannode">[node] TANNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_22">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_22">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-tannode">[node] SCALAR-TANNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_23">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_23">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-asinnode">[node] ASINNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_24">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_24">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-asinnode">[node] SCALAR-ASINNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_25">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_25">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-acosnode">[node] ACOSNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_26">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_26">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-acosnode">[node] SCALAR-ACOSNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_27">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_27">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-atannode">[node] ATANNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_28">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_28">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-atannode">[node] SCALAR-ATANNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_29">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_29">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-sinhnode">[node] SINHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_30">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_30">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-sinhnode">[node] SCALAR-SINHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_31">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_31">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-coshnode">[node] COSHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_32">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_32">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-coshnode">[node] SCALAR-COSHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_33">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_33">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-tanhnode">[node] TANHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_34">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_34">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-tanhnode">[node] SCALAR-TANHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_35">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_35">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-asinhnode">[node] ASINHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_36">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_36">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-asinhnode">[node] SCALAR-ASINHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_37">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_37">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-acoshnode">[node] ACOSHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_38">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_38">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-acoshnode">[node] SCALAR-ACOSHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_39">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_39">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-atanhnode">[node] ATANHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_40">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_40">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-atanhnode">[node] SCALAR-ATANHNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_41">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_41">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-expnode">[node] EXPNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_42">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_42">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-expnode">[node] SCALAR-EXPNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_43">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_43">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-log2node">[node] LOG2NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_44">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_44">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-log2node">[node] SCALAR-LOG2NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_45">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_45">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-log10node">[node] LOG10NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_46">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_46">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-log10node">[node] SCALAR-LOG10NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_47">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_47">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-logenode">[node] LOGENODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_48">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_48">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-scalar-logenode">[node] SCALAR-LOGENODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_49">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_49">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-lazytransposenode">[node] LAZYTRANSPOSENODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_50">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_50">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-argmax-node">[node] ARGMAX-NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_51">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_10">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_51">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-argmin-node">[node] ARGMIN-NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_52">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_11">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_52">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-matmulnode">[node] MATMULNODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_53">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_12">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_53">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-where-operation-node">[node] WHERE-OPERATION-NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_54">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_13">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_54">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-compare-operation-node">[node] COMPARE-OPERATION-NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_55">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_14">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_55">Backward</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">cl-waffe2 Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>[Nodes] cl-waffe2/base-impl</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css"
+  integrity="sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs"
+  crossorigin="anonymous" />
+
+<style type="text/css">
+    .katex img {
+      object-fit: fill;
+      padding: unset;
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: inherit;
+    }
+</style>
+<h1 id="standard-nodes">Standard Nodes</h1>
+<h2 id="node-addnode">[node] ADDNODE</h2>
+<pre><code>(A[~] B[~] -&gt; A[~])
+</code></pre>
+<h3 id="description">Description</h3>
+<p><code>AddNode</code> is a node which computes following operation element-wise.</p>
+<p>Let X and Y be a given arguments and both are matrix.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mo>+</mo><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X + Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="constructor">Constructor</h3>
+<pre><code>(AddNode dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (values (!move dx dout) (!move dy dout)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-subnode">[node] SUBNODE</h2>
+<pre><code>(A[~] B[~] -&gt; A[~])
+</code></pre>
+<h3 id="description_1">Description</h3>
+<p><code>SubNode</code> is a node which computes following operation element-wise.</p>
+<p>Let X and Y be a given arguments and both are matrix.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mo>−</mo><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X - Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="constructor_1">Constructor</h3>
+<pre><code>(SubNode dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_1">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (values (!move dx dout) (!move dy (!mul -1 dout))))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-mulnode">[node] MULNODE</h2>
+<pre><code>(A[~] B[~] -&gt; A[~])
+</code></pre>
+<h3 id="description_2">Description</h3>
+<p><code>MulNode</code> is a node which computes following operation element-wise.</p>
+<p>Let X and Y be a given arguments and both are matrix.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mo>∗</mo><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X * Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="constructor_2">Constructor</h3>
+<pre><code>(MulNode dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_2">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (values (!mul dout dy) (!mul dout dx)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-divnode">[node] DIVNODE</h2>
+<pre><code>(A[~] B[~] -&gt; A[~])
+</code></pre>
+<h3 id="description_3">Description</h3>
+<p><code>DivNode</code> is a node which computes following operation element-wise.</p>
+<p>Let X and Y be a given arguments and both are matrix.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mi mathvariant="normal">/</mi><mi>Y</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X / Y}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span></span></span></span></span></span></p>
+<h3 id="constructor_3">Constructor</h3>
+<pre><code>(DivNode dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_3">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy)
+ (values (!div dout dy) (!div (!mul dx (!mul -1 dout)) (!square dy))))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-inversetensornode">[node] INVERSETENSORNODE</h2>
+<pre><code>(A[~] -&gt; A[~])
+</code></pre>
+<h3 id="description_4">Description</h3>
+<p>InverseTensorNode is a node which computes following operation element-wise</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><mo>←</mo><mrow><mn>1</mn><mi mathvariant="normal">/</mi><mi>A</mi></mrow></mrow><annotation encoding="application/x-tex">
+A\gets{1 / A}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">A</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord">1/</span><span class="mord mathnormal">A</span></span></span></span></span></span></p>
+<h3 id="constructor_4">Constructor</h3>
+<pre><code>(InverseTensorNode dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_4">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx) (values (!div (!mul -1 dout) (!square dx))))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalaradd">[node] SCALARADD</h2>
+<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+</code></pre>
+<h3 id="description_5">Description</h3>
+<p>ScalarAdd is a node which computes following operation element-wise.</p>
+<p>Let X be a given matrix and S be a given scalar.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mo>+</mo><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X + scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="constructor_5">Constructor</h3>
+<pre><code>(ScalarAdd dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_5">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx dy)) (values (-&gt;scal (!mean dout)) dout))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalarsub">[node] SCALARSUB</h2>
+<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+</code></pre>
+<h3 id="description_6">Description</h3>
+<p>ScalarSub is a node which computes following operation element-wise.</p>
+<p>Let X be a given matrix and S be a given scalar.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mo>−</mo><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X - scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="constructor_6">Constructor</h3>
+<pre><code>(ScalarSub dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_6">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx dy))
+ (values (-&gt;scal (!mul -1.0 (!mean dout))) dout))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalarmul">[node] SCALARMUL</h2>
+<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+</code></pre>
+<h3 id="description_7">Description</h3>
+<p>ScalarMul is a node which computes following operation element-wise.</p>
+<p>Let X be a given matrix and S be a given scalar.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mo>∗</mo><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X * scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="constructor_7">Constructor</h3>
+<pre><code>(ScalarMul dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_7">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (values (-&gt;scal (!mean (!mul dy dout))) (!mul dout dx)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalardiv">[node] SCALARDIV</h2>
+<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+</code></pre>
+<h3 id="description_8">Description</h3>
+<p>ScalarDiv is a node which computes following operation element-wise.</p>
+<p>Let X be a given matrix and S be a given scalar.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>←</mo><mrow><mi>X</mi><mi mathvariant="normal">/</mi><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>a</mi><mi>r</mi></mrow></mrow><annotation encoding="application/x-tex">
+X\gets{X / scalar}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mord">/</span><span class="mord mathnormal">sc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></p>
+<h3 id="constructor_8">Constructor</h3>
+<pre><code>(ScalarDiv dtype)
+</code></pre>
+<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<h3 id="backward_8">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy)
+ (values (-&gt;scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))
+         (!div dout dx)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-movetensornode">[node] MOVETENSORNODE</h2>
+<pre><code>(A[~] B[~] -&gt; A[~])
+</code></pre>
+<h3 id="description_9">Description</h3>
+<p>Move all the visible elements of <code>B</code> into visible areas of <code>A</code>.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><mo>←</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">
+A\gets{B}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">A</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span></span></span></p>
+<h3 id="constraints">Constraints</h3>
+<p>In order to implement the behaviour for compilers of eliminating unused copies, all the implementations must satisfy as follows:</p>
+<p>On forward:</p>
+<ol>
+<li>
+<p>If (movetensor-ignore-me self) is t, return <code>B</code> without doing anything.</p>
+</li>
+<li>
+<p>Otherwise, Move all the visible elements of <code>B</code> into <code>A</code>, and return <code>A</code>.</p>
+</li>
+</ol>
+<p>(Note that: until <code>(tensor-vec A)</code> is called, <code>A</code> is never allocated.)</p>
+<h3 id="constructor_9">Constructor</h3>
+<p><code>(MoveTensorNode dtype)</code></p>
+<p><code>dtype</code> dtype to use.</p>
+<h3 id="backward_9">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy)
+ (let ((dy-out
+        (if (and (eql (tensor-attribute dy) chain) (movetensor-ignore-me self))
+            dout
+            (!copy dout))))
+   (values
+    (if (eql (tensor-attribute dx) chain)
+        (!move dx dout)
+        dout)
+    (if (eql (tensor-attribute dy) chain)
+        (!move dy dy-out)
+        dy-out))))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-absnode">[node] ABSNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_10">Description</h3>
+<p>The node <code>ABSNODE</code> takes X as an argument, applying a abs function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>b</mi><mi>s</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{abs(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">ab</span><span class="mord mathnormal">s</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-ABSNODE</code> <code>!abs</code></p>
+<h3 id="backward_10">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dy)) (values (!mul dout (!sign dx)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-absnode">[node] SCALAR-ABSNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_11">Description</h3>
+<p>The node SCALAR-ABSNODE takes scalar X as an argument, applying a abs function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>b</mi><mi>s</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{abs(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">ab</span><span class="mord mathnormal">s</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>ABSNODE</code> <code>!abs</code></p>
+<h3 id="backward_11">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dy)) (values (!mul dout (!sign dx)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-signnode">[node] SIGNNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_12">Description</h3>
+<p>The node <code>SIGNNODE</code> takes X as an argument, applying a sign function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>g</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{sign(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-SIGNNODE</code> <code>!sign</code></p>
+<h3 id="backward_12">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dout dy)) (values (!mul dx 0) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-signnode">[node] SCALAR-SIGNNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_13">Description</h3>
+<p>The node SCALAR-SIGNNODE takes scalar X as an argument, applying a sign function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>g</mi><mi>n</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{sign(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>SIGNNODE</code> <code>!sign</code></p>
+<h3 id="backward_13">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dout dy)) (values (!mul dx 0) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-sqrtnode">[node] SQRTNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_14">Description</h3>
+<p>The node <code>SQRTNODE</code> takes X as an argument, applying a sqrt function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>s</mi><mi>q</mi><mi>r</mi><mi>t</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{sqrt(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">t</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-SQRTNODE</code> <code>!sqrt</code></p>
+<h3 id="backward_14">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dy)) (values (!mul dout (!div 1 dx)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-sqrtnode">[node] SCALAR-SQRTNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_15">Description</h3>
+<p>The node SCALAR-SQRTNODE takes scalar X as an argument, applying a sqrt function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>s</mi><mi>q</mi><mi>r</mi><mi>t</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{sqrt(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">t</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>SQRTNODE</code> <code>!sqrt</code></p>
+<h3 id="backward_15">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dy)) (values (!mul dout (!div 1 dx)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-squarenode">[node] SQUARENODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_16">Description</h3>
+<p>The node <code>SQUARENODE</code> takes X as an argument, applying a square function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>s</mi><mi>q</mi><mi>u</mi><mi>a</mi><mi>r</mi><mi>e</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{square(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal">u</span><span class="mord mathnormal">a</span><span class="mord mathnormal">re</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-SQUARENODE</code> <code>!square</code></p>
+<h3 id="backward_16">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout x) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-squarenode">[node] SCALAR-SQUARENODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_17">Description</h3>
+<p>The node SCALAR-SQUARENODE takes scalar X as an argument, applying a square function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>s</mi><mi>q</mi><mi>u</mi><mi>a</mi><mi>r</mi><mi>e</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{square(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mord mathnormal">u</span><span class="mord mathnormal">a</span><span class="mord mathnormal">re</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>SQUARENODE</code> <code>!square</code></p>
+<h3 id="backward_17">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout x) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-sinnode">[node] SINNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_18">Description</h3>
+<p>The node <code>SINNODE</code> takes X as an argument, applying a sin function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{sin(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">in</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-SINNODE</code> <code>!sin</code></p>
+<h3 id="backward_18">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!cos x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-sinnode">[node] SCALAR-SINNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_19">Description</h3>
+<p>The node SCALAR-SINNODE takes scalar X as an argument, applying a sin function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{sin(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">in</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>SINNODE</code> <code>!sin</code></p>
+<h3 id="backward_19">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!cos x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-cosnode">[node] COSNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_20">Description</h3>
+<p>The node <code>COSNODE</code> takes X as an argument, applying a cos function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>c</mi><mi>o</mi><mi>s</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{cos(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">cos</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-COSNODE</code> <code>!cos</code></p>
+<h3 id="backward_20">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!mul -1 (!sin x))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-cosnode">[node] SCALAR-COSNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_21">Description</h3>
+<p>The node SCALAR-COSNODE takes scalar X as an argument, applying a cos function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>c</mi><mi>o</mi><mi>s</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{cos(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">cos</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>COSNODE</code> <code>!cos</code></p>
+<h3 id="backward_21">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!mul -1 (!sin x))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-tannode">[node] TANNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_22">Description</h3>
+<p>The node <code>TANNODE</code> takes X as an argument, applying a tan function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>t</mi><mi>a</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{tan(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-TANNODE</code> <code>!tan</code></p>
+<h3 id="backward_22">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul (!cos x) (!cos x)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-tannode">[node] SCALAR-TANNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_23">Description</h3>
+<p>The node SCALAR-TANNODE takes scalar X as an argument, applying a tan function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>t</mi><mi>a</mi><mi>n</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{tan(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>TANNODE</code> <code>!tan</code></p>
+<h3 id="backward_23">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul (!cos x) (!cos x)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-asinnode">[node] ASINNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_24">Description</h3>
+<p>The node <code>ASINNODE</code> takes X as an argument, applying a asin function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{asin(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">in</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-ASINNODE</code> <code>!asin</code></p>
+<h3 id="backward_24">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!sqrt (!sub 1 (!square x))))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-asinnode">[node] SCALAR-ASINNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_25">Description</h3>
+<p>The node SCALAR-ASINNODE takes scalar X as an argument, applying a asin function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{asin(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">in</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>ASINNODE</code> <code>!asin</code></p>
+<h3 id="backward_25">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!sqrt (!sub 1 (!square x))))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-acosnode">[node] ACOSNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_26">Description</h3>
+<p>The node <code>ACOSNODE</code> takes X as an argument, applying a acos function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>c</mi><mi>o</mi><mi>s</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{acos(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">cos</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-ACOSNODE</code> <code>!acos</code></p>
+<h3 id="backward_26">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div -1 (!sqrt (!sub 1 (!square x))))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-acosnode">[node] SCALAR-ACOSNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_27">Description</h3>
+<p>The node SCALAR-ACOSNODE takes scalar X as an argument, applying a acos function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>c</mi><mi>o</mi><mi>s</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{acos(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">cos</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>ACOSNODE</code> <code>!acos</code></p>
+<h3 id="backward_27">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div -1 (!sqrt (!sub 1 (!square x))))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-atannode">[node] ATANNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_28">Description</h3>
+<p>The node <code>ATANNODE</code> takes X as an argument, applying a atan function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>t</mi><mi>a</mi><mi>n</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{atan(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-ATANNODE</code> <code>!atan</code></p>
+<h3 id="backward_28">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!add 1 (!square x)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-atannode">[node] SCALAR-ATANNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_29">Description</h3>
+<p>The node SCALAR-ATANNODE takes scalar X as an argument, applying a atan function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>t</mi><mi>a</mi><mi>n</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{atan(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>ATANNODE</code> <code>!atan</code></p>
+<h3 id="backward_29">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!add 1 (!square x)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-sinhnode">[node] SINHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_30">Description</h3>
+<p>The node <code>SINHNODE</code> takes X as an argument, applying a sinh function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{sinh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">inh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-SINHNODE</code> <code>!sinh</code></p>
+<h3 id="backward_30">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!cosh x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-sinhnode">[node] SCALAR-SINHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_31">Description</h3>
+<p>The node SCALAR-SINHNODE takes scalar X as an argument, applying a sinh function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>s</mi><mi>i</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{sinh(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">inh</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>SINHNODE</code> <code>!sinh</code></p>
+<h3 id="backward_31">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!cosh x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-coshnode">[node] COSHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_32">Description</h3>
+<p>The node <code>COSHNODE</code> takes X as an argument, applying a cosh function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>c</mi><mi>o</mi><mi>s</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{cosh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">cos</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-COSHNODE</code> <code>!cosh</code></p>
+<h3 id="backward_32">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!mul -1 (!sinh x))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-coshnode">[node] SCALAR-COSHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_33">Description</h3>
+<p>The node SCALAR-COSHNODE takes scalar X as an argument, applying a cosh function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>c</mi><mi>o</mi><mi>s</mi><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{cosh(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">cos</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>COSHNODE</code> <code>!cosh</code></p>
+<h3 id="backward_33">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!mul -1 (!sinh x))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-tanhnode">[node] TANHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_34">Description</h3>
+<p>The node <code>TANHNODE</code> takes X as an argument, applying a tanh function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{tanh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-TANHNODE</code> <code>!tanh</code></p>
+<h3 id="backward_34">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul (!cosh x) (!cosh x)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-tanhnode">[node] SCALAR-TANHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_35">Description</h3>
+<p>The node SCALAR-TANHNODE takes scalar X as an argument, applying a tanh function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{tanh(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>TANHNODE</code> <code>!tanh</code></p>
+<h3 id="backward_35">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul (!cosh x) (!cosh x)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-asinhnode">[node] ASINHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_36">Description</h3>
+<p>The node <code>ASINHNODE</code> takes X as an argument, applying a asinh function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>s</mi><mi>i</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{asinh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">inh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: NIL</p>
+<p>See also: <code>SCALAR-ASINHNODE</code> <code>!asinh</code></p>
+<h3 id="backward_36">Backward</h3>
+<p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
+<h2 id="node-scalar-asinhnode">[node] SCALAR-ASINHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_37">Description</h3>
+<p>The node SCALAR-ASINHNODE takes scalar X as an argument, applying a asinh function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>s</mi><mi>i</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{asinh(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">s</span><span class="mord mathnormal">inh</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: NIL</p>
+<p>See also: <code>ASINHNODE</code> <code>!asinh</code></p>
+<h3 id="backward_37">Backward</h3>
+<p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
+<h2 id="node-acoshnode">[node] ACOSHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_38">Description</h3>
+<p>The node <code>ACOSHNODE</code> takes X as an argument, applying a acosh function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>c</mi><mi>o</mi><mi>s</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{acosh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">cos</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: NIL</p>
+<p>See also: <code>SCALAR-ACOSHNODE</code> <code>!acosh</code></p>
+<h3 id="backward_38">Backward</h3>
+<p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
+<h2 id="node-scalar-acoshnode">[node] SCALAR-ACOSHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_39">Description</h3>
+<p>The node SCALAR-ACOSHNODE takes scalar X as an argument, applying a acosh function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>c</mi><mi>o</mi><mi>s</mi><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{acosh(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">cos</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: NIL</p>
+<p>See also: <code>ACOSHNODE</code> <code>!acosh</code></p>
+<h3 id="backward_39">Backward</h3>
+<p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
+<h2 id="node-atanhnode">[node] ATANHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_40">Description</h3>
+<p>The node <code>ATANHNODE</code> takes X as an argument, applying a atanh function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>a</mi><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{atanh(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: NIL</p>
+<p>See also: <code>SCALAR-ATANHNODE</code> <code>!atanh</code></p>
+<h3 id="backward_40">Backward</h3>
+<p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
+<h2 id="node-scalar-atanhnode">[node] SCALAR-ATANHNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_41">Description</h3>
+<p>The node SCALAR-ATANHNODE takes scalar X as an argument, applying a atanh function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>a</mi><mi>t</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{atanh(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: NIL</p>
+<p>See also: <code>ATANHNODE</code> <code>!atanh</code></p>
+<h3 id="backward_41">Backward</h3>
+<p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
+<h2 id="node-expnode">[node] EXPNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_42">Description</h3>
+<p>The node <code>EXPNODE</code> takes X as an argument, applying a exp function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>e</mi><mi>x</mi><mi>p</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{exp(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="mord mathnormal">x</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-EXPNODE</code> <code>!exp</code></p>
+<h3 id="backward_42">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!exp x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-expnode">[node] SCALAR-EXPNODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_43">Description</h3>
+<p>The node SCALAR-EXPNODE takes scalar X as an argument, applying a exp function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>e</mi><mi>x</mi><mi>p</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{exp(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="mord mathnormal">x</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>EXPNODE</code> <code>!exp</code></p>
+<h3 id="backward_43">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!exp x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-log2node">[node] LOG2NODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_44">Description</h3>
+<p>The node <code>LOG2NODE</code> takes X as an argument, applying a log2 function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mn>2</mn><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{log2(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord">2</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-LOG2NODE</code> <code>!log2</code></p>
+<h3 id="backward_44">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul x (log 2)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-log2node">[node] SCALAR-LOG2NODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_45">Description</h3>
+<p>The node SCALAR-LOG2NODE takes scalar X as an argument, applying a log2 function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mn>2</mn><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{log2(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord">2</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>LOG2NODE</code> <code>!log2</code></p>
+<h3 id="backward_45">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul x (log 2)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-log10node">[node] LOG10NODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_46">Description</h3>
+<p>The node <code>LOG10NODE</code> takes X as an argument, applying a log10 function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mn>10</mn><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{log10(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord">10</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-LOG10NODE</code> <code>!log10</code></p>
+<h3 id="backward_46">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul x (log 10)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-log10node">[node] SCALAR-LOG10NODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_47">Description</h3>
+<p>The node SCALAR-LOG10NODE takes scalar X as an argument, applying a log10 function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mn>10</mn><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{log10(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord">10</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>LOG10NODE</code> <code>!log10</code></p>
+<h3 id="backward_47">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!mul x (log 10)))) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-logenode">[node] LOGENODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_48">Description</h3>
+<p>The node <code>LOGENODE</code> takes X as an argument, applying a loge function into each element and writes the result into out.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>U</mi><mi>T</mi><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mi>e</mi><mo stretchy="false">(</mo><mi>X</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+OUT\gets{loge(X)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mord mathnormal" style="margin-right:0.10903em;">U</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span></span></span></p>
+<p>save-for-backward: (T NIL)</p>
+<p>See also: <code>SCALAR-LOGENODE</code> <code>!loge</code></p>
+<h3 id="backward_48">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!div 1 x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-scalar-logenode">[node] SCALAR-LOGENODE</h2>
+<pre><code>(X[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_49">Description</h3>
+<p>The node SCALAR-LOGENODE takes scalar X as an argument, applying a loge function into each element and writes the result into out.</p>
+<p><p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>←</mo><mrow><mi>l</mi><mi>o</mi><mi>g</mi><mi>e</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+out\gets{loge(x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+save-for-backward: (T NIL)</p>
+<p>See also: <code>LOGENODE</code> <code>!loge</code></p>
+<h3 id="backward_49">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout x out) (declare (ignore out)) (values (!mul dout (!div 1 x)) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-lazytransposenode">[node] LAZYTRANSPOSENODE</h2>
+<pre><code>(A[~ I J] -&gt; A[~ J I])
+</code></pre>
+<h3 id="description_50">Description</h3>
+<p>LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.</p>
+<p>Internally, This Node Returns The Given A itself but taking transpose of A's shape.</p>
+<p>If the computation node is like: [LazyTransposeNode] -&gt; [MatmulNode], then transpose will be done with NO overhead.</p>
+<h3 id="backward_50">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout dx) (declare (ignore dx)) (values (!t dout)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-argmax-node">[node] ARGMAX-NODE</h2>
+<pre><code>(A[~] OUT[OUT-SIZE] -&gt; OUT[OUT-SIZE])
+</code></pre>
+<h3 id="description_51">Description</h3>
+<p>ArgMax-Node finds a maximum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
+<p>A is a target to find a maximum value, and OUT is a place to set the index.</p>
+<h3 id="constructor_10">Constructor</h3>
+<pre><code>(ArgMax-Node out-size)
+</code></pre>
+<p><code>out-size</code> the reducted shape of <code>out</code>.</p>
+<h3 id="backward_51">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da do) (declare (ignore dout da do)) (values nil nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-argmin-node">[node] ARGMIN-NODE</h2>
+<pre><code>(A[~] OUT[OUT-SIZE] -&gt; OUT[OUT-SIZE])
+</code></pre>
+<h3 id="description_52">Description</h3>
+<p>ArgMin-Node finds a minimum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
+<p>A is a target to find a minimum value, and OUT is a place to set the index.</p>
+<h3 id="constructor_11">Constructor</h3>
+<pre><code>(ArgMin-Node out-size)
+</code></pre>
+<p><code>out-size</code> the reducted shape of <code>out</code>.</p>
+<h3 id="backward_52">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da do) (declare (ignore dout da do)) (values nil nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-matmulnode">[node] MATMULNODE</h2>
+<pre><code>(A[~ I J] B[~ J K] C[~ I K] -&gt; C[~ I K])
+</code></pre>
+<h3 id="description_53">Description</h3>
+<p>MatmulNode Computes a matrix multiplication of given A and B, set the result to C.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>C</mi><mo>←</mo><mrow><mi>g</mi><mi>e</mi><mi>m</mi><mi>m</mi><mo stretchy="false">(</mo><mn>1.0</mn><mo separator="true">,</mo><mi>A</mi><mo separator="true">,</mo><mi>B</mi><mo separator="true">,</mo><mn>0.0</mn><mo separator="true">,</mo><mi>C</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+C\gets{gemm(1.0, A, B, 0.0, C)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mord mathnormal">mm</span><span class="mopen">(</span><span class="mord">1.0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">A</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mclose">)</span></span></span></span></span></span></p>
+<h3 id="constructor_12">Constructor</h3>
+<pre><code>(MatMulNode dtype &amp;key transpose-a transpose-b)
+</code></pre>
+<p><code>dtype</code> dtype to use.</p>
+<p><code>transpose-a</code> <code>transpose-b</code> set t to call with transposing (reversing the last two axes the matrix).</p>
+<h3 id="backward_53">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da db do) (declare (ignore do))
+ (values (!matmul dout (!t db)) (!matmul (!t da) dout) nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-where-operation-node">[node] WHERE-OPERATION-NODE</h2>
+<pre><code>(A[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_54">Description</h3>
+<p>Where-Operation-Node is a node which set <code>true-then</code>, if the result of calling <code>condition</code> with each element of A, is t and if it is NIL, set <code>false-then</code> at corresponding position.</p>
+<h3 id="constructor_13">Constructor</h3>
+<pre><code>(Where-Operation-Node condition true-then false-then)
+</code></pre>
+<p><code>true-then</code> and <code>false-then</code> is a number.</p>
+<p><code>condition</code> a single argument function, each element of A is argument. (e.g.: this could be <code>#'evenp</code> <code>#'oddp</code> etc...)</p>
+<h3 id="backward_54">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da do) (declare (ignore dout da do)) ;; todo: :no-grad t
+ (values nil nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-compare-operation-node">[node] COMPARE-OPERATION-NODE</h2>
+<pre><code>(A[~] B[~] OUT[~] -&gt; OUT[~])
+</code></pre>
+<h3 id="description_55">Description</h3>
+<p>Compare-Operation-Node is a node which set <code>true-then</code>, if the result of calling <code>condition</code> with each element of A and B, if it is NIl set <code>false-then</code> at corresponding position.</p>
+<h3 id="constructor_14">Constructor</h3>
+<pre><code>(Compare-Operation-Node condition true-then false-then)
+</code></pre>
+<p><code>true-then</code> and <code>false-then</code> is a number.</p>
+<p><code>condition</code> a two arguments function, each element of A and B is argument. (e.g.: this could be <code>#'&gt;</code> or <code>#'&lt;</code> etc...)</p>
+<h3 id="backward_55">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da db do) (declare (ignore dout da db do)) ;; todo: :no-grad t
+ (values nil nil nil))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../base-impl/" class="btn btn-neutral float-left" title="[Functions] cl-waffe2/base-impl"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../distributions/" class="btn btn-neutral float-right" title="cl-waffe2/distributions">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../base-impl/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../distributions/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

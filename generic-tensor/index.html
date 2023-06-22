@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>cl-waffe2/vm.generic-tensor - cl-waffe2 Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "cl-waffe2/vm.generic-tensor";
+        var mkdocs_page_input_path = "generic-tensor.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> cl-waffe2 Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/vm.generic-tensor</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#abstracttensor_1">AbstractTensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tensor-vec">tensor-vec</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mref">mref</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#vref">vref</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter">parameter</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#no-grad">*no-grad*</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#with-no-grad">with-no-grad</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#make-tensor">make-tensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#make-input">make-input</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl-nodes/">[Nodes] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">cl-waffe2 Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>cl-waffe2/vm.generic-tensor</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="abstracttensor">AbstractTensor</h1>
+<h2 id="abstracttensor_1">AbstractTensor</h2>
+<p>[class] AbstractTensor</p>
+<p>The class AbstractTensor is a fundamental datatype of dealing with various kernel (e.g.: CPU, Metal, CUDA...).</p>
+<p>The class provides the fundamental features following:
+    1. Lazy-Evaluated Multi-Dimensional Matrix APIs, and accordingly stride APIs for column/row major.
+    2. Multi-Dimensional Matrix Offsets (i.e.: View APIs).
+    3. Recording What Functions were called in the previous computation. (To construct backward.)
+    4. vec container
+    5. Keep Gradients
+    6. Input API
+    7. Trace Informations for JIT to create well-optimized computation node.</p>
+<p>Users can extend this class and define the brand-new Tensor's Dtype depending on their use.</p>
+<p>See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.</p>
+<h2 id="tensor-vec">tensor-vec</h2>
+<p><code>(tensor-vec tensor)</code></p>
+<p>Accessing the pointer/array the tensor has. Not until tensor-vec is called, the new area isn't allocated.</p>
+<h2 id="mref">mref</h2>
+<p><code>(mref tensor &amp;rest subscripts)</code></p>
+<p>Read-only. Only used for printing the tensor.
+Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.</p>
+<h2 id="vref">vref</h2>
+<p><code>(vref tensor index)</code></p>
+<p>vref is a generic-function to access tensor's vec.</p>
+<p>Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.</p>
+<p>If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref.</p>
+<h2 id="parameter">parameter</h2>
+<p>The function parameter computes all the previous nodes of the given tensor, returning the new tensor with requires-grad=t.</p>
+<p>Example:</p>
+<pre><code class="language-lisp">(parameter (randn `(3 3)))
+</code></pre>
+<h2 id="no-grad"><code>*no-grad*</code></h2>
+<p>[parameter] <code>*no-grad*</code></p>
+<p>TODO: DOC</p>
+<h2 id="with-no-grad">with-no-grad</h2>
+<pre><code class="language-lisp">(with-no-grad &amp;body body)
+</code></pre>
+<p>Under this macro, all operations don't create any gradients.</p>
+<h2 id="make-tensor">make-tensor</h2>
+<p>Refering a first-priority of  <em>using-backends</em> (that is, a car part) to know what kernel to use, the function make-tensor creates and allocate a new matrix.</p>
+<p>Input:
+    - shape-or-scalar (Any), set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
+    - requires-grad (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
+    - dtype (keyword) Set dtype you wanna use. See also: (Dtype API)
+    - vec (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
+    - order (member :column :row) 
+    - initial-element (Optional)</p>
+<p>With regard to practical usage, the tutorials would be more helpful rather than this document.</p>
+<h2 id="make-input">make-input</h2>
+<p>Referring a first-priority of <em>using-backend</em> (i.e.: car part), the function make-input creates a InputTensor.
+WIth regard to practical usage, visit my tutorial.</p>
+<p>Input:
+    - Shape [list] Consisted of Fixnum or Symbol.
+    - named [keyword]
+    - dtype (as it is)
+    - order (as it is)(TODO) -&gt; View APIs etc...</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../nodes/" class="btn btn-neutral float-left" title="cl-waffe2/vm.nodes"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../base-impl/" class="btn btn-neutral float-right" title="[Functions] cl-waffe2/base-impl">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../nodes/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../base-impl/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

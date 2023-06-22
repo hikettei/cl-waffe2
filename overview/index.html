@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Tutorials - cl-waffe2 Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Tutorials";
+        var mkdocs_page_input_path = "overview.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> cl-waffe2 Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Tutorials</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#project-structure">Project Structure</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#fundamental-system">Fundamental System</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#standard-apis">Standard APIs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#standard-backendsimplemenetations">Standard Backends/Implemenetations</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#other-utils">Other Utils</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#to-get-started">To Get Started!</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#differentiable-operations-based-on-multiple-backends">Differentiable operations based on multiple backends</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#jit-compile-in-place-optimizing">JIT compile, In-place optimizing</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#infinite-number-of-epochs-no-overheads-of-funcall">Infinite number of Epochs, No Overheads of funcall.</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#in-place-optimizing">In-place optimizing</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#before-optimized-vs-after-optimized">Before Optimized Vs After Optimized.</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#broadcasting-apis-view-apis">Broadcasting APIs, View APIs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#repl-friendly-function-proceed">REPL-Friendly function, proceed</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#strong-shaping-apis">Strong Shaping APIs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#constructing-networks-with-defnodedefmodel">Constructing networks with defnode/defmodel</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-structures">Data Structures</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optimizing-parameters">Optimizing Parameters</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../generic-tensor/">cl-waffe2/vm.generic-tensor</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl-nodes/">[Nodes] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">cl-waffe2 Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>Tutorials</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css"
+  integrity="sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs"
+  crossorigin="anonymous" />
+
+<style type="text/css">
+    .katex img {
+      object-fit: fill;
+      padding: unset;
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: inherit;
+    }
+</style>
+<h1 id="concepts">Concepts</h1>
+<h2 id="project-structure">Project Structure</h2>
+<p>cl-waffe2 consists of the following systems.</p>
+<h3 id="fundamental-system">Fundamental System</h3>
+<pre><code>:cl-waffe2/vm.nodes
+:cl-waffe2/vm.generic-tensor
+</code></pre>
+<p><code>:cl-waffe2/vm.nodes</code> provides a system on constructing networks (e.g.: <code>AbstractNode</code> and <code>defnode</code>, <code>Composite</code> and <code>defmodel</code> etc...), and management to shape (e.g.: <code>:where pharse</code>, <code>subscript</code> etc...).</p>
+<p><code>:cl-waffe2/vm.generic-tensor</code> provides on the other hand a system on differentiable <code>AbstractTensor</code> (e.g.: <code>build</code> <code>make-tensor</code> <code>make-input</code> etc...)</p>
+<p>All other packages are built on this package.</p>
+<h3 id="standard-apis">Standard APIs</h3>
+<pre><code>:cl-waffe2/base-impl
+</code></pre>
+<p><code>:cl-waffe2/base-impl</code> provides a standard implementation for operations (e.g.: <code>!add</code> <code>proceed</code> <code>!view</code> etc...), including <code>defnode</code> definition and defun parts.</p>
+<h3 id="standard-backendsimplemenetations">Standard Backends/Implemenetations</h3>
+<pre><code>:cl-waffe2/backends.lisp
+:cl-waffe2/backends.cpu    
+</code></pre>
+<p>Both of them are standard implementation of <code>:cl-waffe2/base-impl</code> for CPU.</p>
+<p>As of this writing (2023/06/20), cl-waffe2 has a only impls for CPU, however, If only time and money would permit, I'm willing to implement CUDA/Metal Backends.</p>
+<p>:cl-waffe2/backends.lisp is <code>work enough</code> first, it is Portable (based on ANSI Common Lisp) and supports AVX2 but far from <code>full speed</code>.</p>
+<p>On the other hand :cl-waffe2/backends.cpu is accelerated by OpenBLAS (maybe MKL is ok) and other foreign backends, this is SBCL-Dependant and sometimes could be unsafe, but provides <code>full speed</code>.</p>
+<pre><code>:cl-waffe2/backends.fastmath (NOT IMPLEMENTED YET!)
+</code></pre>
+<p>(TODO)</p>
+<h3 id="other-utils">Other Utils</h3>
+<pre><code>:cl-waffe2 ;; Provides multi-threading APIs and config macros!
+:cl-waffe2/nn ;; Provides Basic neural-network Implementations.
+:cl-waffe2/optimizers ;; Provides Basic Optimizers
+:cl-waffe2/viz ;; Provides Vizualizing APIs
+etc...
+</code></pre>
+<h3 id="to-get-started">To Get Started!</h3>
+<p>It is recommended to load the system to be used when defining the package.</p>
+<p>Please pick up the packages that you need depending on your needs.</p>
+<p>For Example:</p>
+<pre><code class="language-lisp">
+(in-package :cl-user)
+
+(defpackage :your-project-name
+    (:use :cl
+          :cl-waffe2
+      :cl-waffe2/vm.generic-tensor
+      :cl-waffe2/vm.nodes
+      :cl-waffe2/base-impl
+      :cl-waffe2/distributions
+      :cl-waffe2/backends.lisp
+      :cl-waffe2/backends.cpu
+      :cl-waffe2/nn
+      :cl-waffe2/optimizers
+      :cl-waffe2/viz))
+
+(in-package :your-project-name)
+
+;; Your code follows...
+
+</code></pre>
+<p>cl-waffe2 does not cause name clashes with other libraries or existing functions.
+In addition, with regard to the function that generates the node is <code>!</code>, there is a rule that functions that create a node must start with <code>!</code> (ignoring the exception of the <code>proceed</code> function).</p>
+<h2 id="differentiable-operations-based-on-multiple-backends">Differentiable operations based on multiple backends</h2>
+<p>All operations in cl-waffe2 can be performed in the following form.</p>
+<pre><code>                           [AbstractNode]
+                                 |
+            |--------------------|------------------------|
+ [CPU Implementation1] [CPU Implementation2] [CUDA Implementation1] ...
+</code></pre>
+<p>AbstractNode is a class declared via <code>defnode</code> macro, and each implementation is implemented via <code>define-impl</code> macro.</p>
+<p>There can be more than one implementation for a single device. (e.g.: it is possible to have a normal implementation and an approximate implementation for the exp function).</p>
+<p>One of the concepts is to minimise code re-writing by defining abstract nodes and switching the backends that executes them depending on the device they run on and the speed required.</p>
+<p>As an example, consider implementing the addition operation <code>!add</code>.</p>
+<p>The addition operation <code>AddNode</code> is the operation of finding the sum of two given matrices A and B and storing the result in A.</p>
+<pre><code class="language-lisp">(defnode (AddNode (myself)
+            :where (A[~] B[~] -&gt; A[~])
+        :documentation &quot;A &lt;- A + B&quot;
+        :backward ((self dout dx dy)
+                   (declare (ignore dx dy))
+               (values dout dout))
+    ;; Here follows constructor's body
+    ;; AddNode class initialized is passed as *myself*
+    )
+</code></pre>
+<p>Here,</p>
+<p><code>:where</code> describes how matrices are performed. Before -&gt; clause refers to the arguments, after -&gt; clause refers to the shape of matrix after the operation.</p>
+<p>It describes:</p>
+<ol>
+<li>Takes A and B as arguments and returns a matrix of pointers of A</li>
+<li>All matrices have the same shape before and after the operation.</li>
+</ol>
+<p><code>:backward</code> defines the operation of backward. This declaration can be made either in <code>defnode</code> or in <code>define-impl</code>, whichever you declare.</p>
+<p>The declared node can be initialized using the function <code>(AddNode)</code>, but seems returning errors.</p>
+<pre><code class="language-lisp">(AddNode)
+;; -&gt; Couldn't find any implementation of AddNode for (CPUTENSOR LISPTENSOR).
+</code></pre>
+<p>This is because there is not yet a single implementation for <code>AddNode</code>, so let's define how AddNode works via <code>define-impl</code> macro.</p>
+<p>One operation can be defined for a backend that can be declared by inheriting from the cl-waffe2/vm.generic-tensor:AbstractTensor class.</p>
+<p>As of this writing(2023/06/20), cl-waffe2 provides following backends as standard.</p>
+<ol>
+<li>
+<p>LispTensor - Portable/Safety First, speed comes second. Everything works on ANSI Common Lisp.</p>
+</li>
+<li>
+<p>CPUTensor - This is SBCL-dependant, but supports OpenBLAS linear-algebra APIs.</p>
+</li>
+</ol>
+<p>Of course, if necessary, you can create a new backend.</p>
+<pre><code class="language-lisp">(defclass MyTensor (AbstractTensor) nil)
+</code></pre>
+<p>(See also: <a href="https://github.com/hikettei/cl-waffe2/blob/master/source/backends/lisp/tensor.lisp">tensor.lisp</a>)</p>
+<p>After defining a new backend, it is <strong>NOT</strong> necessary to give a re-implementation for all standard implementations in cl-waffe2. Select the appropriate backends in order of array compatibility.</p>
+<p>Anyway, this is how AddNode is defined for LispTensor in cl-waffe2.</p>
+<pre><code class="language-lisp">(define-impl (AddNode :device LispTensor)
+         :forward ((self x y)
+               (let ((adder (matrix-add (dtype x))))
+             `(,@(call-with-view
+                  #'(lambda (x-view
+                     y-view)
+                  `(funcall ,adder
+                        (tensor-vec ,x)
+                        (tensor-vec ,y)
+                        ,(offset-of x-view 0)
+                        ,(offset-of y-view 0)
+                        ,(size-of x-view 0)
+                        ,(stride-of x-view 0)
+                        ,(stride-of y-view 0)))
+                  `(,x ,y))
+               ,x))))
+</code></pre>
+<p>In <code>:forward</code> write the expansion expression for the operation in the same way as when defining a macro with <code>defmacro</code>. (see below for details).</p>
+<p>Why define-impl takes such a roundabout approach?</p>
+<ol>
+<li>
+<p>To generate a fast code depending on the matrix size and data type at runtime.</p>
+</li>
+<li>
+<p>To pre-calculate all Indexes</p>
+</li>
+<li>
+<p>It is possible to generate, for example, C code without necessarily performing the same operations.</p>
+</li>
+</ol>
+<p>(I believe that ideas on this macro needed to be given more thoughts, indeed, this is ugly...)</p>
+<p>Let's Perform operations with the defined AddNode!</p>
+<pre><code class="language-lisp">(forward (AddNode) (randn `(10 10)) (randn `(10 10)))
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP9412 
+  :vec-state [maybe-not-computed]
+  ((-0.33475596  1.0127474    -0.060175765 ~ 1.4573603    -0.987001    -1.0165008)                    
+   (-0.045512    -0.17995936  0.23593931   ~ 0.8409552    2.6434622    -0.5789532)   
+                 ...
+   (0.13282542   1.9386152    0.16213055   ~ 0.4363958    0.8294802    -0.1558509)
+   (1.1732875    -1.5769591   -1.2152125   ~ -0.2833903   -0.81108683  0.9846606))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
+</code></pre>
+<p>Look at :vec-state, at that moment, the operation is still not done yet. The tensor displayed is the equivalent to the first argument.</p>
+<p>In cl-waffe2, all operations are lazy-evaluated, being JIT-compiled/Optimized/Parallelized via <code>build</code>, or <code>proceed</code> function.</p>
+<p>You would think that this style programming would make your task more complex, but don't worry, we provide APIs that is as close as possible to defined-by-run, and REPL-Friendly.</p>
+<pre><code class="language-lisp">(proceed (AddNode) (randn `(10 10)) (randn `(10 10)))
+
+;; proceed-time function measures execution time without compiling time.
+(proceed-time (AddNode) (randn `(10 10)) (randn `(10 10)))
+Evaluation took:
+  0.000 seconds of real time
+  0.000014 seconds of total run time (0.000014 user, 0.000000 system)
+  100.00% CPU
+  30,512 processor cycles
+  0 bytes consed
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP9447 
+  :vec-state [computed]
+  ((-1.5820543   2.2804832    -0.5613338   ~ 1.1143546    -1.3096298   -1.3756635)                    
+   (-1.5208249   0.21621853   2.660368     ~ -1.032644    0.25917292   -1.9737494)   
+                 ...
+   (2.2557664    2.4791012    -0.04298857  ~ -1.2520232   1.8216541    -2.818116)
+   (0.8615336    0.92017823   -0.25378937  ~ 0.9697968    -0.6300591   1.5660275))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<p>You can switch backends via <code>(with-devices (&amp;rest devices) &amp;body body)</code> macro seamlessly.</p>
+<pre><code class="language-lisp">(with-devices (LispTensor CPUTensor)
+   ;; The priority of dispatching backends is: LispTensor(First) -&gt; CPUTensor(Second)
+   ;; If there's no any impls on LispTensor, use CPUTensor instead.
+    (!add (randn `(10 10)) (randn `(10 10))))
+</code></pre>
+<h2 id="jit-compile-in-place-optimizing">JIT compile, In-place optimizing</h2>
+<p>As I said <code>Everything is lazy-evaluated, and compiled</code>, JIT Compiling is a one of main idea of this project.</p>
+<p>Mainly, this produces two benefits.</p>
+<h3 id="infinite-number-of-epochs-no-overheads-of-funcall">Infinite number of Epochs, No Overheads of funcall.</h3>
+<p>As all lisper know, there is a unignorable overhead when calling methods.</p>
+<pre><code class="language-lisp">(defmethod test-method ((a fixnum) (b fixnum))
+    (+ a b))
+
+(defmethod test-method ((a single-float) (b single-float))
+    (+ a b))
+
+(time (dotimes (i 100000000) (test-method 1.0 1.0)))
+Evaluation took:
+  0.560 seconds of real time
+  0.554936 seconds of total run time (0.551612 user, 0.003324 system)
+  99.11% CPU
+  1,291,693,656 processor cycles
+  0 bytes consed
+
+(defun test-fun (a b)
+    (declare (type single-float a b))
+    (+ a b))
+
+;; Also, defun can be inlined at the end.
+(time (dotimes (i 100000000) (test-fun 1.0 1.0)))
+Evaluation took:
+  0.298 seconds of real time
+  0.297827 seconds of total run time (0.296968 user, 0.000859 system)
+  100.00% CPU
+  688,686,522 processor cycles
+  0 bytes consed
+</code></pre>
+<p>In this project, which uses a large number of generic functions!, this overhead becomes non-negligible at every Epoch, especially when the matrix size is small.</p>
+<p>Therefore, we took the approach of defining a new function by cutting out the necessary operations from the lazy-evaluated nodes, part by part.</p>
+<p>;; cl-waffe2's benchmark</p>
+<p>TODO: Update This section</p>
+<pre><code class="language-lisp">(let ((f (build (!sin 1.0))))
+    (time (dotimes (i 100000) (funcall f))))
+
+;; Fix: tensor-reset!'s overhead...
+(defun test-f (x)
+    (sin (sin (sin (sin x)))))
+
+(time (dotimes (i 100000) (test-f 1.0)))
+</code></pre>
+<h3 id="in-place-optimizing">In-place optimizing</h3>
+<p>This is a usual function in cl-waffe2, which finds the sum of A and B.</p>
+<pre><code class="language-lisp">(!add a b)
+</code></pre>
+<p>But internally, the operation makes a copy not to produce side effects.</p>
+<pre><code class="language-lisp">(forward (AddNode) (!copy a) b)
+</code></pre>
+<p>Without making a copy, the value of A would be destructed instead of having to allocate extra memory.</p>
+<pre><code class="language-lisp">(let ((a (make-tensor `(3 3) :initial-element 1.0)))
+      (print a)
+      ;; {CPUTENSOR[float] :shape (3 3)  
+      ;;  ((1.0 1.0 1.0)
+      ;;   (1.0 1.0 1.0)
+      ;;   (1.0 1.0 1.0))
+      ;;  :facet :exist
+      ;;  :requires-grad NIL
+      ;;  :backward NIL}
+      ;; (eval A &lt;- A + B)
+      (proceed (forward (AddNode :float) a (randn `(3 3))))
+      (print a)
+      ;; {CPUTENSOR[float] :shape (3 3)  
+      ;;  ((2.0100088   0.2906983   1.5334041)
+      ;;   (-0.50357413 2.389317    0.7051847)
+      ;;   (1.3005692   1.5925546   0.95498145))
+      ;;   :facet :exist
+      ;;   :requires-grad NIL
+      ;;   :backward NIL} )
+
+</code></pre>
+<p>Operations that do not allocate extra space are called <strong>in-place</strong> (or sometimes destructive operations?).</p>
+<p>Making operations in-place is a rational way to optimize your programs, but this is a trade-off with readability, because the coding style is more like a programming notation than a mathematical notation.</p>
+<p>Let's take another example.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>=</mo><mi>f</mi><mo stretchy="false">(</mo><mi>I</mi><mi>n</mi><mi>p</mi><mi>u</mi><mi>t</mi><mo stretchy="false">)</mo><mo>+</mo><mi>f</mi><mo stretchy="false">(</mo><mi>f</mi><mo stretchy="false">(</mo><mi>T</mi><mi>e</mi><mi>n</mi><mi>s</mi><mi>o</mi><mi>r</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
+out = f(Input) + f(f(Tensor))
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mord mathnormal">n</span><span class="mord mathnormal">p</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mord mathnormal">e</span><span class="mord mathnormal">n</span><span class="mord mathnormal" style="margin-right:0.02778em;">sor</span><span class="mclose">))</span></span></span></span></span></p>
+<p>(TODO)</p>
+<pre><code class="language-lisp">(defnode (1DFunc (self)
+      :where (A[~] -&gt; A[~])))
+
+(define-impl (1DFunc :device LispTensor)
+         :forward ((self x)
+                   `(progn ,x))
+         :backward ((self dout dx) (values dout)))
+
+(defun f (tensor)
+    (forward (1DFunc) (!copy tensor)))
+</code></pre>
+<pre><code class="language-lisp">(let ((k (!add (make-input `(3 3) nil) (f (f (randn `(3 3) :requires-grad t))))))
+
+    (build k)
+        (cl-waffe2/viz:viz-computation-node k &quot;assets/1d_fn_arg.dot&quot;))
+</code></pre>
+<h3 id="before-optimized-vs-after-optimized">Before Optimized Vs After Optimized.</h3>
+<p><img alt="bf" src="../../../assets/1d_fn_arg.png" width="45%">
+<img alt="bf" src="../../../assets/1d_fn_arg_optimized.png" width="45%"></p>
+<p>(TODO)</p>
+<h2 id="broadcasting-apis-view-apis">Broadcasting APIs, View APIs</h2>
+<p>!flexible</p>
+<p>!view</p>
+<h2 id="repl-friendly-function-proceed">REPL-Friendly function, proceed</h2>
+<p>Proceed</p>
+<p>Proceed-backward</p>
+<p>Proceed-time</p>
+<h2 id="strong-shaping-apis">Strong Shaping APIs</h2>
+<p>syntax of :where pharse
+Shape Error Reports</p>
+<h2 id="constructing-networks-with-defnodedefmodel">Constructing networks with defnode/defmodel</h2>
+<p>defnode</p>
+<p>defmodel</p>
+<p>call</p>
+<p>forward</p>
+<h2 id="data-structures">Data Structures</h2>
+<p>Parameter/Tensor/Input/ScalarTensor</p>
+<h2 id="optimizing-parameters">Optimizing Parameters</h2>
+<p>defoptimizer</p>
+<p>Tutorials Over!</p>
+<p>I'll keep my finger crossed.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../Tips/" class="btn btn-neutral float-right" title="Tips">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../Tips/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
