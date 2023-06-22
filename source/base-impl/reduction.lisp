@@ -20,16 +20,28 @@
 ;;=========================================================================
 
 (defun !sum (tensor &key (axis t) (-> nil) (keep-repeat nil))
-  "The function !sum return a node which computes the sum of tensor along the given axis.
+  "
+## [function] !sum
 
-Input:
-    - tensor, a tensor to be reducted.
-    - axis[t or fixnum or list] the axis to be reducted.
-    - -> [AbstractTensor or nil] the place to write the result. If nil, creates a new tensor.
-    - keep-repeat[boolean] If t, the axis reducted is repeated.
+```
+(!sum tensor &key (axis t) (-> nil) (keep-repeat nil))
+```
+
+The function !sum return a node which computes the sum of tensor along the given axis.
+
+### Inputs
+
+`tensor`, a tensor to be reducted.
+
+`axis`[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)
+
+`->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
+
+`keep-repeat`[boolean] If t, the axis reducted is repeated.
 
 Return:
-    - out[AbstractTensor]"
+
+`->`[AbstractTensor] the result."
   (declare (type AbstractTensor tensor)
 	   (type boolean keep-repeat)
 	   (type (or t list fixnum) axis))
@@ -75,16 +87,28 @@ Return:
 	    (apply #'!view (A+=B out* tensor) reverser))))))
 
 (defun !mean (tensor &key (axis t) (-> nil) (keep-repeat nil))
-  "The function !mean return a node which computes the average of tensor along the given axis.
+  "
+## [function] !mean
 
-Input:
-    - tensor, a tensor to be reducted.
-    - axis[t or fixnum or list] the axis to be reducted.
-    - -> [AbstractTensor or nil] the place to write the result. If nil, creates a new tensor.
-    - keep-repeat[boolean] If t, the axis reducted is repeated.
+```
+(!mean tensor &key (axis t) (-> nil) (keep-repeat nil))
+```
 
-Return:
-    - out[AbstractTensor]"
+The function !mean return a node which computes the average of tensor along the given axis.
+
+### Inputs
+
+`tensor`, a tensor to be reducted.
+
+`axis`[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)
+
+`->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
+
+`keep-repeat`[boolean] If t, the axis reducted is repeated.
+
+### Return
+
+`->`[AbstractTensor] the result."
   (let* ((result (!sum tensor :axis axis :-> -> :keep-repeat keep-repeat))
 	 (dims (length (shape tensor)))
 	 (reducted-elements 1))

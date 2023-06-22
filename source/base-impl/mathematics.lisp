@@ -22,21 +22,40 @@
 			  :where (X[~] OUT[~] -> OUT[~])
 			  :backward ,backward
 			  :documentation
-			  ,(format nil "The node ~(~a~) takes X as an argument, applying a ~(~a~) function into each element and writes the result into out.
-save-for-backward: ~a"
+			  ,(format nil "The node `~a` takes X as an argument, applying a ~(~a~) function into each element and writes the result into out.
+
+```math
+OUT\\gets{~(~a~)(X)}
+```
+
+save-for-backward: ~a
+
+See also: `~a` `~(~a~)`"
 				   node-name
 				   name
-				   save-for-backward)))
+				   name
+				   save-for-backward
+				   scal-node-name
+				   defun-name)))
 		(defnode (,scal-node-name (myself)
 			  :where (X[~] OUT[~] -> OUT[~])
 			  :backward ,backward
 			  :out-scalar-p t
 			  :documentation
-			  ,(format nil "The node ~(~a~) takes scalar X as an argument, applying a ~(~a~) function into each element and writes the result into out.
-save-for-backward: ~a"
+			  ,(format nil "The node ~a takes scalar X as an argument, applying a ~(~a~) function into each element and writes the result into out.
+
+```math
+out\\gets{~(~a~)(x)}
+```
+save-for-backward: ~a
+
+See also: `~a` `~(~a~)`"
 				   scal-node-name
 				   name
-				   save-for-backward)))
+				   name
+				   save-for-backward
+				   node-name
+				   defun-name)))
 
 		(define-impl (,scal-node-name :device ScalarTensor)
 			     :save-for-backward ,save-for-backward
@@ -47,19 +66,46 @@ save-for-backward: ~a"
 					    ,out))))
 			     
 		(defun ,defun-name (x &key (-> nil))
-		  ,(format nil "The function ~(~a~) takes X as an argument, applying a ~(~a~) function into each element and writes the result into out.
+		  ,(format nil "
+## [function] ~(~a~)
 
-Inputs:
-- x   (AbstractTensor)
-- -> (nil or AbstractTensor). If nil, a new tensor is allocated.
+```lisp
+(~(~a~) x &key (-> nil))
+```
 
-Return:
-- -> (AbstractTensor)
+The function ~(~a~) takes `x` as an argument, applying a ~(~a~) function into each element and writes the result into `->`.
 
-SideEffects:
-- -> will be destructed."
+```math
+OUT_{copy}\\gets{~(~a~)(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`~a` `~a`
+
+### SideEffects
+
+`->` is destructed.
+"
 			   defun-name
-			   name)
+			   defun-name
+			   defun-name
+			   name
+			   name
+			   scal-node-name
+			   node-name)
 		  (if (or (numberp x) (scalar-p x))
 		      (let ((x (if (numberp x)
 				   (make-tensor x)

@@ -528,3 +528,750 @@ Tensor = (10 10) -> [!flexible] -> Tensor' = (1 ... 1 10 10)
 ```
 
 Note that added axes could be broadcasted automatically when the operation called with multiple arguments.
+## [function] !abs
+
+```lisp
+(!abs x &key (-> nil))
+```
+
+The function !abs takes `x` as an argument, applying a abs function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{abs(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ABSNODE` `ABSNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !sign
+
+```lisp
+(!sign x &key (-> nil))
+```
+
+The function !sign takes `x` as an argument, applying a sign function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{sign(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-SIGNNODE` `SIGNNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !sqrt
+
+```lisp
+(!sqrt x &key (-> nil))
+```
+
+The function !sqrt takes `x` as an argument, applying a sqrt function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{sqrt(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-SQRTNODE` `SQRTNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !square
+
+```lisp
+(!square x &key (-> nil))
+```
+
+The function !square takes `x` as an argument, applying a square function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{square(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-SQUARENODE` `SQUARENODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !sin
+
+```lisp
+(!sin x &key (-> nil))
+```
+
+The function !sin takes `x` as an argument, applying a sin function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{sin(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-SINNODE` `SINNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !cos
+
+```lisp
+(!cos x &key (-> nil))
+```
+
+The function !cos takes `x` as an argument, applying a cos function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{cos(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-COSNODE` `COSNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !tan
+
+```lisp
+(!tan x &key (-> nil))
+```
+
+The function !tan takes `x` as an argument, applying a tan function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{tan(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-TANNODE` `TANNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !asin
+
+```lisp
+(!asin x &key (-> nil))
+```
+
+The function !asin takes `x` as an argument, applying a asin function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{asin(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ASINNODE` `ASINNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !acos
+
+```lisp
+(!acos x &key (-> nil))
+```
+
+The function !acos takes `x` as an argument, applying a acos function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{acos(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ACOSNODE` `ACOSNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !atan
+
+```lisp
+(!atan x &key (-> nil))
+```
+
+The function !atan takes `x` as an argument, applying a atan function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{atan(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ATANNODE` `ATANNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !sinh
+
+```lisp
+(!sinh x &key (-> nil))
+```
+
+The function !sinh takes `x` as an argument, applying a sinh function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{sinh(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-SINHNODE` `SINHNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !cosh
+
+```lisp
+(!cosh x &key (-> nil))
+```
+
+The function !cosh takes `x` as an argument, applying a cosh function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{cosh(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-COSHNODE` `COSHNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !tanh
+
+```lisp
+(!tanh x &key (-> nil))
+```
+
+The function !tanh takes `x` as an argument, applying a tanh function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{tanh(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-TANHNODE` `TANHNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !asinh
+
+```lisp
+(!asinh x &key (-> nil))
+```
+
+The function !asinh takes `x` as an argument, applying a asinh function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{asinh(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ASINHNODE` `ASINHNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !acosh
+
+```lisp
+(!acosh x &key (-> nil))
+```
+
+The function !acosh takes `x` as an argument, applying a acosh function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{acosh(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ACOSHNODE` `ACOSHNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !atanh
+
+```lisp
+(!atanh x &key (-> nil))
+```
+
+The function !atanh takes `x` as an argument, applying a atanh function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{atanh(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-ATANHNODE` `ATANHNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !exp
+
+```lisp
+(!exp x &key (-> nil))
+```
+
+The function !exp takes `x` as an argument, applying a exp function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{exp(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-EXPNODE` `EXPNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !log2
+
+```lisp
+(!log2 x &key (-> nil))
+```
+
+The function !log2 takes `x` as an argument, applying a log2 function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{log2(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-LOG2NODE` `LOG2NODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !log10
+
+```lisp
+(!log10 x &key (-> nil))
+```
+
+The function !log10 takes `x` as an argument, applying a log10 function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{log10(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-LOG10NODE` `LOG10NODE`
+
+### SideEffects
+
+`->` is destructed.
+NIL
+## [function] !sum
+
+```
+(!sum tensor &key (axis t) (-> nil) (keep-repeat nil))
+```
+
+The function !sum return a node which computes the sum of tensor along the given axis.
+
+### Inputs
+
+`tensor`, a tensor to be reducted.
+
+`axis`[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)
+
+`->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
+
+`keep-repeat`[boolean] If t, the axis reducted is repeated.
+
+Return:
+
+`->`[AbstractTensor] the result.
+## [function] !mean
+
+```
+(!mean tensor &key (axis t) (-> nil) (keep-repeat nil))
+```
+
+The function !mean return a node which computes the average of tensor along the given axis.
+
+### Inputs
+
+`tensor`, a tensor to be reducted.
+
+`axis`[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)
+
+`->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
+
+`keep-repeat`[boolean] If t, the axis reducted is repeated.
+
+### Return
+
+`->`[AbstractTensor] the result.
+## [function] !argmax
+
+```
+(!argmax tensor &key (axis -1) (out nil))
+```
+
+The function !argmax computes the indices of maximum values of all elements below the **axis** dimension in the given tensor.
+
+### Inputs
+
+`tensor`
+
+`axis`
+
+`out`
+
+### Returns
+
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.## [function] !argmin
+
+```
+(!argmin tensor &key (axis -1) (out nil))
+```
+
+The function !argmin computes the indices of minimum values of all elements below the **axis** dimension in the given tensor.
+
+### Inputs
+
+`tensor`
+
+`axis`
+
+`out`
+
+### Returns
+
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+## [function] !t
+
+```
+(!t tensor)
+```
+
+Applies Lazy-Transpose to the given tensor.
+
+The function is matmul-dedicated, so cooperationg with other operations (e.g.: !add) will cause the wrong result. (Internally, it is the equivalent to calling `!reshape`)
+
+### Current Problem
+
+Inconsistency of operations:
+
+```lisp
+!flexible(!t(x)).is_transposed? = NIL
+!t(!flexible(x)).is_flexible?   = T
+```
+
+## [function] !matmul
+
+```lisp
+(!matmul x y &key (out nil) (transpose-x nil) (transpose-y nil))
+```
+
+Computing a matrix multiplication of X and Y, the function set the result into out.
+
+```math
+out\gets{gemm(1.0, x, y, 0.0, out)}
+```
+
+### Inputs
+
+`transpose-x` `transpose-y` If t, the tensor is called with `(!t tensor)`
+
+### Lazy-Transpose
+
+Call the function `(!t tensor)` in advance to transpose the tensor without overheads.
+
+```
+(!matmul (!t (randn `(5 3))) (randn `(5 3)))
+```
+
+## [function] !dot
+
+```
+(!dot x y)
+```
+
+Finds a dot product of x and y. Unlike `numpy.dot`, `!dot` intentionally only supports computing the dot product of two 1D tensors with the same number of elements.
+
+```lisp
+(proceed (!dot (randn `(100)) (randn `(10 10))))
+{CPUTENSOR[float] :shape (1) -> :view (<0>) -> :visible-shape (1) :named ChainTMP115880 
+  :vec-state [computed]
+  (21.594929)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
