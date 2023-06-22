@@ -4,7 +4,9 @@
 ;; Section: Creating a Module (A set of nodes).
 
 (defclass Composite ()
-  ((model-id :initform (gensym "W") :reader model-id))
+  ((model-id :initform (gensym "W") :reader model-id)
+   (input-size  :initform nil :type list :accessor  composite-input-size)
+   (output-size :initform nil :type list :accessor composite-output-size))
   (:documentation "Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.
 
 In cl-waffe2, All models should be a subtype of this class, and shall return a forward propagation computation node using the **call** function.
@@ -48,6 +50,23 @@ The generic function call is also used to step forward of AbstractNode, that is,
 	  nil
 	  "Assertion Failed with call method, because the model ~a isn't subtype of cl-waffe2/vm.nodes:Composite." model))
 
+(defmethod call :around ((model Composite) &rest inputs)
+  (let ((result (multiple-value-list (call-next-method))))
+
+    ;; Traces the input/output tensor's shape.
+    (setf (composite-input-size model)
+	  (map 'list #'(lambda (x)
+			 (when (typep x 'cl-waffe2/vm.generic-tensor:abstracttensor)
+			   (shape x)))
+	       inputs))
+    
+    (setf (composite-output-size model)
+	  (map 'list #'(lambda (x)
+			 (when (typep x 'cl-waffe2/vm.generic-tensor:abstracttensor)
+			   (shape x)))
+	       result))
+    result))
+
 (defmethod call ((model AbstractNode) &rest inputs)
   (apply #'forward model inputs))
 
@@ -81,6 +100,15 @@ Every time the composite is rendered, this function is called.
 
 (defmethod on-print-object ((model Composite) stream))
 
+;; Enhancement: Inference the size of Input/Output in advance.
+(defmethod on-print-object :after ((model Composite) stream)
+  (when (and (composite-input-size model)
+	     (composite-output-size model))
+    (format stream "
+    <Input : ~a -> Output: ~a>
+" (composite-input-size model)
+  (composite-output-size model))))
+    
 (defmacro defmodel ((name
 		     (self-name &rest constructor-arguments)
 		     &key

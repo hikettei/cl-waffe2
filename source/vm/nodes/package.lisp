@@ -43,6 +43,10 @@
   (:export
    #:defmodel
    #:Composite
+   
+   #:composite-input-size
+   #:composite-output-size
+   
    #:AbstractNode
    #:call
    #:on-print-object

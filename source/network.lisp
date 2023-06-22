@@ -65,6 +65,7 @@ X
 (defmacro defsequence (name (&rest args) &rest nodes)
   "
 ## [macro] defsequence
+
 (defsequence MLP (in-features)
     \"Docstring (optional)\"
     (LinearLayer in-features 512)
