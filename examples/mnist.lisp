@@ -31,10 +31,13 @@
 		      :layer2 (LinearLayer 512 256)
 		      :layer3 (LinearLayer 256 10))
 	   :on-call-> ((self x)
-		       (call (mlp-layer3 self)
-			     (!tanh (call (mlp-layer2 self)
-					  (!tanh (call (mlp-layer1 self) x))))))))
-
+		       (call-> x
+			       (slot-value self 'layer1)
+			       (asnode #'!tanh)
+			       (slot-value self 'layer2)
+			       (asnode #'!tanh)
+			       (slot-value self 'layer3)
+			       (asnode #'!tanh)))))
 
 (let ((model (MLP-Model)))
   (with-build (fw bw v p) (!sum (call model (randn `(10 784))))

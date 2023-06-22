@@ -56,7 +56,10 @@
    #:define-impl)
   ;; Reject-p-utils
   (:export
-   #:supported-dtypes-are))
+   #:supported-dtypes-are)
+
+  (:export
+   #:InstantKernelNode))
 ;; Export: defnode define-impl
 
 (in-package :cl-waffe2/vm.nodes)

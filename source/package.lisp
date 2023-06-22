@@ -18,7 +18,13 @@
    #:with-row-major
    #:with-cpu
    ;;#:with-cuda
-   #:with-build))
+   #:with-build)
+
+  ;; network utils
+  (:export
+   #:asnode
+   #:call->
+   ))
 
 (in-package :cl-waffe2)
 

@@ -77,6 +77,7 @@
 
 	       (:file "package")
 	       (:file "utils")
+	       (:file "network")
 
 	       (:file "viz/package")
 	       (:file "viz/ast")
