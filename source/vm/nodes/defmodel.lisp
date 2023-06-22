@@ -62,6 +62,25 @@ The generic function call is also used to step forward of AbstractNode, that is,
 ;; Automatically dispatching Conv1D Conv2D Conv3D ConvNd ... with generic
 ;; Add: ModuleList
 
+(defgeneric on-print-object (model stream) (:documentation "
+
+## [generic] on-print-object
+
+```
+(on-print-object model stream)
+```
+
+Every time the composite is rendered, this function is called.
+
+```
+<Composite: NAME{...}(
+    [...] <- The content of here is depends on on-print-object
+    [PARAMTETERS]
+)
+```"))
+
+(defmethod on-print-object ((model Composite) stream))
+
 (defmacro defmodel ((name
 		     (self-name &rest constructor-arguments)
 		     &key
@@ -109,6 +128,8 @@ defmodel is a macro used to describe the model of neural network with `Composite
 
   6. `on-call->` [One of: nil symbol-name function list]
      on-call-> is used to control the behaviour of *call* function.
+
+  7. `on-print-object` [null or body]
 
 ### Example
 
@@ -216,11 +237,11 @@ Second case, `on-call->` is symbol-name:
   (let* ((parameters (find-params model))
 	 (longest-name (1+ (loop for p in parameters
 				 maximize (length (symbol-name (car p)))))))
-    (when (null parameters)
-      (return-from render-model-content "()"))
-
+    
     (with-output-to-string (out)
-      (format out "(~%")
+      (format out "(")
+      (on-print-object model out)
+      (if parameters (format out "~%"))
       (dolist (p parameters)
 	(let* ((name  (symbol-name (car p)))
 	       (param (cdr p))
@@ -232,7 +253,7 @@ Second case, `on-call->` is symbol-name:
 
 (defmethod print-object ((model Composite) stream)
   (format stream
-	  "<Composite: ~a{~a}~a"
+	  "<Composite: ~a{~a}~a>"
 	  (class-name (class-of model))
 	  (model-id model)
 	  (render-model-content model)))

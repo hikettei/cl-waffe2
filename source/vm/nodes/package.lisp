@@ -45,6 +45,7 @@
    #:Composite
    #:AbstractNode
    #:call
+   #:on-print-object
    #:find-params)
   
   (:export

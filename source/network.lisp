@@ -11,6 +11,12 @@
 	   :on-call-> ((self x)
 		       (funcall (slot-value self 'node-func) x))))
 
+(defmethod on-print-object ((model Encapsulated-Node) stream)
+  (format stream "
+    ~a
+" (slot-value model 'node-func)))
+
+
 ;; TODO: More than one arguments
 ;; print-object encapsulated-node
 ;; (asnode #'!tanh)
@@ -20,6 +26,7 @@
 ## [macro] asnode
 
 (call (asnode #'!tanh) x)
+(call (asnode #'!add 2.0) x) ;; x += 2.0
 "
   (if arguments
       `(Encapsulated-Node #'(lambda (x) (funcall ,function x ,@arguments)))
@@ -59,6 +66,7 @@ X
   "
 ## [macro] defsequence
 (defsequence MLP (in-features)
+    \"Docstring (optional)\"
     (LinearLayer in-features 512)
     (asnode #'!tanh)
     (LinearLayer 512 256)
