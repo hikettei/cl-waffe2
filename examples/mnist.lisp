@@ -23,6 +23,9 @@
 
 ;; ugly...
 ;; call -> Node
+
+;; one more ogly part: defmodel
+
 (defmodel (MLP-Model (self)
 	   :slots ((layer1 :initarg :layer1 :accessor mlp-layer1)
 		   (layer2 :initarg :layer2 :accessor mlp-layer2)

@@ -22,6 +22,8 @@
 
   ;; network utils
   (:export
+   #:defsequence)
+  (:export
    #:asnode
    #:call->
    ))
