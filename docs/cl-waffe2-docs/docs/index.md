@@ -17,7 +17,7 @@
   </p>
 </p>
 
-> __⚠️ cl-waffe2 is still in the concept stage and has a limited future. Also, things are subject to change.__
+> __⚠️ cl-waffe2 is still in the concept stage and has a limited feature. Also, things are subject to change.__
 
 cl-waffe2 provides a set of differentiable matrix operations which is aimed to apply to build neural network models on Common Lisp.
 
