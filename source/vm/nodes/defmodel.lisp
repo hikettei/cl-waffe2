@@ -68,7 +68,7 @@ The generic function call is also used to step forward of AbstractNode, that is,
 	       result))
     (setf (composite-traced-p model) t)
     
-    result))
+    (apply #'values result)))
 
 (defmethod call ((model AbstractNode) &rest inputs)
   (apply #'forward model inputs))
