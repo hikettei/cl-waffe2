@@ -22,6 +22,8 @@
     (nodedoc ScalarMul)
     (nodedoc ScalarDiv)
 
+    (nodedoc MoveTensorNode)
+
     ))
 
 (with-page *base-impl* "Basic APIs"
@@ -51,4 +53,21 @@
     (caller-doc !mul)
     (caller-doc !div)
 
+    (caller-doc !move)
+    (caller-doc !copy)
+    (caller-doc !copy-force)
+
+    (caller-doc !reshape)
+    (caller-doc !view)
+    ;; unsqueeze/squeeze
+    (caller-doc !flatten)
+    (caller-doc !rankup)
+    (caller-doc ->scal)
+    (caller-doc ->mat)
+
+    (caller-doc proceed)
+    (caller-doc proceed-time)
+    (caller-doc proceed-backward)
+
+    (caller-doc !flexible)
     ))

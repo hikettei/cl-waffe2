@@ -323,3 +323,208 @@ Given type of tensors, this function dispatches these functions automatically:
 ### SideEffects
 
 None
+
+## [function] !move
+
+```lisp
+(!move place tensor)
+```
+
+```math
+A\gets{B}
+```
+
+The function !move returns a node which moves tensor's visible elements into place's visible elements.
+
+### nodes
+
+one of: `MoveTensorNode` `ScalarTensorNode`
+
+### Inputs
+
+`place[AbstractTensor]` tensor to be overwritten.
+
+`tensor[AbstractTensor]` tensor to be referred.
+
+### Output
+
+Unevaluated Copied Tensor.
+## [function] !copy
+
+```lisp
+(!copy tensor)
+```
+
+The function !copy returns a node which makes a copy the tensor's visible area.
+
+Note that: the function `!copy` never creates a new tensor larger than (tensor-vec tensor) has, (i.e.: copying broadcasted tensor will return broadcasted and copied tensor).
+
+`!copy` is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns `InputTensor`, not `AbstractTensor`.
+
+See also: `!copy-force` never being ignored by compiler, and broadcasted axes will be padded.
+
+Input:  Tensor[AbstractTensor]
+Output: Tensor[AbstractTensor]
+## [function] !copy-force
+
+```lisp
+(!copy-force (tensor))
+```
+
+The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
+
+This function is also used to adjust memory alignment of tensor.
+## [function] !reshape
+
+```
+(!reshape tensor &rest shapes)
+```
+
+Changes the shape of given tensor.
+
+Before and after the operation, the total elements of tensors must correspond.
+
+### Inputs
+
+`tensor` `AbstractTensor` but must not includes `symbol` in the shape.
+
+
+`shapes` could be one of: fixnum `t`. `t` can be used at one, but the value of t is automatically inferenced.
+
+
+## [function] !view
+
+```lisp
+(!view tensor &rest subscripts)
+```
+
+The function !view returns a tensor which is applied lazy-evaluated view.
+
+For Example, let A be a 4x8 Matrix, and we gonna create a view of A that portrays `A[:, 2]`.
+
+```
+(!view A 2 t)
+
+     A                            B
+0 ++++++++                     --------
+1 ++++++++                     --------
+2 ++++++++ -> [make a view] -> ++++++++
+3 ++++++++                     --------
+```
+
+Here,
+
+1. `A` and `B` shares the pointer.
+
+2. Calling `(shape B)` returns `(1 8)`.
+
+### Subscripts
+
+Subscripts are following:
+
+1. `t` all elements in the axis.
+
+2. `fixnum` points out the specified index.
+
+3. `(start end)` slices the area.
+
+4. `(start end step-by)` slices the area by `step-by`. step-by can be a negative-fixnum. (Not tested)
+
+5. `(:broadcast N-times)` broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.
+
+6. `(:tflist ...)` (TODO)
+
+7. `(:indices ...)` (TODO)
+
+### Return
+
+`(values sliced-tensor broadcast-reverser)`
+
+Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
+
+## [function] !flatten
+
+```
+(!flatten tensor)
+```
+
+equivalent to the `(!reshape tensor t)`
+
+## [function] !rankup
+
+```lisp
+(!rankup tensor ntimes)
+```
+
+The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.
+
+1. If `ntimes` > 0, appends 1
+
+2. If `ntimes` < 0, reduces 1, if the axis=1, otherwise returns error.
+## [function] ->scal
+
+```
+(->scal matrix-tensor)
+```
+
+The function ->scal receives `matrix-tensor` with total-size = 1, returning a ScalarTensor.
+
+## [function] ->mat
+
+```
+(->mat scalar-tensor &key (dims 1))
+```
+
+The function ->mat receives `ScalarTensor`, returning a matrix with the number of axis=dims.
+## [function] proceed
+
+```
+(proceed tensor &key (measure-time nil))
+```
+
+The function proceed invokes special node, `ProceedNode`, which takes all the previous computation node before tensor, returning the result of it.
+
+The backward is created with the previous node.
+
+
+This function will be useful especially when debugging on REPL.
+
+### Inputs
+
+If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes.
+
+## [function] proceed-time
+
+```
+(proceed-time tensor)
+```
+
+An alias for (proceed tensor :measure-time t)
+## [function] proceed-backward
+
+```
+(proceed-backward tensor)
+```
+
+The function proceed-backward calls forward and backwrd of the tensor.
+
+### Output
+
+`T` (which indicates backward is succeed)
+
+## [function] !flexible
+
+```
+(!flexible tensor)
+```
+
+The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.
+
+That is:
+
+```
+Tensor = (10 10) -> [!flexible] -> Tensor' = (1 ... 1 10 10)
+                                                 ^ <1 x N>
+```
+
+Note that added axes could be broadcasted automatically when the operation called with multiple arguments.

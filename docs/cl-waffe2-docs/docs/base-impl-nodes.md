@@ -314,3 +314,58 @@ X\gets{X / scalar}
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] MOVETENSORNODE
+
+```
+(A[~] B[~] -> A[~])
+```
+
+### Description
+
+
+Move all the visible elements of `B` into visible areas of `A`.
+
+```math
+A\gets{B}
+```
+
+### Constraints
+
+In order to implement the behaviour for compilers of eliminating unused copies, all the implementations must satisfy as follows:
+
+On forward:
+
+1. If (movetensor-ignore-me self) is t, return `B` without doing anything.
+
+2. Otherwise, Move all the visible elements of `B` into `A`, and return `A`.
+
+(Note that: until `(tensor-vec A)` is called, `A` is never allocated.)
+
+### Constructor
+
+`(MoveTensorNode dtype)`
+
+`dtype` dtype to use.
+
+
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout dx dy)
+ (let ((dy-out
+        (if (and (eql (tensor-attribute dy) chain) (movetensor-ignore-me self))
+            dout
+            (!copy dout))))
+   (values
+    (if (eql (tensor-attribute dx) chain)
+        (!move dx dout)
+        dout)
+    (if (eql (tensor-attribute dy) chain)
+        (!move dy dy-out)
+        dy-out))))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
