@@ -307,10 +307,10 @@ In addition, with regard to the function that generates the node is <code>!</cod
 <p>Look at :vec-state, at that moment, the operation is still not done yet. The tensor displayed is the equivalent to the first argument.</p>
 <p>In cl-waffe2, all operations are lazy-evaluated, being JIT-compiled/Optimized/Parallelized via <code>build</code>, or <code>proceed</code> function.</p>
 <p>You would think that this style programming would make your task more complex, but don't worry, we provide APIs that is as close as possible to defined-by-run, and REPL-Friendly.</p>
-<pre><code class="language-lisp">(proceed (AddNode) (randn `(10 10)) (randn `(10 10)))
+<pre><code class="language-lisp">(proceed (!add (AddNode) (randn `(10 10)) (randn `(10 10))))
 
 ;; proceed-time function measures execution time without compiling time.
-(proceed-time (AddNode) (randn `(10 10)) (randn `(10 10)))
+(proceed-time (!add (AddNode) (randn `(10 10)) (randn `(10 10))))
 Evaluation took:
   0.000 seconds of real time
   0.000014 seconds of total run time (0.000014 user, 0.000000 system)
