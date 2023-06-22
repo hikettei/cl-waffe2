@@ -87,3 +87,11 @@ This means: the first argument of :forward was the dtype of :float or :double, u
   (and (some #'cl-waffe2/base-impl::transposed-p inputs)
        (not (subtypep (class-of node) 'cl-waffe2/base-impl:MatmulNode))))
 
+
+(defun inference-io-size (model inputs outputs)
+  (declare (type Composite model)
+	   (type list inputs outputs)
+	   (ignore model inputs outputs))
+  
+  )
+

@@ -19,7 +19,7 @@
   (let ((dtype (dtype out))
 	(k (car (last (shape a))))
 	(kb (second (last (shape a) 2))))
-    (assert (= k kb) nil
+    (assert (shape-equal k kb) nil
 	    "expand-gemm-form: Assertion Failed with k = kb")
     (assert (eql (order a) :column)
 	    nil

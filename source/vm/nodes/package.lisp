@@ -43,7 +43,7 @@
   (:export
    #:defmodel
    #:Composite
-   
+   #:composite-traced-p
    #:composite-input-size
    #:composite-output-size
    

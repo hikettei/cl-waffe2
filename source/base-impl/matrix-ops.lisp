@@ -125,8 +125,8 @@ Call the function `(!t tensor)` in advance to transpose the tensor without overh
 	 (out (or out (make-input `(,@(butlast larger-shape 2) ,i ,k) nil
 				  :dtype (dtype x)
 				  :order (order x)))))
-    
-    (when (not (= jx jy))
+
+    (when (not (shape-equal jx jy))
       (shaping-error
        "!matmul failed because the last two shapes of the two given matrices are invaild.
 The operation is: A[~~ i j] B[~~ j k] C[~~ i k] -> C[~~ i k]

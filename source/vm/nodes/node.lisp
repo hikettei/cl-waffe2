@@ -284,4 +284,4 @@ Use the define-impl macro to give definitions for the node and forward them.
   (declare (ignore inputs))
   (error "Couldn't step backward because ~a backward is undefined." node))
 
-;; (defun call-> (input &rest nodes) )
+

@@ -5,6 +5,7 @@
 
 (defclass Composite ()
   ((model-id :initform (gensym "W") :reader model-id)
+   (traced?     :initform nil :type boolean :accessor composite-traced-p)
    (input-size  :initform nil :type list :accessor  composite-input-size)
    (output-size :initform nil :type list :accessor composite-output-size))
   (:documentation "Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.
@@ -39,6 +40,8 @@ It should work like:
 The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
 "))
 
+(defparameter *traced-io-composite* (make-hash-table))
+
 (defgeneric call (model &rest inputs) (:documentation "All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.
 
 The generic function call is also used to step forward of AbstractNode, that is, works as if forward."))
@@ -65,6 +68,12 @@ The generic function call is also used to step forward of AbstractNode, that is,
 			 (when (typep x 'cl-waffe2/vm.generic-tensor:abstracttensor)
 			   (shape x)))
 	       result))
+
+    (setf (composite-traced-p model) t)
+    
+    (when (null (gethash (class-of model) *traced-io-composite*))
+      (inference-io-size model inputs result))
+    
     result))
 
 (defmethod call ((model AbstractNode) &rest inputs)

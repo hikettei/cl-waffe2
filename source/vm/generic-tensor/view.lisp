@@ -513,8 +513,12 @@ Return: List[SubScript]
   `(the fixnum (+ (the fixnum ,x) (the fixnum ,y))))
 
 (defun shape-equal (a b)
-  "a=1, b=k => T
-   a=1, b=2 => NIL
+  "
+## [function] shape-equal
+
+a=1, b=k => T
+a=1, b=2 => NIL
+
 ..."
   (if (and (numberp a)
 	   (numberp b))
