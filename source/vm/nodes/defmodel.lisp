@@ -40,8 +40,6 @@ It should work like:
 The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
 "))
 
-(defparameter *traced-io-composite* (make-hash-table))
-
 (defgeneric call (model &rest inputs) (:documentation "All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.
 
 The generic function call is also used to step forward of AbstractNode, that is, works as if forward."))
@@ -68,11 +66,7 @@ The generic function call is also used to step forward of AbstractNode, that is,
 			 (when (typep x 'cl-waffe2/vm.generic-tensor:abstracttensor)
 			   (shape x)))
 	       result))
-
     (setf (composite-traced-p model) t)
-    
-    (when (null (gethash (class-of model) *traced-io-composite*))
-      (inference-io-size model inputs result))
     
     result))
 
@@ -111,8 +105,7 @@ Every time the composite is rendered, this function is called.
 
 ;; Enhancement: Inference the size of Input/Output in advance.
 (defmethod on-print-object :after ((model Composite) stream)
-  (when (and (composite-input-size model)
-	     (composite-output-size model))
+  (when (composite-traced-p model)
     (format stream "
     <Input : ~a -> Output: ~a>
 " (composite-input-size model)

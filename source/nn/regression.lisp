@@ -26,12 +26,21 @@
 	   :documentation "In-Features -> Out-Features")
   (setf (linear-weight self)
 	(parameter (!mul 0.01 (randn `(,out-features ,in-features)))))
-
+  
   ;; Init with Xavier
   (when use-bias?
     (setf (linear-bias self)
 	  (make-tensor `(,out-features)
 		       :requires-grad t))))
+
+(defmethod on-print-object ((model LinearLayer) stream)
+  (when (not (composite-traced-p model))
+    (format stream "
+    <Input: ((~~ BATCH-SIZE ~a)) -> Output: ((~~ BATCH-SIZE ~a))>
+"
+	    (car (shape (linear-weight model)))
+	    (second (shape (linear-weight model))))))
+
 
 (defmethod call-linear ((self LinearLayer) x)
   (step-linear

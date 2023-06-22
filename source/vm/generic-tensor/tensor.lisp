@@ -63,7 +63,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
-   
+
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
   (:documentation "The class AbstractTensor is a fundamental datatype of dealing with various kernel (e.g.: CPU, Metal, CUDA...).
 
