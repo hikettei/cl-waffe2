@@ -92,6 +92,9 @@
     (nodedoc ArgMin-Node)
 
     (nodedoc MatmulNode)
+
+    (nodedoc Where-Operation-Node)
+    (nodedoc Compare-Operation-Node)
     ))
 
 
@@ -160,7 +163,7 @@
     (caller-doc !exp)
     (caller-doc !log2)
     (caller-doc !log10)
-    (caller-doc !log)
+    (caller-doc !logE)
 
     (caller-doc !sum)
     (caller-doc !mean)
@@ -171,4 +174,18 @@
     (caller-doc !t)
     (caller-doc !matmul)
     (caller-doc !dot)
+
+    (caller-doc !where)
+    (caller-doc !compare)
+
+
+    (caller-doc A>scal)
+    (caller-doc A<scal)
+    (caller-doc A>=scal)
+    (caller-doc A<=scal)
+
+    (caller-doc A>B)
+    (caller-doc A<B)
+    (caller-doc A>=B)
+    (caller-doc A<=B)
     ))

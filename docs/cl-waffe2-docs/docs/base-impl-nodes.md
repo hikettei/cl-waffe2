@@ -1529,3 +1529,65 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] WHERE-OPERATION-NODE
+
+```
+(A[~] OUT[~] -> OUT[~])
+```
+
+### Description
+
+Where-Operation-Node is a node which set `true-then`, if the result of calling `condition` with each element of A, is t and if it is NIL, set `false-then` at corresponding position.
+
+### Constructor
+
+```
+(Where-Operation-Node condition true-then false-then)
+```
+
+`true-then` and `false-then` is a number.
+
+`condition` a single argument function, each element of A is argument. (e.g.: this could be `#'evenp` `#'oddp` etc...)
+
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout da do) (declare (ignore dout da do)) ;; todo: :no-grad t
+ (values nil nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] COMPARE-OPERATION-NODE
+
+```
+(A[~] B[~] OUT[~] -> OUT[~])
+```
+
+### Description
+
+Compare-Operation-Node is a node which set `true-then`, if the result of calling `condition` with each element of A and B, if it is NIl set `false-then` at corresponding position.
+
+### Constructor
+
+```
+(Compare-Operation-Node condition true-then false-then)
+```
+
+`true-then` and `false-then` is a number.
+
+`condition` a two arguments function, each element of A and B is argument. (e.g.: this could be `#'>` or `#'<` etc...)
+
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout da db do) (declare (ignore dout da db do)) ;; todo: :no-grad t
+ (values nil nil nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)

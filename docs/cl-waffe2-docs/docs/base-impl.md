@@ -1135,7 +1135,39 @@ OUT_{copy}\gets{log10(X)}
 ### SideEffects
 
 `->` is destructed.
-NIL
+
+## [function] !loge
+
+```lisp
+(!loge x &key (-> nil))
+```
+
+The function !loge takes `x` as an argument, applying a loge function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{loge(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-LOGENODE` `LOGENODE`
+
+### SideEffects
+
+`->` is destructed.
+
 ## [function] !sum
 
 ```
@@ -1275,3 +1307,159 @@ Finds a dot product of x and y. Unlike `numpy.dot`, `!dot` intentionally only su
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
+## [function] !where
+
+```
+(!where tensor condition &key (true-then 1) (false-then 0) (out nil))
+```
+
+The function !where returns a elements selected-from `true-then` or `false-then`, depending on condition.
+
+The operation is defined as:
+
+```math
+\begin{equation}
+  out_i=
+  \begin{cases}
+    \text{true-then} & condition(X_i) \\
+    \text{false-then} & \text{otherwise}
+  \end{cases}
+\end{equation}
+```
+
+(where X = tensor)
+
+### Inputs
+
+`out` place to set the result
+`condition` an funcallable function. (e.g.: #'evenp #'oddp etc...)
+
+## [function] !where
+
+```
+(!compare tensor1 tensor2 condition &key (true-then 1) (false-then 0) (out nil))
+```
+
+The function !compare returns a elements selected-from `true-then` or `false-then`, depending on condition.
+
+The operation is defined as:
+
+```math
+\begin{equation}
+  out_i=
+  \begin{cases}
+    \text{true-then} & condition(X_i, Y_i) \\
+    \text{false-then} & \text{otherwise}
+  \end{cases}
+\end{equation}
+```
+
+(where X = tensor1, Y=tensor2)
+
+### Inputs
+
+`out` place to set the result
+`condition` an funcallable function. (e.g.: #'> #'< etc...)
+## [function] a>scal
+
+```
+(a>scal A scal &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a>scal sets `true-then` if the equation: `element > scal` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` AbstractTensor
+`scal` number (not a ScalarTensor)
+
+(TODO: ScalarTensor as scal)
+## [function] a<scal
+
+```
+(a<scal A scal &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a<scal sets `true-then` if the equation: `element < scal` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` AbstractTensor
+`scal` number (not a ScalarTensor)
+
+(TODO: ScalarTensor as scal)
+## [function] a>=scal
+
+```
+(a>=scal A scal &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a>=scal sets `true-then` if the equation: `element >= scal` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` AbstractTensor
+`scal` number (not a ScalarTensor)
+
+(TODO: ScalarTensor as scal)
+## [function] a<=scal
+
+```
+(a<=scal A scal &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a<=scal sets `true-then` if the equation: `element <= scal` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` AbstractTensor
+`scal` number (not a ScalarTensor)
+
+(TODO: ScalarTensor as scal)
+## [function] a>b
+
+```
+(a>b A B &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a>b sets `true-then` if the equation: `A > B` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` `B` AbstractTensor to be compared.
+
+## [function] a<b
+
+```
+(a<b A B &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a<b sets `true-then` if the equation: `A < B` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` `B` AbstractTensor to be compared.
+
+## [function] a>=b
+
+```
+(a>=b A B &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a>=b sets `true-then` if the equation: `A >= B` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` `B` AbstractTensor to be compared.
+
+## [function] a<=b
+
+```
+(a<=b A B &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a<=b sets `true-then` if the equation: `A <= B` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` `B` AbstractTensor to be compared.
