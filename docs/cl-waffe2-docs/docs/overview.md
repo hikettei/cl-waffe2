@@ -219,10 +219,10 @@ In cl-waffe2, all operations are lazy-evaluated, being JIT-compiled/Optimized/Pa
 You would think that this style programming would make your task more complex, but don't worry, we provide APIs that is as close as possible to defined-by-run, and REPL-Friendly.
 
 ```lisp
-(proceed (AddNode) (randn `(10 10)) (randn `(10 10)))
+(proceed (!add (AddNode) (randn `(10 10)) (randn `(10 10))))
 
 ;; proceed-time function measures execution time without compiling time.
-(proceed-time (AddNode) (randn `(10 10)) (randn `(10 10)))
+(proceed-time (!add (AddNode) (randn `(10 10)) (randn `(10 10))))
 Evaluation took:
   0.000 seconds of real time
   0.000014 seconds of total run time (0.000014 user, 0.000000 system)
