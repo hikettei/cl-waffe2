@@ -22,6 +22,7 @@
 ;; (x = (sequence (LinearLayer1 (LinearLayer2 ...
 
 ;; ugly...
+;; call -> Node
 (defmodel (MLP-Model (self)
 	   :slots ((layer1 :initarg :layer1 :accessor mlp-layer1)
 		   (layer2 :initarg :layer2 :accessor mlp-layer2)
@@ -31,10 +32,15 @@
 		      :layer3 (LinearLayer 256 10))
 	   :on-call-> ((self x)
 		       (call (mlp-layer3 self)
-			     (call (mlp-layer2 self)
-				   (call (mlp-layer1 self) x))))))
+			     (!tanh (call (mlp-layer2 self)
+					  (!tanh (call (mlp-layer1 self) x))))))))
 
 
 (let ((model (MLP-Model)))
-  (print (proceed-backward (!sum (call model (randn `(10 784)))))))
+  (with-build (fw bw v p) (!sum (call model (randn `(10 784))))
+    (time (funcall fw))
+    (time (funcall bw))
+    (time (funcall fw))
+    (time (funcall bw))))
+
 

@@ -37,7 +37,9 @@ It should work like:
 The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
 "))
 
-(defgeneric call (model &rest inputs) (:documentation "All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model."))
+(defgeneric call (model &rest inputs) (:documentation "All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.
+
+The generic function call is also used to step forward of AbstractNode, that is, works as if forward."))
 
 (defmethod call :before ((model Composite) &rest inputs)
   (declare (ignore inputs))
@@ -45,6 +47,10 @@ The defmodel macro simplifies the above redundant notation and also solves the p
   (assert (subtypep (class-of model) 'Composite)
 	  nil
 	  "Assertion Failed with call method, because the model ~a isn't subtype of cl-waffe2/vm.nodes:Composite." model))
+
+(defmethod call ((model AbstractNode) &rest inputs)
+  (apply #'forward model inputs))
+
 
 (defmacro define-forward-function (model forward-function)
   "forward-function = funcallable function"
