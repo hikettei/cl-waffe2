@@ -231,7 +231,28 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
        (defclass ,abstract-name (AbstractNode)
 	 (,@slots
 	  (out-scalar-p :initform ,out-scalar-p :accessor out-scalar-p))
-	 (:documentation ,documentation))
+	 (:documentation
+	  ,(format nil
+		   "~%## [node] ~a
+
+```
+~a
+```
+
+### Description
+
+~a
+
+### Backward
+
+~a"
+		   (symbol-name abstract-name)
+		   where
+		   documentation
+		   (if backward
+		       (format nil "✅ Already defined. ~%~%```lisp~%~(~a~)~%```~%~%No need to implement backwards at `define-impl`. (they'd be ignored.)" backward)
+		       
+		       "❌ Undefined. (To make it differentiable, must be defined with `define-impl` macro.)"))))
        ,(when backward
 	  (let ((backward-self-name (caar backward))
 		(backward-args (cdar backward))

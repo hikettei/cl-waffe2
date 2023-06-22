@@ -6,7 +6,8 @@ nav:
     - Tips: Tips.md
     - cl-waffe2/vm.nodes: nodes.md
     - cl-waffe2/vm.generic-tensor: generic-tensor.md
-    - cl-waffe2/base-impl: base-impl.md
+    - "[Functions] cl-waffe2/base-impl": base-impl.md
+    - "[Nodes] cl-waffe2/base-impl": base-impl-nodes.md
     - cl-waffe2/distributions: distributions.md
 
 theme: readthedocs

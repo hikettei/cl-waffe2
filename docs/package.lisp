@@ -87,10 +87,12 @@
 (defparameter *generic-tensor* "")
 (defparameter *nodes* "")
 (defparameter *base-impl* "")
+(defparameter *base-impl-nodes* "")
 
 (defun generate ()
   (write-scr "generic-tensor" *generic-tensor*)
   (write-scr "base-impl" *base-impl*)
+  (write-scr "base-impl-nodes" *base-impl-nodes*)
   (write-scr "nodes" *nodes*)
   (write-scr "distributions" *distributions*)
   

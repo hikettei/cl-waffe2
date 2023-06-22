@@ -31,11 +31,23 @@
 		(defnode (,name (myself dtype)
 			  :where (A[~] B[~] -> A[~])
 			  :backward ,backward
-			  :documentation ,(format nil "~a is a node which computes following operation element-wise.
+			  :documentation ,(format nil "`~a` is a node which computes following operation element-wise.
 
 Let X and Y be a given arguments and both are matrix.
 
-   X <- X ~a Y" document1 document2))))))
+```math
+X\\gets{X ~a Y}
+```
+
+### Constructor
+
+```
+(~a dtype)
+```
+
+`dtype` dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
+
+" document1 document2 document1))))))
   (define-arithmetic-node AddNode "AddNode" "+"
     ((self dout dx dy)
      (values (!move dx dout) (!move dy dout))))
@@ -58,7 +70,21 @@ Let X and Y be a given arguments and both are matrix.
 	  :where (A[~] -> A[~])
 	  :backward ((self dout dx)
 		     (values (!div (!mul -1 dout) (!square dx))))
-	  :documentation "A = 1/A"))
+	  :documentation "InverseTensorNode is a node which computes following operation element-wise
+
+```math
+A\\gets{1 / A}
+```
+
+### Constructor
+
+```
+(InverseTensorNode dtype)
+```
+
+`dtype` dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
+
+"))
 
 (macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
 	     `(progn
@@ -71,7 +97,18 @@ Let X and Y be a given arguments and both are matrix.
 
 Let X be a given matrix and S be a given scalar.
 
-    X <- scalar ~a X" document1 document2))))))
+```math
+X\\gets{X ~a scalar}
+```
+
+### Constructor
+
+```
+(~a dtype)
+```
+
+`dtype` dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
+" document1 document2 document1))))))
   (define-scalar-mat-node
       ScalarAdd
     "ScalarAdd"
@@ -121,46 +158,88 @@ Let X be a given matrix and S be a given scalar.
 ;; ===============================================================
 ;; Defun Parts
 ;; ===============================================================
-(macrolet ((define-arithmetic-node-caller (name node-name ops prep)
+(macrolet ((define-arithmetic-node-caller (name node-name ops prep f)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (x y)
-		  ,(format nil "The function ~a ~a X ~a Y element-wise.
+		  ,(format nil "
+## [function] ~(~a~)
 
-Side Effects: None.
+```lisp
+(~(~a~) x y)
+```
 
-Note that the operation is automatically replaced into in-place operation."
-			   (symbol-name name) ops prep)
+The function `~(~a~)` calls `~a` and ~a X ~a Y element-wise, returning a new tensor.
+
+```math
+X_{copy}\\gets{X ~a Y}
+```
+
+### Inputs
+
+`X` and `Y` must be a AbstractTensor (not a ScalarTensor), with the same shape.
+
+### SideEffects
+
+None.
+"
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name node-name)
+			   ops
+			   prep
+			   f)
 		  ;; Note: !copy is only needed when backward will be used.
 		  ;; Note: The usage of forward below seems a little tricky
 		  (forward (,node-name (dtype x))
 			   (!copy x)
 			   (if *no-grad*
-			       y
+			       y ;; !copy y is always ignored.
 			       (!copy y)))))))
   (define-arithmetic-node-caller
       !matrix-add
     AddNode
     "adds"
-    "and")
+    "and"
+    "+")
   (define-arithmetic-node-caller
       !matrix-sub
     SubNode
     "substracts"
-    "by")
+    "by"
+    "-")
   (define-arithmetic-node-caller
       !matrix-mul
     MulNode
     "multiplies"
-    "and")
+    "and"
+    "*")
   (define-arithmetic-node-caller
       !matrix-div
     DivNode
     "divides"
-    "by"))
+    "by"
+    "/"))
 
 (with-export !inverse
   (defun !inverse (tensor)
+    "## [function] !inverse
+
+```lisp
+(!inverse tensor)
+```
+
+The function `!inverse` calls `InverseTensorNode`, and finds the inverse of the received Tensor/Scalar, returning a new tensor.
+
+```math
+X_{copy}\\gets{1 / X}
+```
+
+### Inputs
+
+tensor[ScalarTensor/AbstractTensor/Number]
+"
     (let* ((X (if (numberp tensor)
 		  (make-tensor tensor)
 		  tensor)))
@@ -173,21 +252,44 @@ Note that the operation is automatically replaced into in-place operation."
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (scalar x)
-		  ,document
+		  ,(format nil "
+## [function] ~(~a~)
+
+```lisp
+(~(~a~) scalar x)
+```
+
+The function ~a computes following operation with calling `~a`, returning a new tensor.
+
+```math
+~a
+```
+
+### Inputs
+
+`scalar` could be one of `ScalarTensor` or `number`
+
+`tensor` `AbstractTensor` (should not be a scalar)
+"
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name node-name)
+			   document)
 		  (forward (,node-name (dtype x))
 			   (number->stensor scalar x) (!copy x))))))
   (define-scalar-mat-node-caller
       !scalar-add ScalarAdd
-    "X += scalar")
+    "X_{copy}\\gets{X + scalar}")
   (define-scalar-mat-node-caller
       !scalar-sub ScalarSub
-    "X -= scalar")
+    "X_{copy}\\gets{X - scalar}")
   (define-scalar-mat-node-caller
       !scalar-mul ScalarMul
-    "X *= scalar")
+    "X_{copy}\\gets{X * scalar}")
   (define-scalar-mat-node-caller
       !scalar-div ScalarDiv
-    "X /= scalar"))
+    "X_{copy}\\gets{X / scalar}"))
 
 ;; ===============================================================
 ;; Scalar-And-Scalar Defnode And Functions.
@@ -262,19 +364,38 @@ Note that the operation is automatically replaced into in-place operation."
 				 (!sas-mul dx (!sas-mul -1 dout))
 				 (!square dy)))))
 
-(macrolet ((define-sas-op (name node-name)
+(macrolet ((define-sas-op (name node-name op)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (x y)
-		  "TODO: Docstring"
+		  ,(format nil "
+## [function] ~(~a~)
+
+The function ~(~a~) provides differentiable scalar-and-scalar operation.
+
+Calling a node `~a`, the function performs following operation:
+
+```math
+x_{copy}\\gets{x ~a y}
+```
+
+### Inputs
+
+`x` `y` could be one of: `ScalarTensor` or `number`
+
+"
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name node-name)
+			   op)
 		  (forward (,node-name)
 			   (!copy (number->stensor x y))  ;; Returns X
 			   (!copy (number->stensor y x))) ;; Returns Y
 		  ))))
-  (define-sas-op !sas-add ScalarAndScalarAdd)
-  (define-sas-op !sas-sub ScalarAndScalarSub)
-  (define-sas-op !sas-mul ScalarAndScalarMul)
-  (define-sas-op !sas-div ScalarAndScalarDiv))
+  (define-sas-op !sas-add ScalarAndScalarAdd "+")
+  (define-sas-op !sas-sub ScalarAndScalarSub "-")
+  (define-sas-op !sas-mul ScalarAndScalarMul "*")
+  (define-sas-op !sas-div ScalarAndScalarDiv "/"))
 
 ;; ===============================================================
 ;; Defines general-purpose functions.
@@ -283,7 +404,6 @@ Note that the operation is automatically replaced into in-place operation."
 (defun scalartensor-p (tensor)
   (scalar-p tensor))
 
-;; Test them:
 (macrolet ((define-arith-function (name
 				   invertor
 				   broadcast-op
@@ -293,7 +413,37 @@ Note that the operation is automatically replaced into in-place operation."
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (x y)
-		  "TODO: Document, Broadcast-auto"
+		  ,(format nil
+			   "
+## [function] ~(~a~)
+
+```lisp
+(~(~a~) x y)
+```
+
+The function provides general-purpose arithmetic operation.
+
+Given type of tensors, this function dispatches these functions automatically:
+
+1. `~(~a~)`
+
+2. `~(~a~)`
+
+3. `~(~a~)`
+
+### Inputs
+
+`x` `y` could be one of `AbstractTensor` `number` `ScalarTensor`
+
+### SideEffects
+
+None
+"
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name scalar-and-scalar-operation)
+			   (symbol-name scalar-operation)
+			   (symbol-name matrix-operation))
 		  (let ((x (number->stensor x y))  ;; Returns X
 			(y (number->stensor y x))) ;; Returns Y
 		    (cond
@@ -331,45 +481,110 @@ Note that the operation is automatically replaced into in-place operation."
 ;; ===============================================================
 
 (macrolet ((define-darith-function (name
-				    matrix-operation)
+				    matrix-operation
+				    op)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (A B)
-		  "TODO: Docstring"
+		  ,(format nil "
+## [function] ~(~a~)
+
+```
+(~(~a~) A B)
+```
+
+The function provides destructive operation of `~a` which computes:
+
+```math
+A\\gets{A ~a B}
+```
+
+### Inputs
+
+`A` `B` both of them are `AbstractTensor` with the same shape, not `ScalarTensor`.
+
+"
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name matrix-operation)
+			   op)
 		  (declare (type AbstractTensor A B))
 		  (assert (or (not (scalar-p A))
 			      (not (scalar-p B)))
 			  nil
 			  "Assertion Failed with A and B both aren't scalar.")
 		  (forward (,matrix-operation (dtype A)) A B)))))
-  (define-darith-function A+=B AddNode)
-  (define-darith-function A-=B SubNode)
-  (define-darith-function A*=B MulNode)
-  (define-darith-function A/=B DivNode))
+  (define-darith-function A+=B AddNode "+")
+  (define-darith-function A-=B SubNode "-")
+  (define-darith-function A*=B MulNode "*")
+  (define-darith-function A/=B DivNode "/"))
 
 ;; ===============================================================
 ;; Destructive Functions Family: A+=scal A-=scal A*=scal A/=scal
 ;; ===============================================================
 
 (macrolet ((define-darith-function (name
-				    matrix-operation)
+				    matrix-operation
+				    op)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (A scalar)
-		  "TODO: Docstring"
+		  ,(format nil "
+## [function] ~(~a~)
+
+```
+(~(~a~) A scalar)
+```
+
+The function provides destructive scalar-matrix operation of `~a`, which computes:
+
+```math
+A\\gets{A ~a scalar}
+```
+
+### Inputs
+
+`A` AbstractTensor
+
+`scalar` could be one of `number` or `AbstractTensor`
+"
+			   (symbol-name name)
+			   (symbol-name name)
+			   (symbol-name matrix-operation)
+			   op)
 		  (if (numberp scalar)
 		      (forward (,matrix-operation (dtype A)) (make-tensor scalar) A)
 		      (forward (,matrix-operation (dtype A)) scalar A)))))
-	   (define-darith-function1 (name broadcast op op1 arg)
+	   (define-darith-function1 (name broadcast op op1 arg op-name)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (A scalar)
-		  "TODO: Docstring"
+		  ,(format nil "
+## [function] ~(~a~)
+
+```
+(~(~a~) A scalar)
+```
+
+The function provides destructive scalar-matrix operation which computes:
+
+```math
+A\\gets{A ~a scalar}
+```
+
+### Inputs
+
+`A` AbstractTensor
+
+`scalar` could be one of `number` or `AbstractTensor`"
+			   (symbol-name name)
+			   (symbol-name name)
+			   op-name)
 		  (if (numberp scalar)
 		      (,broadcast (,op  (number->stensor scalar A)) A)
 		      (,broadcast (,op1 ,arg (number->stensor scalar A)) A))))))
-  (define-darith-function  A+=scal ScalarAdd)
-  (define-darith-function1 A-=scal A+=scal - !mul -1)
-  (define-darith-function  A*=scal ScalarMul)
-  (define-darith-function1 A/=scal A*=scal / !div 1))
+  (define-darith-function  A+=scal ScalarAdd "+")
+  (define-darith-function1 A-=scal A+=scal - !mul -1 "-")
+  (define-darith-function  A*=scal ScalarMul "*")
+  (define-darith-function1 A/=scal A*=scal / !div 1 "*"))
 

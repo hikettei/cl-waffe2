@@ -181,8 +181,8 @@ Return:
      broadcast-reverser)))
 
 
-(defnode (ReshapeTensorNode (self before shape)
-	  :where (A[shape-before] B[shape-after] -> B[shape-after] where shape-before = before shape-after = shape)
+(defnode (ReshapeTensorNode (self before after)
+	  :where (A[before-shape] B[after-shape] -> B[after-shape] where before-shape = before after-shape = after)
 	  :slots ((before :initarg :before :reader reshapenode-shape))
 	  :backward ((self dout dx dy)
 		     (declare (ignore dx dy))
