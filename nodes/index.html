@@ -61,7 +61,7 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#basic-grammar">Basic Grammar</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#assigned-works">Assigned works</a>
+    <li class="toctree-l3"><a class="reference internal" href="#assigned-task">Assigned task</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#determine-rules">Determine Rules</a>
     </li>
@@ -264,7 +264,7 @@ defmodel =&gt; called with `call`
 
 // SubScripts can be one of: [A], [A B] [~ i j] etc...
 </code></pre>
-<h3 id="assigned-works">Assigned works</h3>
+<h3 id="assigned-task">Assigned task</h3>
 <pre><code>A[a b] B[a b] -&gt; B[a b]
 </code></pre>
 <p>In the DSL above, <code>A</code> and <code>B</code> indicates the name of pointer, they're not needed to be defined in advance.</p>
@@ -598,6 +598,9 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 <p><code>on-call-&gt;</code> [One of: nil symbol-name function list]
      on-call-&gt; is used to control the behaviour of <em>call</em> function.</p>
 </li>
+<li>
+<p><code>on-print-object</code> [null or body]</p>
+</li>
 </ol>
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(defmodel (ExampleLayer (self features)
@@ -641,6 +644,7 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 <p>This argument is expanded into <code>#'(lambda ,@on-call-&gt;)</code> and works as well as 3.</p>
 <h2 id="call">call</h2>
 <p>All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.</p>
+<p>The generic function call is also used to step forward of AbstractNode, that is, works as if forward.</p>
 <p><code>[generic-function]</code> (call model &amp;rest inputs)</p>
 <h2 id="with-devices">with-devices</h2>
 <p>The macro with-devices declares the node's priority for the function <em>forward</em> to be used.</p>

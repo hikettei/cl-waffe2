@@ -60,6 +60,74 @@
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/vm.generic-tensor</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#abstracttensor_1">AbstractTensor</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#create-a-new-backend">Create a new backend.</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-orig-shape-list">[slot] orig-shape (List)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-stride-list">[slot] stride (list)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-visible-shape-list">[slot] visible-shape (list)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-view-list">[slot] view (list)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-projected-p-boolean">[slot] projected-p (boolean)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-scalar-p">[slot] scalar-p</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-detach-p">[slot] detach-p</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-state">[slot] state</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-variables">[slot] variables</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-tensor-id-symbol">[slot] tensor-id (symbol)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-grad-abstracttensor">[slot] grad (AbstractTensor)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-backward-abstractnode">[slot] backward (AbstractNode)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-requires-grad-boolean">[slot] requires-grad (Boolean)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-ancestor-param-p-boolean">[slot] ancestor-param-p (Boolean)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-flexible-p-boolean">[slot] flexible-p (Boolean)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slot-facet-keyword">[slot] facet (keyword)</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#make-tensor">make-tensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-make-tensor">[function] make-tensor</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#input">Input</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#make-input">make-input</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-make-input">[function] make-input</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#embody-input">embody-input</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#build">build</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#tensor-vec">tensor-vec</a>
     </li>
@@ -67,15 +135,33 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#vref">vref</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#parameter">parameter</a>
+    <li class="toctree-l2"><a class="reference internal" href="#set-save-for-backward">set-save-for-backward</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#read-save-for-backward">read-save-for-backward</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#no-grad">*no-grad*</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#with-no-grad">with-no-grad</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#make-tensor">make-tensor</a>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-with-no-grad">[macro] with-no-grad</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#make-input">make-input</a>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter">parameter</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dtype-lisp-type">dtype-&gt;lisp-type</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#call-with-view">call-with-view</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#stride-of">stride-of</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#size-of">size-of</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#offset-of">offset-of</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#shape-equal">shape-equal</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-shape-equal">[function] shape-equal</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#force-list">force-list</a>
     </li>
     </ul>
                 </li>
@@ -117,18 +203,254 @@
               
                 <h1 id="abstracttensor">AbstractTensor</h1>
 <h2 id="abstracttensor_1">AbstractTensor</h2>
-<p>[class] AbstractTensor</p>
-<p>The class AbstractTensor is a fundamental datatype of dealing with various kernel (e.g.: CPU, Metal, CUDA...).</p>
-<p>The class provides the fundamental features following:
-    1. Lazy-Evaluated Multi-Dimensional Matrix APIs, and accordingly stride APIs for column/row major.
-    2. Multi-Dimensional Matrix Offsets (i.e.: View APIs).
-    3. Recording What Functions were called in the previous computation. (To construct backward.)
-    4. vec container
-    5. Keep Gradients
-    6. Input API
-    7. Trace Informations for JIT to create well-optimized computation node.</p>
-<p>Users can extend this class and define the brand-new Tensor's Dtype depending on their use.</p>
-<p>See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.</p>
+<p>[class] <code>AbstractTensor</code></p>
+<p>AbstractTensor is a primal class for all devices. Each devices (e.g.: <code>ScalarTensor</code> <code>LispTensor</code> <code>CPUTensor</code> etc...) is a subclass of this.</p>
+<p>The class provides the fundamental and necessary features for tensors.</p>
+<ol>
+<li>
+<p>Lazy-Evaluated and Multi-Dimensional APIs, stride computations.</p>
+</li>
+<li>
+<p><code>View APIs</code> multi-dimensional offsets</p>
+</li>
+<li>
+<p>To construct backward, AbstractTensor records variables called with.</p>
+</li>
+<li>
+<p><code>vec</code> container.</p>
+</li>
+<li>
+<p>an space for saving gradients, copies for backward.</p>
+</li>
+<li>
+<p>Lazy-Evaluated Shapings</p>
+</li>
+<li>
+<p>Trace Informations for JIT to create well-optimized computation node.</p>
+</li>
+</ol>
+<h3 id="create-a-new-backend">Create a new backend.</h3>
+<p>Users can create a new backend by extending this abstract class.</p>
+<pre><code class="language-lisp">(defclass MyBackend (AbstractNode) nil)
+</code></pre>
+<p>To use the <code>MyBackend</code> as a tensor, users also has to override these methods:</p>
+<ol>
+<li>
+<p><code>initialize-instance</code> ... An allocator for tensor's vec.</p>
+</li>
+<li>
+<p><code>vref</code> <code>(setf vref)</code> ... an generic function to access/write tensor's vec.</p>
+</li>
+</ol>
+<pre><code class="language-lisp">;; TODO: Establish a common API for initargs
+(defmethod initialize-instance :before ((tensor MyBackend)
+                    &amp;rest initargs
+                    &amp;key &amp;allow-other-keys)
+  ;; if projected-p -&gt; alloc new vec
+  (let* ((shape (getf initargs :shape))
+     (dtype (dtype-&gt;lisp-type (getf initargs :dtype)))
+     (vec   (getf initargs :vec))
+     (facet (getf initargs :facet))
+     (initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
+    (when (eql facet :exist)
+      (if vec
+      (setf (tensor-vec tensor) vec)
+      (setf (tensor-vec tensor) ;; vec can be anything.
+        (make-array
+         (apply #'* shape)
+         :element-type dtype
+         :initial-element initial-element))))))
+</code></pre>
+<pre><code class="language-lisp">(defmethod vref ((tensor MyBackend) index)
+  (aref (tensor-vec tensor) index))
+
+(defmethod (setf vref) (new-value (tensor MyBackend) index)
+  (setf (aref (tensor-vec tensor) index) new-value))
+</code></pre>
+<p>Now, the name <code>MyBackend</code> is available as a brand-new cl-waffe2 backend!</p>
+<p>Users can define a new implementation following <code>(define-impl (Name :device MyBackend) ...)</code></p>
+<p>(See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)</p>
+<h3 id="slot-orig-shape-list">[slot] orig-shape (List)</h3>
+<p>the original shape of <code>vec</code>. <code>(apply #'* orig-shape)</code> must correspond with the number of total elements of <code>vec</code>.</p>
+<h3 id="slot-stride-list">[slot] stride (list)</h3>
+<p>An stride of tensor, can be chosen from <code>:column</code> <code>:row</code>.</p>
+<p>This slot can be accessed by <code>(tensor-stride object)</code>.</p>
+<h3 id="slot-visible-shape-list">[slot] visible-shape (list)</h3>
+<p>An shape of visible-area of tensor, visible-area is that an viewed size of tensor.</p>
+<p>Can be accessed by <code>(shape object)</code></p>
+<h3 id="slot-view-list">[slot] view (list)</h3>
+<p>An list of multidimensional offsets, view.</p>
+<p>Can be accessed by <code>(tensor-view object)</code></p>
+<h3 id="slot-projected-p-boolean">[slot] projected-p (boolean)</h3>
+<p>Set t if <code>(apply #'* orig-shape) == (apply #'* visible-shape)</code> otherwise set nil.</p>
+<p>If t, the tensor is produced by <code>!view</code> or <code>view</code> functions.</p>
+<h3 id="slot-scalar-p">[slot] scalar-p</h3>
+<p>If t, the tensor is regarded as a Scalar.</p>
+<h3 id="slot-detach-p">[slot] detach-p</h3>
+<p>If t, JIT compilers stop tracing at the tensor.</p>
+<h3 id="slot-state">[slot] state</h3>
+<p>Stores a corresponding <code>StateContainer</code>.</p>
+<h3 id="slot-variables">[slot] variables</h3>
+<p><code>(tensor-variables object)</code></p>
+<p>Records variables called with the tensor.</p>
+<h3 id="slot-tensor-id-symbol">[slot] tensor-id (symbol)</h3>
+<p>Corresponding variable name that used in JIT compiler.</p>
+<h3 id="slot-grad-abstracttensor">[slot] grad (AbstractTensor)</h3>
+<p>If the tensor is a parameter, (i.e.: requires-grad t) and backward propagation has called, the gradients has set to this slot.</p>
+<p>Reader: <code>(grad object)</code>.  Writer: <code>(set-grad object value)</code></p>
+<h3 id="slot-backward-abstractnode">[slot] backward (AbstractNode)</h3>
+<p>the node called with.</p>
+<h3 id="slot-requires-grad-boolean">[slot] requires-grad (Boolean)</h3>
+<p>If t, the tensor become a <code>parameter</code> that gradients are saved.</p>
+<h3 id="slot-ancestor-param-p-boolean">[slot] ancestor-param-p (Boolean)</h3>
+<p>If t, the tensor has created by <code>parameter</code> or tensors whose ancestor-param-p=t.</p>
+<h3 id="slot-flexible-p-boolean">[slot] flexible-p (Boolean)</h3>
+<p>If t, the tensor is <code>broadcastable</code></p>
+<h3 id="slot-facet-keyword">[slot] facet (keyword)</h3>
+<p>Tensors has a two state:</p>
+<ol>
+<li>
+<p>:input</p>
+</li>
+<li>
+<p>:exist</p>
+</li>
+</ol>
+<p><code>:exist</code> tensor is a just normal state, which <code>vec</code> is already allocated.</p>
+<p><code>:input</code> tensor is a lazy-evaluated tensor, which allocation will be done until they're really needed. (often used as a cache, or training data.)
+...</p>
+<h2 id="make-tensor">make-tensor</h2>
+<h2 id="function-make-tensor">[function] make-tensor</h2>
+<pre><code>(make-tensor shape-or-scalar
+           &amp;key
+              (requires-grad nil)
+              (dtype *default-dtype*)
+              (vec  nil)
+              (view nil)
+              (order *default-order*)
+              (initial-element))
+</code></pre>
+<p>Refering a first-priority of  <em>using-backends</em> (i.e.: <code>car</code> of <code>*using-backends*</code>) to know what device to use, the function <code>make-tensor</code> creates and allocate a new matrix instantly.</p>
+<h3 id="input">Input</h3>
+<ol>
+<li>
+<p><code>shape-or-scalar (Any)</code> set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.</p>
+</li>
+<li>
+<p><code>requires-grad</code> (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)</p>
+</li>
+<li>
+<p><code>dtype</code> (keyword) Set dtype you wanna use. See also: (Dtype API)</p>
+</li>
+<li>
+<p><code>vec</code> (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.</p>
+</li>
+<li>
+<p><code>order</code> (member :column :row)</p>
+</li>
+<li>
+<p><code>initial-element</code> (Optional)</p>
+</li>
+</ol>
+<h3 id="example">Example</h3>
+<pre><code class="language-lisp">(make-tensor `(10 10) :initial-element 1.0)
+
+{CPUTENSOR[float] :shape (10 10)  
+  ((1.0 1.0 1.0 ~ 1.0 1.0 1.0)           
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0)   
+        ...
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0)
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="make-input">make-input</h2>
+<h2 id="function-make-input">[function] make-input</h2>
+<p>Referring a first-priority of <em>using-backend</em> (i.e.: car part), the function make-input creates a InputTensor.</p>
+<p>In contrast to <code>make-tensor</code>, allocation of <code>vec</code> is lazy-evaluated, and <code>shape</code> can include symbols. (Lazy-Evaluated Shape).</p>
+<p>For example, whichever <code>(make-input (list 256 256 256 256 256 256) nil)</code> or <code>(make-input (list 256) nil)</code> is called, the memory-usage is the same until <code>(tensor-vec tensor)</code> is called but the moment <code>(tensor-vec tensor)</code> is called, the first one would cause <code>CUDA OUT OF MEMORY</code> or something :(.</p>
+<h3 id="inputs">Inputs</h3>
+<p><code>Shape</code> [list] consisted of fixnum or symbol. (e.g.: <code>(a 10)</code> is a valid shape.)</p>
+<p><code>Named</code> [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name.</p>
+<p><code>scalar-p</code> [boolean] set t is the input is scalar.</p>
+<p><code>dtype</code> [keyword] as it is.</p>
+<p><code>order</code> [keyword] an member of :column :row</p>
+<h3 id="example_1">Example</h3>
+<pre><code class="language-lisp">(make-input `(a 10) :train-x)
+
+{CPUTENSOR[float] :shape (A 10) :named TRAIN-X 
+  &lt;&lt;Not-Embodied (A 10) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<p>The InputTensor named with a keyword is called <code>not-embodied tensor</code>, and can be changed its <code>vec</code> with <code>embody-input</code></p>
+<h2 id="embody-input">embody-input</h2>
+<p>(embody-input variables :a tensor)</p>
+<h3 id="example_2">Example</h3>
+<p><strong>REPL:</strong></p>
+<pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :x)))
+</code></pre>
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP35895 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
+</code></pre>
+<p><strong>REPL:</strong></p>
+<pre><code class="language-lisp">&gt; (with-build (fw bw vars params) out
+            (embody-input vars :x (randn `(10 10))) ;; :X = (randn `(10 10))
+            (funcall fw))
+</code></pre>
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP35884 
+  ((-2.1486177   1.4877725    -1.7822108   ~ 0.30888113   -3.668074    -1.4501324)                    
+   (0.90827906   -3.6974688   -0.7262471   ~ 2.153652     0.7110309    1.2819712)   
+                 ...
+   (-2.6074939   0.04147309   -0.97653854  ~ 0.3843904    -0.20308924  -0.614793)
+   (1.7244194    1.5219165    0.3820825    ~ -0.41161555  0.5861892    0.18113303))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
+<h2 id="build">build</h2>
+<p>Return:
+    (values forward backward variables parameters)</p>
+<h3 id="example_3">Example</h3>
+<p><strong>REPL:</strong></p>
+<pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
+</code></pre>
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP35924 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
+</code></pre>
+<p><strong>REPL:</strong></p>
+<pre><code class="language-lisp">&gt; (multiple-value-list (build out))
+</code></pre>
+<pre><code>(#&lt;FUNCTION (LAMBDA () :IN &quot;/private/var/tmp/slimemU2Krr.fasl&quot;) {53A5B54B}&gt;
+ #&lt;FUNCTION (LAMBDA () :IN &quot;/private/var/tmp/slimemU2Krr.fasl&quot;) {53A8776B}&gt;
+ += [Computation Node Information] =======+
+
+Subscripts:
+     [A -&gt; ?]
+
+
+Variables
+ NAMES |   SIZE  | 
+––––––––––––––––––
+   X   |  (A 10) | 
+
+
+ - The number of tmp variables: 4
++========================================+
+ #S(NODEPARAMETERS
+    :PARAMETERS (omitted)
+    :ntensors 3))
+</code></pre>
 <h2 id="tensor-vec">tensor-vec</h2>
 <p><code>(tensor-vec tensor)</code></p>
 <p>Accessing the pointer/array the tensor has. Not until tensor-vec is called, the new area isn't allocated.</p>
@@ -141,36 +463,40 @@ Whether you cares about performance or not, this function shouldn't be used igno
 <p>vref is a generic-function to access tensor's vec.</p>
 <p>Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.</p>
 <p>If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref.</p>
+<h2 id="set-save-for-backward">set-save-for-backward</h2>
+<p>NIL</p>
+<h2 id="read-save-for-backward">read-save-for-backward</h2>
+<p>NIL</p>
+<h2 id="no-grad"><code>*no-grad*</code></h2>
+<p>[parameter] <code>*no-grad*</code></p>
+<p>If t, all operations don't create gradients.</p>
+<h2 id="with-no-grad">with-no-grad</h2>
+<h2 id="macro-with-no-grad">[macro] with-no-grad</h2>
+<pre><code class="language-lisp">(with-no-grad &amp;body body)
+</code></pre>
+<p>Set <code>*np-grad*</code> <code>t</code> under the <code>body</code> execution, no gradients are made for backward.</p>
 <h2 id="parameter">parameter</h2>
 <p>The function parameter computes all the previous nodes of the given tensor, returning the new tensor with requires-grad=t.</p>
 <p>Example:</p>
 <pre><code class="language-lisp">(parameter (randn `(3 3)))
 </code></pre>
-<h2 id="no-grad"><code>*no-grad*</code></h2>
-<p>[parameter] <code>*no-grad*</code></p>
-<p>TODO: DOC</p>
-<h2 id="with-no-grad">with-no-grad</h2>
-<pre><code class="language-lisp">(with-no-grad &amp;body body)
-</code></pre>
-<p>Under this macro, all operations don't create any gradients.</p>
-<h2 id="make-tensor">make-tensor</h2>
-<p>Refering a first-priority of  <em>using-backends</em> (that is, a car part) to know what kernel to use, the function make-tensor creates and allocate a new matrix.</p>
-<p>Input:
-    - shape-or-scalar (Any), set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
-    - requires-grad (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
-    - dtype (keyword) Set dtype you wanna use. See also: (Dtype API)
-    - vec (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
-    - order (member :column :row) 
-    - initial-element (Optional)</p>
-<p>With regard to practical usage, the tutorials would be more helpful rather than this document.</p>
-<h2 id="make-input">make-input</h2>
-<p>Referring a first-priority of <em>using-backend</em> (i.e.: car part), the function make-input creates a InputTensor.
-WIth regard to practical usage, visit my tutorial.</p>
-<p>Input:
-    - Shape [list] Consisted of Fixnum or Symbol.
-    - named [keyword]
-    - dtype (as it is)
-    - order (as it is)(TODO) -&gt; View APIs etc...</p>
+<h2 id="dtype-lisp-type">dtype-&gt;lisp-type</h2>
+<p>NIL</p>
+<h2 id="call-with-view">call-with-view</h2>
+<p>NIL</p>
+<h2 id="stride-of">stride-of</h2>
+<p>NIL</p>
+<h2 id="size-of">size-of</h2>
+<p>NIL</p>
+<h2 id="offset-of">offset-of</h2>
+<p>NIL</p>
+<h2 id="shape-equal">shape-equal</h2>
+<h2 id="function-shape-equal">[function] shape-equal</h2>
+<p>a=1, b=k =&gt; T
+a=1, b=2 =&gt; NIL</p>
+<p>...</p>
+<h2 id="force-list">force-list</h2>
+<p>Returns subscript-t if view is Subscript otherwise returns a view</p>
               
             </div>
           </div><footer>
