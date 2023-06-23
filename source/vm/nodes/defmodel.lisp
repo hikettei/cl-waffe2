@@ -231,11 +231,33 @@ Second case, `on-call->` is symbol-name:
        ;; defines LinearLayer class
        (defclass ,name (Composite)
 	 (,@slots)
-	 (:documentation ,(format nil "class, ~a" documentation)))
+	 (:documentation ,(format nil "
+## [model] ~a
+
+```
+(~(~a~)~a)
+```
+
+### Description
+
+~a
+"
+				  (symbol-name name)
+				  (symbol-name name)
+				  (with-output-to-string (out)
+				    (dolist (arg constructor-arguments)
+				      (princ " " out)
+				      (format out "~a" arg)))
+				  documentation)))
 
        ;; Creates a constructor named (linearlayer constructor-arguments)
        (defun ,name (,@constructor-arguments)
-	 ,(format nil "An constructor for model.")
+	 ,(format nil "
+## [function] ~a
+
+An constructor function for ~a."
+		  name
+		  name)
 	 (let ((,self-name (make-instance
 			    ',name
 			    ,@initargs)))

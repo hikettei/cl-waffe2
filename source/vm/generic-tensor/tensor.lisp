@@ -21,7 +21,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (or (eql name :column) (eql name :row)))
 
 (defclass AbstractTensor ()
-  ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list)
+  ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
 
    ;; MultiDimensional APIs
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
@@ -65,20 +65,159 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
-  (:documentation "The class AbstractTensor is a fundamental datatype of dealing with various kernel (e.g.: CPU, Metal, CUDA...).
+  (:documentation "
+AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.
 
-The class provides the fundamental features following:
-    1. Lazy-Evaluated Multi-Dimensional Matrix APIs, and accordingly stride APIs for column/row major.
-    2. Multi-Dimensional Matrix Offsets (i.e.: View APIs).
-    3. Recording What Functions were called in the previous computation. (To construct backward.)
-    4. vec container
-    5. Keep Gradients
-    6. Input API
-    7. Trace Informations for JIT to create well-optimized computation node.
+The class provides the fundamental and necessary features for tensors.
 
-Users can extend this class and define the brand-new Tensor's Dtype depending on their use.
+1. Lazy-Evaluated and Multi-Dimensional APIs, stride computations.
 
-See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.
+2. `View APIs` multi-dimensional offsets
+
+3. To construct backward, AbstractTensor records variables called with.
+
+4. `vec` container.
+
+5. an space for saving gradients, copies for backward.
+
+6. Lazy-Evaluated Shapings
+
+7. Trace Informations for JIT to create well-optimized computation node.
+
+### Create a new backend.
+
+Users can create a new backend by extending this abstract class.
+
+```lisp
+(defclass MyBackend (AbstractNode) nil)
+```
+
+To use the `MyBackend` as a tensor, users also has to override these methods:
+
+1. `initialize-instance` ... An allocator for tensor's vec.
+
+2. `vref` `(setf vref)` ... an generic function to access/write tensor's vec.
+
+```lisp
+;; TODO: Establish a common API for initargs
+(defmethod initialize-instance :before ((tensor MyBackend)
+					&rest initargs
+					&key &allow-other-keys)
+  ;; if projected-p -> alloc new vec
+  (let* ((shape (getf initargs :shape))
+ 	 (dtype (dtype->lisp-type (getf initargs :dtype)))
+	 (vec   (getf initargs :vec))
+	 (facet (getf initargs :facet))
+	 (initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
+    (when (eql facet :exist)
+      (if vec
+	  (setf (tensor-vec tensor) vec)
+	  (setf (tensor-vec tensor) ;; vec can be anything.
+		(make-array
+		 (apply #'* shape)
+		 :element-type dtype
+		 :initial-element initial-element))))))
+```
+
+```lisp
+(defmethod vref ((tensor MyBackend) index)
+  (aref (tensor-vec tensor) index))
+
+(defmethod (setf vref) (new-value (tensor MyBackend) index)
+  (setf (aref (tensor-vec tensor) index) new-value))
+```
+
+Now, the name `MyBackend` is available as a brand-new cl-waffe2 backend!
+
+Users can define a new implementation following `(define-impl (Name :device MyBackend) ...)`
+
+(See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)
+
+### [slot] orig-shape (List)
+
+the original shape of `vec`. `(apply #'* orig-shape)` must correspond with the number of total elements of `vec`.
+
+### [slot] stride (list)
+
+An stride of tensor, can be chosen from `:column` `:row`.
+
+This slot can be accessed by `(tensor-stride object)`.
+
+### [slot] visible-shape (list)
+
+An shape of visible-area of tensor, visible-area is that an viewed size of tensor.
+
+Can be accessed by `(shape object)`
+
+### [slot] view (list)
+
+An list of multidimensional offsets, view.
+
+Can be accessed by `(tensor-view object)`
+
+### [slot] projected-p (boolean)
+
+Set t if `(apply #'* orig-shape) == (apply #'* visible-shape)` otherwise set nil.
+
+If t, the tensor is produced by `!view` or `view` functions.
+
+### [slot] scalar-p
+
+If t, the tensor is regarded as a Scalar.
+
+### [slot] detach-p
+
+If t, JIT compilers stop tracing at the tensor.
+
+### [slot] state
+
+Stores a corresponding `StateContainer`.
+
+### [slot] variables
+
+`(tensor-variables object)`
+
+Records variables called with the tensor.
+
+### [slot] tensor-id (symbol)
+
+Corresponding variable name that used in JIT compiler.
+
+### [slot] grad (AbstractTensor)
+
+If the tensor is a parameter, (i.e.: requires-grad t) and backward propagation has called, the gradients has set to this slot.
+
+Reader: `(grad object)`.  Writer: `(set-grad object value)`
+
+### [slot] backward (AbstractNode)
+
+the node called with.
+
+### [slot] requires-grad (Boolean)
+
+If t, the tensor become a `parameter` that gradients are saved.
+
+### [slot] ancestor-param-p (Boolean)
+
+If t, the tensor has created by `parameter` or tensors whose ancestor-param-p=t.
+
+### [slot] flexible-p (Boolean)
+
+If t, the tensor is `broadcastable`
+
+### [slot] facet (keyword)
+
+Tensors has a two state:
+
+1. :input
+
+2. :exist
+
+`:exist` tensor is a just normal state, which `vec` is already allocated.
+
+`:input` tensor is a lazy-evaluated tensor, which allocation will be done until they're really needed. (often used as a cache, or training data.)
+...
+
 "))
 
 (defmethod tensor-delete ((tensor AbstractTensor))
@@ -89,24 +228,31 @@ See the examples to understand how this could be achieved at ./source/backends/l
 ;; Inline
 (declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
-  "The function tensor-vec has a multiple behaviours depending on the state of tensor.
+  "
 
-1. If the given tensor is existing, or is input but allocated.
-   Returns the given tensor's vec.
+## [function] tensor-vec
 
-2. If the given tensor is Input, and still not yet being accessed.
-   Allocates the new area for matrix, and set tensor's vec slot it.
-   The allocated area of tensor is returned.
+The function tensor-vec has a multiple behaviours depending on the state of tensor.
+
+1. If the given tensor is existing, or is input but allocated. -> Returns the given tensor's vec.
+
+2. If the given tensor is Input, and still not yet being accessed. -> Allocates the new area for matrix, and set tensor's vec slot it. The allocated area of tensor is returned.
 
 In a short words:
 
-Basically, tensor-vec is a function where:
+```
+In general, tensor-vec is a function where:
   Input  -> AbstractTensor
   Output -> The tensor's vec slot (depends on their kernel)
+```
 
-However, using this function allows us to optimize the timing of allocation.
+By using `tensor-vec`, allocation of InputTensor will be done until they're really needed.
 
-Note that this function is inlined.
+Note:
+
+1. this function is inlined.
+
+2. this function is setfable
 "
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
@@ -128,9 +274,6 @@ Note that this function is inlined.
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))
   (write-vec new-value tensor))
-
-;; (defmacro variable  ())
-;; (defmacro parameter ())
 
 (defun make-gradient-adder (target shape)
   "Returns a instant-kernel to add the new-gradient to given target."
@@ -236,17 +379,36 @@ Note that this function is inlined.
 		      (view nil)
 		      (order *default-order*)
 		      (initial-element))
-  "Refering a first-priority of  *using-backends* (that is, a car part) to know what kernel to use, the function make-tensor creates and allocate a new matrix.
+  "
+## [function] make-tensor
 
-Input:
-    - shape-or-scalar (Any), set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
-    - requires-grad (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
-    - dtype (keyword) Set dtype you wanna use. See also: (Dtype API)
-    - vec (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
-    - order (member :column :row) 
-    - initial-element (Optional)
+```
+(make-tensor shape-or-scalar
+		   &key
+		      (requires-grad nil)
+		      (dtype *default-dtype*)
+		      (vec  nil)
+		      (view nil)
+		      (order *default-order*)
+		      (initial-element))
+```
 
-With regard to practical usage, the tutorials would be more helpful rather than this document."
+Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*`) to know what device to use, the function `make-tensor` creates and allocate a new matrix instantly.
+
+### Input
+
+1. `shape-or-scalar (Any)` set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
+
+2. `requires-grad` (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
+
+3. `dtype` (keyword) Set dtype you wanna use. See also: (Dtype API)
+
+4. `vec` (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
+
+5. `order` (member :column :row)
+
+6. `initial-element` (Optional)
+"
   (declare (type list view)
 	   (ignore vec))
   (if (typep shape-or-scalar 'list)
@@ -276,14 +438,27 @@ With regard to practical usage, the tutorials would be more helpful rather than 
 		     (scalar-p nil)
 		     (dtype *default-dtype*)
 		     (order *default-order*))
-  "Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
-WIth regard to practical usage, visit my tutorial.
+  "
+## [function] make-input
 
-Input:
-    - Shape [list] Consisted of Fixnum or Symbol.
-    - named [keyword]
-    - dtype (as it is)
-    - order (as it is)"
+Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
+
+In contrast to `make-tensor`, allocation of `vec` is lazy-evaluated, and `shape` can include symbols. (Lazy-Evaluated Shape).
+
+For example, whichever `(make-input (list 256 256 256 256 256 256) nil)` or `(make-input (list 256) nil)` is called, the memory-usage is the same until `(tensor-vec tensor)` is called but the moment `(tensor-vec tensor)` is called, the first one would cause `CUDA OUT OF MEMORY` or something :(.
+
+### Inputs
+
+`Shape` [list] consisted of fixnum or symbol. (e.g.: `(a 10)` is a valid shape.)
+
+`Named` [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name.
+
+`scalar-p` [boolean] set t is the input is scalar.
+
+`dtype` [keyword] as it is.
+
+`order` [keyword] an member of :column :row
+"
   (declare (type list shape)
 	   (type (or null keyword) named))
   (make-instance (if scalar-p 'ScalarTensor (car *using-backend*))

@@ -69,7 +69,13 @@
 ```
 "
 	    source result)))
-	   
+
+(defun with-examples (&rest codes)
+  (format *page-out-to* "~%###Example")
+  (dolist (c codes)
+    (format *page-out-to* "~%**REPL:**~%```lisp~%> ~a~%```" c)
+    (let ((result (eval (read-from-string c))))
+      (format *page-out-to* "~%```~%~a~%```~%" result))))
 
 (defparameter *target-dir* "./docs/cl-waffe2-docs/docs")
 

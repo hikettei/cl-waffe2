@@ -3,23 +3,280 @@
 
 ## AbstractTensor
 
-[class] AbstractTensor
+[class] `AbstractTensor`
 
-The class AbstractTensor is a fundamental datatype of dealing with various kernel (e.g.: CPU, Metal, CUDA...).
 
-The class provides the fundamental features following:
-    1. Lazy-Evaluated Multi-Dimensional Matrix APIs, and accordingly stride APIs for column/row major.
-    2. Multi-Dimensional Matrix Offsets (i.e.: View APIs).
-    3. Recording What Functions were called in the previous computation. (To construct backward.)
-    4. vec container
-    5. Keep Gradients
-    6. Input API
-    7. Trace Informations for JIT to create well-optimized computation node.
+AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.
 
-Users can extend this class and define the brand-new Tensor's Dtype depending on their use.
+The class provides the fundamental and necessary features for tensors.
 
-See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.
+1. Lazy-Evaluated and Multi-Dimensional APIs, stride computations.
 
+2. `View APIs` multi-dimensional offsets
+
+3. To construct backward, AbstractTensor records variables called with.
+
+4. `vec` container.
+
+5. an space for saving gradients, copies for backward.
+
+6. Lazy-Evaluated Shapings
+
+7. Trace Informations for JIT to create well-optimized computation node.
+
+### Create a new backend.
+
+Users can create a new backend by extending this abstract class.
+
+```lisp
+(defclass MyBackend (AbstractNode) nil)
+```
+
+To use the `MyBackend` as a tensor, users also has to override these methods:
+
+1. `initialize-instance` ... An allocator for tensor's vec.
+
+2. `vref` `(setf vref)` ... an generic function to access/write tensor's vec.
+
+```lisp
+;; TODO: Establish a common API for initargs
+(defmethod initialize-instance :before ((tensor MyBackend)
+					&rest initargs
+					&key &allow-other-keys)
+  ;; if projected-p -> alloc new vec
+  (let* ((shape (getf initargs :shape))
+ 	 (dtype (dtype->lisp-type (getf initargs :dtype)))
+	 (vec   (getf initargs :vec))
+	 (facet (getf initargs :facet))
+	 (initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
+    (when (eql facet :exist)
+      (if vec
+	  (setf (tensor-vec tensor) vec)
+	  (setf (tensor-vec tensor) ;; vec can be anything.
+		(make-array
+		 (apply #'* shape)
+		 :element-type dtype
+		 :initial-element initial-element))))))
+```
+
+```lisp
+(defmethod vref ((tensor MyBackend) index)
+  (aref (tensor-vec tensor) index))
+
+(defmethod (setf vref) (new-value (tensor MyBackend) index)
+  (setf (aref (tensor-vec tensor) index) new-value))
+```
+
+Now, the name `MyBackend` is available as a brand-new cl-waffe2 backend!
+
+Users can define a new implementation following `(define-impl (Name :device MyBackend) ...)`
+
+(See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)
+
+### [slot] orig-shape (List)
+
+the original shape of `vec`. `(apply #'* orig-shape)` must correspond with the number of total elements of `vec`.
+
+### [slot] stride (list)
+
+An stride of tensor, can be chosen from `:column` `:row`.
+
+This slot can be accessed by `(tensor-stride object)`.
+
+### [slot] visible-shape (list)
+
+An shape of visible-area of tensor, visible-area is that an viewed size of tensor.
+
+Can be accessed by `(shape object)`
+
+### [slot] view (list)
+
+An list of multidimensional offsets, view.
+
+Can be accessed by `(tensor-view object)`
+
+### [slot] projected-p (boolean)
+
+Set t if `(apply #'* orig-shape) == (apply #'* visible-shape)` otherwise set nil.
+
+If t, the tensor is produced by `!view` or `view` functions.
+
+### [slot] scalar-p
+
+If t, the tensor is regarded as a Scalar.
+
+### [slot] detach-p
+
+If t, JIT compilers stop tracing at the tensor.
+
+### [slot] state
+
+Stores a corresponding `StateContainer`.
+
+### [slot] variables
+
+`(tensor-variables object)`
+
+Records variables called with the tensor.
+
+### [slot] tensor-id (symbol)
+
+Corresponding variable name that used in JIT compiler.
+
+### [slot] grad (AbstractTensor)
+
+If the tensor is a parameter, (i.e.: requires-grad t) and backward propagation has called, the gradients has set to this slot.
+
+Reader: `(grad object)`.  Writer: `(set-grad object value)`
+
+### [slot] backward (AbstractNode)
+
+the node called with.
+
+### [slot] requires-grad (Boolean)
+
+If t, the tensor become a `parameter` that gradients are saved.
+
+### [slot] ancestor-param-p (Boolean)
+
+If t, the tensor has created by `parameter` or tensors whose ancestor-param-p=t.
+
+### [slot] flexible-p (Boolean)
+
+If t, the tensor is `broadcastable`
+
+### [slot] facet (keyword)
+
+Tensors has a two state:
+
+1. :input
+
+2. :exist
+
+`:exist` tensor is a just normal state, which `vec` is already allocated.
+
+`:input` tensor is a lazy-evaluated tensor, which allocation will be done until they're really needed. (often used as a cache, or training data.)
+...
+
+
+## make-tensor
+
+## [function] make-tensor
+
+```
+(make-tensor shape-or-scalar
+		   &key
+		      (requires-grad nil)
+		      (dtype *default-dtype*)
+		      (vec  nil)
+		      (view nil)
+		      (order *default-order*)
+		      (initial-element))
+```
+
+Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*`) to know what device to use, the function `make-tensor` creates and allocate a new matrix instantly.
+
+### Input
+
+1. `shape-or-scalar (Any)` set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
+
+2. `requires-grad` (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
+
+3. `dtype` (keyword) Set dtype you wanna use. See also: (Dtype API)
+
+4. `vec` (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
+
+5. `order` (member :column :row)
+
+6. `initial-element` (Optional)
+
+### Example
+
+```lisp
+(make-tensor `(10 10) :initial-element 1.0)
+
+{CPUTENSOR[float] :shape (10 10)  
+  ((1.0 1.0 1.0 ~ 1.0 1.0 1.0)           
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0)   
+        ...
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0)
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+```
+
+## make-input
+
+## [function] make-input
+
+Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
+
+In contrast to `make-tensor`, allocation of `vec` is lazy-evaluated, and `shape` can include symbols. (Lazy-Evaluated Shape).
+
+For example, whichever `(make-input (list 256 256 256 256 256 256) nil)` or `(make-input (list 256) nil)` is called, the memory-usage is the same until `(tensor-vec tensor)` is called but the moment `(tensor-vec tensor)` is called, the first one would cause `CUDA OUT OF MEMORY` or something :(.
+
+### Inputs
+
+`Shape` [list] consisted of fixnum or symbol. (e.g.: `(a 10)` is a valid shape.)
+
+`Named` [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name.
+
+`scalar-p` [boolean] set t is the input is scalar.
+
+`dtype` [keyword] as it is.
+
+`order` [keyword] an member of :column :row
+
+### Example
+
+```lisp
+(make-input `(a 10) :train-x)
+
+{CPUTENSOR[float] :shape (A 10) :named TRAIN-X 
+  <<Not-Embodied (A 10) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+```
+The InputTensor named with a keyword is called `not-embodied tensor`, and can be changed its `vec` with `embody-input`
+## embody-input
+(embody-input variables :a tensor)
+###Example
+**REPL:**
+```lisp
+> (setq out (!add (randn `(10 10)) (make-input `(a 10) :x)))
+```
+```
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP24649 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (10 10) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+```
+
+**REPL:**
+```lisp
+> (with-build (fw bw vars params) out
+            (embody-input vars :x (randn `(10 10))) ;; :X = (randn `(10 10))
+            (funcall fw))
+```
+```
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP24638 
+  ((-0.8317172   0.8521589    -1.3240831   ~ 2.021981     1.49586      2.4994402)                    
+   (0.84517705   1.441886     1.1546972    ~ -1.7793846   -0.025024354 0.34384906)   
+                 ...
+   (-1.1687047   -0.7702612   2.6149702    ~ -1.1432478   -0.72839165  -1.3739656)
+   (1.9905882    1.457518     -1.0817754   ~ 1.1603789    2.027603     -1.6497405))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+```
+
+## build
+Return:
+    (values forward backward variables parameters)
 ## tensor-vec
 
 `(tensor-vec tensor)`
@@ -40,6 +297,24 @@ vref is a generic-function to access tensor's vec.
 Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
 
 If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref.
+## set-save-for-backward
+NIL
+## read-save-for-backward
+NIL
+## `*no-grad*`
+[parameter] `*no-grad*`
+
+If t, all operations don't create gradients.
+## with-no-grad
+
+## [macro] with-no-grad
+
+```lisp
+(with-no-grad &body body)
+```
+
+Set `*np-grad*` `t` under the `body` execution, no gradients are made for backward.
+
 ## parameter
 The function parameter computes all the previous nodes of the given tensor, returning the new tensor with requires-grad=t.
 
@@ -48,34 +323,23 @@ Example:
 ```lisp
 (parameter (randn `(3 3)))
 ```
-## `*no-grad*`
-[parameter] `*no-grad*`
+## dtype->lisp-type
+NIL
+## call-with-view
+NIL
+## stride-of
+NIL
+## size-of
+NIL
+## offset-of
+NIL
+## shape-equal
 
-TODO: DOC
-## with-no-grad
-```lisp
-(with-no-grad &body body)
-```
+## [function] shape-equal
 
-Under this macro, all operations don't create any gradients.
-## make-tensor
-Refering a first-priority of  *using-backends* (that is, a car part) to know what kernel to use, the function make-tensor creates and allocate a new matrix.
+a=1, b=k => T
+a=1, b=2 => NIL
 
-Input:
-    - shape-or-scalar (Any), set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
-    - requires-grad (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
-    - dtype (keyword) Set dtype you wanna use. See also: (Dtype API)
-    - vec (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
-    - order (member :column :row) 
-    - initial-element (Optional)
-
-With regard to practical usage, the tutorials would be more helpful rather than this document.
-## make-input
-Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
-WIth regard to practical usage, visit my tutorial.
-
-Input:
-    - Shape [list] Consisted of Fixnum or Symbol.
-    - named [keyword]
-    - dtype (as it is)
-    - order (as it is)(TODO) -> View APIs etc...
+...
+## force-list
+Returns subscript-t if view is Subscript otherwise returns a view(TODO) -> View APIs etc...

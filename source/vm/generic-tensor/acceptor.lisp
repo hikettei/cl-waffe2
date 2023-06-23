@@ -4,11 +4,15 @@
 (defparameter *no-grad* nil "If t, all operations don't create gradients.")
 
 (defmacro with-no-grad (&body body)
-  "```lisp
+  "
+## [macro] with-no-grad
+
+```lisp
 (with-no-grad &body body)
 ```
 
-Under this macro, all operations don't create any gradients."
+Set `*np-grad*` `t` under the `body` execution, no gradients are made for backward.
+"
   `(let ((*no-grad* t))
      ,@body))
 

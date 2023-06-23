@@ -8,6 +8,9 @@
 (defmodel (Encapsulated-Node (self node-func)
 	   :slots ((node-func :initarg :node-func))
 	   :initargs (:node-func node-func)
+	   :documentation "Wraps the given function with callable data structure.
+
+This model usually combined with `asnode` macro."
 	   :on-call-> ((self x)
 		       (funcall (slot-value self 'node-func) x))))
 

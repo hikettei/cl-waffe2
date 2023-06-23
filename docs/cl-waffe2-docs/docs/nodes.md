@@ -96,7 +96,7 @@ PointerName[SubScripts]
 // SubScripts can be one of: [A], [A B] [~ i j] etc...
 ```
 
-### Assigned works
+### Assigned task
 
 ```
 A[a b] B[a b] -> B[a b]
@@ -464,6 +464,8 @@ defmodel is a macro used to describe the model of neural network with `Composite
   6. `on-call->` [One of: nil symbol-name function list]
      on-call-> is used to control the behaviour of *call* function.
 
+  7. `on-print-object` [null or body]
+
 ### Example
 
 ```lisp
@@ -529,6 +531,8 @@ Second case, `on-call->` is symbol-name:
    This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3.
 ## call
 All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.
+
+The generic function call is also used to step forward of AbstractNode, that is, works as if forward.
 
 `[generic-function]` (call model &rest inputs)
 ## with-devices
