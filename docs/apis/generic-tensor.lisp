@@ -34,9 +34,11 @@
             (embody-input vars :x (randn `(10 10))) ;; :X = (randn `(10 10))
             (funcall fw))"))
 
-      ;; with-example
-      
-      (with-doc 'build 'function)
+      ;; with-example      
+      (with-doc 'build 'function
+	(with-examples
+	  "(setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))"
+	  "(multiple-value-list (build out))"))
 
       
       ;; Accessors
@@ -80,11 +82,6 @@ Accessing the pointer/array the tensor has. Not until tensor-vec is called, the 
     (with-doc 'shape-equal 'function)
 
     (with-doc 'force-list 'function)
-
-    (insert "(TODO) -> View APIs etc...")
-    ;; TO Add: ViewInstruction
-    ;; stride-of etc....
-
     ))
 
 

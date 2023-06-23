@@ -248,7 +248,7 @@ The InputTensor named with a keyword is called `not-embodied tensor`, and can be
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :x)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP24649 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP35895 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -263,12 +263,12 @@ The InputTensor named with a keyword is called `not-embodied tensor`, and can be
             (funcall fw))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP24638 
-  ((-0.8317172   0.8521589    -1.3240831   ~ 2.021981     1.49586      2.4994402)                    
-   (0.84517705   1.441886     1.1546972    ~ -1.7793846   -0.025024354 0.34384906)   
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP35884 
+  ((-2.1486177   1.4877725    -1.7822108   ~ 0.30888113   -3.668074    -1.4501324)                    
+   (0.90827906   -3.6974688   -0.7262471   ~ 2.153652     0.7110309    1.2819712)   
                  ...
-   (-1.1687047   -0.7702612   2.6149702    ~ -1.1432478   -0.72839165  -1.3739656)
-   (1.9905882    1.457518     -1.0817754   ~ 1.1603789    2.027603     -1.6497405))
+   (-2.6074939   0.04147309   -0.97653854  ~ 0.3843904    -0.20308924  -0.614793)
+   (1.7244194    1.5219165    0.3820825    ~ -0.41161555  0.5861892    0.18113303))
   :facet :input
   :requires-grad NIL
   :backward NIL}
@@ -277,6 +277,46 @@ The InputTensor named with a keyword is called `not-embodied tensor`, and can be
 ## build
 Return:
     (values forward backward variables parameters)
+###Example
+**REPL:**
+```lisp
+> (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
+```
+```
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP35924 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (10 10) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+```
+
+**REPL:**
+```lisp
+> (multiple-value-list (build out))
+```
+```
+(#<FUNCTION (LAMBDA () :IN "/private/var/tmp/slimemU2Krr.fasl") {53A5B54B}>
+ #<FUNCTION (LAMBDA () :IN "/private/var/tmp/slimemU2Krr.fasl") {53A8776B}>
+ += [Computation Node Information] =======+
+
+Subscripts:
+     [A -> ?]
+
+
+Variables
+ NAMES |   SIZE  | 
+––––––––––––––––––
+   X   |  (A 10) | 
+
+
+ - The number of tmp variables: 4
++========================================+
+ #S(NODEPARAMETERS
+    :PARAMETERS (omitted)
+    :ntensors 3))
+```
+
 ## tensor-vec
 
 `(tensor-vec tensor)`
@@ -342,4 +382,4 @@ a=1, b=2 => NIL
 
 ...
 ## force-list
-Returns subscript-t if view is Subscript otherwise returns a view(TODO) -> View APIs etc...
+Returns subscript-t if view is Subscript otherwise returns a view
