@@ -20,6 +20,14 @@
 			(declare (ignore dx))
 			(values dout)))
 
+(defun map-tree (fn tree)
+  (let ((tree (funcall fn tree)))
+    (if (listp tree)
+        (mapcar (lambda (subtree)
+                  (map-tree fn subtree))
+                tree)
+        tree)))
+
 (defmacro with-instant-kernel (tensor &body body)
   "Creates an instant-kernel following tensor.
 

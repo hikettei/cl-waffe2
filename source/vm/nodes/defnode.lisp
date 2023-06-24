@@ -123,11 +123,12 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 
 
 (defmacro subscript (where &key (fixed nil) (allow-symbol nil) (constructor-args nil))
-  (multiple-value-bind (body states uprankable) (create-subscript-p `,where :fixed fixed :return-body t :allow-symbol allow-symbol :local-variables (get-params `,constructor-args))
+  (multiple-value-bind (body states uprankable parsed-state) (create-subscript-p `,where :fixed fixed :return-body t :allow-symbol allow-symbol :local-variables (get-params `,constructor-args))
     `(values
       ,body
       ',states
-      ',uprankable)))
+      ',uprankable
+      ',parsed-state)))
 
 ;; Broadcasting Semantic
 

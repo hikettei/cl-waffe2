@@ -6,6 +6,8 @@
 (defclass Composite ()
   ((model-id :initform (gensym "W") :reader model-id)
    (subscript-linter :initform nil :initarg :linter-f :reader composite-linter-f)
+   (linter-state1 :initform nil :initarg :linter-state1 :reader composite-linter1)
+   (linter-state2 :initform nil :initarg :linter-state2 :reader composite-linter2)
    (traced?     :initform nil :type boolean :accessor composite-traced-p)
    (input-size  :initform nil :type list :accessor  composite-input-size)
    (output-size :initform nil :type list :accessor composite-output-size))
@@ -132,10 +134,50 @@ Here's a list of reports:
 			 do (format out "~a. ~a~%"
 				    nth c)))))
 
+(defun preprocess-batch-symbol (p1)
+  "~ -> GENSYM:XXX"
+  (let ((name (gensym "~")))
+    (values
+     name
+     (map-tree
+      #'(lambda (x)
+	  (typecase x
+	    (symbol
+	     (if (symbol-eq '~ x)
+		 name
+		 x))
+	    (T x)))
+      p1))))
+
+(defun restore-symbol (sym out)
+  "GENSYM:XXX -> ~"
+  (map-tree
+   #'(lambda (x)
+       (typecase x
+	 (symbol
+	  (if (symbol-eq sym x)
+	      '~
+	      x))
+	 (T x)))
+   out))
+
 (defmethod composite-where ((model Composite) inputs)
-  (if (composite-linter-f model)
-      (funcall (composite-linter-f model) model inputs)
-      nil))
+
+  ;; At first: symbols
+  ;; (funcall Linter-Function model nil   input-state1 input-state2)
+  ;; Fixnums
+  ;; (funcall Linter-Function model shape input-state1 input-state2)
+  (with-slots ((linter-function subscript-linter)
+	       (state1 linter-state1)
+	       (state2 linter-state2))
+      model
+    
+    (if linter-function
+	(multiple-value-bind (sym1 state1) (preprocess-batch-symbol (car state1))
+	  (restore-symbol
+	   sym1
+	   (funcall linter-function model inputs state1 state1)))
+	nil)))
 
 (defmacro defmodel ((name
 		     (self-name &rest constructor-arguments)
@@ -151,6 +193,9 @@ Here's a list of reports:
 		      (subscript-p2 (gensym "sub2"))
 		      (test-subscript-p (gensym "sub"))
 		      (inputs       (gensym "Inputs"))
+		      (inputs1      (gensym "Inputs"))
+		      (inputs2      (gensym "Inputs"))
+		    
 		      (try-out (gensym))
 		      (try-err (gensym))
 		      (try-rank-error (gensym))
@@ -294,38 +339,37 @@ Second case, `on-call->` is symbol-name:
 An constructor function for ~a."
 		  name
 		  name)
-	 (labels ((,subscript-p1 (,inputs)
-		    (declare (ignorable ,inputs))
-		    ,(if use-linter-p
-			 `(funcall (subscript ,where :allow-symbol t :constructor-args ,constructor-arguments) ,inputs)))
-		  (,subscript-p2 (,inputs)
-		    (declare (ignorable ,inputs))
-		    ,(if use-linter-p
-			 `(funcall (subscript ,where :fixed t :allow-symbol t :constructor-args ,constructor-arguments) ,inputs)))
-		  (,test-subscript-p (,self-place1 ,inputs)
-		    (declare (ignorable ,self-place1 ,inputs))
-		    ,(if use-linter-p
-			 `(multiple-value-bind (,try-out ,try-err ,try-rank-error)
-			      (,subscript-p2 ,inputs)
-			    (if ,try-rank-error
-				(multiple-value-bind (,try-out ,try-err)
-				    (,subscript-p1 ,inputs)
+	 (let ((,subscript-p1 ,(if use-linter-p
+				   `(multiple-value-list (subscript ,where :allow-symbol t :constructor-args ,constructor-arguments))))
+	       (,subscript-p2 ,(if use-linter-p
+				   `(multiple-value-list (subscript ,where :fixed :t :allow-symbol t :constructor-args ,constructor-arguments)))))
+	   (declare (ignorable ,subscript-p1 ,subscript-p2))
+	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
+		      (declare (ignorable ,self-place1 ,inputs))
+		      ,(if use-linter-p
+			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error)
+				 (funcall (car ,subscript-p2) (or ,inputs ,inputs2))
+			      (if ,try-rank-error
+				  (multiple-value-bind (,try-out ,try-err)
+				      (funcall (car ,subscript-p1) (or ,inputs ,inputs1))
+				    (if (null ,try-err)
+					,try-out
+					(composite-error ,self-place1 ,try-err)))
 				  (if (null ,try-err)
 				      ,try-out
-				      (composite-error ,self-place1 ,try-err)))
-				(if (null ,try-err)
-				    ,try-out
-				    (composite-error ,self-place1 ,try-err)))))))
-	   (let ((,self-name (make-instance
-			      ',name
-			      :linter-f
-			      ;; test-subscript-p
-			      ;; (function self inputs)
-			      #',test-subscript-p
-			      ,@initargs)))
-	     ;; funcall test-subscript-p with first-state
-	     ,@constructor-body
-	     ,self-name)))
+				      (composite-error ,self-place1 ,try-err)))))))
+	     (let ((,self-name (make-instance
+				',name
+				:linter-f
+				#',test-subscript-p
+				:linter-state1
+				(fourth ,subscript-p1)
+				:linter-state2
+				(fourth ,subscript-p2)
+				,@initargs)))
+	       ;; funcall test-subscript-p with first-state
+	       ,@constructor-body
+	       ,self-name))))
 
        ;; Registers forward funcition cl-waffe2 uses.
        ;; on-call-> could be one of them:

@@ -611,7 +611,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					  ;; 1. [a b]
 					  ;; 2. ~
 
-					  ;; TODO: Auto Padding
 					  (or
 					   (when (or (not (symbolp s))
 						     (find s ,undetermined-symbols))
@@ -630,6 +629,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			       out)))
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
+			
 			(values
 			 ;; (list out-shape1 out-shape...n)
 			 (list ,@(map 'list #'(lambda (arg)
@@ -654,4 +654,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		   #'(lambda (s)
 		       ;; The first rank is broadcastable?
 		       (symbol-eq (car s) '~))
-		   first-state)))))
+		   first-state)
+	      (list first-state out-state)))))
+
