@@ -174,13 +174,10 @@ Here's a list of reports:
     
     (if linter-function
 	(multiple-value-bind (sym1 state1) (preprocess-batch-symbol (car state1))
-	  (values
-	   (restore-symbol
-	    sym1
-	    (funcall linter-function model inputs state1 state1))
-	   (restore-symbol
-	    sym1
-	    state1)))
+	  (multiple-value-bind (res in) (funcall linter-function model inputs state1 state1)
+	    (values
+	     (restore-symbol sym1 res)
+	     (restore-symbol sym1 in))))
 	nil)))
 
 (defmacro defmodel ((name
@@ -196,9 +193,12 @@ Here's a list of reports:
 		      (subscript-p1 (gensym "sub1"))
 		      (subscript-p2 (gensym "sub2"))
 		      (test-subscript-p (gensym "sub"))
+		    
 		      (inputs       (gensym "Inputs"))
 		      (inputs1      (gensym "Inputs"))
 		      (inputs2      (gensym "Inputs"))
+
+		      (input-size (gensym "IO"))
 		    
 		      (try-out (gensym))
 		      (try-err (gensym))
@@ -351,16 +351,17 @@ An constructor function for ~a."
 	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
 		      (declare (ignorable ,self-place1 ,inputs))
 		      ,(if use-linter-p
-			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error)
+			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
 				 (funcall (car ,subscript-p2) (or ,inputs ,inputs2))
 			      (if ,try-rank-error
-				  (multiple-value-bind (,try-out ,try-err)
+				  (multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
 				      (funcall (car ,subscript-p1) (or ,inputs ,inputs1))
+				    (declare (ignore ,try-rank-error))
 				    (if (null ,try-err)
-					,try-out
+					(values ,try-out ,input-size)
 					(composite-error ,self-place1 ,try-err)))
 				  (if (null ,try-err)
-				      ,try-out
+				      (values ,try-out ,input-size)
 				      (composite-error ,self-place1 ,try-err)))))))
 	     (let ((,self-name (make-instance
 				',name

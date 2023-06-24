@@ -639,7 +639,10 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						   ',arg)))
 				      out-state))
 			 (reverse ,all-conditions)
-			 ,rank-error-p)))))))
+			 ,rank-error-p
+			 (list ,@(map 'list #'(lambda (arg)
+						`(flatten (list ,@arg)))
+				      first-state)))))))))
       (when macroexpand
 	(print body))
 

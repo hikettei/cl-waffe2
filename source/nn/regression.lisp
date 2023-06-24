@@ -25,6 +25,8 @@
 	   :where ([~ batch-size in-features] -> [~ batch-size out-features])
 	   :on-call-> call-linear
 	   :documentation "In-Features -> Out-Features")
+
+  ;; Initialize Weights
   (setf (linear-weight self)
 	(parameter (!mul 0.01 (randn `(,out-features ,in-features)))))
   
