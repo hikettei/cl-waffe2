@@ -34,15 +34,6 @@
 	  (make-tensor `(,out-features)
 		       :requires-grad t))))
 
-(defmethod on-print-object ((model LinearLayer) stream)
-  (when (not (composite-traced-p model))
-    (format stream "
-    <Input: ((~~ BATCH-SIZE ~a)) -> Output: ((~~ BATCH-SIZE ~a))>
-"
-	    (car (shape (linear-weight model)))
-	    (second (shape (linear-weight model))))))
-
-
 (defmethod call-linear ((self LinearLayer) x)
   (step-linear
    x

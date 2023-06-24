@@ -174,9 +174,13 @@ Here's a list of reports:
     
     (if linter-function
 	(multiple-value-bind (sym1 state1) (preprocess-batch-symbol (car state1))
-	  (restore-symbol
-	   sym1
-	   (funcall linter-function model inputs state1 state1)))
+	  (values
+	   (restore-symbol
+	    sym1
+	    (funcall linter-function model inputs state1 state1))
+	   (restore-symbol
+	    sym1
+	    state1)))
 	nil)))
 
 (defmacro defmodel ((name
@@ -367,7 +371,15 @@ An constructor function for ~a."
 				:linter-state2
 				(fourth ,subscript-p2)
 				,@initargs)))
-	       ;; funcall test-subscript-p with first-state
+	       ;; Update IO size
+
+	       (multiple-value-bind (result input)
+		   (composite-where ,self-name nil)
+		 (when result
+		   (setf (composite-traced-p ,self-name) t)
+		   (setf (composite-input-size ,self-name)  input)
+		   (setf (composite-output-size ,self-name) result)))
+	       
 	       ,@constructor-body
 	       ,self-name))))
 
