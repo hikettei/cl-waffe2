@@ -122,8 +122,8 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
   (error 'node-not-found :node abstract-name))
 
 
-(defmacro subscript (where &key (fixed nil))
-  (multiple-value-bind (body states uprankable) (create-subscript-p `,where :fixed fixed :return-body t)
+(defmacro subscript (where &key (fixed nil) (allow-symbol nil))
+  (multiple-value-bind (body states uprankable) (create-subscript-p `,where :fixed fixed :return-body t :allow-symbol allow-symbol)
     `(values
       ,body
       ',states

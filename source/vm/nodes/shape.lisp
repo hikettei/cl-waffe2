@@ -321,6 +321,7 @@ Because : The actual ~ath argument given has a shape of ~a.
 ;; Rewrite this program...
 (defun create-subscript-p (subscripts
 			   &key
+			     (allow-symbol nil)
 			     (macroexpand nil)
 			     (fixed nil)
 			     (return-body nil)
@@ -329,8 +330,11 @@ Because : The actual ~ath argument given has a shape of ~a.
 			     (undetermined-shape-tmp (gensym "UD"))
 			     (all-conditions (gensym "Conds"))
 			     (pos (gensym "pos"))
-			     (undetermined-symbols (gensym "SYM")))
+			     (undetermined-symbols (gensym "SYM"))
+			     (rank-error-p (gensym "rerr")))
   "Creates a subscript-p function.
+
+allow-symbol ... Returned shape can contain symbols.
 Example:
  (create-subscript-p `([x y] -> [x y]))
  (funcall * `((1 1))) -> (values `((1 1)) NIL)
@@ -388,6 +392,7 @@ Example:
 	     `(lambda (,previous-subscripts
 		       &aux
 			 (,all-conditions)
+			 (,rank-error-p nil)
 			 (,undetermined-symbols (find-symbols (flatten ,previous-subscripts))))
 		(declare (optimize (speed 1) (compilation-speed 3))
 			 #+sbcl(sb-ext:muffle-conditions cl:style-warning sb-ext:compiler-note)
@@ -427,22 +432,25 @@ Butgot              -> ~a (shape=~a)
 					  (nth k ,previous-subscripts))
 				  ,all-conditions))))
 			  
-		     
+
+		;; The Number of dimensions error.
 		(mapc
 		 #'(lambda (nth-arg declared act)
 		     (unless (<= declared (length act))
-		       (push
-			(format
-			 nil
-			 "The number of dimensions must satisfy: dimensions >= ~a
+		       (and
+			(setq ,rank-error-p t)
+			(push
+			 (format
+			  nil
+			  "The number of dimensions must satisfy: dimensions >= ~a
 Because the function is declared as: ~a -> ~a.
 => However, the actual ~ath argument given was ~a."
-			 declared
-			 ',first-state
-			 ',out-state
-			 (1+ nth-arg)
-			 act)
-			,all-conditions)))
+			  declared
+			  ',first-state
+			  ',out-state
+			  (1+ nth-arg)
+			  act)
+			 ,all-conditions))))
 		 (range 0 (length ,previous-subscripts))
 		 ',least-required-dims
 		 ,previous-subscripts)
@@ -451,28 +459,30 @@ Because the function is declared as: ~a -> ~a.
 		 #'(lambda (nth-arg declared act)
 		     (unless (or (= declared -1)
 				 (= declared (length act)))
-		       (push
-			(format
-			 nil
-			 "The ~ath argument is declared as: ~a
+		       (and
+			(setq ,rank-error-p t)
+			(push
+			 (format
+			  nil
+			  "The ~ath argument is declared as: ~a
 Accordingly, the argument must satisfy: dimensions = ~a
 => However, the actual ~ath argument given was ~a"
-			 (1+ nth-arg)
-			 (nth nth-arg ',first-state)
-			 declared
-			 (1+ nth-arg)
-			 act)
-			,all-conditions)))
+			  (1+ nth-arg)
+			  (nth nth-arg ',first-state)
+			  declared
+			  (1+ nth-arg)
+			  act)
+			 ,all-conditions))))
 		 
 		 (range 0 (length ,previous-subscripts))
 		 ',max-required-dims
 		 ,previous-subscripts)
 
 		
-
-		
 		(let* (,@(map 'list #'(lambda (x)
-					`(,x))
+					(if (boundp x)
+					    `(,x ,x)
+					    `(,x)))
 			      common-symbols)
 		       ,@let-binding
 		       (,undetermined-shape-tmp
@@ -593,6 +603,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					  ;; TODO: Auto Padding
 					  (or
 					   (when (or (not (symbolp s))
+						     ,allow-symbol
 						     (find s ,undetermined-symbols))
 					     s)
 					   (and
@@ -615,7 +626,8 @@ Accordingly, the argument must satisfy: dimensions = ~a
 						   (list ,@arg)
 						   ',arg)))
 				      out-state))
-			 (reverse ,all-conditions))))))))
+			 (reverse ,all-conditions)
+			 ,rank-error-p)))))))
       (when macroexpand
 	(print body))
 

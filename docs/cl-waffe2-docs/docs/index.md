@@ -32,3 +32,29 @@ The primary concepts and goals of this project is following
 
 **Everything in this documentation is incomplete! I guess should be much more polished!**
 
+#
+
+## Install
+
+```
+Coming Soon...
+```
+
+## Benchmarks
+
+```
+Coming soon ...
+```
+
+## Contribute
+
+```
+Coming soon ...
+```
+
+## Acknowledgments
+
+```
+Coming soon...
+```
+

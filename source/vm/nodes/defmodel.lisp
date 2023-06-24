@@ -5,6 +5,7 @@
 
 (defclass Composite ()
   ((model-id :initform (gensym "W") :reader model-id)
+   (subscript-linter :initform nil :initarg :linter-f :reader composite-linter-f)
    (traced?     :initform nil :type boolean :accessor composite-traced-p)
    (input-size  :initform nil :type list :accessor  composite-input-size)
    (output-size :initform nil :type list :accessor composite-output-size))
@@ -109,16 +110,29 @@ Every time the composite is rendered, this function is called.
     (format stream "
     <Input : ~a -> Output: ~a>
 " (composite-input-size model)
-  (composite-output-size model))))
+(composite-output-size model))))
+
+(defmethod composite-update-io ((model Composite) p1 p2)
+  (declare (type function p1 p2))
+  )
     
 (defmacro defmodel ((name
 		     (self-name &rest constructor-arguments)
 		     &key
 		       (slots nil)
 		       (initargs)
+		       (where nil)
 		       (on-call-> nil)
 		       (documentation ""))
-		    &body constructor-body)
+		    &body constructor-body
+		    &aux
+		      (subscript-p1 (gensym "sub1"))
+		      (subscript-p2 (gensym "sub2"))
+		      (test-subscript-p (gensym "sub"))
+		      (inputs       (gensym "Inputs"))
+		      (try-out (gensym))
+		      (try-err (gensym))
+		      (try-rank-error (gensym)))
   "
 ```
 (defmodel ((name
@@ -225,8 +239,8 @@ Second case, `on-call->` is symbol-name:
 
    This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3."
   (declare (type (or symbol function list null) on-call->))
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (progn
+  (let ((use-linter-p (not (null where))))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
        ;; E.g.: The case when we want to define LinearLayer Model...
        ;; defines LinearLayer class
        (defclass ,name (Composite)
@@ -258,11 +272,36 @@ Second case, `on-call->` is symbol-name:
 An constructor function for ~a."
 		  name
 		  name)
-	 (let ((,self-name (make-instance
-			    ',name
-			    ,@initargs)))
-	   ,@constructor-body
-	   ,self-name))
+	 (labels ((,subscript-p1 (,inputs)
+		    (declare (ignorable ,inputs))
+		    ,(if use-linter-p
+			 `(funcall (subscript ,where :allow-symbol t) ,inputs)))
+		  (,subscript-p2 (,inputs)
+		    (declare (ignorable ,inputs))
+		    ,(if use-linter-p
+			 `(funcall (subscript ,where :fixed t :allow-symbol t) ,inputs)))
+		  (,test-subscript-p (,inputs)
+		    (declare (ignorable ,inputs))
+		    ,(if use-linter-p
+			 `(multiple-value-bind (,try-out ,try-err ,try-rank-error)
+			      (,subscript-p2 ,inputs)
+			    (if ,try-rank-error
+				(multiple-value-bind (,try-out ,try-err)
+				    (,subscript-p1 ,inputs)
+				  (if (null ,try-err)
+				      ,try-out
+				      (warn "Shape Error2")))
+				(if (null ,try-err)
+				    ,try-out
+				    (warn "Shape Error1")))))))
+	   (let ((,self-name (make-instance
+			      ',name
+			      :linter-f
+			      #',test-subscript-p
+			      ,@initargs)))
+	     ;; funcall test-subscript-p with first-state
+	     ,@constructor-body
+	     ,self-name)))
 
        ;; Registers forward funcition cl-waffe2 uses.
        ;; on-call-> could be one of them:
