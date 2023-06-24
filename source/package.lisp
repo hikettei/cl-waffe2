@@ -22,7 +22,9 @@
 
   ;; network utils
   (:export
-   #:defsequence)
+   #:defsequence
+   #:sequencelist-nth)
+  
   (:export
    #:asnode
    #:call->

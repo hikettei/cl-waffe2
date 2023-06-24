@@ -42,14 +42,15 @@
 			       (slot-value self 'layer3)
 			       (asnode #'!tanh)))))
 
-(defsequence MLP-Sequence (in-features hidden-dim out-features)
-	     "3 Layer MLP"
+(defsequence MLP-Sequence (in-features hidden-dim out-features
+			   &key (activation #'!tanh))
+	     "3 Layers MLP"
 	     (LinearLayer in-features out-features)
-	     (asnode #'!tanh)
+	     (asnode activation)
 	     (LinearLayer out-features hidden-dim)
-	     (asnode #'!tanh)
+	     (asnode activation)
 	     (LinearLayer hidden-dim out-features)
-	     (asnode #'!tanh))
+	     (asnode activation))
 
 (let ((model (MLP-Model)))
   (with-build (fw bw v p) (!sum (call model (randn `(10 784))))

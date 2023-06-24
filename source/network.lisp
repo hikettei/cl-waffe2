@@ -65,6 +65,13 @@ X
 
       (expand-call-form nodes))))
 
+;; Sequence Printer
+
+(defgeneric sequencelist-nth (n sequence-model)
+  (:documentation "
+## [generic] sequencelist-nth
+"))
+
 (defmacro defsequence (name (&rest args) &rest nodes)
   "
 ## [macro] defsequence
@@ -83,13 +90,18 @@ X
 	 (nodes (if (stringp (car nodes))
 		    (cdr nodes)
 		    nodes))
+	 (length   (length nodes))
+	 (readers  (loop for i in nodes collect (gensym "Reader")))
 	 (names    (loop for i in nodes collect (gensym "Composite")))
 	 (keywords (loop for i in nodes collect (intern (symbol-name (gensym "KW")) "KEYWORD"))))
 
-    `(defmodel (,name (self ,@args)
+    `(progn
+       (defmodel (,name (self ,@args)
 		:slots (,@(loop for name in names
 				for kw   in keywords
-				collect `(,name :initarg ,kw)))
+				for reader in readers
+				collect `(,name :initarg ,kw :reader ,reader))
+			(length :initform ,length :reader sequencelist-length))
 		:initargs ,(let ((result))
 			     (loop for kw in keywords
 				   for node in nodes
@@ -100,6 +112,25 @@ X
 			    (call-> x
 				    ,@(loop for name in names
 					    collect `(slot-value self ',name))))
-		:documentation ,documentation))))
+		:documentation ,documentation))
+       (defmethod sequencelist-nth (n (model ,name))
+	 (if (> n ,length)
+	     (error "defsequence: ~a is out of range for ~a list." n ,length)
+	     (funcall (nth n ',readers) model)))
+
+       (defmethod on-print-object ((model ,name) stream &aux (length (sequencelist-length model)))
+	 (format stream "
+    <<~a Layers Sequence>>
+" length)
+	 (dotimes (i length)
+	   (let ((layer (sequencelist-nth i model)))
+	     (format stream "
+[~a/~a]          ↓ 
+~a"
+		     (1+ i) length layer)))))))
+
+;; (defun nth-seq (n 10)
+;; (slot-value model (nth slots ...))
+
 
 
