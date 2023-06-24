@@ -103,7 +103,7 @@ PointerName[SubScripts]
 // SubScripts can be one of: [A], [A B] [~~ i j] etc...
 ```
 
-### Assigned works
+### Assigned task
 
 ```
 A[a b] B[a b] -> B[a b]
@@ -113,7 +113,7 @@ In the DSL above, `A` and `B` indicates the name of pointer, they're not needed 
 
 On the other hand `a` and `b` inside [ ... ], indicates subscripts of `A` and `B`, DSL's assigned work is to inference these **undetermined symbols** from:
 
-1. local variables declared in `defnode` form or `where` pharse.
+1. determined symbol from `where` pharse and symbols in arguments of constructor.
 
 2. Shape of the given inputs at runtime.
 
@@ -251,15 +251,59 @@ In conclusion, I believe introducing Subscript DSL produces two benefits:
 
 2. JIT Compiler can use a shape of given arguments in advance. (If only CL has a const-generics like Rust, Subscript DSL isn't needed anymore!).
 
-### Where Pharse
+### Initial value of table
 
-With where pharse, you can put local variables like:
+In order to give a initial value to tables, you can declare symbols with initial value.
+
+**Using where pharse in :where form**
+
+Add this form to your `:where` form.
 
 ```lisp
 ;; Syntax is that: Symbol-Name = Expression
 
-A[i] B[j] -> C[k] where i = (1+ (random 1)) j = (1+ (random 1)) k = (1+ (random 1))
+(defnode (...
+    :where (A[i] B[j] -> C[k] where i = 1 j = 2 k = 3)
+    ....
 ```
+
+will produce:
+
+```
+[TABLE]
+i = 1
+j = 2
+k = 3
+```
+
+Using arguments declared in `constructor`.
+
+```lisp
+(defnode (ExampleNode (self i)
+             :where (A[~~] -> A[i]))
+        ...)
+```
+
+Arguments used in constructor, will automatically interpreted as `initial value`. (e.g.: `i` is a initial value.)
+
+```
+[TABLE]
+~~ = ?
+i = i
+```
+
+That is, when `ExampleNode` is initialized with `(ExampleNode 3)`, the table become:
+
+```
+[TABLE]
+~~ = ?
+i = 3
+```
+
+
+
+2. arguments of constructor
+
 
 ### API: create-subscript-p
 

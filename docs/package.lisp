@@ -101,5 +101,6 @@
   (write-scr "base-impl-nodes" *base-impl-nodes*)
   (write-scr "nodes" *nodes*)
   (write-scr "distributions" *distributions*)
-  
+
+  (format t "Completed~%")
   )

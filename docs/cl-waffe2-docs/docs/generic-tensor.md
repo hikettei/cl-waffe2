@@ -248,7 +248,7 @@ The InputTensor named with a keyword is called `not-embodied tensor`, and can be
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :x)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP35895 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP2742 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -263,12 +263,12 @@ The InputTensor named with a keyword is called `not-embodied tensor`, and can be
             (funcall fw))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP35884 
-  ((-2.1486177   1.4877725    -1.7822108   ~ 0.30888113   -3.668074    -1.4501324)                    
-   (0.90827906   -3.6974688   -0.7262471   ~ 2.153652     0.7110309    1.2819712)   
-                 ...
-   (-2.6074939   0.04147309   -0.97653854  ~ 0.3843904    -0.20308924  -0.614793)
-   (1.7244194    1.5219165    0.3820825    ~ -0.41161555  0.5861892    0.18113303))
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP2731 
+  ((1.0010146     -0.24480553   -0.9825687    ~ -1.4212608    2.7377772     0.721311)                     
+   (0.72866976    -1.5144252    0.24458039    ~ 0.26790237    -2.6994684    -0.09221876)   
+                  ...
+   (4.0055227     -0.8050267    2.0541375     ~ -2.287451     0.26688823    2.6189566)
+   (0.48146668    0.9677067     0.8550117     ~ 1.2094214     -0.9150659    -0.38464153))
   :facet :input
   :requires-grad NIL
   :backward NIL}
@@ -283,7 +283,7 @@ Return:
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP35924 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP2771 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -296,8 +296,12 @@ Return:
 > (multiple-value-list (build out))
 ```
 ```
-(#<FUNCTION (LAMBDA () :IN "/private/var/tmp/slimemU2Krr.fasl") {53A5B54B}>
- #<FUNCTION (LAMBDA () :IN "/private/var/tmp/slimemU2Krr.fasl") {53A8776B}>
+(#<FUNCTION (LAMBDA ()
+              :IN
+              "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53903BCB}>
+ #<FUNCTION (LAMBDA ()
+              :IN
+              "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53810D7B}>
  += [Computation Node Information] =======+
 
 Subscripts:
