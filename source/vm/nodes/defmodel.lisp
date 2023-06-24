@@ -162,6 +162,17 @@ Here's a list of reports:
    out))
 
 (defmethod composite-where ((model Composite) inputs)
+  "
+## [function] composite-where
+
+### Inputs
+
+`inputs` ... nil or list
+
+### Outputs
+
+(values input output) or nil
+"
 
   ;; At first: symbols
   ;; (funcall Linter-Function model nil   input-state1 input-state2)
@@ -349,7 +360,7 @@ An constructor function for ~a."
 				   `(multiple-value-list (subscript ,where :fixed :t :allow-symbol t :constructor-args ,constructor-arguments)))))
 	   (declare (ignorable ,subscript-p1 ,subscript-p2))
 	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
-		      (declare (ignorable ,self-place1 ,inputs))
+		      (declare (ignorable ,self-place1 ,inputs ,inputs1 ,inputs2))
 		      ,(if use-linter-p
 			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
 				 (funcall (car ,subscript-p2) (or ,inputs ,inputs2))
@@ -378,7 +389,7 @@ An constructor function for ~a."
 		   (composite-where ,self-name nil)
 		 (when result
 		   (setf (composite-traced-p ,self-name) t)
-		   (setf (composite-input-size ,self-name)  input)
+		   (setf (composite-input-size  ,self-name) input)
 		   (setf (composite-output-size ,self-name) result)))
 	       
 	       ,@constructor-body

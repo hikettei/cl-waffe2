@@ -77,14 +77,14 @@ X
     (asnode #'!tanh)
     (LinearLayer 256 10))
 ..."
-  (let ((documentation (if (stringp (car nodes))
-			   (car nodes)
-			   ""))
-	(nodes (if (stringp (car nodes))
-		   (cdr nodes)
-		   nodes))
-	(names    (loop for i in nodes collect (gensym "Composite")))
-	(keywords (loop for i in nodes collect (intern (symbol-name (gensym "KW")) "KEYWORD"))))
+  (let* ((documentation (if (stringp (car nodes))
+			    (car nodes)
+			    ""))
+	 (nodes (if (stringp (car nodes))
+		    (cdr nodes)
+		    nodes))
+	 (names    (loop for i in nodes collect (gensym "Composite")))
+	 (keywords (loop for i in nodes collect (intern (symbol-name (gensym "KW")) "KEYWORD"))))
 
     `(defmodel (,name (self ,@args)
 		:slots (,@(loop for name in names
@@ -102,4 +102,4 @@ X
 					    collect `(slot-value self ',name))))
 		:documentation ,documentation))))
 
-		    
+

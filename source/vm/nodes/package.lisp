@@ -30,6 +30,7 @@
 		#:scalar-p)
   (:export
    #:create-subscript-p
+   #:composite-where
    #:forward
    #:backward
    #:node-passed-p
