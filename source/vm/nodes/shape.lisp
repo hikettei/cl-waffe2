@@ -319,12 +319,14 @@ Because : The actual ~ath argument given has a shape of ~a.
 ;; Optimize Me...
 ;; TODO: call it when defnode is called
 ;; Rewrite this program...
+;; TODO: Rewrite this ugly code, and print better error-notes
 (defun create-subscript-p (subscripts
 			   &key
 			     (allow-symbol nil)
 			     (macroexpand nil)
 			     (fixed nil)
 			     (return-body nil)
+			     (local-variables nil)
 			   &aux
 			     (previous-subscripts (gensym "PreviousShape"))
 			     (undetermined-shape-tmp (gensym "UD"))
@@ -335,10 +337,13 @@ Because : The actual ~ath argument given has a shape of ~a.
   "Creates a subscript-p function.
 
 allow-symbol ... Returned shape can contain symbols.
+
+local-variables ... symbols to be implictly added to `where`.
 Example:
  (create-subscript-p `([x y] -> [x y]))
  (funcall * `((1 1))) -> (values `((1 1)) NIL)
 "
+  (declare (type list local-variables))
   (multiple-value-bind (input-names
 			output-names
 			first-state
@@ -385,9 +390,10 @@ Example:
 			    for k fixnum upfrom 0
 			    if (find '~ (the list (flatten input)) :test #'symbol-eq)
 			      collect k))
-	   ;; If ~ syntax inn't used in out-state, Anything is ok as ~.
+	   ;; If ~ syntax isn't used in out-state, Anything is ok as ~.
 	   ;; Unless then, ~ must be used as the same meaning in all args.
 	   (common-symbols (get-common-symbols (list first-state out-state)))
+
 	   (body
 	     `(lambda (,previous-subscripts
 		       &aux
@@ -478,13 +484,18 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		 ',max-required-dims
 		 ,previous-subscripts)
 
+		;; Initializing Tables
 		
 		(let* (,@(map 'list #'(lambda (x)
-					(if (boundp x)
+					;; If the symbol is declared as localvar
+					;; Use it as initial value
+					(if (find x local-variables :test #'symbol-eq)
 					    `(,x ,x)
 					    `(,x)))
-			      common-symbols)
-		       ,@let-binding
+			      common-symbols) ;; Tables: 'a 'b 'c ...
+		       ,@let-binding ;; initial element to 'a 'b 'c...
+
+		       ;; ~ = `(nil nil nil) at first.
 		       (,undetermined-shape-tmp
 			 (loop for s
 			       upfrom 0
@@ -603,15 +614,16 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					  ;; TODO: Auto Padding
 					  (or
 					   (when (or (not (symbolp s))
-						     ,allow-symbol
 						     (find s ,undetermined-symbols))
 					     s)
 					   (and
-					    (push
-					     (format
-					      nil
-					      "Failed to determine this symbol: ~a" name)
-					     ,all-conditions)
+					    (unless ,allow-symbol
+					      (push
+					       (format
+						nil
+						"Failed to determine this symbol: ~a" name)
+					       ,all-conditions)
+					      t)
 					    '~)))
 				      shapes
 				      names)))
@@ -643,4 +655,3 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		       ;; The first rank is broadcastable?
 		       (symbol-eq (car s) '~))
 		   first-state)))))
-

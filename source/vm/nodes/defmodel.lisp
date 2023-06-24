@@ -114,8 +114,29 @@ Every time the composite is rendered, this function is called.
 
 (defmethod composite-update-io ((model Composite) p1 p2)
   (declare (type function p1 p2))
+
   )
-    
+
+(defmethod composite-error ((model Composite) error-content)
+  (shaping-error "Shaping-Error is detected when calling Composite.
+
+~a
+
+Here's a list of reports:
+
+~a"
+		 model
+		 (with-output-to-string (out)
+		   (loop for nth upfrom 1
+			 for c in error-content
+			 do (format out "~a. ~a~%"
+				    nth c)))))
+
+(defmethod composite-where ((model Composite) inputs)
+  (if (composite-linter-f model)
+      (funcall (composite-linter-f model) model inputs)
+      nil))
+
 (defmacro defmodel ((name
 		     (self-name &rest constructor-arguments)
 		     &key
@@ -132,7 +153,8 @@ Every time the composite is rendered, this function is called.
 		      (inputs       (gensym "Inputs"))
 		      (try-out (gensym))
 		      (try-err (gensym))
-		      (try-rank-error (gensym)))
+		      (try-rank-error (gensym))
+		      (self-place1 (gensym)))
   "
 ```
 (defmodel ((name
@@ -275,13 +297,13 @@ An constructor function for ~a."
 	 (labels ((,subscript-p1 (,inputs)
 		    (declare (ignorable ,inputs))
 		    ,(if use-linter-p
-			 `(funcall (subscript ,where :allow-symbol t) ,inputs)))
+			 `(funcall (subscript ,where :allow-symbol t :constructor-args ,constructor-arguments) ,inputs)))
 		  (,subscript-p2 (,inputs)
 		    (declare (ignorable ,inputs))
 		    ,(if use-linter-p
-			 `(funcall (subscript ,where :fixed t :allow-symbol t) ,inputs)))
-		  (,test-subscript-p (,inputs)
-		    (declare (ignorable ,inputs))
+			 `(funcall (subscript ,where :fixed t :allow-symbol t :constructor-args ,constructor-arguments) ,inputs)))
+		  (,test-subscript-p (,self-place1 ,inputs)
+		    (declare (ignorable ,self-place1 ,inputs))
 		    ,(if use-linter-p
 			 `(multiple-value-bind (,try-out ,try-err ,try-rank-error)
 			      (,subscript-p2 ,inputs)
@@ -290,13 +312,15 @@ An constructor function for ~a."
 				    (,subscript-p1 ,inputs)
 				  (if (null ,try-err)
 				      ,try-out
-				      (warn "Shape Error2")))
+				      (composite-error ,self-place1 ,try-err)))
 				(if (null ,try-err)
 				    ,try-out
-				    (warn "Shape Error1")))))))
+				    (composite-error ,self-place1 ,try-err)))))))
 	   (let ((,self-name (make-instance
 			      ',name
 			      :linter-f
+			      ;; test-subscript-p
+			      ;; (function self inputs)
 			      #',test-subscript-p
 			      ,@initargs)))
 	     ;; funcall test-subscript-p with first-state

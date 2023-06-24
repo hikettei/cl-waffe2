@@ -122,8 +122,8 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
   (error 'node-not-found :node abstract-name))
 
 
-(defmacro subscript (where &key (fixed nil) (allow-symbol nil))
-  (multiple-value-bind (body states uprankable) (create-subscript-p `,where :fixed fixed :return-body t :allow-symbol allow-symbol)
+(defmacro subscript (where &key (fixed nil) (allow-symbol nil) (constructor-args nil))
+  (multiple-value-bind (body states uprankable) (create-subscript-p `,where :fixed fixed :return-body t :allow-symbol allow-symbol :local-variables (get-params `,constructor-args))
     `(values
       ,body
       ',states
@@ -272,8 +272,8 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
        ;; Backends are modular
        (defun ,abstract-name (,@(cdr constructor-arguments))
 	 ,documentation
-	 (let* ((,subscript-p  (multiple-value-list (subscript ,where)))
-		(,subscript-p1 (multiple-value-list (subscript ,where :fixed t))) ;; subscript-p without ~
+	 (let* ((,subscript-p  (multiple-value-list (subscript ,where :constructor-args ,(cdr constructor-arguments))))
+		(,subscript-p1 (multiple-value-list (subscript ,where :fixed t :constructor-args ,(cdr constructor-arguments)))) ;; subscript-p without ~
 		(,(car constructor-arguments)
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(get-params (cdr constructor-arguments)))

@@ -272,7 +272,7 @@ Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-rev
 
 
 (defnode (ReshapeTensorNode (self before after)
-	  :where (A[before-shape] B[after-shape] -> B[after-shape] where before-shape = before after-shape = after)
+	  :where (A[before] B[after] -> B[after])
 	  :slots ((before :initarg :before :reader reshapenode-shape))
 	  :backward ((self dout dx dy)
 		     (declare (ignore dx dy))

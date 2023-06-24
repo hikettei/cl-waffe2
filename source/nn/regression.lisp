@@ -22,7 +22,7 @@
 (defmodel (LinearLayer (self in-features out-features &optional (use-bias? t))
 	   :slots ((weights :accessor linear-weight)
 		   (bias    :initform nil :accessor linear-bias))
-	   :where ([~ batch-size B]  -> [~ batch-size C] where b = in-features c = out-features)
+	   :where ([~ batch-size in-features] -> [~ batch-size out-features])
 	   :on-call-> call-linear
 	   :documentation "In-Features -> Out-Features")
   (setf (linear-weight self)
