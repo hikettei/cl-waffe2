@@ -62,3 +62,9 @@
       a
       b))
 
+
+(defun make-clone (tensor)
+  (make-input (shape tensor) nil
+	      :dtype (dtype tensor)
+	      :order (order tensor)
+	      :scalar-p (scalar-p tensor)))

@@ -43,8 +43,8 @@
 	(setf (vref a i) 1)
 	(setf (vref b i) 1))
       (let ((out (!add a b)))
-	(multiple-value-bind (forward bw vars params) (build out)
-	  (let ((result (tensor-vec (funcall forward))))
+	(let ((model (build out)))
+	  (let ((result (tensor-vec (forward model))))
 	    (every #'(lambda (elm) (= elm 2)) result)))))))
 
 (defun test-elementwise-forward ()
@@ -55,8 +55,8 @@
 	(setf (vref a i) 1)
 	(setf (vref b i) 1))
       (let ((out (!add a b)))
-	(multiple-value-bind (forward bw vars params) (build out)
-	  (let ((result (tensor-vec (funcall forward))))
+	(let ((model (build out)))
+	  (let ((result (tensor-vec (forward model))))
 	    (every #'(lambda (elm) (= elm 2)) result)))))))
 
 (test test-call-with-view

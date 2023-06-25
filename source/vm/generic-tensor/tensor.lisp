@@ -283,13 +283,14 @@ Note:
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
-      (let ((forward-fn (compile-forward-kernel (cl-waffe2/base-impl:A+=B (grad target) out))))
+      (let ((forward-fn (compile-forward-kernel (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype (grad target))) (grad target) out))))
 	#'(lambda (new-value)
 	    (assert (equal (shape new-value) shape)
 		    nil
 		    "Attempted to add a new grad: ~a to ~a but failed due to shaping problems."
 		    (shape new-value)
 		    shape)
+	    
 	    (embody-actual-tensor out new-value)
 	    (funcall forward-fn)
 	    nil)))))
@@ -540,9 +541,9 @@ If you've created a new backend with having different ptr-type (can't be accesse
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor). (Pointers are shared.)"
   (declare (type AbstractTensor input-tensor actual-tensor))
 
-  (assert (eql (tensor-facet input-tensor) :input)
-	  nil
-	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
+  ;;(assert (eql (tensor-facet input-tensor) :input)
+  ;;	  nil
+  ;;	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
 
   (assert (vec actual-tensor)
 	  nil

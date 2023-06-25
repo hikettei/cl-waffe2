@@ -274,11 +274,60 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 node
 	 (class-name (class-of node))))
 
+
+;; Inputs: dout dx dy dz ...
+;;       InputTensor dx dy dz ...
 (defmethod backward :around ((node AbstractNode) &rest inputs)
-  (declare (ignore inputs))
   (when (not *no-grad*)
     (with-no-grad
-      (multiple-value-list (call-next-method)))))
+      (with-shape-checkpoint (:backward node)
+	(let* ((dout (car inputs))
+	       (moveplist)
+	       (out-kernels (multiple-value-list (call-next-method)))
+	       (out-kernels (loop for out in out-kernels
+				  for in  in (cdr inputs)
+				  for k upfrom 0
+				  if out
+				    collect (multiple-value-bind (res mv)
+						(!maybe-move in out :deterministic-p (and (not (cl-waffe2/vm.generic-tensor:ancestor-param-p in))
+											  (= (1- (length (cdr inputs))) k)))
+					      (push mv moveplist)
+					      res)
+				  else
+				    collect (and (push nil moveplist) nil)
+				  finally (setq moveplist (reverse moveplist))))
+	       (compiled-g (map 'list #'(lambda (x) (when x (cl-waffe2/vm.generic-tensor::compile-forward-kernel x :read-save-for-backward t))) out-kernels))
+	       (movers (loop for v   in (cdr inputs)
+			     for out in out-kernels
+			     for mv? in moveplist
+			     if (and out mv?)
+			       collect (prog1
+					   (cl-waffe2/vm.generic-tensor::compile-forward-kernel (cl-waffe2/base-impl:!move (detach v t) (detach out t)))
+
+					 (detach v nil)
+					 (detach out nil))
+			     else
+			       collect nil)))
+	  ;; dout should be make-input
+	  ;; g(dout, dx, dy, ..., dn) -> dx.grad, gy.grad, ..., dn.grad
+	  (loop for g in compiled-g
+		for o in out-kernels
+		for m in movers
+		;; g(x) * n
+		if g
+		  collect
+		  (list
+		   o
+		   (let ((g g)
+			 (dout dout))
+		     ;; funarg
+		     #'(lambda (dout-real)
+			 ;; dout <- dout-real
+			 (cl-waffe2/vm.generic-tensor:embody-actual-tensor dout dout-real)
+			 (funcall g)))
+		   m)
+		else
+		  collect nil))))))
 
 (defmethod backward ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))

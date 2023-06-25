@@ -95,3 +95,29 @@ This means: the first argument of :forward was the dtype of :float or :double, u
   (and (some #'cl-waffe2/base-impl::transposed-p inputs)
        (not (subtypep (class-of node) 'cl-waffe2/base-impl:MatmulNode))))
 
+(defun !maybe-move (place tensor &key (deterministic-p nil))
+  "Moves the result of backwards, into variables where it was (if deterministic).
+
+Return:
+    (values next-tensor moved-p)
+    moved-p ... If p, the tensor should be moved to the variable."
+  ;; If deterministic-p = t, do in-place.
+  (with-no-grad
+    (when tensor
+      (if (movetensor-p (tensor-backward tensor))
+	  (values tensor nil);; the tensor is already copied?
+	  (with-shape-checkpoint (:moving nil)
+	    (let ((place (if deterministic-p
+			     place ;; place=tensor.variables[n]
+			     (make-tensor (if (scalar-p place)
+					      0
+					      (shape place))
+					  :dtype (dtype place)
+					  :order (order place)))))
+	      ;; Forcibly moving them.
+	      (values (cl-waffe2/base-impl:!move place tensor) deterministic-p)))))))
+
+(defun detach (tensor &optional (state t))
+  (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) state)
+  tensor)
+

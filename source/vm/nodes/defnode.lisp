@@ -371,8 +371,8 @@ Return nil -> ok
 		       (declare (ignorable ,@,inputs))
 		       ,@(loop for input in ,inputs
 			       for state in ',save-for-backward
-			       if (and state
-				       (cl-waffe2/vm.generic-tensor::ancestor-param-p input))
+			       if (or state
+				      (cl-waffe2/vm.generic-tensor::ancestor-param-p input))
 				 collect `(unless *no-grad*
 					    (set-save-for-backward ,(tensor-id input))))
 		       ,,@(car forward-body)))))
