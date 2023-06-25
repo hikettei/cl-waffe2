@@ -362,10 +362,12 @@ Return:
   (let ((*node-parameters-tmp*))
     (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
       ;; (declare (optimize (speed 3) (safety 0)))
-      (compile nil
-	       `(lambda ()
-		  (map 'list #'state-reset! ',*node-parameters-tmp*)
-		  ,body)))))
+      (values
+       (compile nil
+		`(lambda ()
+		   (map 'list #'state-reset! ',*node-parameters-tmp*)
+		   ,body))
+       *node-parameters-tmp*))))
 
 (defun compile-backward-kernel (toplevel)
   (let* ((out (if (scalar-p toplevel)
@@ -389,11 +391,11 @@ Return:
 
 
 (defclass Compiled-Composite ()
-  ;; fw/bw/vars/paramsまとめる
   ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
    (compiled-backward :initarg :compiled-backward :type (or null function) :reader compiled-backward)
    (variables :initarg :variables :reader compiled-variables)
-   (parameters :initarg :parameters :reader compiled-parameters)))
+   (parameters :initarg :parameters :reader compiled-parameters)
+   (first-call-p :initform nil :accessor composite-first-call-p :type boolean)))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
   ;; Keywords :A A :B B ...
@@ -405,10 +407,27 @@ Return:
 
 (defun build (toplevel
 	      &key (construct-backward? (not *no-grad*)))
-  (let ((forward-kernel (compile-forward-kernel toplevel))
-	(backward-kernel (when construct-backward?
-			   (compile-backward-kernel toplevel))))
 
+  (multiple-value-bind (forward-kernel vars) (compile-forward-kernel toplevel)
+    ;; Vars - All Variables (including ChainTMP) used in forward.
     (make-instance 'Compiled-Composite
+		   :variables  (construct-variables-table vars)
+		   :parameters (make-node-parameters
+				(loop for v in vars
+				      if (slot-value v 'requires-grad)
+					collect v))
 		   :compiled-forward forward-kernel
-		   :compiled-backward backward-kernel)))
+		   :compiled-backward (when construct-backward?
+					(compile-backward-kernel toplevel)))))
+
+(defmethod print-object ((model Compiled-Composite) stream)
+  (format stream "<Compiled-Composite
+    forward:  ~a
+    backward: ~a
+   (TODO)
+>"
+	  ;; Variables
+	  (compiled-forward model)
+	  (compiled-backward model)))
+
+;; set variable

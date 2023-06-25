@@ -21,7 +21,8 @@
    #:trans-b?
    #:!matmul
    #:transposed-p
-   #:!t)
+   #:!t
+   #:A+=B)
   (:export
    #:!sum
    #:!mean

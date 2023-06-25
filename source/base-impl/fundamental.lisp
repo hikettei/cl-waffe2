@@ -484,33 +484,35 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 (defnode (ProceedNode (myself &key (measure-time nil))
 	  :where (A[~] -> A[~])
-	  :slots ((measure-time :initarg :measure-time :reader measure-time-p)
-		  (backward :accessor proceed-backward-f)
-		  (result   :accessor proceed-result))
+	  :slots ((measure-time   :initarg :measure-time :reader measure-time-p)
+		  (compiled-model :accessor proceed-compiled-model)
+		  (result         :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
 
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (multiple-value-bind (fw bw vars params) (build x)
-			 (declare (ignore vars params))
-			 ;; Vars/Params will be tracked by other build.
-			 (setf (proceed-backward-f self) bw)
+		       (let ((compiled-model (build x)))
+			 (setf (proceed-compiled-model self) compiled-model)
 			 (if (measure-time-p self)
-			     (setf (proceed-result self) (time (funcall fw)))
-			     (setf (proceed-result self) (funcall fw)))
+			     (progn
+			       ;; TODO
+			       ;; Display Both: First-Time-Call/Second-Time-Call
+			       (forward compiled-model)
+			       (setf (proceed-result self) (time (forward compiled-model))))
+			     (setf (proceed-result self) (forward compiled-model)))
 			 ;; Tell cl-waffe2 VM the returned value's type
 			 (setf (out-scalar-p self) (scalar-p (proceed-result self)))
 			 `(progn ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
-			(let ((bw (proceed-backward-f self)))
+			(let ((compiled-model (proceed-compiled-model self)))
 			  (values
 			   (with-instant-kernel dout
 			     `(and
 			       ,(if (measure-time-p self)
-				    `(time (funcall ,bw))
-				    `(funcall ,bw))
+				    `(time (backward ,compiled-model))
+				    `(backward ,compiled-model))
 			       ;; Delete Gradients.
 			       (!mul 0 ,dout)))))))
 
@@ -573,10 +575,9 @@ The function proceed-backward calls forward and backwrd of the tensor.
 `T` (which indicates backward is succeed)
 "
   (declare (type AbstractTensor tensor))
-  (multiple-value-bind (fw bw vars params) (build tensor)
-    (declare (ignore vars params))
-    (funcall fw)
-    (funcall bw)))
+  (let ((compiled-model (build tensor)))
+    (forward compiled-model)
+    (backward compiled-model)))
 
 ;; ===============================================================
 ;; Broadcast APIs
