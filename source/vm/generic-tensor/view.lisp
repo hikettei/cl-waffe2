@@ -750,15 +750,13 @@ a=1, b=2 => NIL
 		(loop for k upfrom 0
 		      for s in (shape tensor)
 		      if (symbolp s)
-			do (push `(,s (if (numberp ,s)
-					  ,s
-					  (nth ,k (shape ,tensor))))
+			do (push `(,s (use-number-one ,s (nth ,k (shape ,tensor))))
 				 nondeterministic-symbols)))
-	    tensors)			  
+	    tensors)
 
       `(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
 	 (let*-ignorable (,@(loop for s in used-symbols
-				  collect `(,s nil)))
+				  collect `(,s)))
 	   (let*-ignorable (,@nondeterministic-symbols)
 	     ,(explore
 	       dims

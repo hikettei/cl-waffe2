@@ -57,3 +57,8 @@
 	       `(progn ,@body))))
     (expand-forms forms)))
 
+(defun use-number-one (a b)
+  (if (numberp a)
+      a
+      b))
+
