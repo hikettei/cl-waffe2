@@ -311,6 +311,10 @@ Note:
     ;; orig-shape = used to compute strides.
     (setf (slot-value tensor 'orig-shape)  orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
+
+    (setf (slot-value tensor 'ancestor-param-p)
+	  (or (ancestor-param-p tensor)
+	      (eql (tensor-facet tensor) :exist)))
     
     (cond
       ((eql (getf initargs :facet) :input)
