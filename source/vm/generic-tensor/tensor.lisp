@@ -283,8 +283,7 @@ Note:
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
-      (multiple-value-bind (fw bw vars params) (build (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype target)) (grad target) out))
-	(declare (ignore bw vars params))
+      (let ((forward-fn (compile-forward-kernel (cl-waffe2/base-impl:A+=B (grad target) out))))
 	#'(lambda (new-value)
 	    (assert (equal (shape new-value) shape)
 		    nil
@@ -292,10 +291,9 @@ Note:
 		    (shape new-value)
 		    shape)
 	    (embody-actual-tensor out new-value)
-	    (funcall fw)
+	    (funcall forward-fn)
 	    nil)))))
 
-;; Fix: Scalar Gradient.
 (defun make-gradient-adder-scal (target)
   #'(lambda (new-value)
       (assert (scalar-p new-value)
@@ -694,17 +692,21 @@ Example:
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
+;; TO FIX: save-for-backward/gradient-adder
 (defun set-save-for-backward (tensor)
   (let ((space (save-for-backward-space tensor)))
 
-    (print space)
-    (when (null space)
-      (multiple-value-bind (fw bw vars pms) (let ((*no-grad* t)) (build (cl-waffe2/base-impl:!copy-force tensor)))
+    ;; Update Event: the shape has changed/space is null.
+    (when (or (null space)
+	      (not (equal (shape tensor) (shape space))))
+      (detach! tensor)
+      (multiple-value-bind (fw bw vars pms)
+	  (let ((*no-grad* t)) (compile-forward-kernel (cl-waffe2/base-impl:!copy-force tensor)))
 	(declare (ignore bw vars pms))
+	(setf (detach-p tensor) nil)
 	(setf (save-for-backward-cloner tensor) fw)))
     
-    (print (shape tensor))
-    (setf (save-for-backward-space tensor) (cl-waffe2/base-impl:proceed (cl-waffe2/base-impl:!copy-force tensor)))
+    (setf (save-for-backward-space tensor) (funcall (save-for-backward-cloner tensor)))
     t))
 
 (defun read-save-for-backward (tensor)

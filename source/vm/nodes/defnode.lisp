@@ -371,7 +371,7 @@ Return nil -> ok
 		       ,@(loop for input in ,inputs
 			       for state in ',save-for-backward
 			       if (and state
-				       (cl-waffe2/vm.generic-tensor:ancestor-param-p input))
+				       (cl-waffe2/vm.generic-tensor::ancestor-param-p input))
 				 collect `(unless *no-grad*
 					    (set-save-for-backward ,(tensor-id input))))
 		       ,,@(car forward-body)))))
@@ -388,14 +388,9 @@ Return nil -> ok
        ,(when backward
 	  `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
 	     (declare (type ,impl-name ,backward-self-name))
-	     (multiple-value-bind (,@backward-args) (apply #'values (map 'list #'(lambda (x) (or (read-save-for-backward x) x)) ,inputs))
-	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
-	       
-	       ;; read-save4backwardもそのまま読み込む？
-	       ;; i.e.: まとめてコンパイル？
-	       ;; Backwardも即時コンパイルにする
-	       ;; (self dy) -> grad1 grad2 grad3...
-	       ,@backward-body))))))
+	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
+		(declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
+		,@backward-body))))))
 
 (defun declare-local-variables (self &rest tensors)
   ""
