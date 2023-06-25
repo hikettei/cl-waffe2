@@ -71,7 +71,7 @@ Return:
        (setq shape (make-list dims :initial-element 1))))
 
     ;; Use Instead: make-input
-    (let* ((out (or -> (make-tensor shape 
+    (let* ((out (or -> (make-input shape nil 
 				    :dtype (dtype tensor)
 				    :order (order tensor))))
 	   (out (A*=scal out 0))) ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill

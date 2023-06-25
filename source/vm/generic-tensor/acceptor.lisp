@@ -408,6 +408,9 @@ Return:
 (defun build (toplevel
 	      &key (construct-backward? (not *no-grad*)))
 
+  (when (some #'symbolp (shape toplevel))
+    (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
+  
   (multiple-value-bind (forward-kernel vars) (compile-forward-kernel toplevel)
     ;; Vars - All Variables (including ChainTMP) used in forward.
     (make-instance 'Compiled-Composite
@@ -420,6 +423,10 @@ Return:
 		   :compiled-backward (when construct-backward?
 					(compile-backward-kernel toplevel)))))
 
+;; TODO: Print-Obj
+;; TODO  Fix Tests
+;; TODO  Embody Input
+;; TODO 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a
