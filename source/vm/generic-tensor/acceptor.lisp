@@ -17,6 +17,7 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
      ,@body))
 
 
+;; StateContainer is a temporary node for creating forward/backward
 (defstruct (StateContainer)
   (state :initialized :type (member :initialized :forwarded :backwarded))
   (forward-out-form nil :type function)
@@ -144,30 +145,7 @@ Variables
       (setf (statecontainer-forward-result  (tensor-state tensor)) nil
 	    (statecontainer-backward-result (tensor-state tensor)) nil)))
 
-(defvar *node-variables-tmp* nil)
 (defvar *node-parameters-tmp* nil)
-
-;; fw, bw, vars, params = build(out-node, input-vars)
-(defun build (toplevel-tensor
-	      &key
-		(ignore-optimize nil)
-		(requires-grad (not *no-grad*))
-		(macroexpand-forward nil)
-		(macroexpand-backward nil))
-  "Return:
-    (values forward backward variables parameters)"
-  
-  (multiple-value-bind (forward vars params backward)
-      (construct-forward toplevel-tensor
-			 :ignore-optimize ignore-optimize
-			 :requires-grad requires-grad
-			 :macroexpand-forward macroexpand-forward
-			 :macroexpand-backward macroexpand-backward)
-    (values
-     forward
-     backward
-     vars
-     (make-node-parameters params))))
 
 (defun construct-variables-table (variables-list)
   "Returns variable-table where key and value is tensor's name and tensor's pointer."
@@ -195,65 +173,6 @@ Variables
 
     (make-variable-table symbols variable-table tmp-variable-table)))
 
-(defun construct-forward (toplevel
-			  &key
-			    (requires-grad nil)
-			    (macroexpand-forward nil)
-			    (macroexpand-backward nil)
-			    (ignore-optimize nil)
-			    (unroll-threshold 10))
-  "TODO: Docstring
-
-Return:
-    (values function-body[compiled-function]
-            variables[plist]
-            all-tensors[list])"
-  (declare (type AbstractTensor toplevel))
-
-  (unless ignore-optimize
-    (optimize-computation-node! toplevel :speed 1))
-  
-  ;; toplevel (usually out-scalar) -> forward -> each variables, parameters
-  (let ((*node-variables-tmp*)
-	(*node-parameters-tmp*)
-	(*unroll-threshold* unroll-threshold))
-    (let ((body (compile-forward toplevel))
-	  (backward (if requires-grad
-			(construct-backward toplevel :macroexpand macroexpand-backward))))
-      (let ((body `(lambda ()
-		     (declare (optimize (speed 3)))
-		     (mapc #'state-reset! ',(remove-duplicates *node-parameters-tmp*))
-		     (funcall ,body))))
-	(when macroexpand-forward
-	  (print body))
-
-	;; Enhancement: save the compiled body as fasl.
-	(values (compile nil body) 
-		(construct-variables-table (remove-duplicates *node-variables-tmp*))
-		(remove-duplicates *node-parameters-tmp*)
-		backward)))))
-
-(defun construct-backward (out-scalar
-			   &key
-			     (macroexpand nil))
-  (declare (type AbstractTensor out-scalar))
-
-  ;; out-scalar -> backward -> Each Parameters
-
-  (let* ((out (if (scalar-p out-scalar)
-		  (make-tensor 1
-			       :dtype (dtype out-scalar)
-			       :order (order out-scalar))
-		  (make-tensor (shape out-scalar)
-			       :dtype (dtype out-scalar)
-			       :order (order out-scalar)
-			       :initial-element 1)))
-	 (body `(lambda ()
-		  ,(explore-backwards out-scalar out)
-		  t)))
-    (when macroexpand (print body))
-    (compile nil body)))
-
 (defun map-tree (fn tree)
   (let ((tree (funcall fn tree)))
     (if (listp tree)
@@ -262,66 +181,16 @@ Return:
                 tree)
         tree)))
 
-(defun dispatch-tensor-variable (form)
-  (map-tree
-   #'(lambda (x)
-       (typecase x
-	 (AbstractTensor
-	  (if (eql (tensor-facet x) :input)
-	      (push x *node-variables-tmp*))
-	  (tensor-id x))
-	 ;; Add: AbstractNode
-	 (T x)))
-   form))
-
 (defun register-variables (list)
   (dolist (tensor list)
     (when (typep tensor 'AbstractTensor)
       (unless (find tensor *node-parameters-tmp* :test #'equal)
 	(push tensor *node-parameters-tmp*)))))
 
-(defun compile-forward (toplevel)
-  (declare (type AbstractTensor toplevel)
-	   (optimize (speed 3)))
-  (let ((state     (tensor-state     toplevel))
-	(id        (tensor-id        toplevel))
-	(variables (tensor-variables toplevel)))
+;; ==============================================================================
+;; Kernel Constructor
+;; ==============================================================================
 
-    (when (or (detach-p toplevel) (null state))
-      (return-from compile-forward (compile nil (lambda () toplevel))))
-
-    (let ((next-states (map 'list #'compile-forward variables))
-	  (out-places  (map 'list #'tensor-id       variables)))
-
-      (compile nil
-	       `(lambda ()
-		  (declare (optimize (speed 3)))
-		  ;; When Same Tensors continues, The variable hoge is defined but never used will be occurs...
-		  (let* (,@(loop for f in next-states
-				 for p in out-places
-				 collect `(,p (funcall ,f)))
-			 ,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
-				 collect `(,(tensor-id v) ,v))
-			 (,id ,toplevel))
-		    (declare (type AbstractTensor ,@out-places)
-			     (ignorable ,@out-places))
-		    
-		    ;; If toplevel isn't evaluated yet...
-		    ,(and
-		      (push toplevel *node-parameters-tmp*)
-		      nil)
-		    (when (null (statecontainer-forward-result (tensor-state ,id)))
-		      (setf (statecontainer-forward-result (tensor-state ,id))
-			    (multiple-value-list
-			     (progn
-			       ,(dispatch-tensor-variable (statecontainer-forward-out-form state))))))
-		    
-		    (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,id)))))))))
-
-;; TODO
-;; Most of backward-error, occurs here
-;; So make it their log much clear.
-;; Bug: Maybe this function doesn't work well.
 (defun !maybe-move (place tensor &key (deterministic-p nil))
   "Moves the result of backwards, into variables where it was (if deterministic).
 
@@ -344,151 +213,6 @@ Return:
 	      ;; Forcibly moving them.
 	      (values (cl-waffe2/base-impl:!move place tensor) deterministic-p)))))))
 
-;; there remains to be improved (in term of compile-speed)
-(defun explore-backwards (toplevel past-dy)
-  "Constructs the computation node for backwards."
-  (declare (type AbstractTensor toplevel past-dy))
-  
-  ;; g(t's dout dx dy dz...) -> [t-1]'s dout
-  ;; first past-dy = 1.0
-
-  ;; Get a backward node.
-
-  ;; ((self dout dx dy)
-  ;;   (values (kernel1) (kernel2)))
-  ;; Step1. dx.dy copy Step2 kernel2, kernel2, Step3 Move
-  ;; copy -> compile -> backward -> copy
-
-
-  ;; The problem is that:
-  ;; (values (!move dx (!mul dout dy)) (!move dx (!mul dout dy)))
-  ;; produces side effects
-  
-  (when (null (tensor-backward toplevel))
-    (return-from explore-backwards))
-
-  ;; Record: at what node, the backward error was occured.
-  (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
-    ;; In order to restore tensors' backwards, keep them saving at backwards-tmp.
-    (let* ((ancestor-p-map (map 'list #'ancestor-param-p (tensor-variables toplevel)))
-	   (deterministic-n (count t ancestor-p-map :test #'(lambda (x y) (and x y))))
-	   (deterministic-p (<= deterministic-n 1))
-	   ;; Explore previous backwards of tensor-variables.
-	   (outs (apply
-		  ;; (backward self dout dx dy dz ...)
-		  #'cl-waffe2/vm.nodes:backward
-		  (tensor-backward toplevel)		  
-		   past-dy;;(detach! past-dy)
-		  (map 'list #'detach! (tensor-variables toplevel))))
-	   (moved-p-list)
-	   ;; Pruning unused nodes by exploring ancestor-param-p
-	   ;; dy1 <- dx.grad
-	   (outs (loop for var in (tensor-variables toplevel)
-		       for out in outs
-		       for k upfrom 0
-		       if (ancestor-param-p var)
-			 collect
-			 (multiple-value-bind (res moved-p)
-			     (!maybe-move var out
-					  :deterministic-p (or deterministic-p
-							       (= k (1- deterministic-n))))
-			   (push moved-p moved-p-list)
-			   res)
-		       else
-			 collect nil
-		       finally (setq moved-p-list (reverse moved-p-list))))
-	   (movers (loop for var in (tensor-variables toplevel)
-			 for out in outs
-			 for mv? in moved-p-list
-			 if (and out mv?)
-			   collect
-			   (prog1 ;; var <- out
-			       (let ((*no-grad* t)) (compile-forward (cl-waffe2/base-impl:!move (detach! var) (detach! out))))
-			     (setf (detach-p var) nil
-				   (detach-p out) nil)))))
-
-      ;; dx1 <- dx'
-      ;; dy1 <- dy'
-
-      ;; dx <- dx1
-      ;; dy <- dy1
-		     
-      ;; all backwards' node should ends with MoveTensorNode
-      #|
-      (assert (every (compose #'movetensor-p #'tensor-backward)
-		     outs)
-	      nil
-      "Explore-Backwards: Assertion Failed because the nodes: ~a aren't ended with MoveTensorNode/MoveTensorScalarNode" (tensor-variables toplevel))
-      |#
-
-      (labels ((expand-backward-values (variables outs paramp body)
-		 (cond
-		   ((and (null variables)
-			 (null outs))
-		    body)
-		   ((and (car variables) (car outs) (car paramp))
-		    `(let ((,(tensor-id (car outs)) (funcall ,(compile-forward (car outs)))))
-		       ,(expand-backward-values (cdr variables) (cdr outs) (cdr paramp) body)))
-		   (T (expand-backward-values (cdr variables) (cdr outs) (cdr paramp) body)))))
-
-	;; Body
-	`(let*-ignorable
-	     (,@(map 'list
-		     #'(lambda (tensor)
-			 `(,(tensor-id tensor) ,tensor))
-		     (tensor-variables toplevel))
-	      ,@(loop for tensor in outs
-		      if tensor
-			collect `(,(tensor-id tensor) ,tensor)))
-	   ,(expand-backward-values
-	     (tensor-variables toplevel)
-	     outs
-	     (map 'list #'(lambda (x) (slot-value x 'requires-grad)) (tensor-variables toplevel))
-	     `(progn
-		,@(map 'list #'(lambda (v x) `(setq ,(tensor-id v) (funcall ,x)))
-		       (tensor-variables toplevel) movers)
-		,@(loop for v  in (tensor-variables toplevel)
-			for o  in outs			
-			if (slot-value v 'requires-grad)
-			  collect `(add-grads ,v ,(tensor-id o))
-			if (and ;;(not (slot-value v 'requires-grad))
-			    o
-			    (tensor-state v))
-			  collect (progn
-				    (setf (detach-p v) nil)
-				    (setf (detach-p o) nil)
-				    (explore-backwards v o))))))))))
-
-
-;; ==========================================
-;; Rewriting
-;; ==========================================
-
-
-(defclass Compiled-Composite (cl-waffe2/vm.nodes:Composite)
-  ;; fw/bw/vars/paramsまとめる
-  ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
-   (compiled-backward :initarg :compiled-backward :type (or null function) :reader :compiled-backward)
-   (variables :initarg :variables :reader compiled-variables)
-   (parameters :initarg :parameteers :reader compiled-parameters)))
-
-(defmethod cl-waffe2/vm.nodes:call ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
-  ;; Keywords :A A :B B ...
-  ;; forward
-  (apply (compiled-forward model) inputs))
-
-(defun build1 (out)
-  (let ((forward-kernel (compile-forward-kernel out))
-	(backward-kernel (unless *no-grad*
-			   (compile-backward-kernel out))))
-    (time (funcall forward-kernel))
-    ;;(print (time (funcall forward-kernel)))
-    (time (funcall backward-kernel))
-
-    (time (funcall forward-kernel))
-
-    (time (funcall backward-kernel))
-    ))
 
 (defun compile-forward-chain (toplevel &key (read-save-for-backward nil))
   "
@@ -530,19 +254,6 @@ Return:
 		 (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
-
-(defun compile-forward-kernel (toplevel &key (read-save-for-backward nil))
-  "
-## [function] compile-forward-kernel
-"
-  (optimize-computation-node! toplevel :speed 1)
-  (let ((*node-parameters-tmp*))
-    (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
-      ;; (declare (optimize (speed 3) (safety 0)))
-      (compile nil
-	       `(lambda ()
-		  (map 'list #'state-reset! ',*node-parameters-tmp*)
-		  ,body)))))
 
 (defun compile-backward-chain (toplevel past-dy)
   "Constructs the computation node for backwards."
@@ -642,6 +353,19 @@ Return:
 				    (setf (detach-p o) nil)
 				    (compile-backward-chain v o))))))))))
 
+;; Toplevel
+(defun compile-forward-kernel (toplevel &key (read-save-for-backward nil))
+  "
+## [function] compile-forward-kernel
+"
+  (optimize-computation-node! toplevel :speed 1)
+  (let ((*node-parameters-tmp*))
+    (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
+      ;; (declare (optimize (speed 3) (safety 0)))
+      (compile nil
+	       `(lambda ()
+		  (map 'list #'state-reset! ',*node-parameters-tmp*)
+		  ,body)))))
 
 (defun compile-backward-kernel (toplevel)
   (let* ((out (if (scalar-p toplevel)
@@ -657,3 +381,34 @@ Return:
 		  t)))
     (compile nil body)))
 
+
+
+;; ==========================================
+;; Rewriting
+;; ==========================================
+
+
+(defclass Compiled-Composite ()
+  ;; fw/bw/vars/paramsまとめる
+  ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
+   (compiled-backward :initarg :compiled-backward :type (or null function) :reader compiled-backward)
+   (variables :initarg :variables :reader compiled-variables)
+   (parameters :initarg :parameters :reader compiled-parameters)))
+
+(defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
+  ;; Keywords :A A :B B ...
+  ;; forward
+  (funcall (compiled-forward model)))
+
+(defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
+  (funcall (compiled-backward model)))
+
+(defun build (toplevel
+	      &key (construct-backward? (not *no-grad*)))
+  (let ((forward-kernel (compile-forward-kernel toplevel))
+	(backward-kernel (when construct-backward?
+			   (compile-backward-kernel toplevel))))
+
+    (make-instance 'Compiled-Composite
+		   :compiled-forward forward-kernel
+		   :compiled-backward backward-kernel)))
