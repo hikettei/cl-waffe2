@@ -483,16 +483,12 @@ Return:
 			   (compile-backward-kernel out))))
     (time (funcall forward-kernel))
     ;;(print (time (funcall forward-kernel)))
-    (print (time (funcall backward-kernel)))
-    ))
+    (time (funcall backward-kernel))
 
-;; 関数をちゃんと定義する flet + 名前 debugしやすく
-;; call/forwardをした時点でcompileを走らせる + λ式をAβstractNodeに格納
-;; 保持するのは計算木の構造のみとする
-;; call-with-viewを治す
-;; TopLevelからEmbody-Inputできるように
-;; 今日は寝る
-;; TopLevelでShapeが決定されてないInput Tensorを用いる->返り値は固定->したは決定していく。。。
+    (time (funcall forward-kernel))
+
+    (time (funcall backward-kernel))
+    ))
 
 (defun compile-forward-chain (toplevel &key (read-save-for-backward nil))
   "
@@ -608,7 +604,8 @@ Return:
 			 (null outs))
 		    body)
 		   ((and (car variables) (car outs) (car paramp))
-		    `(let ((,(tensor-id (car outs)) (funcall ,(compile-forward-kernel (car outs) :read-save-for-backward t))))
+		    `(let* ((*no-grad* t)
+			    (,(tensor-id (car outs)) (funcall ,(compile-forward-kernel (car outs) :read-save-for-backward t))))
 		       ;; dx.grad/dy.grad... <- g(dout, dx, dy,...) 
 		       
 		       ,(expand-g-callers (cdr variables) (cdr outs) (cdr paramp) body)))
