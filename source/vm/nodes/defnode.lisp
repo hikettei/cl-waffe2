@@ -368,6 +368,7 @@ Return nil -> ok
 		  (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 		    ,@(second forward-body)
 		    `(lambda ,,inputs
+		       (declare (ignorable ,@,inputs))
 		       ,@(loop for input in ,inputs
 			       for state in ',save-for-backward
 			       if (and state
