@@ -5,6 +5,7 @@
 
 ;; TODO: DOCSTRINGS
 
+;; FixME: Shape got undetermined.
 (defmodel (Encapsulated-Node (self node-func)
 	   :slots ((node-func :initarg :node-func))
 	   :initargs (:node-func node-func)
@@ -97,22 +98,23 @@ X
 
     `(progn
        (defmodel (,name (self ,@args)
-		:slots (,@(loop for name in names
-				for kw   in keywords
-				for reader in readers
-				collect `(,name :initarg ,kw :reader ,reader))
-			(length :initform ,length :reader sequencelist-length))
-		:initargs ,(let ((result))
-			     (loop for kw in keywords
-				   for node in nodes
-				   do (push node result)
-				      (push kw result))
-			     result)
-		:on-call-> ((self x)
-			    (call-> x
-				    ,@(loop for name in names
-					    collect `(slot-value self ',name))))
-		:documentation ,documentation))
+		  :slots (,@(loop for name in names
+				  for kw   in keywords
+				  for reader in readers
+				  collect `(,name :initarg ,kw :reader ,reader))
+			  (length :initform ,length :reader sequencelist-length))
+		  :initargs ,(let ((result))
+			       (loop for kw in keywords
+				     for node in nodes
+				     do (push node result)
+					(push kw result))
+			       result)
+		  :on-call-> ((self x)
+			      (call-> x
+				      ,@(loop for name in names
+					      collect `(slot-value self ',name))))
+		  :documentation ,documentation))
+       
        (defmethod sequencelist-nth (n (model ,name))
 	 (if (> n ,length)
 	     (error "defsequence: ~a is out of range for ~a list." n ,length)
@@ -129,8 +131,6 @@ X
 ~a"
 		     (1+ i) length layer)))))))
 
-;; (defun nth-seq (n 10)
-;; (slot-value model (nth slots ...))
 
 
 

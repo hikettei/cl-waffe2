@@ -6,9 +6,11 @@
 (defpackage :cl-waffe2/vm.nodes
   (:use :cl :cl-ppcre :alexandria)
   (:import-from :cl-waffe2/vm.generic-tensor
+		#:AbstractTensor
 		#:*using-backend*
 		#:shape
 		#:tensor-backward
+		#:tensor-id
 		#:tensor-variables
 		#:tensor-state
 		#:tensor-out-n

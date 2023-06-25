@@ -40,23 +40,26 @@
 			       (slot-value self 'layer2)
 			       (asnode #'!tanh)
 			       (slot-value self 'layer3)
-			       (asnode #'!tanh)))))
+			       (asnode #'!softmax)))))
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!tanh))
 	     "3 Layers MLP"
-	     (LinearLayer in-features out-features)
+	     (LinearLayer in-features hidden-dim)
 	     (asnode activation)
-	     (LinearLayer out-features hidden-dim)
+	     (LinearLayer hidden-dim hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features)
-	     (asnode activation))
+	     (asnode #'!softmax))
 
-(let ((model (MLP-Model)))
-  (with-build (fw bw v p) (!sum (call model (randn `(10 784))))
-    (time (funcall fw))
-    (time (funcall bw))
-    (time (funcall fw))
-    (time (funcall bw))))
+(defun train ()
+  (let ((model (MLP-Sequence 784 256 10)))
+    (with-build (forward backward vars params)
+		(!sum (call model (make-input `(batch-size 784) :X)))
+      (embody-input vars :X (randn `(10 784)))
 
+      (time (print (funcall forward)))
+      (time (funcall backward))
+      
+      )))
 

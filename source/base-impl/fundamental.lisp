@@ -164,11 +164,10 @@ Output: Tensor[AbstractTensor]"
 The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
 
 This function is also used to adjust memory alignment of tensor."
-  (let* ((out (make-tensor (if (scalar-p tensor)
-			       0
-			       (shape tensor))
-			   :dtype (dtype tensor)
-			   :order (order tensor)))
+  (let* ((out (make-input (shape tensor) nil
+			  :scalar-p (scalar-p tensor)
+			  :dtype (dtype tensor)
+			  :order (order tensor)))
 	 (res (!move out tensor)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))

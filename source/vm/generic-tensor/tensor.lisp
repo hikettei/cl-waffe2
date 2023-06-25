@@ -16,6 +16,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 (defparameter *default-dtype* :float  "")
 (defparameter *default-order* :column "")
 
+(defparameter *with-printing-tensor-omitted* nil "If t, the displayed tensor is omitted")
+
 (defun order-p (name)
   (declare (type keyword name))
   (or (eql name :column) (eql name :row)))
@@ -650,6 +652,11 @@ Example:
        :wait-for-reset))))
 
 (defmethod print-object ((tensor AbstractTensor) stream)
+
+  (when *with-printing-tensor-omitted*
+    (format stream "<<~a Tensor (Omitted)>>" (shape tensor))
+    (return-from print-object))
+  
   (format stream
 	  "{~a[~(~a~)] ~a ~a ~a
   ~a
@@ -689,13 +696,15 @@ Example:
 
 (defun set-save-for-backward (tensor)
   (let ((space (save-for-backward-space tensor)))
+
+    (print space)
     (when (null space)
       (multiple-value-bind (fw bw vars pms) (let ((*no-grad* t)) (build (cl-waffe2/base-impl:!copy-force tensor)))
 	(declare (ignore bw vars pms))
 	(setf (save-for-backward-cloner tensor) fw)))
-
-    (setf (save-for-backward-space tensor)
-	  (funcall (save-for-backward-cloner tensor)))
+    
+    (print (shape tensor))
+    (setf (save-for-backward-space tensor) (cl-waffe2/base-impl:proceed (cl-waffe2/base-impl:!copy-force tensor)))
     t))
 
 (defun read-save-for-backward (tensor)

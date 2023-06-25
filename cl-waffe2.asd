@@ -72,7 +72,10 @@
 	       (:file "distributions/ziggurat")
 
 	       (:file "nn/package")
+	       (:file "nn/activation")
 	       (:file "nn/regression")
+	       (:file "nn/criterion")
+	       
 	       (:file "optimizers/package")
 
 	       (:file "package")

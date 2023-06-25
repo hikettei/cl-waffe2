@@ -571,6 +571,9 @@ a=1, b=2 => NIL
 ;; Expands call-with-view
 ;; =======================================
 
+;; TODO: Rewrite Call-With-View
+;; TODO: Acceptor
+;; TODO: Subscript-p
 
 ;; e.g: (view tensor `(0 2) t t) could be splitted into: `(0 2) * t*t times order
 (defun order-reductable-p (dim-start-from &rest tensors)
@@ -732,20 +735,34 @@ a=1, b=2 => NIL
 						 tensors))))))))))))))
 
     (let ((offset-place (gensym "OffsetsTmp"))
+	  (used-symbols)
 	  (nondeterministic-symbols))
+
       (mapc #'(lambda (tensor)
-		(loop for i upfrom 0
-		      for shape in (shape tensor)
-		      if (not (numberp shape))
-			do (push `(,shape (nth ,i (shape ,tensor))) nondeterministic-symbols)))
+		(mapc #'(lambda (s)
+			  (when (symbolp s)
+			    (unless (find s used-symbols)
+			      (push s used-symbols))))
+		      (shape tensor)))
 	    tensors)
+
+      (mapc #'(lambda (tensor)
+		(loop for k upfrom 0
+		      for s in (shape tensor)
+		      if (symbolp s)
+			do (push `(,s (if (numberp ,s)
+					  ,s
+					  (nth ,k (shape ,tensor))))
+				 nondeterministic-symbols)))
+	    tensors)			  
+
       `(let ((,offset-place (make-list ,(length tensors) :initial-element 0)))
-	 (let* (,@nondeterministic-symbols)
-	   (declare (type fixnum ,@(map 'list #'car nondeterministic-symbols))
-		    (ignorable   ,@(map 'list #'car nondeterministic-symbols)))
-	   ,(explore
-	     dims
-	     offset-place))))))
+	 (let*-ignorable (,@(loop for s in used-symbols
+				  collect `(,s nil)))
+	   (let*-ignorable (,@nondeterministic-symbols)
+	     ,(explore
+	       dims
+	       offset-place)))))))
 
 ;; call-with-view dedicated to tensors with view = `(... t t)
 (defun call-with-view-1dkernel (function
@@ -775,4 +792,4 @@ a=1, b=2 => NIL
 				1)))
 		     (list view))))))
 
-	   
+

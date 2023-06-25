@@ -326,14 +326,15 @@ Return t   -> reject
 Return nil -> ok
 "
   
-  (let ((forward-self-name (caar forward))
-	(backward-self-name (caar backward))
-	(forward-args  (cdar forward))
-	(backward-args (cdar backward))
-	(forward-body  (cdr forward))
-	(backward-body (cdr backward))
-	(impl-name (subnode-name abstract-name device)))
-
+  (let* ((forward-self-name (caar forward))
+	 (backward-self-name (caar backward))
+	 (forward-args  (cdar forward))
+	 (backward-args (cdar backward))
+	 (forward-body  (multiple-value-list (parse-body (cdr forward))))
+	 (backward-body (cdr backward))
+	 (impl-name (subnode-name abstract-name device))
+	 (fw-name (gensym "FW")))
+    
     (eval-when (:compile-toplevel :load-toplevel :execute)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
 	      nil
@@ -348,28 +349,40 @@ Return nil -> ok
 		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
 		 ',abstract-name
 		 ',device))
+       
        (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
+       
        (defclass ,impl-name (,abstract-name)
 	 nil
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
 				  impl-name
 				  abstract-name
 				  device)))
+       
        ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))
-	 ;; The copy is only needed when cl-waffe2 is used as deep learning framework. (i.e.: backward is called)
 
-	 (loop for input in ,inputs
-	       for state in ',save-for-backward
-	       if (and state           ;; save-for-backward=t
-		       (not *no-grad*) ;; training-mode
-		       (cl-waffe2/vm.generic-tensor:ancestor-param-p input))
-		 do (set-save-for-backward input))
-	 
-	 (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
-	   (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@forward-args))
-	   ,@forward-body))
+	 ;; Enhancement: macroexpand
+	 (flet ((,fw-name (,inputs)
+		  (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
+		    ,@(second forward-body)
+		    `(lambda ,,inputs
+		       ,@(loop for input in ,inputs
+			       for state in ',save-for-backward
+			       if (and state
+				       (cl-waffe2/vm.generic-tensor:ancestor-param-p input))
+				 collect `(unless *no-grad*
+					    (set-save-for-backward ,(tensor-id input))))
+		       ,,@(car forward-body)))))
+	   ;; (,fw-name ,inputs) => Expanded Forms.
+	   (compile nil
+		    (map-tree #'(lambda (obj)
+				  (typecase obj
+				    (AbstractTensor (tensor-id obj))
+				    (T obj)))
+			      (,fw-name ,inputs)))))
+       
 
        ;; Backward should be defined at either/both of defnode or/and define-impl. (defnode takes the precendence)
        ,(when backward
@@ -377,6 +390,11 @@ Return nil -> ok
 	     (declare (type ,impl-name ,backward-self-name))
 	     (multiple-value-bind (,@backward-args) (apply #'values (map 'list #'(lambda (x) (or (read-save-for-backward x) x)) ,inputs))
 	       (declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
+	       
+	       ;; read-save4backwardもそのまま読み込む？
+	       ;; i.e.: まとめてコンパイル？
+	       ;; Backwardも即時コンパイルにする
+	       ;; (self dy) -> grad1 grad2 grad3...
 	       ,@backward-body))))))
 
 (defun declare-local-variables (self &rest tensors)

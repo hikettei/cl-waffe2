@@ -38,6 +38,8 @@
    #:set-save-for-backward
    #:read-save-for-backward
    #:parameter
+   #:*with-printing-tensor-omitted*
+   #:tensor-id
    )
 
   (:export

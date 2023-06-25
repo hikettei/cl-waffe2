@@ -19,7 +19,7 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
 
 (defstruct (StateContainer)
   (state :initialized :type (member :initialized :forwarded :backwarded))
-  (forward-out-form nil :type list)
+  (forward-out-form nil :type function)
   (forward-result   nil :type list)
 
   (backward-input-variable)
@@ -156,14 +156,6 @@ Variables
 		(macroexpand-backward nil))
   "Return:
     (values forward backward variables parameters)"
-
-  (when (some #'symbolp (shape toplevel-tensor))
-    (node-compile-error
-     "Can't construct forward/backward code because the shape of toplevel-tensor should be determined by the end of nodes.
-
-The shape of toplevel-tensor: ~a
-
-Perhaps you're forgetting to call reducting APIs: !sum or !mean for example." (shape toplevel-tensor)))
   
   (multiple-value-bind (forward vars params backward)
       (construct-forward toplevel-tensor
@@ -230,7 +222,6 @@ Return:
 			(construct-backward toplevel :macroexpand macroexpand-backward))))
       (let ((body `(lambda ()
 		     (declare (optimize (speed 3)))
-		     ;;(mapc #'result-reset! ',(remove-duplicates *node-parameters-tmp* :key #'tensor-vec))
 		     (mapc #'state-reset! ',(remove-duplicates *node-parameters-tmp*))
 		     (funcall ,body))))
 	(when macroexpand-forward
@@ -461,3 +452,74 @@ Return:
 				    (setf (detach-p v) nil)
 				    (setf (detach-p o) nil)
 				    (explore-backwards v o))))))))))
+
+
+;; ==========================================
+;; Rewriting
+;; ==========================================
+
+
+(defclass Compiled-Composite (cl-waffe2/vm.nodes:Composite)
+  ;; fw/bw/vars/paramsまとめる
+  ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
+   (compiled-backward :initarg :compiled-backward :type (or null function) :reader :compiled-backward)
+   (variables :initarg :variables :reader compiled-variables)
+   (parameters :initarg :parameteers :reader compiled-parameters)))
+
+(defmethod cl-waffe2/vm.nodes:call ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
+  ;; Keywords :A A :B B ...
+  ;; forward
+  (apply (compiled-forward model) inputs))
+
+;; 関数をちゃんと定義する flet + 名前 debugしやすく
+;; call/forwardをした時点でcompileを走らせる + λ式をAβstractNodeに格納
+;; 保持するのは計算木の構造のみとする
+;; call-with-viewを治す
+;; TopLevelからEmbody-Inputできるように
+;; 今日は寝る
+
+(defun build1 (out)
+  ;;
+  )
+
+(defun compile-forward-chain (toplevel)
+  "
+## [function] compile-forward-chain
+
+"
+  (declare (type AbstractTensor toplevel))
+  
+  (when (or (detach-p toplevel) (null (tensor-state toplevel)))
+    (return-from compile-forward-chain toplevel))
+  
+  (let* ((state (tensor-state toplevel))
+	 (vars  (tensor-variables toplevel))
+	 (fw-compiled (statecontainer-forward-out-form state)))
+    
+
+    (let ((next-states (map 'list #'compile-forward-chain vars))
+	  (out-places  (map 'list #'tensor-id vars)))
+
+      ;; Tensors to use is determined when compiled
+      ;; InputTensor ... Symbols(A, B) is changed, alloc is changed.
+      `(let*-ignorable (,@(loop for s in next-states ;; p <- s
+				for p in out-places
+				collect `(,p ,s))
+			,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
+				collect `(,(tensor-id v) ,v))
+			(,(tensor-id toplevel) (progn ,toplevel)))
+
+	 ;; The Operation hasn't done yet...
+	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
+	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
+		 (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+
+	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
+
+(defun compile-forward-kernel (toplevel)
+  "
+## [function] compile-forward-kernel
+"
+  (let ((body (compile-forward-chain toplevel)))
+    (compile nil `(lambda () ,body))))
+
