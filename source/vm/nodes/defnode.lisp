@@ -333,7 +333,8 @@ Return nil -> ok
 	 (forward-body  (multiple-value-list (parse-body (cdr forward))))
 	 (backward-body (cdr backward))
 	 (impl-name (subnode-name abstract-name device))
-	 (fw-name (gensym "FW")))
+	 (fw-name-expand (symb abstract-name device '-expand))
+	 (fw-name-vm     (symb abstract-name device '-vm-function)))
     
     (eval-when (:compile-toplevel :load-toplevel :execute)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
@@ -364,10 +365,10 @@ Return nil -> ok
 	 (declare (type ,impl-name ,forward-self-name))
 
 	 ;; Enhancement: macroexpand
-	 (flet ((,fw-name (,inputs)
+	 (flet ((,fw-name-expand (,inputs)
 		  (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 		    ,@(second forward-body)
-		    `(lambda ,,inputs
+		    `(named-lambda ,',fw-name-vm ,,inputs
 		       (declare (ignorable ,@,inputs))
 		       ,@(loop for input in ,inputs
 			       for state in ',save-for-backward
@@ -377,12 +378,16 @@ Return nil -> ok
 					    (set-save-for-backward ,(tensor-id input))))
 		       ,,@(car forward-body)))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
-	   (compile nil
-		    (map-tree #'(lambda (obj)
-				  (typecase obj
-				    (AbstractTensor (tensor-id obj))
-				    (T obj)))
-			      (,fw-name ,inputs)))))
+
+	   ;; Forms: Lambda (args) -> outs
+	   (map-tree #'(lambda (obj)
+			 (typecase obj
+			   (AbstractTensor
+			    (if (find (tensor-id obj) ,inputs :key #'tensor-id)
+				(tensor-id obj)
+				obj))
+			   (T obj)))
+		     (,fw-name-expand ,inputs))))
        
 
        ;; Backward should be defined at either/both of defnode or/and define-impl. (defnode takes the precendence)

@@ -17,10 +17,13 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
      ,@body))
 
 
-;; StateContainer is a temporary node for creating forward/backward
+;; StateContainer is a structure which accompany with Tensors
+;; and is used to share:
+;; Forward/Backward Forms
+;; Their computation results
 (defstruct (StateContainer)
   (state :initialized :type (member :initialized :forwarded :backwarded))
-  (forward-out-form nil :type function)
+  (forward-out-form nil :type list)
   (forward-result   nil :type list)
 
   (backward-input-variable)
@@ -30,6 +33,8 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
   (forward-n-out  0 :type fixnum)
   (backward-n-out 0 :type fixnum))
 
+
+;; TODO: Rewrite them.
 (defstruct (NodeVariables
 	    (:constructor make-variable-table
 		(symbols
@@ -191,11 +196,11 @@ Variables
 ;; Kernel Constructor
 ;; ==============================================================================
 
-
 (defun compile-forward-chain (toplevel &key (read-save-for-backward nil))
   "
 ## [function] compile-forward-chain
 
+Tracing until one of variables reached a toplevel tensor (detach-p is t or no backwards), returning an S-expression which can be compiled.
 "
   (declare (type AbstractTensor toplevel))
   
@@ -208,10 +213,15 @@ Variables
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
-    
 
     (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :read-save-for-backward read-save-for-backward)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
+      
+      ;;
+      ;; f(x, y)
+      ;; x <- x.func
+      ;; y <- y.func
+      ;; f(x.func, y.func)
 
       ;; Tensors to use is determined when compiled
       ;; InputTensor ... Symbols(A, B) is changed, alloc is changed.
@@ -247,7 +257,7 @@ Variables
 		  ;; (backward self dout dx dy dz ...)
 		  #'cl-waffe2/vm.nodes:backward
 		  (tensor-backward toplevel)	  
-		  (detach! past-dy)
+		  (make-clone past-dy)
 		  (map 'list #'detach! (tensor-variables toplevel))))
 	   (out-kernels (map 'list #'second outs))
 	   (next-dys    (map 'list #'first  outs))
@@ -257,8 +267,7 @@ Variables
       `(let (,@(loop for out-kernel in out-kernels
 		     for ndy in next-dys
 		     if out-kernel
-		       collect `(,(tensor-id ndy) ,ndy;;(funcall ,out-kernel ,(tensor-id past-dy))
-				 )))
+		       collect `(,(tensor-id ndy) (funcall ,out-kernel ,(tensor-id past-dy)))))
 	 (declare (ignorable ,@(loop for out-kernel in out-kernels
 				     for ndy in next-dys
 				     if out-kernel
@@ -290,8 +299,6 @@ Variables
 ## [function] compile-forward-kernel
 "
 
-  ;; Acceptor ...
-  ;; Side Effects!
   (optimize-computation-node! toplevel :speed 1)
   
   (let ((*node-parameters-tmp*))
@@ -303,6 +310,14 @@ Variables
 		   (map 'list #'state-reset! ',*node-parameters-tmp*)
 		   ,body))
        *node-parameters-tmp*))))
+
+(defun make-vm-function (toplevel &key (read-save-for-backward nil))
+  (optimize-computation-node! toplevel :speed 1)
+
+  (let ((*node-parameters-tmp*))
+    (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
+      `(lambda () ,body))))
+
 
 (defun compile-backward-kernel (toplevel)
   (let* ((out (if (scalar-p toplevel)

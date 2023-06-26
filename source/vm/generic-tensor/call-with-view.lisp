@@ -274,4 +274,7 @@ Return: (values offsets-place form)"
       (explore dims offset-place))))
 
 
+
 ;; Bugs (with-no-grad (proceed (!add (!view (ax+b `(5 5 5) 1.0 0.0) `(2 3) t t) (ax+b `(1 5 5) 1.0 0.0))))
+;; Due to wrong forward pointer?
+;; => make forward/backward constructor

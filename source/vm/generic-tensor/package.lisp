@@ -78,6 +78,9 @@
    )
 
   (:export
+   #:make-vm-function
+   #:compile-forward-chain)
+  (:export
    #:movetensor-p
    #:shape-equal)
 

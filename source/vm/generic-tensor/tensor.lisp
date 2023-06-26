@@ -620,6 +620,7 @@ Example:
   (let ((out (cl-waffe2/base-impl:proceed tensor)))
     (setf (tensor-facet out) :exist)
     (setf (slot-value out 'requires-grad) t)
+    (setf (tensor-name out) nil)
     (view out)))
 
 
@@ -705,12 +706,10 @@ Example:
     (when (or (null space)
 	      (not (equal (shape tensor) (shape space))))
       (detach! tensor)
-      (multiple-value-bind (fw bw vars pms)
-	  (let ((*no-grad* t)) (compile-forward-kernel (cl-waffe2/base-impl:!copy-force tensor)))
-	(declare (ignore bw vars pms))
+      (let ((fw (let ((*no-grad* t)) (compile-forward-kernel (cl-waffe2/base-impl:!copy-force tensor)))))
 	(setf (detach-p tensor) nil)
 	(setf (save-for-backward-cloner tensor) fw)))
-    
+
     (setf (save-for-backward-space tensor) (funcall (save-for-backward-cloner tensor)))
     t))
 

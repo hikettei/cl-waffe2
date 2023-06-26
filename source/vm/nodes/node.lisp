@@ -289,20 +289,19 @@ Use the define-impl macro to give definitions for the node and forward them.
 				  for k upfrom 0
 				  if out
 				    collect (multiple-value-bind (res mv)
-						(!maybe-move in out :deterministic-p (and (not (cl-waffe2/vm.generic-tensor:ancestor-param-p in))
-											  (= (1- (length (cdr inputs))) k)))
+						(!maybe-move in out :deterministic-p (= (1- (length (cdr inputs))) k))
 					      (push mv moveplist)
 					      res)
 				  else
 				    collect (and (push nil moveplist) nil)
 				  finally (setq moveplist (reverse moveplist))))
-	       (compiled-g (map 'list #'(lambda (x) (when x (cl-waffe2/vm.generic-tensor::compile-forward-kernel x :read-save-for-backward t))) out-kernels))
+	       (compiled-g (map 'list #'(lambda (x) (when x (cl-waffe2/vm.generic-tensor:make-vm-function x :read-save-for-backward t))) out-kernels))
 	       (movers (loop for v   in (cdr inputs)
 			     for out in out-kernels
 			     for mv? in moveplist
 			     if (and out mv?)
 			       collect (prog1
-					   (cl-waffe2/vm.generic-tensor::compile-forward-kernel (cl-waffe2/base-impl:!move (detach v t) (detach out t)))
+					   (cl-waffe2/vm.generic-tensor:make-vm-function (cl-waffe2/base-impl:!move (detach v t) (detach out t)))
 
 					 (detach v nil)
 					 (detach out nil))
@@ -310,7 +309,8 @@ Use the define-impl macro to give definitions for the node and forward them.
 			       collect nil)))
 	  ;; dout should be make-input
 	  ;; g(dout, dx, dy, ..., dn) -> dx.grad, gy.grad, ..., dn.grad
-	  (loop for g in compiled-g
+	  (loop with dout-real = (gensym "dout")
+	        for g in compiled-g
 		for o in out-kernels
 		for m in movers
 		;; g(x) * n
@@ -318,13 +318,9 @@ Use the define-impl macro to give definitions for the node and forward them.
 		  collect
 		  (list
 		   o
-		   (let ((g g)
-			 (dout dout))
-		     ;; funarg
-		     #'(lambda (dout-real)
-			 ;; dout <- dout-real
-			 (cl-waffe2/vm.generic-tensor:embody-actual-tensor dout dout-real)
-			 (funcall g)))
+		   `(lambda (,dout-real)
+		      (cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout ,dout-real)
+		      (print (funcall ,g)))
 		   m)
 		else
 		  collect nil))))))
