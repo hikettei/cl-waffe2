@@ -5,6 +5,8 @@
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
+(define-modify-macro multf (&optional (number 1)) *)
+
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))

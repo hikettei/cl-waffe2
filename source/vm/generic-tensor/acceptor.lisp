@@ -289,7 +289,11 @@ Variables
   "
 ## [function] compile-forward-kernel
 "
+
+  ;; Acceptor ...
+  ;; Side Effects!
   (optimize-computation-node! toplevel :speed 1)
+  
   (let ((*node-parameters-tmp*))
     (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
       ;; (declare (optimize (speed 3) (safety 0)))
