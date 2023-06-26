@@ -75,8 +75,15 @@ tensor-ref-n indicates that how many times the tensor was used in the node."
 	       ;; [MoveTensor] -> [AnyTensor save-for-backward=t]
 	       ;; ↑Ignored.
 	       ;; The conditions below is neccesary?
-	       ;;(cl-waffe2/base-impl:movetensor-save-for-backward current-node)
+	       ;; (cl-waffe2/base-impl:movetensor-save-for-backward current-node)
+	       
 	       ;; (!copy place past-out) i.e. (!copy Chain Past-Out)
+
+	       ;; The problem is that: it is unknown wheter movetensor returns Viewed Input or not.
+	       ;; So Tensors whose place has multi-dimensional offset, is ignored
+
+	       (apply #'order-reductable-p 0 past-variables)
+	       
 	       (eql (tensor-attribute (car past-variables)) :chain)
 	       (let* ((prev-out (second past-variables))
 		      (attr     (tensor-attribute prev-out)))

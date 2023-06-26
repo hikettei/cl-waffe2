@@ -10,6 +10,7 @@
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
 		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+	  
 	  :backward ((self dout dx dy)
 		     (let ((dy-out
 			     (if (and
@@ -65,7 +66,9 @@ On forward:
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout))))
+		       
 		       ;; dx/dy never shares pointer, so just moving to dx/dy is enough i guess.
+		       
 		       (values
 			(if (eql (tensor-attribute dx) :chain)
 			    (!move dx dout)
@@ -112,7 +115,9 @@ Unevaluated Copied Tensor."
   (if (and (scalar-p place)
 	   (scalar-p place))
       (forward (MoveScalarTensorNode) place tensor)
+      ;; The problem is that: it is unknown whether place or tensor is returned until optimize-computation-node! is called.
       (forward (MoveTensorNode (dtype place)) place tensor)))
+
 
 (defun !copy (tensor)
   "
@@ -181,9 +186,9 @@ This function is also used to adjust memory alignment of tensor."
 ;; Both !view and !reshape has the same format of arguments:
 ;; (function tensor &rest args)
 
-(defnode (ViewTensorNode (myself subscripts result1 before1)
+(defnode (ViewTensorNode (myself subscripts result before)
 	  :slots ((subscripts :initarg :subscripts))
-	  :where (A[result] B[before] -> A[result] where result = result1 before = before1))
+	  :where (A[result] B[before] -> A[result]))
   (setf (ignore-shape-error myself) t))
 
 (define-impl (ViewTensorNode)

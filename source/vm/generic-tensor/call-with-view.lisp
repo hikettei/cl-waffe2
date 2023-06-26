@@ -74,7 +74,6 @@ Set 2 if the operation is matmul for example.
     (not (some #'not-reductable-p tensors))))
 
 
-
 (defun expand-funcall-with-view (function tensors offsets-place target-dim rest-dims)
   ""
   ;; (apply function view1 view2 view3 ...)
@@ -223,13 +222,13 @@ Return: (values offsets-place form)"
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
+	       
 	       (return-from explore
 		 (expand-call-with-view-flatten
 		  function
 		  tensors
 		  offsets-place
 		  :dim-start-from target-dim)))
-
 	     ;; Otherwise...
 
 	     ;; Computing Multi-Dimensional Offsets

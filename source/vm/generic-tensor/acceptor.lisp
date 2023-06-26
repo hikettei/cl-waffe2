@@ -298,7 +298,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   "
 ## [function] compile-forward-kernel
 "
-
+  
   (optimize-computation-node! toplevel :speed 1)
   
   (let ((*node-parameters-tmp*))
