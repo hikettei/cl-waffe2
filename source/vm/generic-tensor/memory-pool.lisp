@@ -9,13 +9,10 @@
   ;; Gc-able temporary-rooms?
   (temporary-rooms (make-hash-table) :type hash-table))
 
-(defun free-current-memory-pool ()
-  
-  )
-
 (defparameter *memory-pool* (make-memory-pool) "Memory-Pool is a place to store caching tensors.")
 
 (defvar *adjustable-shape-table* nil "An hash-table: Symbol -> Size.")
+
 
 
 (defstruct (Temporary-Room
@@ -26,6 +23,50 @@
   ;; Adjustable Tensor Size
   (shape-first shape-first :type list)
   (cache-tensor input-tensor :type AbstractTensor))
+
+(defun print-current-memory-pool (&key (stream t))
+  (print-object *memory-pool* stream))
+
+
+(defmethod print-object ((pool Memory-Pool) stream)
+  (let ((exist-tensors)
+	(non-exist-tensors)
+	(print-elements1)
+	(print-elements2))
+    (maphash #'(lambda (key value &aux (tensor (temporary-room-cache-tensor value)))
+		 (if (vec tensor)
+		     (push (cons key value) exist-tensors)
+		     (push (cons key value) non-exist-tensors)))
+	     (memory-pool-temporary-rooms pool))
+
+    (dolist (tensor non-exist-tensors)
+      (push (format nil "[~a -> ~a]" (car tensor) (temporary-room-shape-first (cdr tensor))) print-elements1)
+      (push " | " print-elements1))
+
+    (dolist (tensor exist-tensors)
+      (push (format nil "[~a -> ~a]" (car tensor) (temporary-room-shape-first (cdr tensor))) print-elements2)
+      (push " | " print-elements2))
+
+    (format stream "
++= [Memory Pool] =======================+
+")
+    
+    (mapc
+     #'(lambda (print-elements display-name)
+	 (format stream " + [~a] +" display-name)
+	 (format stream "
+~a"
+		 (with-output-to-string (out)
+		   (dolist (e print-elements) (princ e out)))))
+     `(,print-elements1 ,print-elements2)
+     `("Allocated" "Unallocated"))
+    nil))
+	      
+
+(defun free-current-memory-pool ()
+  ;; TODO
+  ;; *memory-pool*
+  )
 
 (defmacro with-memory-pool (&body body)
   "
