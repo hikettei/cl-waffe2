@@ -301,8 +301,8 @@ Use the define-impl macro to give definitions for the node and forward them.
 			     for mv? in moveplist
 			     if (and out mv?)
 			       collect (prog1
+					   ;; Var <- Var.Grad
 					   (cl-waffe2/vm.generic-tensor:make-vm-function (cl-waffe2/base-impl:!move (detach v t) (detach out t)))
-
 					 (detach v nil)
 					 (detach out nil))
 			     else
@@ -321,6 +321,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 		   `(lambda (,dout-real)
 		      (with-no-grad
 			(cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout ,dout-real)
+			;; print (g)
 			(funcall ,g)))
 		   m)
 		else

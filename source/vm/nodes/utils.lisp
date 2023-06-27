@@ -100,22 +100,21 @@ This means: the first argument of :forward was the dtype of :float or :double, u
 
 Return:
     (values next-tensor moved-p)
-    moved-p ... If p, the tensor should be moved to the variable."
+    moved-p ... If p, move me to where it was."
   ;; If deterministic-p = t, do in-place.
   (with-no-grad
     (when tensor
       (if (movetensor-p (tensor-backward tensor))
-	  (values tensor nil);; the tensor is already copied?
+	  (values tensor nil);; the tensor is alread moved into somewhere?
 	  (with-shape-checkpoint (:moving nil)
 	    (let ((place (if deterministic-p
 			     place ;; place=tensor.variables[n]
-			     (make-tensor (if (scalar-p place)
-					      0
-					      (shape place))
-					  :dtype (dtype place)
-					  :order (order place)))))
+			     (make-input (shape place) nil
+					 :scalar-p (scalar-p place)
+					 :dtype (dtype place)
+					 :order (order place)))))
 	      ;; Forcibly moving them.
-	      (values (cl-waffe2/base-impl:!move place tensor) deterministic-p)))))))
+	      (values (cl-waffe2/base-impl:!move place tensor) t)))))))
 
 (defun detach (tensor &optional (state t))
   (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) state)

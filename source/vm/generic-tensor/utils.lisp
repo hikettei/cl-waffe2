@@ -76,3 +76,20 @@
 	      :dtype (dtype tensor)
 	      :order (order tensor)
 	      :scalar-p (scalar-p tensor)))
+
+(deftype compile-option-t ()
+  `(and keyword
+	(member :fastest :compile-speed :debug :safety)))
+
+(defun compile-option-form (option)
+  (declare (type compile-option-t option))
+  (case option
+    (:fastest
+     `(optimize (speed 3) (safety 0)))
+    (:compile-speed
+     `(optimize (speed 0) (safety 0) (compilation-speed 3)))
+    (:safety
+     `(optimize (safety 3)))
+    (:debug ;; Compiling would be suuuuuper slow
+     `(optimize (safety 3) (debug 3)))))
+

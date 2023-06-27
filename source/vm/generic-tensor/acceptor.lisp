@@ -269,48 +269,54 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (when (null (tensor-backward toplevel))
     (return-from compile-backward-chain))
 
-  ;; Record: at what node, the backward error was occured.
+  ;; with-shape-checkout: at where node, the backward error was occured?
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
     ;; In order to restore tensors' backwards, keep them saving at backwards-tmp.
+
+    ;; The backward function is: g(dout) -> x.grad, y.grad where/dx/dy is a constant parameter. dout is a variable.
     (let* ((outs (apply
 		  ;; (backward self dout dx dy dz ...)
-		  #'cl-waffe2/vm.nodes:backward
-		  (tensor-backward toplevel)	  
+		  ;; -> (backward self dout)
+		  #'cl-waffe2/vm.nodes:backward ;; Here, we trace the definition of backward.
+		  (tensor-backward toplevel)
 		  (make-clone past-dy)
 		  (map 'list #'detach! (tensor-variables toplevel))))
+	   ;; outs ... (values dout-next compiled-backward-function Variable-Mover-Function)
+	   (next-douts  (map 'list #'first  outs))
 	   (out-kernels (map 'list #'second outs))
-	   (next-dys    (map 'list #'first  outs))
 	   (movers      (map 'list #'third outs)))
 
-      `(let (,@(loop for out-kernel in out-kernels
-		     for ndy in next-dys
-		     if out-kernel
-		       collect `(,(tensor-id ndy) (funcall ,out-kernel ,(tensor-id past-dy)))))
-	 (declare (ignorable ,@(loop for out-kernel in out-kernels
-				     for ndy in next-dys
-				     if out-kernel
-				       collect (tensor-id ndy))))
+      ;; Memo: All backward nodes, are ends with MoveTensorNode
+      `(progn
+	 ;; call backward functions as long as the function isn't pruned.
+	 ,@(map 'list #'(lambda (x) (when x `(funcall (the function ,x) ,past-dy))) out-kernels)
 
-	 (progn
-	   ,@(map 'list #'(lambda (x) (when x `(funcall ,x))) movers)
-	   
-	   ;; dx.grad += grad
-	   ,@(loop for next-dy in next-dys
-		   for var in (tensor-variables toplevel)
-		   if (slot-value var 'requires-grad)
-		     collect `(add-grads ,var ,(tensor-id next-dy))
-		   if (and next-dy
-			   (tensor-backward var)
-			   (ancestor-param-p var))
-		     collect (compile-backward-chain var next-dy)))))))
+	 ;; set results where it was
+	 ,@(map 'list #'(lambda (x) (when x `(funcall (the function ,x)))) movers)
+
+	 ;; Explore deeper, or add grads to the parameter
+
+	 ,@(loop for next-dout in next-douts
+		 for var in (tensor-variables toplevel)
+
+		 if (slot-value var 'requires-grad)
+		   collect `(add-grads ,var ,next-dout)
+		 if (and next-dout
+			 (tensor-backward var)
+			 (ancestor-param-p var))
+		   collect (compile-backward-chain var next-dout))))))
 
 
 ;; Toplevel
-(defun compile-forward-kernel (toplevel &key (read-save-for-backward nil))
+(defun compile-forward-kernel (toplevel
+			       &key
+				 (compile-mode :fastest)
+				 (read-save-for-backward nil))
   "
 ## [function] compile-forward-kernel
 "
 
+  (declare (type compile-option-t compile-mode))
   ;; Pruning unused nodes.
   (optimize-computation-node! toplevel :speed 1)
   
@@ -328,9 +334,16 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
 	  inputs)
 
+    ;;(print (length (alexandria:flatten body)))
+
+    ;; set some of options
+    ;; compile-first (declare (optimize (speed 0) (safety 0) (compilation-speed 3)))
+    ;; quality-first (declare (optimize (speed 3) (safety 0)))
+    
     (values
      (compile nil
 	      `(lambda ()
+		 (declare ,(compile-option-form compile-mode))
 		 (map 'list #'state-reset! ',*node-parameters-tmp*)
 		 (with-adjustable-symbols (,@set-input-forms)
 		   ,body)))
