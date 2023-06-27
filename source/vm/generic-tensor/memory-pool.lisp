@@ -39,11 +39,11 @@
 		     (push (cons key value) non-exist-tensors)))
 	     (memory-pool-temporary-rooms pool))
 
-    (dolist (tensor non-exist-tensors)
+    (dolist (tensor exist-tensors)
       (push (format nil "[~a -> ~a]" (car tensor) (temporary-room-shape-first (cdr tensor))) print-elements1)
       (push " | " print-elements1))
 
-    (dolist (tensor exist-tensors)
+    (dolist (tensor non-exist-tensors)
       (push (format nil "[~a -> ~a]" (car tensor) (temporary-room-shape-first (cdr tensor))) print-elements2)
       (push " | " print-elements2))
 
@@ -53,19 +53,20 @@
     
     (mapc
      #'(lambda (print-elements display-name)
-	 (format stream " + [~a] +" display-name)
+	 (format stream display-name)
 	 (format stream "
 ~a"
 		 (with-output-to-string (out)
 		   (dolist (e print-elements) (princ e out)))))
      `(,print-elements1 ,print-elements2)
-     `("Allocated" "Unallocated"))
+     `(" + [Allocated] +" "~% + [Unallocated] +"))
     nil))
 	      
 
 (defun free-current-memory-pool ()
   ;; TODO
   ;; *memory-pool*
+  ;; (maphash ... tensor-delete)
   )
 
 (defmacro with-memory-pool (&body body)
