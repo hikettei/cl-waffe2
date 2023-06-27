@@ -6,10 +6,10 @@
 ;; Copying APIs
 ;; ===============================================================
 
-(defnode (MoveTensorNode (myself dtype)
+(defnode (MoveTensorNode (myself dtype &key (save-for-backward nil))
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
-		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
 		     (let ((dy-out
@@ -53,10 +53,10 @@ On forward:
 
 "))
 
-(defnode (MoveScalarTensorNode (myself)
+(defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
 	  :out-scalar-p t
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
-		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
 	  :backward ((self dout dx dy)
@@ -85,7 +85,7 @@ On forward:
 			      ,x)
 			    ,y)))
 
-(defun !move (place tensor)
+(defun !move (place tensor &key (force nil))
   "
 ## [function] !move
 
@@ -109,14 +109,16 @@ one of: `MoveTensorNode` `ScalarTensorNode`
 
 `tensor[AbstractTensor]` tensor to be referred.
 
+`force[boolean]` If t, the operation is never pruned by cl-waffe2.
+
 ### Output
 
 Unevaluated Copied Tensor."
   (if (and (scalar-p place)
 	   (scalar-p place))
-      (forward (MoveScalarTensorNode) place tensor)
+      (forward (MoveScalarTensorNode :save-for-backward force) place tensor)
       ;; The problem is that: it is unknown whether place or tensor is returned until optimize-computation-node! is called.
-      (forward (MoveTensorNode (dtype place)) place tensor)))
+      (forward (MoveTensorNode (dtype place) :save-for-backward force) place tensor)))
 
 
 (defun !copy (tensor)

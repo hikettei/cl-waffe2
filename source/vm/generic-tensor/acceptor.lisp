@@ -265,7 +265,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 (defun compile-backward-chain (toplevel past-dy)
   "Constructs the computation node for backwards."
   (declare (type AbstractTensor toplevel past-dy))
-    
+  
   (when (null (tensor-backward toplevel))
     (return-from compile-backward-chain))
 
@@ -294,8 +294,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 ;; set results where it was
 	 ,@(map 'list #'(lambda (x) (when x `(funcall (the function ,x)))) movers)
 
-	 ;; Explore deeper, or add grads to the parameter
-
+	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for next-dout in next-douts
 		 for var in (tensor-variables toplevel)
 
@@ -304,7 +303,10 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		 if (and next-dout
 			 (tensor-backward var)
 			 (ancestor-param-p var))
-		   collect (compile-backward-chain var next-dout))))))
+		   collect (progn
+			     (setf (detach-p var) nil)
+			     (setf (detach-p next-dout) nil)
+			     (compile-backward-chain var next-dout)))))))
 
 
 ;; Toplevel
@@ -333,12 +335,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		    if (symbolp shape)
 		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
 	  inputs)
-
-    ;;(print (length (alexandria:flatten body)))
-
-    ;; set some of options
-    ;; compile-first (declare (optimize (speed 0) (safety 0) (compilation-speed 3)))
-    ;; quality-first (declare (optimize (speed 3) (safety 0)))
     
     (values
      (compile nil
@@ -349,6 +345,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		   ,body)))
      *node-parameters-tmp*)))
 
+;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed.
 (defun make-vm-function (toplevel &key (read-save-for-backward nil))
   (optimize-computation-node! toplevel :speed 1)
 
@@ -357,7 +354,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       `(lambda () ,body))))
 
 
-(defun compile-backward-kernel (toplevel)
+(defun compile-backward-kernel (toplevel &key (compile-mode :fastest))
+  (declare (type compile-option-t compile-mode))
   (let* ((out (if (scalar-p toplevel)
 		  (make-tensor 1
 			       :dtype (dtype toplevel)
@@ -368,7 +366,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			       :initial-element 1)))
 	 (body `(lambda ()
 		  (let ((,(tensor-id out) ,out))
-		    (declare (ignorable ,(tensor-id out)))
+		    (declare (ignorable ,(tensor-id out))
+			     ,(compile-option-form compile-mode))
 		    (let ((*no-grad* t))
 		      ,(compile-backward-chain toplevel out))
 		    t))))

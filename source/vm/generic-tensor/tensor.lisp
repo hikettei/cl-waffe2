@@ -688,21 +688,14 @@ Example:
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
+
 (defun set-save-for-backward (tensor)
-  (let ((space (save-for-backward-space tensor)))
+  ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
+  (let ((space-tmp (make-clone tensor)))
+    (setf (save-for-backward-space tensor) tensor)
+    (cl-waffe2/base-impl:!move space-tmp tensor)))
 
-    ;; Update Event: the shape has changed/space is null.
-    (when (or (null space)
-	      (not (equal (shape tensor) (shape space))))
-      (detach! tensor)
-      (let ((fw (let ((*no-grad* t)) (compile-forward-kernel (cl-waffe2/base-impl:!copy-force tensor)))))
-	(setf (detach-p tensor) nil)
-	(setf (save-for-backward-cloner tensor) fw)))
-
-    
-    (setf (save-for-backward-space tensor) (funcall (save-for-backward-cloner tensor)))
-    t))
-
+;; read-save-for-backward is actually working, but the problem is movetensor doesn't tell the variable well.
 (defun read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 

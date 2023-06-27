@@ -365,31 +365,33 @@ Return nil -> ok
 	 (declare (type ,impl-name ,forward-self-name))
 
 	 ;; Enhancement: macroexpand
-	 (flet ((,fw-name-expand (,inputs)
-		  (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
-		    ,@(second forward-body)
-		    `(named-lambda ,',fw-name-vm ,,inputs
-		       (declare (ignorable ,@,inputs))
-		       ,@(loop for input in ,inputs
-			       for state in ',save-for-backward
-			       if (or state
-				      (cl-waffe2/vm.generic-tensor::ancestor-param-p input))
-				 collect `(unless *no-grad*
-					    (set-save-for-backward ,(tensor-id input))))
-		       ,,@(car forward-body)))))
+	 (labels ((,fw-name-expand (,inputs)
+		    (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
+		      ,@(second forward-body)
+
+		      ,@(loop for state in save-for-backward
+			      for input-name in forward-args
+			      if state
+				collect `(when (cl-waffe2/vm.generic-tensor:ancestor-param-p ,input-name)
+					   (unless *no-grad*
+					     (setq ,input-name (set-save-for-backward ,input-name)))))
+		      
+		      `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
+			 (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
+			 ,(map-tree #'(lambda (obj)
+					(typecase obj
+					  (AbstractTensor
+					   (if (find (tensor-id obj) ,inputs :key #'tensor-id)
+					       (tensor-id obj)
+					       obj))
+					  (T obj)))
+				    ,@(car forward-body))))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
 
 	   ;; Forms: Lambda (args) -> outs
-	   (map-tree #'(lambda (obj)
-			 (typecase obj
-			   (AbstractTensor
-			    (if (find (tensor-id obj) ,inputs :key #'tensor-id)
-				(tensor-id obj)
-				obj))
-			   (T obj)))
-		     (,fw-name-expand ,inputs))))
+	   (,fw-name-expand ,inputs)))
        
-
+       
        ;; Backward should be defined at either/both of defnode or/and define-impl. (defnode takes the precendence)
        ,(when backward
 	  `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
