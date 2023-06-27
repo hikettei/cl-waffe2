@@ -105,6 +105,11 @@ Variables:
     (let ((symbols-changed (make-hash-table)))
       (loop for place in (tensor-input-shape input-tensor)
 	    for value in (shape actual-tensor)
+	    if (and (not (symbolp place))
+		    (not (= place value)))
+	      do (error "Can't embody ~a into fixed place, ~a.
+~a and ~a"
+			value place input-tensor actual-tensor)
 	    if (symbolp place)
 	      do (setf (gethash place symbols-changed) value))
 
@@ -114,7 +119,6 @@ Variables:
 	(maphash
 	 #'(lambda (key value)
 	     (let ((max-val (gethash key maxsize)))
-
 	       (when (and (not (null max-val))
 			  (> value max-val))
 		 (error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
@@ -138,8 +142,6 @@ Variables:
        symbols-changed)
 
       t)))
-      
-      
 
 (defun state-reset! (tensor)
   "Resets tensor's result to get next round output."
@@ -175,8 +177,7 @@ Variables:
 	 (when (slot-value tensor 'requires-grad)
 	   (push tensor parameters))
 	 
-	 (when (and (eql (tensor-facet tensor) :input)
-		    (eql (tensor-attribute tensor) :input))
+	 (when (user-input-p tensor)
 	   (setf (gethash (tensor-name tensor) variable-table) tensor))
 
 	 ;; (make-input ... ChainTMPXXX)
@@ -247,20 +248,19 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       (register-variables (tensor-variables toplevel))
 
       ;; Declare undetermined shapes
-      (with-shape-det-form (tensor-variables toplevel)
-	`(let*-ignorable (,@(loop for s in next-states ;; p <- s
-				  for p in out-places
-				  collect `(,p ,s))
-			  ,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
-				  collect `(,(tensor-id v) ,v))
-			  (,(tensor-id toplevel) (progn ,toplevel)))
-	   
-	   ;; The Operation hasn't done yet...
-	   (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
-	     (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
-		   (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+      `(let*-ignorable (,@(loop for s in next-states ;; p <- s
+				for p in out-places
+				collect `(,p ,s))
+			,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
+				collect `(,(tensor-id v) ,v))
+			(,(tensor-id toplevel) (progn ,toplevel)))
+	 
+	 ;; The Operation hasn't done yet...
+	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
+	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
+		 (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
-	   (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))))
+	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 
 (defun compile-backward-chain (toplevel past-dy)
   "Constructs the computation node for backwards."
@@ -310,18 +310,31 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   "
 ## [function] compile-forward-kernel
 "
-  
+
+  ;; Pruning unused nodes.
   (optimize-computation-node! toplevel :speed 1)
   
-  (let ((*node-parameters-tmp*))
-    (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
-      ;; (declare (optimize (speed 3) (safety 0)))
-      (values
-       (compile nil
-		`(lambda ()
-		   (map 'list #'state-reset! ',*node-parameters-tmp*)
-		   ,body))
-       *node-parameters-tmp*))))
+  (let* ((*node-parameters-tmp*)
+	 (body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward))
+	 (inputs (loop for var in *node-parameters-tmp*
+		       if (user-input-p var)
+			 collect var))
+	 (set-input-forms))
+
+    (mapc #'(lambda (input)
+	      (loop for shape in (shape input)
+		    for kth-dim upfrom 0
+		    if (symbolp shape)
+		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
+	  inputs)
+
+    (values
+     (compile nil
+	      `(lambda ()
+		 (map 'list #'state-reset! ',*node-parameters-tmp*)
+		 (with-adjustable-symbols (,@set-input-forms)
+		   ,body)))
+     *node-parameters-tmp*)))
 
 (defun make-vm-function (toplevel &key (read-save-for-backward nil))
   (optimize-computation-node! toplevel :speed 1)
@@ -382,6 +395,13 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 "
   (embody-input (compiled-variables model) input-name actual-value))
 
+(defmethod get-input ((model Compiled-Composite) input-name)
+  "
+## [method] get-input
+
+"
+  (gethash input-name (nodevariables-variables (compiled-variables model))))
+
 (defun build (toplevel
 	      &key (construct-backward? (not *no-grad*)))
 
@@ -402,7 +422,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 ;; TODO  Embody Input
 ;; TODO
 
-;; TopLevelでシンボルを初期化
+;; TopLevelでシンボルを初期化 (OK)
 ;; tensor-vec/memory-poolを更新
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite

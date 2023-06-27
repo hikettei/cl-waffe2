@@ -115,6 +115,9 @@ Set 2 if the operation is matmul for example.
     ;; sizes (for exmaple) = ((100) (100))
     ;; for element-wise operation, whenever row/column major, set stride=1
 
+
+    ;; (THE FIXNUM (* (THE FIXNUM 3) (THE FIXNUM A))) ..
+
     (apply
      function
      (loop for tensor in tensors
@@ -131,69 +134,24 @@ Set 2 if the operation is matmul for example.
 
 Return: (values offsets-place form)"
 
-  `(let ((,offset-name-place (tensor-gensym-list ,tensors))
-	 (used-symbols)
-	 (determine-forms))
-     
-     (mapc #'(lambda (tensor)
-	       (mapc #'(lambda (s)
-			 (when (symbolp s)
-			   (unless (find s used-symbols)
-			     (push s used-symbols))))
-		     (shape tensor)))
-	   ,tensors)
-
-     (mapc #'(lambda (tensor)
-	       (loop for k fixnum upfrom 0
-		     for s in (shape tensor)
-		     if (symbolp s)
-		       do (push `(,s (use-number-one ,s (nth ,k (shape ,tensor)))) determine-forms)))
-	   ,tensors)
-
+  `(let ((,offset-name-place (tensor-gensym-list ,tensors)))
      ;; Initializing Offsets with 0
-     ;; Initializing Symbols (e.g.: a, b ...)
      `(let*-ignorable (,@(loop for name in ,offset-name-place
-			       collect `(,name 0))
-		       ,@(loop for name in used-symbols
-			       collect `(,name))
-		       ,@determine-forms)
-	(locally (declare (type fixnum ,@,offset-name-place ,@used-symbols))
+			       collect `(,name 0)))
+	(locally (declare (type fixnum ,@,offset-name-place))
 	  ,,@body))))
 
 
 (defmacro with-shape-det-form (tensors &body body)
-  "Expands: initializing offsets, determining symbols form
-
-Return: (values offsets-place form)"
-
-  `(let ((used-symbols)
-	 (determine-forms))
-     
+  `(let ((used-symbols))
      (mapc #'(lambda (tensor)
 	       (mapc #'(lambda (s)
 			 (when (symbolp s)
-			   (unless (find s used-symbols)
-			     (push s used-symbols))))
+			   (push s used-symbols)))
 		     (shape tensor)))
 	   ,tensors)
-
-     (mapc #'(lambda (tensor)
-	       (loop for k fixnum upfrom 0
-		     for s in (shape tensor)
-		     if (symbolp s)
-		       do (push `(,s (use-number-one ,s (nth ,k (shape ,tensor)))) determine-forms)))
-	   ,tensors)
-
-     ;; Initializing Offsets with 0
-     ;; Initializing Symbols (e.g.: a, b ...)
-     `(let*-ignorable (,@(loop for name in used-symbols
-			       collect `(,name))
-		       ,@determine-forms)
-	(locally (declare (type fixnum ,@used-symbols))
-	  ;; Register determined symbols
-	  (with-adjustable-symbols (,@(loop for name in used-symbols
-					    collect `(',name ,name)))
-	    ,,@body)))))
+     `(with-let-adjustable-symbols (,@used-symbols)
+	,,@body)))
 
 
 (defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body)
@@ -304,7 +262,8 @@ Return: (values offsets-place form)"
 		    (explore
 		     (1- rest-dim)
 		     offsets-place)))))))
-    
-    (with-expand-init-tmp-form offset-place tensors
-      (explore dims offset-place))))
+
+    (with-shape-det-form tensors
+      (with-expand-init-tmp-form offset-place tensors
+	(explore dims offset-place)))))
 

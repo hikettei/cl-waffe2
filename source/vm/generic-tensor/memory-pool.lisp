@@ -50,7 +50,16 @@ If there's any undetermined one, returns an error (TODO: Add Conditions)"
 		       (error "translate-adjustable-shape: encountered unknown symbol: ~a" s))))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
-  "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function."
+  "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
+
+Usage:
+
+(with-adjustable-symbols (('a 1) ('b 1))
+    (with-let-adjustable-symbols (a b)
+        (print a)
+        (print b)))
+
+"
 
   `(let ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
      (unless (typep ,symbol-value 'fixnum)
@@ -66,4 +75,21 @@ If there's any undetermined one, returns an error (TODO: Add Conditions)"
 		 `(with-adjustable-symbol (,@(car rest-forms))
 		    ,(expand-form (cdr rest-forms))))))
     (expand-form forms)))
+
+(defmacro with-let-adjustable-symbol (symbol-name &body body)
+  `(let ((,symbol-name (gethash ',symbol-name *adjustable-shape-table*)))
+     (declare (type fixnum ,symbol-name)
+	      (ignorable ,symbol-name))
+     ,@body))
+
+(defmacro with-let-adjustable-symbols ((&rest symbol-names) &body body)
+  (labels ((expand (rest-forms)
+	     (if (null rest-forms)
+		 `(progn ,@body)
+		 `(with-let-adjustable-symbol ,(car rest-forms)
+		    ,(expand (cdr rest-forms))))))
+    (expand symbol-names)))
+
+(defun read-symbol (symbol)
+  (gethash symbol *adjustable-shape-table*))
 

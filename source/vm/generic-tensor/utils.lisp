@@ -18,10 +18,13 @@
       #'identity))
 
 (defun lazy* (x y)
+  ;;(format t "lazy*: ~a ~a~%" x y)
   (if (and (typep x 'number)
 	   (typep y 'number))
       (* x y)
-      `(the fixnum (* (the fixnum ,x) (the fixnum ,y)))))
+      `(the fixnum
+	    (* (the fixnum ,x)
+	       (the fixnum ,y)))))
 
 (defun lazy-mulup (&rest args)
   (let ((res 1))
@@ -63,6 +66,10 @@
   (if (numberp a)
       a
       b))
+
+(defun user-input-p (tensor)
+  (and (eql (tensor-facet tensor) :input)
+       (eql (tensor-attribute tensor) :input)))
 
 
 (defun make-clone (tensor)
