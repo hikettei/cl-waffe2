@@ -416,14 +416,15 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		   :compiled-backward (when construct-backward?
 					(compile-backward-kernel toplevel)))))
 
-
-;; TODO: Print-Obj
-;; TODO  Fix Tests
-;; TODO  Embody Input
-;; TODO
-
 ;; TopLevelでシンボルを初期化 (OK)
 ;; tensor-vec/memory-poolを更新
+
+;; TODO:
+;;
+;; 1. Memory-Pool/Tensor-vecを続きやる
+;; 2. Forwardを正しく行う
+;; 3. 適切な場所でSave-For-Backwardが呼び出されているか？Copyが重複していないか？
+;;
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a

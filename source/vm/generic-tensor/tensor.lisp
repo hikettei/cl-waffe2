@@ -258,22 +258,12 @@ Note:
 "
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
-  (if (null (tensor-name tensor))
+  ;; Is it ok?
+  (print
+   (if (or (null (tensor-name tensor))
+	  (vec tensor))
       (vec tensor) ;; tensor is created by male-tensor
-      (if (vec tensor) ;; add: equal size?
-	  (vec tensor)
-	  ;; Fix Allocator
-	  ;; Maybe form below would be deteled
-	  (let ((alloc (if (scalar-p tensor)
-			   (make-tensor
-			    0
-			    :dtype (dtype tensor))
-			   (make-tensor
-			    (translate-adjustable-shape (shape tensor))
-			    :dtype (dtype tensor)
-			    :order (order tensor)))))
-	    (setf (tensor-vec tensor) (vec alloc))
-	    (vec tensor)))))
+      (get-from-memory-pool tensor))))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))

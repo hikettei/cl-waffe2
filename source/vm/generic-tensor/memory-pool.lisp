@@ -6,7 +6,8 @@
 ;;
 
 (defstruct Memory-Pool
-  (temporary-rooms nil :type list))
+  ;; Gc-able temporary-rooms?
+  (temporary-rooms (make-hash-table) :type hash-table))
 
 (defun free-current-memory-pool ()
   
@@ -18,8 +19,12 @@
 
 
 (defstruct (Temporary-Room
-	    (:constructor make-room (input-tensor)))
+	    (:constructor make-room
+		(input-tensor
+		 &aux
+		   (shape-first (shape input-tensor)))))
   ;; Adjustable Tensor Size
+  (shape-first shape-first :type list)
   (cache-tensor input-tensor :type AbstractTensor))
 
 (defmacro with-memory-pool (&body body)
@@ -32,6 +37,51 @@ After the body exists, all the temporary tensors in the pool is freed."
   `(let ((*memory-pool* (make-memory-pool)))
      (unwind-protect (progn ,@body)
        (free-current-memory-pool))))
+
+;; To avoid using equal which is heavy operation, coerce string -> keyword:
+(defun get-mem-pool (key)
+  (declare (type string key))
+  (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms *memory-pool*)))
+
+(defun set-mem-pool (key value)
+  (declare (type string key))
+  (setf (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms *memory-pool*)) value)
+  value)
+
+(defun assure-and-return-room (room tensor)
+  "Checking room's size, returning tensor"
+  (declare (type Temporary-Room room)
+	   (type AbstractTensor tensor)
+	   (optimize (speed 3)))
+  (let ((required-size (translate-adjustable-shape (shape tensor)))
+	(vec (vec (temporary-room-cache-tensor room))))
+    ;; Checking required-size, is done at toplevel.
+    ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
+
+    ;; TODO: Add a new attribute Room: :read-state
+    ;; :read-state is one of: :used :free-now
+    ;; when assure-and-return-room is called:
+    ;; find :free-now and required-size is enough caches, and return it.
+
+    (when (null vec)
+      (setf vec (vec (make-tensor required-size :dtype (dtype tensor) :order (order tensor)))))
+
+    vec))
+
+(defun chaintmp-find-mem-pool (tensor)
+  (declare (type AbstractTensor)
+	   (optimize (speed 3)))
+
+  ;; Assert: The Given Tensor is ChaimTMP
+
+  (let ((place (tensor-name tensor)))
+    (declare (type string place))
+
+    (let ((room (get-mem-pool place)))
+      (if room
+	  (assure-and-return-room room tensor)
+	  (and (set-mem-pool place (make-room tensor)) ;; set and read it
+	       (chaintmp-find-mem-pool tensor))))))
 
 (defun translate-adjustable-shape (shape) ;; tensor-input-shape
   "
@@ -92,4 +142,26 @@ Usage:
 
 (defun read-symbol (symbol)
   (gethash symbol *adjustable-shape-table*))
+
+(defun get-from-memory-pool (tensor)
+  (declare (type AbstractTensor tensor)
+	   (optimize (speed 3)))
+
+  ;; The number of call cases:
+
+  ;;  Much Higher  <->    Low
+  ;;    ChainTMP        ScalarTensor
+  (cond
+    ;; The Tensor is Scalar
+    ((stringp (tensor-name tensor))
+     (chaintmp-find-mem-pool tensor))
+    ((scalar-p tensor)
+     (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
+       (setf (tensor-vec tensor) (vec tmp-tensor))))
+    ;; The Tensor is InputTensor (ChainTMP)
+    ;; (user-input-p tensor) is expensible, so use stringp instead.
+    ((user-input-p tensor) ;; high cost
+     (error "get-from-memory-pool failed: ~a isn't embodied." tensor))
+    (T
+     (error "get-from-memory-pool failed: because the given tensor isn't one of: ScalarTensor InputTensor(ChainTMP)"))))
 
