@@ -262,12 +262,14 @@ Note:
       (vec tensor) ;; tensor is created by male-tensor
       (if (vec tensor) ;; add: equal size?
 	  (vec tensor)
+	  ;; Fix Allocator
+	  ;; Maybe form below would be deteled
 	  (let ((alloc (if (scalar-p tensor)
 			   (make-tensor
 			    0
 			    :dtype (dtype tensor))
 			   (make-tensor
-			    (shape tensor)
+			    (translate-adjustable-shape (shape tensor))
 			    :dtype (dtype tensor)
 			    :order (order tensor)))))
 	    (setf (tensor-vec tensor) (vec alloc))

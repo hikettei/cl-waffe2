@@ -18,7 +18,6 @@
       #'identity))
 
 (defun lazy* (x y)
-  ;;(format t "lazy*: ~a ~a~%" x y)
   (if (and (typep x 'number)
 	   (typep y 'number))
       (* x y)

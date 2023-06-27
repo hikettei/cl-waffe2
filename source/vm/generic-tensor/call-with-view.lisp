@@ -161,7 +161,7 @@ Return: (values offsets-place form)"
 	 (ith (gensym)))
      `(let (,@(loop for stride-place in stride-places ;; (place <- stride)
 		     for tensor in ,tensors
-		     collect `(,stride-place (nth ,,target-dim (tensor-stride ,tensor)))))
+		     collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor))))))
 
 	,@(expand-first-offset-adder
 	   ,tensors

@@ -254,7 +254,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
 				collect `(,(tensor-id v) ,v))
 			(,(tensor-id toplevel) (progn ,toplevel)))
-	 
+
 	 ;; The Operation hasn't done yet...
 	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
