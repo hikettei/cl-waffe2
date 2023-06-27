@@ -87,7 +87,8 @@
   (:export
    #:embody-input
    #:embody-actual-tensor
-   #:build)
+   #:build
+   #:set-input)
 
   ;; Backends / Tensor API
   (:export

@@ -67,7 +67,7 @@
 
 ;; MulNode/DivNode -> LispKernel
 (define-impl (MoveTensorNode :device CPUTensor
-	      :reject-p (supported-dtypes-are 0 :float :double))
+			     :reject-p (supported-dtypes-are 0 :float :double))
 	     :forward ((self x y)
 		       ;; X <- Y
 		       `(progn

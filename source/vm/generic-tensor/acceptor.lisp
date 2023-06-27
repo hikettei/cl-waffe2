@@ -34,50 +34,53 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
   (backward-n-out 0 :type fixnum))
 
 
-;; TODO: Rewrite them.
 (defstruct (NodeVariables
 	    (:constructor make-variable-table
-		(symbols
+		(parameters
+		 symbols
+		 adjustable-symbol-table
 		 variables
 		 tmp-variables)))
-  (symbols symbols :type list)
-  (variables variables :type list)
-  (tmp-variables tmp-variables :type list))
-
-(defstruct (NodeParameters
-	    (:constructor make-node-parameters (parameters)))
-  (parameters parameters :type list))
+  (parameters parameters :type list)
+  (symbols       symbols :type list)   ;; 'a -> current-size 'b -> current-size
+  (adjustable-symbol adjustable-symbol-table :type hash-table) ;; 'a -> max-alloc-size 'b -> max-alloc-size
+  (variables     variables :type hash-table) ;; (make-input `(...) :A)
+  (tmp-variables tmp-variables :type list))  ;; (make-input `(...) nil) i.e.: chaintmp
 
 (defmethod print-object ((node NodeVariables) stream)
-  (let ((syms (nodevariables-symbols node))
-	(vars (nodevariables-variables node))
-	(table (make-print-table)))
+  (let* ((syms  (nodevariables-symbols node))
+ 	 (vars  (nodevariables-variables node)) ;; Hash-Table
+	 (input-keys (alexandria:hash-table-keys vars))
+	 (table (make-print-table)))
     (format
      stream
-     "+= [Computation Node Information] =======+
+     "+= [NodeVariables Information] =======+
 
 Subscripts:
 ~a
 
-Variables
+Variables:
 ~a
 
- - The number of tmp variables: ~a
+ - The number of tmp variables : ~a
+ - The number of parameters    : ~a
 +========================================+" ;; TODO: Print Number of Parameters
      (with-output-to-string (out)
        (loop for k downfrom (length syms) to 0 by 2
 	     if (nth k syms)
-	       do (format out "     [~a -> ~a]~%" (nth k syms)
-			  (or (nth (1+ k) syms) "?"))))
-     
+	       do (format out "     [~a -> ~a, max=~a]~%"
+			  (nth k syms)
+			  (or (nth (1+ k) syms) "?")
+			  (or (gethash (nth k syms) (nodevariables-adjustable-symbol node)) "?"))))
+
      (with-output-to-string (out)
        (let ((first-row)
 	     (second-row))
 	 (push "NAMES" first-row)
 	 (push "SIZE"  second-row)
-	 (loop for k upfrom 0 below (length vars) by 2
-	       do (push (nth k vars) first-row)
-		  (push (shape (nth (1+ k) vars)) second-row))
+	 (loop for k upfrom 0 below (length input-keys)
+	       do (push (nth k input-keys) first-row)
+		  (push (shape (gethash (nth k input-keys) vars)) second-row))
 	 
 	 (mapc #'(lambda (n s)
 		   (addrow! table
@@ -85,63 +88,58 @@ Variables
 					,(format nil "~a" s)))))
 	       (reverse first-row) (reverse second-row))
 	 (render-table table out)))
-     (length (nodevariables-tmp-variables node)))))
+     (length (nodevariables-tmp-variables node))
+     (length (nodevariables-parameters node)))))
 
-(defmethod print-object ((params NodeParameters) stream)
-  (format stream "#S(NODEPARAMETERS~%    :PARAMETERS (omitted)~%    :ntensors ~a)" (length (nodeparameters-parameters params))))
 
-(defun embody-input (variables variable-name tensor)
+;; Rewrite
+(defun embody-input (nodevars variable-name actual-tensor)
   "(embody-input variables :a tensor)"
-  (declare (type NodeVariables variables))
+  (declare (type NodeVariables nodevars))
+  
+  (let ((input-tensor (gethash variable-name (nodevariables-variables nodevars))))
 
-  (let ((input (getf (nodevariables-variables variables) variable-name)))
-    (when (null input)
-      (error "Couldn't find a variable of ~a" variable-name))
+    (when (null input-tensor)
+      (error "The InputTensor named ~a weren't appeared in the computation node" variable-name))
 
     (let ((symbols-changed (make-hash-table)))
-      (loop for place in (tensor-input-shape input)
-	    for val   in (shape tensor)
+      (loop for place in (tensor-input-shape input-tensor)
+	    for value in (shape actual-tensor)
 	    if (symbolp place)
-	      do (setf (gethash place symbols-changed) val))
+	      do (setf (gethash place symbols-changed) value))
 
-      ;; input <- tensor's visible-area
-      (embody-actual-tensor input tensor)
+      ;; Checking if the new size never beyonds memory-pool.
 
-      (maybe-optimize-memory-allocation
-       variables
-       symbols-changed))))
+      (let ((maxsize (nodevariables-adjustable-symbol nodevars)))
+	(maphash
+	 #'(lambda (key value)
+	     (let ((max-val (gethash key maxsize)))
 
-(defun maybe-delete-tensor-vec (tensor)
-  (if (vec tensor)
-      (tensor-delete tensor))
-  (setf (tensor-vec tensor) nil))
+	       (when (and (not (null max-val))
+			  (> value max-val))
+		 (error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
+			key
+			value
+			key
+			max-val))
 
-(defun tensor-update-alloc (tensor name size)
-  (declare (optimize (speed 3))
-	   (type AbstractTensor tensor)
-	   (type symbol name)
-	   (type fixnum size))
-  (let* ((shape    (the list (tensor-input-shape tensor)))
-	 (name-pos (position name shape :test #'eql)))
-    (when name-pos
-      (setf (nth name-pos (slot-value tensor 'orig-shape)) size
-	    (nth name-pos (slot-value tensor 'visible-shape)) size))))
+	       (when (null max-val)
+		 (setf (gethash key maxsize) value))))
+	 symbols-changed))
+      
+      ;; InputTensor <- Actual-Tensor
+      (embody-actual-tensor input-tensor actual-tensor)
 
-(defun maybe-optimize-memory-allocation (variables symbols-changed)
-  (declare (type NodeVariables variables))
+      ;; Apply hash-table
 
-  (let ((var-table (nodevariables-variables variables))
-	(tmp-vars  (nodevariables-tmp-variables variables)))
-    (maphash
-     #'(lambda (key val)
-	 ;; Detects the shape has changed compared with old-one.
-	 (when (not (eql (getf var-table key) val))
-	   (map 'list #'maybe-delete-tensor-vec tmp-vars)
-	   (map 'list #'(lambda (x)
-			  (tensor-update-alloc x key val))
-		tmp-vars)))
-     symbols-changed)
-    t))
+      (maphash
+       #'(lambda (key value)
+	   (setf (getf (nodevariables-symbols nodevars) key) value))
+       symbols-changed)
+
+      t)))
+      
+      
 
 (defun state-reset! (tensor)
   "Resets tensor's result to get next round output."
@@ -150,13 +148,16 @@ Variables
       (setf (statecontainer-forward-result  (tensor-state tensor)) nil
 	    (statecontainer-backward-result (tensor-state tensor)) nil)))
 
-(defvar *node-parameters-tmp* nil)
+(defvar *node-parameters-tmp* nil "An temporary variable to store all the variables used in the computation node.")
 
 (defun construct-variables-table (variables-list)
+  ;; variables-list = *node-parameters-tmp*
   "Returns variable-table where key and value is tensor's name and tensor's pointer."
   (declare (type list variables-list))
-  (let ((variable-table `())
-	(tmp-variable-table)
+  (let ((variable-table (make-hash-table))
+	(tmp-variable-table) ;; All the InputTensor
+	(adjustable-symbol-table (make-hash-table))
+	(parameters `())
 	(symbols `()))
 
     (mapc
@@ -164,19 +165,31 @@ Variables
 	 (let ((shapes (shape tensor)))
 	   (loop for s in shapes
 		 if (symbolp s)
-		   do (setf (getf symbols s) nil)))
+		   do (setf (gethash s adjustable-symbol-table) nil)
+		      (setf (getf symbols s) nil)))
 
 	 ;; tensor-name is keyword -> user-defined
 	 ;; tensor-name is string  -> automatically-generated (assertion make not for users to never declare it)
-	 
-	 (if (typep (tensor-name tensor) 'keyword) ;; user-defined
-	     (setf  (getf variable-table (tensor-name tensor)) tensor))
 
-	 (if (typep (tensor-name tensor) 'string)
-	     (push tensor tmp-variable-table)))
+	 ;; (make-input ... :Train-X)
+	 (when (slot-value tensor 'requires-grad)
+	   (push tensor parameters))
+	 
+	 (when (and (eql (tensor-facet tensor) :input)
+		    (eql (tensor-attribute tensor) :input))
+	   (setf (gethash (tensor-name tensor) variable-table) tensor))
+
+	 ;; (make-input ... ChainTMPXXX)
+	 (when (typep (tensor-name tensor) 'string)
+	   (push tensor tmp-variable-table)))
      variables-list)
 
-    (make-variable-table symbols variable-table tmp-variable-table)))
+    (make-variable-table
+     parameters
+     symbols
+     adjustable-symbol-table
+     variable-table
+     tmp-variable-table)))
 
 (defun map-tree (fn tree)
   (let ((tree (funcall fn tree)))
@@ -187,28 +200,32 @@ Variables
         tree)))
 
 (defun register-variables (list)
+  ;; Registers Parameter/Variables If any.
   (dolist (tensor list)
     (when (typep tensor 'AbstractTensor)
       (unless (find tensor *node-parameters-tmp* :test #'equal)
-	(push tensor *node-parameters-tmp*)))))
+	  (push tensor *node-parameters-tmp*)))))
 
 ;; ==============================================================================
 ;; Kernel Constructor
 ;; ==============================================================================
 
-(defun compile-forward-chain (toplevel &key (read-save-for-backward nil))
+(defun compile-forward-chain (toplevel
+			      &key
+				(read-save-for-backward nil))
   "
 ## [function] compile-forward-chain
 
 Tracing until one of variables reached a toplevel tensor (detach-p is t or no backwards), returning an S-expression which can be compiled.
 "
   (declare (type AbstractTensor toplevel))
-  
+
   (when (or (detach-p toplevel) (null (tensor-state toplevel)))
     (return-from compile-forward-chain
       (if read-save-for-backward
 	  `(or (read-save-for-backward ,toplevel) ,toplevel)
 	  toplevel)))
+
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
@@ -228,20 +245,22 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 
       (register-variables out-places)
       (register-variables (tensor-variables toplevel))
-      
-      `(let*-ignorable (,@(loop for s in next-states ;; p <- s
-				for p in out-places
-				collect `(,p ,s))
-			,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
-				collect `(,(tensor-id v) ,v))
-			(,(tensor-id toplevel) (progn ,toplevel)))
 
-	 ;; The Operation hasn't done yet...
-	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
-	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
-		 (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+      ;; Declare undetermined shapes
+      (with-shape-det-form (tensor-variables toplevel)
+	`(let*-ignorable (,@(loop for s in next-states ;; p <- s
+				  for p in out-places
+				  collect `(,p ,s))
+			  ,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
+				  collect `(,(tensor-id v) ,v))
+			  (,(tensor-id toplevel) (progn ,toplevel)))
+	   
+	   ;; The Operation hasn't done yet...
+	   (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
+	     (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
+		   (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
-	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
+	   (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))))
 
 (defun compile-backward-chain (toplevel past-dy)
   "Constructs the computation node for backwards."
@@ -263,7 +282,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   (next-dys    (map 'list #'first  outs))
 	   (movers      (map 'list #'third outs)))
 
-      (setf (detach-p past-dy) nil)
       `(let (,@(loop for out-kernel in out-kernels
 		     for ndy in next-dys
 		     if out-kernel
@@ -273,15 +291,9 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 				     if out-kernel
 				       collect (tensor-id ndy))))
 
-	 (let (,@(loop for mv in movers
-		       for dy in next-dys
-		       if mv
-			 collect `(,(tensor-id dy) (funcall ,mv))))
-	   (declare (ignorable ,@(loop for mv in movers
-				       for dy in next-dys
-				       if mv
-					 collect (tensor-id dy))))
-
+	 (progn
+	   ,@(map 'list #'(lambda (x) (when x `(funcall ,x))) movers)
+	   
 	   ;; dx.grad += grad
 	   ,@(loop for next-dy in next-dys
 		   for var in (tensor-variables toplevel)
@@ -331,7 +343,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 (body `(lambda ()
 		  (let ((,(tensor-id out) ,out))
 		    (declare (ignorable ,(tensor-id out)))
-		    ,(compile-backward-chain toplevel out)
+		    (let ((*no-grad* t))
+		      ,(compile-backward-chain toplevel out))
 		    t))))
     (compile nil body)))
 
@@ -346,16 +359,28 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
    (compiled-backward :initarg :compiled-backward :type (or null function) :reader compiled-backward)
    (variables :initarg :variables :reader compiled-variables)
-   (parameters :initarg :parameters :reader compiled-parameters)
    (first-call-p :initform nil :accessor composite-first-call-p :type boolean)))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
   ;; Keywords :A A :B B ...
   ;; forward
+  (when inputs
+    (warn "forward: Inputs are ignored"))
+  
   (funcall (compiled-forward model)))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
+
+  (when inputs
+    (warn "backward: Inputs are ignored"))
   (funcall (compiled-backward model)))
+
+(defmethod set-input ((model Compiled-Composite) input-name actual-value)
+  "
+## [method] set-input
+
+"
+  (embody-input (compiled-variables model) input-name actual-value))
 
 (defun build (toplevel
 	      &key (construct-backward? (not *no-grad*)))
@@ -367,27 +392,28 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     ;; Vars - All Variables (including ChainTMP) used in forward.
     (make-instance 'Compiled-Composite
 		   :variables  (construct-variables-table vars)
-		   :parameters (make-node-parameters
-				(loop for v in vars
-				      if (slot-value v 'requires-grad)
-					collect v))
 		   :compiled-forward forward-kernel
 		   :compiled-backward (when construct-backward?
 					(compile-backward-kernel toplevel)))))
 
+
 ;; TODO: Print-Obj
 ;; TODO  Fix Tests
 ;; TODO  Embody Input
-;; TODO  Optimizing constructing backward (いらないところまでTraceしてそ~~)
-;; TODO 
+;; TODO
+
+;; TopLevelでシンボルを初期化
+;; tensor-vec/memory-poolを更新
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a
     backward: ~a
-   (TODO)
+
+~a
 >"
 	  ;; Variables
 	  (compiled-forward model)
-	  (compiled-backward model)))
+	  (compiled-backward model)
+	  (compiled-variables model)))
 
 ;; set variable

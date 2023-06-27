@@ -152,12 +152,48 @@ Return: (values offsets-place form)"
 
      ;; Initializing Offsets with 0
      ;; Initializing Symbols (e.g.: a, b ...)
-     `(let (,@(loop for name in ,offset-name-place
-		    collect `(,name 0))
-	    ,@determine-forms)
-	(declare (ignorable ,@,offset-name-place)
-		 (type fixnum ,@,offset-name-place ,@used-symbols))
-	,,@body)))
+     `(let*-ignorable (,@(loop for name in ,offset-name-place
+			       collect `(,name 0))
+		       ,@(loop for name in used-symbols
+			       collect `(,name))
+		       ,@determine-forms)
+	(locally (declare (type fixnum ,@,offset-name-place ,@used-symbols))
+	  ,,@body))))
+
+
+(defmacro with-shape-det-form (tensors &body body)
+  "Expands: initializing offsets, determining symbols form
+
+Return: (values offsets-place form)"
+
+  `(let ((used-symbols)
+	 (determine-forms))
+     
+     (mapc #'(lambda (tensor)
+	       (mapc #'(lambda (s)
+			 (when (symbolp s)
+			   (unless (find s used-symbols)
+			     (push s used-symbols))))
+		     (shape tensor)))
+	   ,tensors)
+
+     (mapc #'(lambda (tensor)
+	       (loop for k fixnum upfrom 0
+		     for s in (shape tensor)
+		     if (symbolp s)
+		       do (push `(,s (use-number-one ,s (nth ,k (shape ,tensor)))) determine-forms)))
+	   ,tensors)
+
+     ;; Initializing Offsets with 0
+     ;; Initializing Symbols (e.g.: a, b ...)
+     `(let*-ignorable (,@(loop for name in used-symbols
+			       collect `(,name))
+		       ,@determine-forms)
+	(locally (declare (type fixnum ,@used-symbols))
+	  ;; Register determined symbols
+	  (with-adjustable-symbols (,@(loop for name in used-symbols
+					    collect `(',name ,name)))
+	    ,,@body)))))
 
 
 (defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body)
@@ -272,8 +308,3 @@ Return: (values offsets-place form)"
     (with-expand-init-tmp-form offset-place tensors
       (explore dims offset-place))))
 
-
-
-;; Bugs (with-no-grad (proceed (!add (!view (ax+b `(5 5 5) 1.0 0.0) `(2 3) t t) (ax+b `(1 5 5) 1.0 0.0))))
-;; Due to wrong forward pointer?
-;; => make forward/backward constructor

@@ -319,8 +319,9 @@ Use the define-impl macro to give definitions for the node and forward them.
 		  (list
 		   o
 		   `(lambda (,dout-real)
-		      (cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout ,dout-real)
-		      (print (funcall ,g)))
+		      (with-no-grad
+			(cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout ,dout-real)
+			(funcall ,g)))
 		   m)
 		else
 		  collect nil))))))

@@ -228,7 +228,7 @@ Tensors has a two state:
   )
 
 ;; Inline
-(declaim (inline tensor-vec))
+;;(declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
   "
 
@@ -698,7 +698,6 @@ Example:
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
-;; TO FIX: save-for-backward/gradient-adder
 (defun set-save-for-backward (tensor)
   (let ((space (save-for-backward-space tensor)))
 
@@ -710,6 +709,7 @@ Example:
 	(setf (detach-p tensor) nil)
 	(setf (save-for-backward-cloner tensor) fw)))
 
+    
     (setf (save-for-backward-space tensor) (funcall (save-for-backward-cloner tensor)))
     t))
 
