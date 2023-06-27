@@ -66,6 +66,7 @@ After the body exists, all the temporary tensors in the pool is freed."
     (when (null vec)
       (setf vec (vec (make-tensor required-size :dtype (dtype tensor) :order (order tensor)))))
 
+    (setf (tensor-vec tensor) vec)
     vec))
 
 (defun chaintmp-find-mem-pool (tensor)

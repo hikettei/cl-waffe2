@@ -258,12 +258,10 @@ Note:
 "
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
-  ;; Is it ok?
-  (print
-   (if (or (null (tensor-name tensor))
+  (if (or (null (tensor-name tensor))
 	  (vec tensor))
       (vec tensor) ;; tensor is created by male-tensor
-      (get-from-memory-pool tensor))))
+      (get-from-memory-pool tensor)))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))
