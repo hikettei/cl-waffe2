@@ -273,15 +273,16 @@ Note:
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
-      (let ((forward-fn (compile-forward-kernel (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype (grad target))) (grad target) out))))
+      (let* ((node-out (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype (grad target))) (grad target) out))
+	     (forward-fn (compile-forward-kernel node-out)))
 	#'(lambda (new-value)
 	    (assert (equal (shape new-value) shape)
 		    nil
 		    "Attempted to add a new grad: ~a to ~a but failed due to shaping problems."
 		    (shape new-value)
 		    shape)
-	    
 	    (embody-actual-tensor out new-value)
+	    (state-reset! node-out)
 	    (funcall forward-fn)
 	    nil)))))
 
@@ -325,7 +326,7 @@ Note:
 	 nil)))
 
     ;; Setup utils for collecting gradients.
-    (when (getf initargs :requires-grad)
+    (when (slot-value tensor 'requires-grad)
       (if (scalar-p tensor)
 	  (set-grad (make-tensor 0
 				 :dtype (dtype tensor)
@@ -611,7 +612,12 @@ Example:
     (setf (tensor-facet out) :exist)
     (setf (slot-value out 'requires-grad) t)
     (setf (tensor-name out) nil)
-    (view out)))
+    (if (scalar-p tensor)
+	(make-tensor (tensor-vec tensor)
+		     :requires-grad t
+		     :dtype (dtype tensor)
+		     :order (order tensor))
+	(view out))))
 
 
 (defun render-shape (tensor)

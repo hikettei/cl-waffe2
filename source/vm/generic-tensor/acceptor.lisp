@@ -293,10 +293,10 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 ;;(declare (ignorable ,@(loop for var in (tensor-variables toplevel)
 	;;			     for kernel in outs
 	;;			     if kernel collect (tensor-id var))))
-	 ,@(loop for v in (tensor-variables toplevel)
-		 for k in outs
-		 if k
-		   collect `(print ,(tensor-id v)))
+	 ;;,@(loop for v in (tensor-variables toplevel)
+	;;	 for k in outs
+	;;	 if k
+	;;	   collect `(print ,(tensor-id v)))
 	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs
