@@ -114,7 +114,7 @@ Return:
 					 :dtype (dtype place)
 					 :order (order place)))))
 	      ;; Forcibly moving them.
-	      (values (cl-waffe2/base-impl:!move place tensor) t)))))))
+	      (values (cl-waffe2/base-impl:!move place tensor :force t) t)))))))
 
 (defun detach (tensor &optional (state t))
   (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) state)

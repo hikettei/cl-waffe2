@@ -275,8 +275,62 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 (class-name (class-of node))))
 
 
-;; Inputs: dout dx dy dz ...
-;;       InputTensor dx dy dz ...
+;; cl-waffe2 backward semantics:
+;; It is nothing but a topdown AD. (Comments below is just for myself.)
+;; There's a five kinds of operations used in deep-learning (for convinience I call it so)
+;; 1. f(x) (e.g.: sin/cos etc...)
+;; 2. f(x, y) (e.g.: axpy add sub)
+;; 3. f_swap(x, y) (e.g.: gemm. mul, div, save-for-backward=t)
+;; 4. Matmul
+;; 5. View/Broadcsting (e.g.: !view !sum !flexible)
+;;
+;; == [Memo] ================================================
+;;
+;; Keep in-place operation for f_swap(x, y) backward (e.g.: Mul/DivNode), with numerical stability?
+;;
+;; MulTensorNode with Parameter Argument, requires 3 times copy:
+;; 1. x_clone to avoid being parameter destructed
+;; 2. x_save_for_backward to compute backward.
+;;
+;; g(dout, x_input, y_input) = MulTensorNode.backward
+;; = Move(x_place, dout*y_input), Move(y_place, dout*x_input)
+;;
+;; (If x_place were x_input, the second operation won't performed well because x_input is invaild.)
+;;
+;; where x_input is 
+;; 1. x_save_for_backward If corresponding save-for-backward is t.
+;; 2. x                   otherwise (being destructed by other node, just cache place.)
+;; 
+;; where x_place is
+;; 1. Node.variables[0]
+;;
+;; Memo: Separate x_place and x_input
+;; ==========================================================
+;;
+;; in-place operation for f(x, y) backward (e.g.: Axpy)
+;; g(dout, x_in, y_in) = AxpyNode.backward
+;; = Move(x_place, dout), Move(y_place, dout)
+;; Here, x_place/y_place never share the same pointer, that is, it works as a brunching.
+;;
+;; ==========================================================
+;;
+;; one-arg function, f(x) (e.g.: SinNode)
+;; g(dout, x_in) = Move(x_place, cos(x_in)) where x_in = x_save_for_backward, x_place is SinNode.variables[0]
+;;
+;; ==========================================================
+;;
+;; MoveTensorNode's backward
+;;
+;; !move is defined as: Move(place, target)
+;; g(dout, x_in, y_in) = (nil, Move(y_place, y_in))
+;;
+;; y_in = (previous dout)
+;; y_place =
+;; 1. Copy of Node.variables[0] If the argument is Parameter/ExistTensor, which is NEVER allowed to modify.
+;; 2. ChainTMP otherwise
+;;
+
+
 (defmethod backward :around ((node AbstractNode) &rest inputs)
   (when (not *no-grad*)
     (with-no-grad
