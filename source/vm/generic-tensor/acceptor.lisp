@@ -269,6 +269,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     ;; In order to restore tensors' backwards, keep them saving at backwards-tmp.
 
     ;; The backward function is: g(dout) -> x.grad, y.grad where/dx/dy is a constant parameter. dout is a variable.
+    (print (tensor-backward toplevel))
     (let* ((outs (apply
 		  ;; (backward self dout dx dy dz ...)
 		  ;; -> (backward self dout)
@@ -294,10 +295,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		 if (slot-value var 'requires-grad)
 		   collect `(add-grads ,var ,(tensor-id var))
 		 if (and kernel
-			 (tensor-backward var)
 			 (ancestor-param-p var))
 		   collect (compile-backward-chain var var))))))
-
 
 ;; Toplevel
 (defun compile-forward-kernel (toplevel

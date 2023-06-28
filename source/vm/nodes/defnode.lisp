@@ -142,6 +142,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 		      (where t)
 		      (out-scalar-p nil)
 		      (slots nil)
+		      (save-for-backward nil)
 		      (backward nil)
 		      (documentation ""))
 		   &body constructor-body
@@ -231,6 +232,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (defclass ,abstract-name (AbstractNode)
 	 (,@slots
+	  (save-for-backward-space1 :initform ',save-for-backward :reader node-save-for-backward1)
 	  (out-scalar-p :initform ,out-scalar-p :accessor out-scalar-p))
 	 (:documentation
 	  ,(format nil
@@ -354,7 +356,7 @@ Return nil -> ok
        (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
        
        (defclass ,impl-name (,abstract-name)
-	 nil
+	 ((save-for-backward-space2 :initform ',save-for-backward :reader node-save-for-backward2))
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
 				  impl-name
 				  abstract-name
@@ -368,14 +370,6 @@ Return nil -> ok
 	 (labels ((,fw-name-expand (,inputs)
 		    (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 		      ,@(second forward-body)
-
-		      ,@(loop for state in save-for-backward
-			      for input-name in forward-args
-			      if state
-				collect `(when (cl-waffe2/vm.generic-tensor:ancestor-param-p ,input-name)
-					   (unless *no-grad*
-					     (setq ,input-name (set-save-for-backward ,input-name)))))
-		      
 		      `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
 			 (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
 			 ,(map-tree #'(lambda (obj)
@@ -399,6 +393,10 @@ Return nil -> ok
 	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
 		(declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 		,@backward-body))))))
+
+(defun node-save-for-backward (node)
+  (or (node-save-for-backward1 node)
+      (node-save-for-backward2 node)))
 
 (defun declare-local-variables (self &rest tensors)
   ""

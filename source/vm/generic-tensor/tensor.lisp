@@ -689,11 +689,15 @@ Example:
 	  (tensor-backward tensor)))
 
 
+;; FixME:
+;; The Problem is that: after calling forward :around, set-save-for-backward is called.
+;; Chain Rule isn't working well.
 (defun set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
   (let ((space-tmp (make-clone tensor)))
-    (setf (save-for-backward-space tensor) tensor)
-    (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
+    (setf (save-for-backward-space tensor) space-tmp)
+    (cl-waffe2/base-impl:!move space-tmp tensor)))
+
 
 ;; read-save-for-backward is actually working, but the problem is movetensor doesn't tell the variable well.
 (defun read-save-for-backward (tensor)

@@ -123,7 +123,15 @@ Here's a list of reports.
   ;; Update Computation Nodes
 
   ;; TODO: Put warning when !t without matmul
-  (let* ((transition-function     (abstractnode-node node))  ;; original subscript
+  
+  (let* ((save-for-backward (node-save-for-backward node))
+	 (inputs (loop for i in inputs
+		       for k upfrom 0
+		       if (nth k save-for-backward) ;; If T?
+			 collect (set-save-for-backward i)
+		       else
+			 collect i))
+	 (transition-function     (abstractnode-node node))  ;; original subscript
 	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
@@ -374,13 +382,15 @@ inputs      ... inputs called with
 	 ;; out-kernels = (list x.g y.g)
 	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs)))
 
-    (loop for kernel in out-kernels
-	  collect
-	  (when kernel
-	    `(lambda (,dout-place)
-	       (with-no-grad
-		 (cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout-input ,dout-place)
-		 ,(cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))
+    (prog1
+	(loop for kernel in out-kernels
+	      collect
+	      (when kernel
+		`(lambda (,dout-place)
+		   (with-no-grad
+		     (cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout-input ,dout-place)
+		     ,(cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))
+      (map 'list #'(lambda (x) (detach x nil)) inputs))))
 
 ;; the method backward constructs backward function
 ;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp
