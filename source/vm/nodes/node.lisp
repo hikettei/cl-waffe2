@@ -372,13 +372,15 @@ Inputs:
 out-kernels ... nodes of user defined backward
 inputs      ... inputs called with
 "
+
+  ;;FIX: REDUCE COMPILE TIME!
+  
   ;; Collecting x_in
+  (detach dout t)
   (let* ((inputs (loop for input in inputs
 		       collect (detach (or (read-save-for-backward input) input) t)))
 	 ;; Tracing User-Defined-Backward, still not yet compiled.
-	 (dout-input (make-clone dout))
-	 (out-kernels (apply #'backward node dout-input inputs))
-	 (dout-place (gensym "dout"))
+	 (out-kernels (apply #'backward node dout inputs))
 	 ;; out-kernels = (list x.g y.g)
 	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs)))
 
@@ -386,11 +388,11 @@ inputs      ... inputs called with
 	(loop for kernel in out-kernels
 	      collect
 	      (when kernel
-		`(lambda (,dout-place)
-		   (with-no-grad
-		     (cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout-input ,dout-place)
-		     ,(cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))
-      (map 'list #'(lambda (x) (detach x nil)) inputs))))
+		`(named-lambda ,(symb (class-name (class-of node)) '-backward) ()
+		   ,(with-no-grad
+		      (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))
+      (detach dout t)
+      (map 'list #'(lambda (x) (detach x t)) inputs))))
 
 ;; the method backward constructs backward function
 ;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp

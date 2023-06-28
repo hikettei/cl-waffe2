@@ -71,8 +71,8 @@
        (eql (tensor-attribute tensor) :input)))
 
 
-(defun make-clone (tensor)
-  (make-input (shape tensor) nil
+(defun make-clone (tensor &optional name)
+  (make-input (shape tensor) (or name nil)
 	      :dtype (dtype tensor)
 	      :order (order tensor)
 	      :scalar-p (scalar-p tensor)))

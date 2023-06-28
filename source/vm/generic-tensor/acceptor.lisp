@@ -211,7 +211,7 @@ Variables:
 ;; Kernel Constructor
 ;; ==============================================================================
 
-(defun compile-forward-chain (toplevel)
+(defun compile-forward-chain (toplevel &key (stop-me nil))
   "
 ## [function] compile-forward-chain
 
@@ -219,15 +219,19 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 "
   (declare (type AbstractTensor toplevel))
 
-  (when (or (detach-p toplevel) (null (tensor-state toplevel)))
+  (when (or stop-me (null (tensor-state toplevel)))
     (return-from compile-forward-chain toplevel))
+
+  (when (detach-p toplevel)
+    ;; After reading 
+    (setq stop-me t))
 
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
 
-    (let ((next-states (map 'list #'compile-forward-chain vars))
+    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
       ;;
@@ -269,7 +273,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     ;; In order to restore tensors' backwards, keep them saving at backwards-tmp.
 
     ;; The backward function is: g(dout) -> x.grad, y.grad where/dx/dy is a constant parameter. dout is a variable.
-    (print (tensor-backward toplevel))
     (let* ((outs (apply
 		  ;; (backward self dout dx dy dz ...)
 		  ;; -> (backward self dout)
@@ -282,13 +285,18 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       ;; Rewrite
       
       ;; Memo: All backward nodes, are ends with MoveTensorNode
+      
       `(let (,@(loop for var in (tensor-variables toplevel)
 		     for kernel in outs
 		     if kernel
-		       collect `(,(tensor-id var) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
-	 (declare (ignorable ,@(loop for var in (tensor-variables toplevel)
-				     for kernel in outs
-				     if kernel collect (tensor-id var))))
+		       collect `(,(tensor-id var) (funcall (the function ,kernel)))))
+	 ;;(declare (ignorable ,@(loop for var in (tensor-variables toplevel)
+	;;			     for kernel in outs
+	;;			     if kernel collect (tensor-id var))))
+	 ,@(loop for v in (tensor-variables toplevel)
+		 for k in outs
+		 if k
+		   collect `(print ,(tensor-id v)))
 	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs
