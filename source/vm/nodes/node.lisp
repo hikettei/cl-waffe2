@@ -330,56 +330,66 @@ Use the define-impl macro to give definitions for the node and forward them.
 ;; 2. ChainTMP otherwise
 ;;
 
+(defun adjust-bw-place (bw-node place)
+  "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
+  (when bw-node
+    (if (movetensor-p (tensor-backward bw-node))
+	bw-node
+	(with-shape-checkpoint (:moving nil)
+	  (cl-waffe2/base-impl:!move place bw-node :force t)))))
 
+(defun expand-backward (node dout &rest inputs)
+  "
+## [function] expand-backward
+
+Constructs an backward function of the given node, with inputs.
+
+Returns an lambda-function(dout) (not being compiled) with following the template below.
+
+[dout_input] [x_input] [y_input] <- x_input/y_input is involved by compiling, because what tensor to use is determined when compiling time.
+
+    |            |           |
+   [ User Defined Backward Ops ]
+                 |
+      (values ∂out/∂x ∂out/∂y )
+                 |
+  [Move(x_in, ∂out/∂x)], [Move(y_in, ∂out/∂y)] (If the User-Defined-Backward Ops is ends with MoveTensorNode, this form is ignored.)
+
+Lambda-Function:
+Input : dout-past
+Output: NIL
+
+Inputs:
+
+out-kernels ... nodes of user defined backward
+inputs      ... inputs called with
+"
+  ;; Collecting x_in
+  (let* ((inputs (loop for input in inputs
+		       collect (detach (or (read-save-for-backward input) input) t)))
+	 ;; Tracing User-Defined-Backward, still not yet compiled.
+	 (dout-input (make-clone dout))
+	 (out-kernels (apply #'backward node dout-input inputs))
+	 (dout-place (gensym "dout"))
+	 ;; out-kernels = (list x.g y.g)
+	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs)))
+
+    (loop for kernel in out-kernels
+	  collect
+	  (when kernel
+	    `(lambda (,dout-place)
+	       (with-no-grad
+		 (cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout-input ,dout-place)
+		 ,(cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))
+
+;; the method backward constructs backward function
+;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp
 (defmethod backward :around ((node AbstractNode) &rest inputs)
+  (declare (ignore inputs))
   (when (not *no-grad*)
     (with-no-grad
       (with-shape-checkpoint (:backward node)
-	(let* ((dout (car inputs))
-	       (moveplist)
-	       (out-kernels (multiple-value-list (call-next-method)))
-	       (out-kernels (loop for out in out-kernels
-				  for in  in (cdr inputs)
-				  for k upfrom 0
-				  if out
-				    collect (multiple-value-bind (res mv)
-						(!maybe-move in out :deterministic-p (= (1- (length (cdr inputs))) k))
-					      (push mv moveplist)
-					      res)
-				  else
-				    collect (and (push nil moveplist) nil)
-				  finally (setq moveplist (reverse moveplist))))
-	       (compiled-g (map 'list #'(lambda (x) (when x (cl-waffe2/vm.generic-tensor:make-vm-function x :read-save-for-backward t))) out-kernels))
-	       (movers (loop for v   in (cdr inputs)
-			     for out in out-kernels
-			     for mv? in moveplist
-			     if (and out mv?)
-			       collect (prog1
-					   ;; Var <- Var.Grad
-					   (cl-waffe2/vm.generic-tensor:make-vm-function (cl-waffe2/base-impl:!move (detach v t) (detach out t)))
-					 (detach v nil)
-					 (detach out nil))
-			     else
-			       collect nil)))
-	  ;; dout should be make-input
-	  ;; g(dout, dx, dy, ..., dn) -> dx.grad, gy.grad, ..., dn.grad
-	  (loop with dout-real = (gensym "dout")
-	        for g in compiled-g
-		for o in out-kernels
-		for m in movers
-		;; g(x) * n
-		if g
-		  collect
-		  (list
-		   o
-		   `(lambda (,dout-real)
-		      (with-no-grad
-			(cl-waffe2/vm.generic-tensor:embody-actual-tensor ,dout ,dout-real)
-			;; print (g)
-			(funcall ,g)))
-		   m)
-		else
-		  collect nil))))))
+	(multiple-value-list (call-next-method))))))
 
 (defmethod backward ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))

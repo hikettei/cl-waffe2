@@ -35,6 +35,7 @@
    #:composite-where
    #:forward
    #:backward
+   #:expand-backward
    #:node-passed-p
    #:ignore-shape-error
    #:out-scalar-p

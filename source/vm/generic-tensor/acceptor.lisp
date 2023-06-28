@@ -211,9 +211,7 @@ Variables:
 ;; Kernel Constructor
 ;; ==============================================================================
 
-(defun compile-forward-chain (toplevel
-			      &key
-				(read-save-for-backward nil))
+(defun compile-forward-chain (toplevel)
   "
 ## [function] compile-forward-chain
 
@@ -222,17 +220,14 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (declare (type AbstractTensor toplevel))
 
   (when (or (detach-p toplevel) (null (tensor-state toplevel)))
-    (return-from compile-forward-chain
-      (if read-save-for-backward
-	  `(or (read-save-for-backward ,toplevel) ,toplevel)
-	  toplevel)))
+    (return-from compile-forward-chain toplevel))
 
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
 
-    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :read-save-for-backward read-save-for-backward)) vars))
+    (let ((next-states (map 'list #'compile-forward-chain vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
       ;;
@@ -263,7 +258,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 
 (defun compile-backward-chain (toplevel past-dy)
-  "Constructs the computation node for backwards."
+  "Constructs the computation node for backwards recursively."
   (declare (type AbstractTensor toplevel past-dy))
   
   (when (null (tensor-backward toplevel))
@@ -277,43 +272,37 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (let* ((outs (apply
 		  ;; (backward self dout dx dy dz ...)
 		  ;; -> (backward self dout)
-		  #'cl-waffe2/vm.nodes:backward ;; Here, we trace the definition of backward.
+		  #'cl-waffe2/vm.nodes:expand-backward
+		  ;; Here, we trace the definition of backward.
 		  (tensor-backward toplevel)
-		  (make-clone past-dy)
-		  (map 'list #'detach! (tensor-variables toplevel))))
-	   ;; outs ... (values dout-next compiled-backward-function Variable-Mover-Function)
-	   (next-douts  (map 'list #'first  outs))
-	   (out-kernels (map 'list #'second outs))
-	   (movers      (map 'list #'third outs)))
+		  past-dy
+		  (tensor-variables toplevel))))
 
+      ;; Rewrite
+      
       ;; Memo: All backward nodes, are ends with MoveTensorNode
-      `(progn
-	 ;; call backward functions as long as the function isn't pruned.
-	 ,@(map 'list #'(lambda (x) (when x `(funcall (the function ,x) ,past-dy))) out-kernels)
-
-	 ;; set results where it was
-	 ,@(map 'list #'(lambda (x) (when x `(funcall (the function ,x)))) movers)
-
+      `(let (,@(loop for var in (tensor-variables toplevel)
+		     for kernel in outs
+		     if kernel
+		       collect `(,(tensor-id var) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
+	 (declare (ignorable ,@(loop for var in (tensor-variables toplevel)
+				     for kernel in outs
+				     if kernel collect (tensor-id var))))
 	 ;; Explore deeper, or ,if any, add grads to the parameter
-	 ,@(loop for next-dout in next-douts
-		 for var in (tensor-variables toplevel)
-
+	 ,@(loop for var in (tensor-variables toplevel)
+		 for kernel in outs
 		 if (slot-value var 'requires-grad)
-		   collect `(add-grads ,var ,next-dout)
-		 if (and next-dout
+		   collect `(add-grads ,var ,(tensor-id var))
+		 if (and kernel
 			 (tensor-backward var)
 			 (ancestor-param-p var))
-		   collect (progn
-			     (setf (detach-p var) nil)
-			     (setf (detach-p next-dout) nil)
-			     (compile-backward-chain var next-dout)))))))
+		   collect (compile-backward-chain var var))))))
 
 
 ;; Toplevel
 (defun compile-forward-kernel (toplevel
 			       &key
-				 (compile-mode :fastest)
-				 (read-save-for-backward nil))
+				 (compile-mode :fastest))
   "
 ## [function] compile-forward-kernel
 "
@@ -323,7 +312,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (optimize-computation-node! toplevel :speed 1)
   
   (let* ((*node-parameters-tmp*)
-	 (body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward))
+	 (body (compile-forward-chain toplevel))
 	 (inputs (loop for var in *node-parameters-tmp*
 		       if (user-input-p var)
 			 collect var))
@@ -345,13 +334,12 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		   ,body)))
      *node-parameters-tmp*)))
 
-;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed.
-(defun make-vm-function (toplevel &key (read-save-for-backward nil))
+;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed. <- Do it at toplevel
+(defun make-vm-function (toplevel)
   (optimize-computation-node! toplevel :speed 1)
-
+  
   (let ((*node-parameters-tmp*))
-    (let ((body (compile-forward-chain toplevel :read-save-for-backward read-save-for-backward)))
-      `(lambda () ,body))))
+    (compile-forward-chain toplevel)))
 
 
 (defun compile-backward-kernel (toplevel &key (compile-mode :fastest))
@@ -365,6 +353,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			       :order (order toplevel)
 			       :initial-element 1)))
 	 (body `(lambda ()
+		  ;; TODO: with-adjustable-symbols, with-no-grad,
 		  (let ((,(tensor-id out) ,out))
 		    (declare (ignorable ,(tensor-id out))
 			     ,(compile-option-form compile-mode))
