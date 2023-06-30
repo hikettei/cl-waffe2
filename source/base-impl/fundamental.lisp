@@ -6,10 +6,11 @@
 ;; Copying APIs
 ;; ===============================================================
 
-(defnode (MoveTensorNode (myself dtype)
+(defnode (MoveTensorNode (myself dtype &key (save-for-backward nil))
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
-		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+	  
 	  :backward ((self dout dx dy)
 		     (let ((dy-out
 			     (if (and
@@ -20,10 +21,10 @@
 		       ;; X <- Y
 		       (values
 			(if (eql (tensor-attribute dx) :chain)
-			    (!move dx dout)
+			    (!move dx dout :force t)
 			    dout)
 			(if (eql (tensor-attribute dy) :chain)
-			    (!move dy dy-out)
+			    (!move dy dy-out :force t)
 			    dy-out))))
 	  :documentation "
 Move all the visible elements of `B` into visible areas of `A`.
@@ -52,10 +53,10 @@ On forward:
 
 "))
 
-(defnode (MoveScalarTensorNode (myself)
+(defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
 	  :out-scalar-p t
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
-		  (save-for-backward :initform nil :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
+		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
 	  :backward ((self dout dx dy)
@@ -65,13 +66,15 @@ On forward:
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout))))
+		       
 		       ;; dx/dy never shares pointer, so just moving to dx/dy is enough i guess.
+		       
 		       (values
 			(if (eql (tensor-attribute dx) :chain)
-			    (!move dx dout)
+			    (!move dx dout :force t)
 			    dout)
 			(if (eql (tensor-attribute dy) :chain)
-			    (!move dy dy-out)
+			    (!move dy dy-out :force t)
 			    dy-out))))))
 
 (define-impl (MoveScalarTensorNode :device ScalarTensor)
@@ -82,7 +85,7 @@ On forward:
 			      ,x)
 			    ,y)))
 
-(defun !move (place tensor)
+(defun !move (place tensor &key (force nil))
   "
 ## [function] !move
 
@@ -106,13 +109,17 @@ one of: `MoveTensorNode` `ScalarTensorNode`
 
 `tensor[AbstractTensor]` tensor to be referred.
 
+`force[boolean]` If t, the operation is never pruned by cl-waffe2.
+
 ### Output
 
 Unevaluated Copied Tensor."
   (if (and (scalar-p place)
 	   (scalar-p place))
-      (forward (MoveScalarTensorNode) place tensor)
-      (forward (MoveTensorNode (dtype place)) place tensor)))
+      (forward (MoveScalarTensorNode :save-for-backward force) place tensor)
+      ;; The problem is that: it is unknown whether place or tensor is returned until optimize-computation-node! is called.
+      (forward (MoveTensorNode (dtype place) :save-for-backward force) place tensor)))
+
 
 (defun !copy (tensor)
   "
@@ -164,10 +171,11 @@ Output: Tensor[AbstractTensor]"
 The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
 
 This function is also used to adjust memory alignment of tensor."
-  (let* ((out (make-input (shape tensor) nil
-			  :scalar-p (scalar-p tensor)
-			  :dtype (dtype tensor)
-			  :order (order tensor)))
+  (let* ((out (make-tensor (if (scalar-p tensor)
+			       0
+			       (shape tensor))
+			   :dtype (dtype tensor)
+			   :order (order tensor)))
 	 (res (!move out tensor)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
@@ -180,9 +188,9 @@ This function is also used to adjust memory alignment of tensor."
 ;; Both !view and !reshape has the same format of arguments:
 ;; (function tensor &rest args)
 
-(defnode (ViewTensorNode (myself subscripts result1 before1)
+(defnode (ViewTensorNode (myself subscripts result before)
 	  :slots ((subscripts :initarg :subscripts))
-	  :where (A[result] B[before] -> A[result] where result = result1 before = before1))
+	  :where (A[result] B[before] -> A[result]))
   (setf (ignore-shape-error myself) t))
 
 (define-impl (ViewTensorNode)
@@ -483,33 +491,35 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 (defnode (ProceedNode (myself &key (measure-time nil))
 	  :where (A[~] -> A[~])
-	  :slots ((measure-time :initarg :measure-time :reader measure-time-p)
-		  (backward :accessor proceed-backward-f)
-		  (result   :accessor proceed-result))
+	  :slots ((measure-time   :initarg :measure-time :reader measure-time-p)
+		  (compiled-model :accessor proceed-compiled-model)
+		  (result         :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
 
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (multiple-value-bind (fw bw vars params) (build x)
-			 (declare (ignore vars params))
-			 ;; Vars/Params will be tracked by other build.
-			 (setf (proceed-backward-f self) bw)
+		       (let ((compiled-model (build x)))
+			 (setf (proceed-compiled-model self) compiled-model)
 			 (if (measure-time-p self)
-			     (setf (proceed-result self) (time (funcall fw)))
-			     (setf (proceed-result self) (funcall fw)))
+			     (progn
+			       ;; TODO
+			       ;; Display Both: First-Time-Call/Second-Time-Call
+			       (forward compiled-model)
+			       (setf (proceed-result self) (time (forward compiled-model))))
+			     (setf (proceed-result self) (forward compiled-model)))
 			 ;; Tell cl-waffe2 VM the returned value's type
 			 (setf (out-scalar-p self) (scalar-p (proceed-result self)))
 			 `(progn ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
-			(let ((bw (proceed-backward-f self)))
+			(let ((compiled-model (proceed-compiled-model self)))
 			  (values
 			   (with-instant-kernel dout
 			     `(and
 			       ,(if (measure-time-p self)
-				    `(time (funcall ,bw))
-				    `(funcall ,bw))
+				    `(time (backward ,compiled-model))
+				    `(backward ,compiled-model))
 			       ;; Delete Gradients.
 			       (!mul 0 ,dout)))))))
 
@@ -572,10 +582,9 @@ The function proceed-backward calls forward and backwrd of the tensor.
 `T` (which indicates backward is succeed)
 "
   (declare (type AbstractTensor tensor))
-  (multiple-value-bind (fw bw vars params) (build tensor)
-    (declare (ignore vars params))
-    (funcall fw)
-    (funcall bw)))
+  (let ((compiled-model (build tensor)))
+    (forward compiled-model)
+    (backward compiled-model)))
 
 ;; ===============================================================
 ;; Broadcast APIs

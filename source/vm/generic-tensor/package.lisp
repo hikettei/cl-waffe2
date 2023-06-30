@@ -78,13 +78,18 @@
    )
 
   (:export
+   #:make-vm-function
+   #:compile-forward-chain)
+  (:export
    #:movetensor-p
    #:shape-equal)
 
   (:export
    #:embody-input
    #:embody-actual-tensor
-   #:build)
+   #:build
+   #:set-input
+   #:get-input)
 
   ;; Backends / Tensor API
   (:export

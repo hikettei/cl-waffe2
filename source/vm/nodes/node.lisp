@@ -123,7 +123,15 @@ Here's a list of reports.
   ;; Update Computation Nodes
 
   ;; TODO: Put warning when !t without matmul
-  (let* ((transition-function     (abstractnode-node node))  ;; original subscript
+  
+  (let* ((save-for-backward (node-save-for-backward node))
+	 (inputs (loop for i in inputs
+		       for k upfrom 0
+		       if (nth k save-for-backward) ;; If T?
+			 collect (set-save-for-backward i)
+		       else
+			 collect i))
+	 (transition-function     (abstractnode-node node))  ;; original subscript
 	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
@@ -274,11 +282,133 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 node
 	 (class-name (class-of node))))
 
+
+;; cl-waffe2 backward semantics:
+;; It is nothing but a topdown AD. (Comments below is just for myself.)
+;; There's a five kinds of operations used in deep-learning (for convinience I call it so)
+;; 1. f(x) (e.g.: sin/cos etc...)
+;; 2. f(x, y) (e.g.: axpy add sub)
+;; 3. f_swap(x, y) (e.g.: gemm. mul, div, save-for-backward=t)
+;; 4. Matmul
+;; 5. View/Broadcsting (e.g.: !view !sum !flexible)
+;;
+;; == [Memo] ================================================
+;;
+;; Keep in-place operation for f_swap(x, y) backward (e.g.: Mul/DivNode), with numerical stability?
+;;
+;; MulTensorNode with Parameter Argument, requires 3 times copy:
+;; 1. x_clone to avoid being parameter destructed
+;; 2. x_save_for_backward to compute backward.
+;;
+;; g(dout, x_input, y_input) = MulTensorNode.backward
+;; = Move(x_place, dout*y_input), Move(y_place, dout*x_input)
+;;
+;; (If x_place were x_input, the second operation won't performed well because x_input is invaild.)
+;;
+;; where x_input is 
+;; 1. x_save_for_backward If corresponding save-for-backward is t.
+;; 2. x                   otherwise (being destructed by other node, just cache place.)
+;; 
+;; where x_place is
+;; 1. Node.variables[0]
+;;
+;; Memo: Separate x_place and x_input
+;; ==========================================================
+;;
+;; in-place operation for f(x, y) backward (e.g.: Axpy)
+;; g(dout, x_in, y_in) = AxpyNode.backward
+;; = Move(x_place, dout), Move(y_place, dout)
+;; Here, x_place/y_place never share the same pointer, that is, it works as a brunching.
+;;
+;; ==========================================================
+;;
+;; one-arg function, f(x) (e.g.: SinNode)
+;; g(dout, x_in) = Move(x_place, cos(x_in)) where x_in = x_save_for_backward, x_place is SinNode.variables[0]
+;;
+;; ==========================================================
+;;
+;; MoveTensorNode's backward
+;;
+;; !move is defined as: Move(place, target)
+;; g(dout, x_in, y_in) = (nil, Move(y_place, y_in))
+;;
+;; y_in = (previous dout)
+;; y_place =
+;; 1. Copy of Node.variables[0] If the argument is Parameter/ExistTensor, which is NEVER allowed to modify.
+;; 2. ChainTMP otherwise
+;;
+
+(defun adjust-bw-place (bw-node place)
+  "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
+  (when bw-node
+    (if (movetensor-p (tensor-backward bw-node))
+	bw-node
+	(with-shape-checkpoint (:moving nil)
+	  (let ((out (cl-waffe2/base-impl:!move place bw-node :force t)))
+	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
+		out
+		bw-node))))))
+
+(defun expand-backward (node dout &rest inputs-in)
+  "
+## [function] expand-backward
+
+Constructs an backward function of the given node, with inputs.
+
+Returns an lambda-function(dout) (not being compiled) with following the template below.
+
+[dout_input] [x_input] [y_input] <- x_input/y_input is involved by compiling, because what tensor to use is determined when compiling time.
+
+    |            |           |
+   [ User Defined Backward Ops ]
+                 |
+      (values ∂out/∂x ∂out/∂y )
+                 |
+  [Move(x_in, ∂out/∂x)], [Move(y_in, ∂out/∂y)] (If the User-Defined-Backward Ops is ends with MoveTensorNode, this form is ignored.)
+
+Lambda-Function:
+Input : dout-past
+Output: NIL
+
+Inputs:
+
+out-kernels ... nodes of user defined backward
+inputs      ... inputs called with
+"
+
+  ;;FIX: REDUCE COMPILE TIME!
+  
+  ;; Collecting x_in
+  (detach dout t)
+  (let* ((inputs (loop for input in inputs-in
+		       collect (detach (or (read-save-for-backward input) input) t)))
+	 ;; Tracing User-Defined-Backward, still not yet compiled.
+	 (out-kernels (apply #'backward node dout inputs))
+	 (dout-place (gensym "dout"))
+	 ;; out-kernels = (list x.g y.g)
+	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs-in)))
+
+    (prog1
+	(loop for kernel in out-kernels
+	      collect
+	      (when kernel
+		`(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
+		   (cl-waffe2/vm.generic-tensor:embody-actual-tensor
+		    ,dout
+		    ,dout-place)
+		   ,(with-no-grad
+		      (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))
+      (detach dout t)
+      (map 'list #'(lambda (x) (detach x t)) inputs))))
+
+;; the method backward constructs backward function
+;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp
 (defmethod backward :around ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))
   (when (not *no-grad*)
     (with-no-grad
-      (multiple-value-list (call-next-method)))))
+      (with-shape-checkpoint (:backward node)
+	(multiple-value-list (call-next-method))))))
 
 (defmethod backward ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))

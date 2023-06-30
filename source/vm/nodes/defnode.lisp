@@ -142,6 +142,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 		      (where t)
 		      (out-scalar-p nil)
 		      (slots nil)
+		      (save-for-backward nil)
 		      (backward nil)
 		      (documentation ""))
 		   &body constructor-body
@@ -231,6 +232,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (defclass ,abstract-name (AbstractNode)
 	 (,@slots
+	  (save-for-backward-space1 :initform ',save-for-backward :reader node-save-for-backward1)
 	  (out-scalar-p :initform ,out-scalar-p :accessor out-scalar-p))
 	 (:documentation
 	  ,(format nil
@@ -333,7 +335,8 @@ Return nil -> ok
 	 (forward-body  (multiple-value-list (parse-body (cdr forward))))
 	 (backward-body (cdr backward))
 	 (impl-name (subnode-name abstract-name device))
-	 (fw-name (gensym "FW")))
+	 (fw-name-expand (symb abstract-name device '-expand))
+	 (fw-name-vm     (symb abstract-name device '-vm-function)))
     
     (eval-when (:compile-toplevel :load-toplevel :execute)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
@@ -353,7 +356,7 @@ Return nil -> ok
        (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
        
        (defclass ,impl-name (,abstract-name)
-	 nil
+	 ((save-for-backward-space2 :initform ',save-for-backward :reader node-save-for-backward2))
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
 				  impl-name
 				  abstract-name
@@ -364,26 +367,25 @@ Return nil -> ok
 	 (declare (type ,impl-name ,forward-self-name))
 
 	 ;; Enhancement: macroexpand
-	 (flet ((,fw-name (,inputs)
-		  (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
-		    ,@(second forward-body)
-		    `(lambda ,,inputs
-		       ,@(loop for input in ,inputs
-			       for state in ',save-for-backward
-			       if (and state
-				       (cl-waffe2/vm.generic-tensor::ancestor-param-p input))
-				 collect `(unless *no-grad*
-					    (set-save-for-backward ,(tensor-id input))))
-		       ,,@(car forward-body)))))
+	 (labels ((,fw-name-expand (,inputs)
+		    (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
+		      ,@(second forward-body)
+		      `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
+			 (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
+			 ,(map-tree #'(lambda (obj)
+					(typecase obj
+					  (AbstractTensor
+					   (if (find (tensor-id obj) ,inputs :key #'tensor-id)
+					       (tensor-id obj)
+					       obj))
+					  (T obj)))
+				    ,@(car forward-body))))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
-	   (compile nil
-		    (map-tree #'(lambda (obj)
-				  (typecase obj
-				    (AbstractTensor (tensor-id obj))
-				    (T obj)))
-			      (,fw-name ,inputs)))))
-       
 
+	   ;; Forms: Lambda (args) -> outs
+	   (,fw-name-expand ,inputs)))
+       
+       
        ;; Backward should be defined at either/both of defnode or/and define-impl. (defnode takes the precendence)
        ,(when backward
 	  `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
@@ -391,6 +393,10 @@ Return nil -> ok
 	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
 		(declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
 		,@backward-body))))))
+
+(defun node-save-for-backward (node)
+  (or (node-save-for-backward1 node)
+      (node-save-for-backward2 node)))
 
 (defun declare-local-variables (self &rest tensors)
   ""

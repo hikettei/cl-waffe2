@@ -26,14 +26,16 @@
 	(insert "The InputTensor named with a keyword is called `not-embodied tensor`, and can be changed its `vec` with `embody-input`"))
       
       ;; with-example
-      
+
+      #|
       (with-doc 'embody-input 'function
 	(with-examples
 	  "(setq out (!add (randn `(10 10)) (make-input `(a 10) :x)))"
 	  "(with-build (fw bw vars params) out
             (embody-input vars :x (randn `(10 10))) ;; :X = (randn `(10 10))
             (funcall fw))"))
-
+      |#
+      
       ;; with-example      
       (with-doc 'build 'function
 	(with-examples

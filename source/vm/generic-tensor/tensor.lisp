@@ -228,7 +228,7 @@ Tensors has a two state:
   )
 
 ;; Inline
-(declaim (inline tensor-vec))
+;;(declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
   "
 
@@ -258,20 +258,10 @@ Note:
 "
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3) (safety 0)))
-  (if (null (tensor-name tensor))
+  (if (or (null (tensor-name tensor))
+	  (vec tensor))
       (vec tensor) ;; tensor is created by male-tensor
-      (if (vec tensor) ;; add: equal size?
-	  (vec tensor)
-	  (let ((alloc (if (scalar-p tensor)
-			   (make-tensor
-			    0
-			    :dtype (dtype tensor))
-			   (make-tensor
-			    (shape tensor)
-			    :dtype (dtype tensor)
-			    :order (order tensor)))))
-	    (setf (tensor-vec tensor) (vec alloc))
-	    (vec tensor)))))
+      (get-from-memory-pool tensor)))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))
@@ -283,7 +273,8 @@ Note:
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
-      (let ((forward-fn (compile-forward-kernel (cl-waffe2/base-impl:A+=B (grad target) out))))
+      (let* ((node-out (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype (grad target))) (grad target) out))
+	     (forward-fn (compile-forward-kernel node-out)))
 	#'(lambda (new-value)
 	    (assert (equal (shape new-value) shape)
 		    nil
@@ -291,6 +282,7 @@ Note:
 		    (shape new-value)
 		    shape)
 	    (embody-actual-tensor out new-value)
+	    (state-reset! node-out)
 	    (funcall forward-fn)
 	    nil)))))
 
@@ -334,7 +326,7 @@ Note:
 	 nil)))
 
     ;; Setup utils for collecting gradients.
-    (when (getf initargs :requires-grad)
+    (when (slot-value tensor 'requires-grad)
       (if (scalar-p tensor)
 	  (set-grad (make-tensor 0
 				 :dtype (dtype tensor)
@@ -536,13 +528,14 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	  "Can't reference tensors which doesn't have a existing vec.")
   (setf (aref (tensor-vec tensor) index) new-value))
 
+;; input <- actual
 (defun embody-actual-tensor (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor). (Pointers are shared.)"
   (declare (type AbstractTensor input-tensor actual-tensor))
 
-  (assert (eql (tensor-facet input-tensor) :input)
-	  nil
-	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
+  ;;(assert (eql (tensor-facet input-tensor) :input)
+  ;;	  nil
+  ;;	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
 
   (assert (vec actual-tensor)
 	  nil
@@ -552,14 +545,15 @@ If you've created a new backend with having different ptr-type (can't be accesse
 	     (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
-  
+
+  ;; Offsets?
   (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
-	
-	(slot-value input-tensor 'visible-shape)
-	(compute-visible-shape
-	 (slot-value actual-tensor 'orig-shape)
-	 (tensor-view actual-tensor)))
+	(tensor-view input-tensor) (tensor-view actual-tensor)
+	(tensor-stride input-tensor) (tensor-stride actual-tensor)
+	(tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
+
+	)
   t)
 
 (defun view (tensor &rest subscripts)
@@ -619,7 +613,13 @@ Example:
   (let ((out (cl-waffe2/base-impl:proceed tensor)))
     (setf (tensor-facet out) :exist)
     (setf (slot-value out 'requires-grad) t)
-    (view out)))
+    (setf (tensor-name out) nil)
+    (if (scalar-p tensor)
+	(make-tensor (tensor-vec tensor)
+		     :requires-grad t
+		     :dtype (dtype tensor)
+		     :order (order tensor))
+	(view out))))
 
 
 (defun render-shape (tensor)
@@ -696,23 +696,20 @@ Example:
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
-;; TO FIX: save-for-backward/gradient-adder
+
+;; FixME:
+;; The Problem is that: after calling forward :around, set-save-for-backward is called.
 (defun set-save-for-backward (tensor)
-  (let ((space (save-for-backward-space tensor)))
+  ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
+  (let ((space-tmp (make-clone tensor)))
+    ;;(setf (save-for-backward-space tensor) tensor)
+    (let ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
+      (setf (save-for-backward-space result) tensor)
+      ;; result = space-tmp
+      result)))
 
-    ;; Update Event: the shape has changed/space is null.
-    (when (or (null space)
-	      (not (equal (shape tensor) (shape space))))
-      (detach! tensor)
-      (multiple-value-bind (fw bw vars pms)
-	  (let ((*no-grad* t)) (compile-forward-kernel (cl-waffe2/base-impl:!copy-force tensor)))
-	(declare (ignore bw vars pms))
-	(setf (detach-p tensor) nil)
-	(setf (save-for-backward-cloner tensor) fw)))
-    
-    (setf (save-for-backward-space tensor) (funcall (save-for-backward-cloner tensor)))
-    t))
 
+;; read-save-for-backward is actually working, but the problem is movetensor doesn't tell the variable well.
 (defun read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 

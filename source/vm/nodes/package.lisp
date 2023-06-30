@@ -24,6 +24,7 @@
 		#:order
 		#:dtype
 		#:make-statecontainer
+		#:tensor-projected-p
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
@@ -35,6 +36,7 @@
    #:composite-where
    #:forward
    #:backward
+   #:expand-backward
    #:node-passed-p
    #:ignore-shape-error
    #:out-scalar-p

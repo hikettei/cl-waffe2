@@ -5,6 +5,8 @@
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
 
+(define-modify-macro multf (&optional (number 1)) *)
+
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))
@@ -19,7 +21,9 @@
   (if (and (typep x 'number)
 	   (typep y 'number))
       (* x y)
-      `(the fixnum (* (the fixnum ,x) (the fixnum ,y)))))
+      `(the fixnum
+	    (* (the fixnum ,x)
+	       (the fixnum ,y)))))
 
 (defun lazy-mulup (&rest args)
   (let ((res 1))
@@ -56,4 +60,36 @@
 		  ,(expand-forms (cdr rest-forms)))
 	       `(progn ,@body))))
     (expand-forms forms)))
+
+(defun use-number-one (a b)
+  (if (numberp a)
+      a
+      b))
+
+(defun user-input-p (tensor)
+  (and (eql (tensor-facet tensor) :input)
+       (eql (tensor-attribute tensor) :input)))
+
+
+(defun make-clone (tensor &optional name)
+  (make-input (shape tensor) (or name nil)
+	      :dtype (dtype tensor)
+	      :order (order tensor)
+	      :scalar-p (scalar-p tensor)))
+
+(deftype compile-option-t ()
+  `(and keyword
+	(member :fastest :compile-speed :debug :safety)))
+
+(defun compile-option-form (option)
+  (declare (type compile-option-t option))
+  (case option
+    (:fastest
+     `(optimize (speed 3) (safety 0)))
+    (:compile-speed
+     `(optimize (speed 0) (safety 0) (compilation-speed 3)))
+    (:safety
+     `(optimize (safety 3)))
+    (:debug ;; Compiling would be suuuuuper slow
+     `(optimize (safety 3) (debug 3)))))
 

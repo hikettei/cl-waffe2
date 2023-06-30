@@ -26,8 +26,10 @@
 	       (:file "vm/nodes/package")
 	       (:file "base-impl/package")
 	       (:file "vm/generic-tensor/view")
-	       
+	       (:file "vm/generic-tensor/call-with-view")
+	       (:file "vm/generic-tensor/memory-pool")
 
+	       
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/acceptor")
 	       
