@@ -344,9 +344,12 @@ Use the define-impl macro to give definitions for the node and forward them.
     (if (movetensor-p (tensor-backward bw-node))
 	bw-node
 	(with-shape-checkpoint (:moving nil)
-	  (cl-waffe2/base-impl:!move place bw-node :force t)))))
+	  (let ((out (cl-waffe2/base-impl:!move place bw-node :force t)))
+	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
+		out
+		bw-node))))))
 
-(defun expand-backward (node dout &rest inputs)
+(defun expand-backward (node dout &rest inputs-in)
   "
 ## [function] expand-backward
 
@@ -377,18 +380,26 @@ inputs      ... inputs called with
   
   ;; Collecting x_in
   (detach dout t)
-  (let* ((inputs (loop for input in inputs
+  (let* ((inputs (loop for input in inputs-in
 		       collect (detach (or (read-save-for-backward input) input) t)))
 	 ;; Tracing User-Defined-Backward, still not yet compiled.
 	 (out-kernels (apply #'backward node dout inputs))
+	 (dout-place (gensym "dout"))
 	 ;; out-kernels = (list x.g y.g)
-	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs)))
+	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs-in)))
 
     (prog1
 	(loop for kernel in out-kernels
 	      collect
 	      (when kernel
-		`(named-lambda ,(symb (class-name (class-of node)) '-backward) ()
+		`(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
+		   (print "Backward")
+		   (print ,dout)
+		   (print ,dout-place)
+		   (print "+++++++")
+		   (cl-waffe2/vm.generic-tensor:embody-actual-tensor
+		    ,dout
+		    ,dout-place)
 		   ,(with-no-grad
 		      (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))
       (detach dout t)

@@ -17,14 +17,19 @@
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (!copy dout))))
+				 (let ((k (!copy dout)))
+				   (with-instant-kernel k
+				     `(progn
+					(print "INSTANT_KERNEL")
+					(print ,k)
+					,k))))))
 		       ;; X <- Y
 		       (values
 			(if (eql (tensor-attribute dx) :chain)
-			    (!move dx dout)
+			    (!move dx dout :force t)
 			    dout)
 			(if (eql (tensor-attribute dy) :chain)
-			    (!move dy dy-out)
+			    (!move dy dy-out :force t)
 			    dy-out))))
 	  :documentation "
 Move all the visible elements of `B` into visible areas of `A`.
@@ -71,10 +76,10 @@ On forward:
 		       
 		       (values
 			(if (eql (tensor-attribute dx) :chain)
-			    (!move dx dout)
+			    (!move dx dout :force t)
 			    dout)
 			(if (eql (tensor-attribute dy) :chain)
-			    (!move dy dy-out)
+			    (!move dy dy-out :force t)
 			    dy-out))))))
 
 (define-impl (MoveScalarTensorNode :device ScalarTensor)

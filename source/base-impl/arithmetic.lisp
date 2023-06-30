@@ -50,13 +50,17 @@ X\\gets{X ~a Y}
 " document1 document2 document1))))))
   (define-arithmetic-node AddNode "AddNode" "+"
     ((self dout dx dy)
+     ;; forward: next = x + y
+     ;; dx = x, dy = y
      (values (!move dx dout) (!move dy dout))))
   (define-arithmetic-node SubNode "SubNode" "-"
     ((self dout dx dy)
      (values (!move dx dout) (!move dy (!mul -1 dout)))))
   (define-arithmetic-node MulNode "MulNode" "*"
     ((self dout dx dy)
-     (values (!mul dout dy) (!mul dout dx))))
+     (values
+      (!mul dout dy)
+      (!mul dout dx))))
   (define-arithmetic-node DivNode "DivNode" "/"
     ((self dout dx dy)
      ;; ∂/∂x = 1/x

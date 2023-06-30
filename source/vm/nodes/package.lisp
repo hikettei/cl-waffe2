@@ -24,6 +24,7 @@
 		#:order
 		#:dtype
 		#:make-statecontainer
+		#:tensor-projected-p
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
