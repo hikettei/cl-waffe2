@@ -17,12 +17,7 @@
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (let ((k (!copy dout)))
-				   (with-instant-kernel k
-				     `(progn
-					(print "INSTANT_KERNEL")
-					(print ,k)
-					,k))))))
+				 (!copy dout))))
 		       ;; X <- Y
 		       (values
 			(if (eql (tensor-attribute dx) :chain)

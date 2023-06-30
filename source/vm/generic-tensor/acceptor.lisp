@@ -291,48 +291,18 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       `(let (,@(loop for var in (tensor-variables toplevel)
 		     for kernel in outs
 		     if kernel
-		       collect `(,(tensor-id var) (progn (print "========================") (print (funcall (print (the function ,kernel)) (print ,(tensor-id past-dy))))))))
-	 ;; A is being destructed!
-	 ;; SinNode -> MoveTensorへの移動がうまくいっていない？
+		       collect `(,(tensor-id var) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
 	 (declare (ignorable ,@(loop for var in (tensor-variables toplevel)
 				     for kernel in outs
 				     if kernel collect (tensor-id var))))
-
-	#|
-	 (format t "
-++++++++++++++++++++++
-Node: ~a
-
-~a
-->
-Variables: ~a~%=====~%"
-		 ,(tensor-backward toplevel)
-		 ,toplevel
-		 ,(with-output-to-string (out)
-		    (dolist (m (tensor-variables toplevel))
-		      (princ m out)
-	 (format out "~%"))))
-	 |#
-	 
-	 #|
-	 ,@(loop for v in (tensor-variables toplevel)
-	 for k in outs
-		 if k
-		   collect `(progn
-			      (print ,(slot-value v 'requires-grad))
-			      (print ,v)
-	 (print ,(tensor-id v))))
-	 |#
 	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs
 		 if (slot-value var 'requires-grad)
-		   collect `(add-grads ,var (print ,(tensor-id var)))
+		   collect `(add-grads ,var ,(tensor-id var))
 		 if (and kernel
 			 (ancestor-param-p var))
-		   collect (compile-backward-chain var var)
-
-		 )))))
+		   collect (compile-backward-chain var var))))))
 
 ;; Toplevel
 (defun compile-forward-kernel (toplevel

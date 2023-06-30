@@ -393,10 +393,6 @@ inputs      ... inputs called with
 	      collect
 	      (when kernel
 		`(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
-		   (print "Backward")
-		   (print ,dout)
-		   (print ,dout-place)
-		   (print "+++++++")
 		   (cl-waffe2/vm.generic-tensor:embody-actual-tensor
 		    ,dout
 		    ,dout-place)
