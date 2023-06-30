@@ -83,14 +83,14 @@ Set 2 if the operation is matmul for example.
 	       for tensor in tensors
 	       collect
 	       ;; Iterate for kernel-dim
-	       (loop for target-dim
+	       (loop for target-dim-n
 		     upfrom target-dim
 		       below (+ rest-dims target-dim)
 		     collect (make-viewinstruction
 			      (nth kth-tensor offsets-place)
-			      (nth target-dim (shape tensor))
-			      (let ((stride (nth target-dim (tensor-stride tensor)))
-				    (view (subscript-view (nth target-dim (tensor-view tensor)))))
+			      (nth target-dim-n (shape tensor))
+			      (let ((stride (nth target-dim-n (tensor-stride tensor)))
+				    (view (subscript-view (nth target-dim-n (tensor-view tensor)))))
 				(lazy* stride (compute-stepby view))))))))
 
 (defun expand-call-with-view-flatten
@@ -142,6 +142,17 @@ Return: (values offsets-place form)"
 	  ,,@body))))
 
 
+(defmacro with-update-offset-place (offset-name-place tensors &body body &aux (tmp-space (gensym)))
+  ""
+  `(let ((,tmp-space ,offset-name-place)
+	 (,offset-name-place (tensor-gensym-list ,tensors)))
+     `(let*-ignorable (,@(loop for name in ,offset-name-place
+			       for past-value in ,tmp-space
+			       collect `(,name ,past-value)))
+	(locally (declare (type fixnum ,@,offset-name-place))
+	  ,,@body))))
+
+
 (defmacro with-shape-det-form (tensors &body body)
   `(let ((used-symbols))
      (mapc #'(lambda (tensor)
@@ -152,7 +163,6 @@ Return: (values offsets-place form)"
 	   ,tensors)
      `(with-let-adjustable-symbols (,@used-symbols)
 	,,@body)))
-
 
 (defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body)
   ;; Set Strides At Runtime
@@ -216,7 +226,6 @@ Return: (values offsets-place form)"
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
-	       
 	       (return-from explore
 		 (expand-call-with-view-flatten
 		  function
@@ -241,27 +250,39 @@ Return: (values offsets-place form)"
 	       (cond
 		 ((<= rest-dim at-least-dim)
 		  ;; funcall form
-		  (expand-funcall-with-view
-		   function
-		   tensors
-		   offsets-place
-		   target-dim
-		   rest-dim))
+		  (with-update-offset-place offsets-place tensors
+		    (let ((stride-places (tensor-gensym-list tensors)))
+		      `(let (,@(loop for stride-place in stride-places
+				     for tensor in tensors
+				     collect `(,stride-place (nth ,target-dim (list ,@(tensor-stride tensor))))))
+			 ,@(expand-first-offset-adder
+			    tensors
+			    offsets-place
+			    stride-places
+			    start-points)
+			 ,(expand-funcall-with-view
+			   function
+			   tensors
+			   offsets-place
+			   target-dim
+			   rest-dim)))))
 		 ((and axis-determined-p
 		       (<= (the fixnum *unroll-threshold*) (the fixnum (car end-points))))
 
 		  ;; Currently disabled
-		  (with-expanding-explore-form
-		      (tensors offsets-place target-dim start-points end-points)
-		    (explore
-		     (1- rest-dim)
-		     offsets-place)))
+		  (with-update-offset-place offsets-place tensors
+		    (with-expanding-explore-form
+			(tensors offsets-place target-dim start-points end-points)
+		      (explore
+		       (1- rest-dim)
+		       offsets-place))))
 		 (T
-		  (with-expanding-explore-form
-		      (tensors offsets-place target-dim start-points end-points)
-		    (explore
-		     (1- rest-dim)
-		     offsets-place)))))))
+		  (with-update-offset-place offsets-place tensors
+		    (with-expanding-explore-form
+			(tensors offsets-place target-dim start-points end-points)
+		      (explore
+		       (1- rest-dim)
+		       offsets-place))))))))
 
     (with-shape-det-form tensors
       (with-expand-init-tmp-form offset-place tensors

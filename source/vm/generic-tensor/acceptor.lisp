@@ -307,7 +307,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 ;; Toplevel
 (defun compile-forward-kernel (toplevel
 			       &key
-				 (compile-mode :fastest))
+				 (compile-mode :default))
   "
 ## [function] compile-forward-kernel
 "
@@ -349,7 +349,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
        ,(compile-forward-chain toplevel))))
 
 
-(defun compile-backward-kernel (toplevel &key (compile-mode :fastest))
+(defun compile-backward-kernel (toplevel &key (compile-mode :default))
   (declare (type compile-option-t compile-mode))
   (let* ((out (if (scalar-p toplevel)
 		  (make-tensor 1
