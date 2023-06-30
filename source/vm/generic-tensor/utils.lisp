@@ -79,11 +79,13 @@
 
 (deftype compile-option-t ()
   `(and keyword
-	(member :fastest :compile-speed :debug :safety)))
+	(member :default :fastest :compile-speed :debug :safety)))
 
 (defun compile-option-form (option)
   (declare (type compile-option-t option))
   (case option
+    (:default
+     `(optimize (speed 3) (safety 1)))
     (:fastest
      `(optimize (speed 3) (safety 0)))
     (:compile-speed

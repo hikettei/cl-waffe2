@@ -250,21 +250,22 @@ Return: (values offsets-place form)"
 	       (cond
 		 ((<= rest-dim at-least-dim)
 		  ;; funcall form
-		  (let ((stride-places (tensor-gensym-list tensors)))
-		    `(let (,@(loop for stride-place in stride-places
-				   for tensor in tensors
-				   collect `(,stride-place (nth ,target-dim (list ,@(tensor-stride tensor))))))
-		       ,@(expand-first-offset-adder
-			  tensors
-			  offsets-place
-			  stride-places
-			  start-points)
-		       ,(expand-funcall-with-view
-			 function
-			 tensors
-			 offsets-place
-			 target-dim
-			 rest-dim))))
+		  (with-update-offset-place offsets-place tensors
+		    (let ((stride-places (tensor-gensym-list tensors)))
+		      `(let (,@(loop for stride-place in stride-places
+				     for tensor in tensors
+				     collect `(,stride-place (nth ,target-dim (list ,@(tensor-stride tensor))))))
+			 ,@(expand-first-offset-adder
+			    tensors
+			    offsets-place
+			    stride-places
+			    start-points)
+			 ,(expand-funcall-with-view
+			   function
+			   tensors
+			   offsets-place
+			   target-dim
+			   rest-dim)))))
 		 ((and axis-determined-p
 		       (<= (the fixnum *unroll-threshold*) (the fixnum (car end-points))))
 
