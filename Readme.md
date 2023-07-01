@@ -132,9 +132,9 @@ Second Goal -> FastMathKernel (with AVX512, AVX2)
            (build (!sum result1)) ;; Applying JIT, waffe2 optimizes the computation node, memory-allocation, thread scheduling, etc...
 	   )))))
 
-(multiple-value-bind (fw bw vars params) (build-kernel)
-    (time (funcall fw))
-    (time (funcall bw)))
+(let ((compiled-model (build-kernel)))
+    (time (forward  compiled-model))
+    (time (backward compiled-model)))
 ...
 ```
 
