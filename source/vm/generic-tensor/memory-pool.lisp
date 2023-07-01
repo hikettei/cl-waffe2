@@ -7,7 +7,7 @@
 
 (defstruct Memory-Pool
   ;; Gc-able temporary-rooms?
-  (temporary-rooms (tg:make-weak-hash-table :weakness :key-or-value) :type hash-table))
+  (temporary-rooms (make-hash-table) :type hash-table))
 
 (defparameter *memory-pool* (make-memory-pool) "Memory-Pool is a place to store caching tensors.")
 
@@ -86,7 +86,7 @@ After the body exists, all the temporary tensors in the pool is freed."
 
 (defun set-mem-pool (key value)
   (declare (type string key))
-  (tg:finalize value #'(lambda () (remhash key (memory-pool-temporary-rooms *memory-pool*))))
+  ;;(tg:finalize value #'(lambda () (remhash key (memory-pool-temporary-rooms *memory-pool*))))
   
   (setf (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms *memory-pool*)) value)
   value)
