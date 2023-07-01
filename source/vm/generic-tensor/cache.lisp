@@ -174,7 +174,7 @@ Reading *kernel-storeroom*, the function expands the form below.
   `(,(kernel-name kernel-function) ,@inputs))
 
 (defmacro call-kernel (kernel-function &rest inputs)
-  `(if (compiled-kernel-cache-p ,kernel-function)
-       (call-cache-fn ,kernel-function ,@inputs)
-       (funcall-kernel ,kernel-function ,@inputs)))
+  (if (compiled-kernel-cache-p kernel-function)
+      `(call-cache-fn ,kernel-function ,@inputs)
+      `(funcall-kernel ,kernel-function ,@inputs)))
 
