@@ -32,8 +32,7 @@
 ;; We store such like functions to reduce compile-time.
 ;;
 
-;; 1. Create a LUT to store compiled-s-expression.
-
+;; 1. Create a LUT to store generated and reusable s-expression.
 ;; ==================================================================
 ;; A template form of compiled cl-waffe2 programs:
 ;; (labels ((SinNode-CPUTensor-3D () ;; Storeroom of compiled kernels used
@@ -43,12 +42,15 @@
 ;;             ...
 ;;           ))
 ;;
-;; (forward/backward networks continues)
+;; (forward/backward networks continues) <- Place SinNode-CPUTensor-3D for example.
 ;; )
 ;; ==================================================================
 
-(defvar *kernel-storeroom* nil "An storeroom to record all kernels used in compiling time.")
+;; What I want to do?: the compiling time of (!sin (!sin (!sin x))) and (!sin x) should be approximately the same, because they're working on the same code ignoring indicating pointer.
 
+(defvar *kernel-storeroom* nil "An storeroom to record all kernels used in compiling time.") ;; Corresponds to: (labels ((SinNode-... )) ... )
+
+;; An unit of compiled funciton.
 (defstruct Compiled-Kernel
   (name nil :type symbol)            ;; SinNode-CPUTENSOR
   (body nil :type list)              ;; (named-lambda ... () ...)
