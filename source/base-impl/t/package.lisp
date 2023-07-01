@@ -42,12 +42,13 @@
 	  ,@(map 'list #'(lambda (dtype)
 			   `(test ,(symb ', name '- dtype '- backend)
 			      (is (with-dtype ,dtype
-				    (let ((result (progn ,,@body)))
-				      (if (eql result t)
-					  t
-					  (if (eql result :backward)
-					      (error "the result of backward is invaild")
-					      (error "the result of forward is invaild"))))))))
+				    (with-memory-pool
+				      (let ((result (progn ,,@body)))
+					(if (eql result t)
+					    t
+					    (if (eql result :backward)
+						(error "the result of backward is invaild")
+						(error "the result of forward is invaild")))))))))
 		 ',(case op-type
 		     (:sparse *sparse-types*)
 		     (:dense  *dense-types*)

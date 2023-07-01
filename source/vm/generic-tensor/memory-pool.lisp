@@ -20,6 +20,7 @@
 		   (shape-first (shape input-tensor)))))
   ;; Adjustable Tensor Size
   (shape-first shape-first :type list)
+  (size (apply #'* (shape input-tensor)) :type fixnum)
   (cache-tensor input-tensor :type AbstractTensor))
 
 (defun print-current-memory-pool (&key (stream t))
@@ -95,7 +96,7 @@ After the body exists, all the temporary tensors in the pool is freed."
   (declare (type Temporary-Room room)
 	   (type AbstractTensor tensor)
 	   (optimize (speed 3)))
-  (let ((required-size (translate-adjustable-shape (shape tensor)))
+  (let ((required-size (apply #'* (translate-adjustable-shape (shape tensor))))
 	(vec (vec (temporary-room-cache-tensor room))))
     ;; Checking required-size, is done at toplevel.
     ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
@@ -105,9 +106,20 @@ After the body exists, all the temporary tensors in the pool is freed."
     ;; when assure-and-return-room is called:
     ;; find :free-now and required-size is enough caches, and return it.
 
-    (when (null vec)
-      (setf vec (vec (make-tensor required-size :dtype (dtype tensor) :order (order tensor)))))
+    (when (or
+	   (null vec)
+	   (> (the fixnum required-size) (temporary-room-size room)))
+      (setf (temporary-room-size room) required-size)
+      (setf vec (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
 
+    #|
+    ;; 4 debugging
+    (unless (<= (the fixnum required-size) (temporary-room-size room))
+      (error "Required size is too small! ~a is allocated but ~a is required!"
+	     (temporary-room-size room)
+    required-size))
+    |#
+    
     (setf (tensor-vec tensor) vec)
     vec))
 
@@ -196,11 +208,11 @@ Usage:
   ;;    ChainTMP        ScalarTensor
   (cond
     ;; The Tensor is Scalar
-    ((stringp (tensor-name tensor))
-     (chaintmp-find-mem-pool tensor))
     ((scalar-p tensor)
      (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
        (setf (tensor-vec tensor) (vec tmp-tensor))))
+    ((stringp (tensor-name tensor))
+     (chaintmp-find-mem-pool tensor))
     ;; The Tensor is InputTensor (ChainTMP)
     ;; (user-input-p tensor) is expensible, so use stringp instead.
     ((user-input-p tensor) ;; high cost

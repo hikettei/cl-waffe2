@@ -256,11 +256,10 @@ Note:
 
 2. this function is setfable
 "
-  (declare (type AbstractTensor tensor)
-	   (optimize (speed 3) (safety 0)))
+  (declare (type AbstractTensor tensor))
   (if (or (null (tensor-name tensor))
 	  (vec tensor))
-      (vec tensor) ;; tensor is created by male-tensor
+      (vec tensor) ;; tensor is created by make-tensor
       (get-from-memory-pool tensor)))
 
 (defun (setf tensor-vec) (new-value tensor)
