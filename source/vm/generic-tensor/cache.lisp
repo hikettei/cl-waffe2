@@ -1,7 +1,24 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; Not used anymore?
+;; cache.lisp is used to reuse the result of **call-with-view** in compling time, which consists larger part of generated code, and most reusable part.
+
+;; =======================================================================
+;; Goal: `3 Layers MLP's compiling time of forward and backward` << `5sec`.
+
+;; Compiling time with cache.lisp is approximated as:
+;; ```
+;; O((the number of kernel types used in nodes))
+;; ```
+;; while without cache.lisp:
+;; ```
+;; O((the number of operation))
+;; ```
+;; =======================================================================
+
+;; the number of kernel types used in nodes <-> compiling time of kernels in *kernel-storeroom*
+
+;; **This Parameter isn't used anymore?**
 (defparameter *cache-directory* "~/.cache/cl-waffe2/")
 
 ;; The file cache.lisp provides an optimized kernel compiler for acceptor.lisp
@@ -63,7 +80,7 @@ TensorViewNameN depicts the path call-with-view traced.
 "
   (flet ((template (&optional dim)
 	   (if dim
-	       (symb ;; backendname+dtypename
+	       (symb ;; {->(DIM)-BackendName[Dype]}
 		'{
 		(intern (format nil "->(~a)-" dim))
 		(class-name (class-of tensor))
@@ -71,7 +88,7 @@ TensorViewNameN depicts the path call-with-view traced.
 		(intern (symbol-name (dtype tensor)))
 		']
 		'})
-	       (symb ;; <BackendName[Dtype]>
+	       (symb ;; {BackendName[Dtype]}
 		'{
 		(class-name (class-of tensor))
 		'[
@@ -90,10 +107,23 @@ TensorViewNameN depicts the path call-with-view traced.
 		 (return-from trace-loop)
 	    else
 	      do (push (template dim) name-list))
-      (apply #'symb name-list))))
+      ;; call-with-view traces following
+      ;; n-1 n-2 ... 2 1 0th dim.
+      (apply #'symb (reverse name-list)))))
 
-(defun kernel-name (tensors)
+(defun kernel-name (kernel-name kernel-dim tensors)
 
+  ;; 1. compute reductable-p
+  ;; 2.
+  ;; TODO: call-with-view generates the name.
+  ;; LUTableなものは、展開式にcall-with-viewが含まれているもの
+  ;; forwardの展開中にcall-with-viewが呼び出される
+  ;; -> *call-with-view-traced*にたどった経路を保存する
+  ;; -> そこからカーネル名を生成
+  ;; -> 
+
+  ;; :use-lut tをdefine-implに追加する
+  
   )
 ;; &rest kernel-name
 
