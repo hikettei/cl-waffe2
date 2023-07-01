@@ -337,7 +337,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
      (compile nil
 	      `(lambda ()
 		 (declare ,(compile-option-form compile-mode))
-		 (map 'list #'state-reset! ',*node-parameters-tmp*)
+		 ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
 		 ,(place-cached-kernels
 		   `(with-adjustable-symbols (,@set-input-forms)
 		      ,body))))
