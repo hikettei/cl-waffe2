@@ -42,8 +42,8 @@
 				do (setq all-p (and (= (vref (grad a) i) ,grad1)
 						    (= (vref (grad b) i) ,grad2))))
 			  (if all-p
-			    t
-			    :backward)))))))))
+			      t
+			      :backward)))))))))
   (define-arith-tester add-tester  !add  11 1  1)
   (define-arith-tester sub-tester  !sub  9  1 -1)
   (define-arith-tester mul-tester  !mul  10 1 10)

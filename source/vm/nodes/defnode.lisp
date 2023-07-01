@@ -294,8 +294,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 	   (the ,abstract-name ,(car constructor-arguments)))))))
 
 ;; TODO: Add Keyword:
-;; reject-when
-;; reject-dtype (:uint8 etc...)
+;; To Fix: :device=t, -> undefined-byte cl-waffe2/vm.nodes.facets-tmp::...
 (defmacro define-impl ((abstract-name
 			&key
 			  (device t)

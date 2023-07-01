@@ -225,7 +225,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (when (detach-p toplevel)
     ;; After reading 
     (setq stop-me t))
-
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
@@ -329,7 +328,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		    if (symbolp shape)
 		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
 	  inputs)
-    
+
     (values
      (compile nil
 	      `(lambda ()
@@ -337,7 +336,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		 (map 'list #'state-reset! ',*node-parameters-tmp*)
 		 (with-adjustable-symbols (,@set-input-forms)
 		   ,body)))
-     *node-parameters-tmp*)))
+     *node-parameters-tmp*
+     set-input-forms)))
 
 ;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed. <- Do it at toplevel
 (defun make-vm-function (toplevel)
@@ -349,7 +349,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
        ,(compile-forward-chain toplevel))))
 
 
-(defun compile-backward-kernel (toplevel &key (compile-mode :default))
+(defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
   (let* ((out (if (scalar-p toplevel)
 		  (make-tensor 1
@@ -365,10 +365,12 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		    (declare (ignorable ,(tensor-id out))
 			     ,(compile-option-form compile-mode))
 		    (let ((*no-grad* t))
-		      ,(compile-backward-chain toplevel out))
+		      ,(if set-input-forms
+			   `(with-adjustable-symbols (,@set-input-forms)
+			      ,(compile-backward-chain toplevel out))
+			   (compile-backward-chain toplevel out)))
 		    t))))
     (compile nil body)))
-
 
 
 ;; ==========================================
@@ -411,28 +413,21 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (gethash input-name (nodevariables-variables (compiled-variables model))))
 
 (defun build (toplevel
-	      &key (construct-backward? (not *no-grad*)))
+	      &key
+		(construct-backward? (not *no-grad*))
+		(compile-mode :fastest))
 
   (when (some #'symbolp (shape toplevel))
     (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   
-  (multiple-value-bind (forward-kernel vars) (compile-forward-kernel toplevel)
+  (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
     ;; Vars - All Variables (including ChainTMP) used in forward.
     (make-instance 'Compiled-Composite
 		   :variables  (construct-variables-table vars)
 		   :compiled-forward forward-kernel
 		   :compiled-backward (when construct-backward?
-					(compile-backward-kernel toplevel)))))
+					(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))))
 
-;; TopLevelでシンボルを初期化 (OK)
-;; tensor-vec/memory-poolを更新
-
-;; TODO:
-;;
-;; 1. Memory-Pool/Tensor-vecを続きやる
-;; 2. Forwardを正しく行う
-;; 3. 適切な場所でSave-For-Backwardが呼び出されているか？Copyが重複していないか？
-;;
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a

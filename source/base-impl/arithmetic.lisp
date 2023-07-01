@@ -55,7 +55,8 @@ X\\gets{X ~a Y}
      (values (!move dx dout) (!move dy dout))))
   (define-arithmetic-node SubNode "SubNode" "-"
     ((self dout dx dy)
-     (values (!move dx dout) (!move dy (!mul -1 dout)))))
+     (declare (ignore dx dy))
+     (values dout (!mul -1 dout))))
   (define-arithmetic-node MulNode "MulNode" "*"
     ((self dout dx dy)
      (values

@@ -20,7 +20,7 @@
   (with-devices (LispTensor)
     (let ((out (!add (make-tensor `(10 10))
 		     (make-tensor `(10 10)))))
-      (funcall (build out)))))
+      (forward (build out)))))
 
 (defun test-simple-forward-with-view ()
   (with-devices (LispTensor)
