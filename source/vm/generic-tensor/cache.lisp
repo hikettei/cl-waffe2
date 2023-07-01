@@ -19,7 +19,7 @@
 ;; the number of kernel types used in nodes <-> compiling time of kernels in *kernel-storeroom*
 
 ;; **This Parameter isn't used anymore?**
-(defparameter *cache-directory* "~/.cache/cl-waffe2/")
+;; (defparameter *cache-directory* "~/.cache/cl-waffe2/")
 
 ;; The file cache.lisp provides an optimized kernel compiler for acceptor.lisp
 
@@ -60,9 +60,6 @@
 
 ;; the maximum length of symbol-name used in CL shoule be 512? i dont remember ...
 ;; Memo:
-;; 展開されたS式と一致するか調べるべきか？
-;; LUTを作成することで生まれる制約は、define-implに課す制約と同値だと思うが
-
 (defun make-kernel-name (tensor reductable-p-map)
   "The naming rule of kernel functions is following:
 
