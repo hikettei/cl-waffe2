@@ -566,6 +566,7 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 ```
 
 An alias for (proceed tensor :measure-time t)"
+  (declare (type AbstractTensor tensor))
   (proceed tensor :measure-time t :compile-mode compile-mode))
 
 (defun proceed-backward (tensor &key (compile-mode :default))

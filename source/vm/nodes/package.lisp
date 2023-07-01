@@ -28,6 +28,7 @@
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
+		#:make-compiled-kernel
 		#:set-save-for-backward
 		#:read-save-for-backward
 		#:scalar-p)

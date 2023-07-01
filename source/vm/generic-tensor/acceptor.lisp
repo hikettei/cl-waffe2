@@ -23,7 +23,7 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
 ;; Their computation results
 (defstruct (StateContainer)
   (state :initialized :type (member :initialized :forwarded :backwarded))
-  (forward-out-form nil :type list)
+  (forward-out-form nil :type Compiled-Kernel)
   (forward-result   nil :type list)
 
   (backward-input-variable)
@@ -230,6 +230,9 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 (vars  (tensor-variables toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
 
+    (when (compiled-kernel-cache-p fw-compiled)
+      (push fw-compiled *kernel-storeroom*))
+	
     (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
@@ -256,7 +259,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 ;; The Operation hasn't done yet...
 	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
-		 (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 
@@ -316,6 +319,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (optimize-computation-node! toplevel :speed 1)
   
   (let* ((*node-parameters-tmp*)
+	 (*kernel-storeroom*)
 	 (body (compile-forward-chain toplevel))
 	 (inputs (loop for var in *node-parameters-tmp*
 		       if (user-input-p var)
@@ -333,9 +337,10 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
      (compile nil
 	      `(lambda ()
 		 (declare ,(compile-option-form compile-mode))
-		 (map 'list #'state-reset! ',*node-parameters-tmp*)
-		 (with-adjustable-symbols (,@set-input-forms)
-		   ,body)))
+		 ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
+		 ,(place-cached-kernels
+		   `(with-adjustable-symbols (,@set-input-forms)
+		      ,body))))
      *node-parameters-tmp*
      set-input-forms)))
 
@@ -351,7 +356,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 
 (defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
-  (let* ((out (if (scalar-p toplevel)
+  (let* ((*kernel-storeroom*)
+	 (out (if (scalar-p toplevel)
 		  (make-tensor 1
 			       :dtype (dtype toplevel)
 			       :order (order toplevel))
@@ -359,19 +365,16 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			       :dtype (dtype toplevel)
 			       :order (order toplevel)
 			       :initial-element 1)))
-	 (body `(lambda ()
-		  ;; TODO: with-adjustable-symbols, with-no-grad,
-		  (let ((,(tensor-id out) ,out))
-		    (declare (ignorable ,(tensor-id out))
-			     ,(compile-option-form compile-mode))
-		    (let ((*no-grad* t))
-		      ,(if set-input-forms
-			   `(with-adjustable-symbols (,@set-input-forms)
-			      ,(compile-backward-chain toplevel out))
-			   (compile-backward-chain toplevel out)))
-		    t))))
-    (compile nil body)))
-
+	 (body `(let ((,(tensor-id out) ,out))
+		  (declare (ignorable ,(tensor-id out))
+			   ,(compile-option-form compile-mode))
+		  (let ((*no-grad* t))
+		    ,(if set-input-forms
+			 `(with-adjustable-symbols (,@set-input-forms)
+			    ,(compile-backward-chain toplevel out))
+			 (compile-backward-chain toplevel out)))
+		  t)))
+    (compile nil `(lambda () ,(place-cached-kernels body)))))
 
 ;; ==========================================
 ;; Rewriting
@@ -416,7 +419,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	      &key
 		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest))
-
+  (declare (type AbstractTensor toplevel))
+  
   (when (some #'symbolp (shape toplevel))
     (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   

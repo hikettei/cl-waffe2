@@ -191,6 +191,9 @@ Return: (values offsets-place form)"
 (defmacro with-expanding-explore-inlining ((tensors offset-places target-dim start-points end-points) &body body)
   `(with-expanding-explore-form* (,tensors ,offset-places ,target-dim ,start-points ,end-points) ,@body))
 
+(defun update-calling-route (value)
+  (push value cl-waffe2/vm.nodes::*call-with-view-route*))
+
 (defun call-with-view (function
 		       tensors
 		       &key
@@ -226,12 +229,17 @@ Return: (values offsets-place form)"
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
+
+	       (update-calling-route nil)
+	       
 	       (return-from explore
 		 (expand-call-with-view-flatten
 		  function
 		  tensors
 		  offsets-place
 		  :dim-start-from target-dim)))
+	     
+	     (update-calling-route rest-dim)
 	     ;; Otherwise...
 
 	     ;; Computing Multi-Dimensional Offsets

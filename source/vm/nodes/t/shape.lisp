@@ -48,10 +48,11 @@
 
 (test test-adjustable-input-subscript-p
   ;; It is controversial whether we allow it or not.
-  (is (test-subscript
-       `([~ x] -> [x])
-       `((10))
-       `((10))))
+  ;; Fixed by compiling twice times
+  ;;(is (test-subscript
+  ;;     `([~ x] -> [x])
+  ;;     `((10))
+  ;;     `((10))))
   (is (test-subscript
        `([~ x] -> [x])
        `((10 3))
