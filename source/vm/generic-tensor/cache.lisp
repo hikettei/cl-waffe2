@@ -59,6 +59,7 @@
   (view-route nil :type list)) ;; 2D 3D Flatten ...
 
 ;; the maximum length of symbol-name used in CL shoule be 512? i dont remember ...
+;; Memo:
 ;; 展開されたS式と一致するか調べるべきか？
 ;; LUTを作成することで生まれる制約は、define-implに課す制約と同値だと思うが
 
@@ -113,28 +114,22 @@ TensorViewNameN depicts the path call-with-view traced.
 	      do (push (template dim) name-list))
       ;; call-with-view traces following
       ;; n-1 n-2 ... 2 1 0th dim.
-      (apply #'symb (reverse name-list)))))
+      (apply #'symb (reverse name-list) (list (intern (format nil "~a" (shape tensor))))))))
 
 (defun kernel-name (compiled-kernel)
-
-  ;; 1. compute reductable-p
-  ;; 2.
-  ;; TODO: call-with-view generates the name.
-  ;; LUTableなものは、展開式にcall-with-viewが含まれているもの
-  ;; forwardの展開中にcall-with-viewが呼び出される
-  ;; -> *call-with-view-traced*にたどった経路を保存する
-  ;; -> そこからカーネル名を生成
-  ;; -> 
-
   (symb
    (compiled-kernel-name compiled-kernel)
    '-
    (apply
     #'symb
     (map 'list #'(lambda (x) (make-kernel-name x (compiled-kernel-view-route compiled-kernel))) (compiled-kernel-args compiled-kernel)))))
-;; &rest kernel-name
 
-(defun place-cached-kernels (body)
+(defun cache-kernel-form (compiled-function)
+  (let ((fbody (cdar (compiled-kernel-body compiled-function))))
+    `(,(kernel-name compiled-function)
+      ,@(tensor->id (cdr fbody) (compiled-kernel-args compiled-function)))))
+
+(defun place-cached-kernels (&rest body)
   "
 Reading *kernel-storeroom*, the function expands the form below.
 (progn
@@ -151,24 +146,35 @@ Reading *kernel-storeroom*, the function expands the form below.
 )"
   ;; Expand *kernel-storeroom*
 
-  `(labels ((,@(loop for kernel in *kernel-storeroom*
-		     if kernel
-		       collect nil)))
-     ,@body))
+  (let ((caches (make-hash-table)))
+    (dolist (fn *kernel-storeroom*)
+      (setf (gethash (kernel-name fn) caches) (cache-kernel-form fn)))
+
+    `(labels (,@(loop for body being the hash-values in caches
+		      collect body))
+       ,@body)))
+
+(defun tensor->id (body args)
+  (map-tree
+   #'(lambda (obj)
+       (typecase obj
+	 (AbstractTensor
+	  (if (find (tensor-id obj) args :key #'tensor-id)
+	      (tensor-id obj)
+	      obj))
+	 (T
+	  obj)))
+   body))
+
+(defmacro funcall-kernel (kernel-function &rest inputs)
+  "A replacement of (funcall fw-compiled)"
+  `(funcall ,@(tensor->id (compiled-kernel-body kernel-function) (compiled-kernel-args kernel-function)) ,@inputs))
+
+(defmacro call-cache-fn (kernel-function &rest inputs)
+  `(,(kernel-name kernel-function) ,@inputs))
 
 (defmacro call-kernel (kernel-function &rest inputs)
-  "A replacement of (funcall fw-compiled)"
-  `(funcall ,@(map-tree
-	       #'(lambda (obj)
-		   (typecase obj
-		     (AbstractTensor
-		      (if (find (tensor-id obj) (compiled-kernel-args kernel-function) :key #'tensor-id)
-			  (tensor-id obj)
-			  obj))
-		     (T
-		      obj)))
-	       (compiled-kernel-body kernel-function))
-	    ,@inputs))
-
-
+  `(if (compiled-kernel-cache-p ,kernel-function)
+       (call-cache-fn ,kernel-function ,@inputs)
+       (funcall-kernel ,kernel-function ,@inputs)))
 

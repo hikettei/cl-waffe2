@@ -230,6 +230,9 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 (vars  (tensor-variables toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
 
+    (when (compiled-kernel-cache-p fw-compiled)
+      (push fw-compiled *kernel-storeroom*))
+	
     (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
@@ -316,6 +319,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (optimize-computation-node! toplevel :speed 1)
   
   (let* ((*node-parameters-tmp*)
+	 (*kernel-storeroom*)
 	 (body (compile-forward-chain toplevel))
 	 (inputs (loop for var in *node-parameters-tmp*
 		       if (user-input-p var)
@@ -334,8 +338,9 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	      `(lambda ()
 		 (declare ,(compile-option-form compile-mode))
 		 (map 'list #'state-reset! ',*node-parameters-tmp*)
-		 (with-adjustable-symbols (,@set-input-forms)
-		   ,body)))
+		 ,(place-cached-kernels
+		   `(with-adjustable-symbols (,@set-input-forms)
+		      ,body))))
      *node-parameters-tmp*
      set-input-forms)))
 
@@ -351,7 +356,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 
 (defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
-  (let* ((out (if (scalar-p toplevel)
+  (let* ((*kernel-storeroom*)
+	 (out (if (scalar-p toplevel)
 		  (make-tensor 1
 			       :dtype (dtype toplevel)
 			       :order (order toplevel))
@@ -359,19 +365,16 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			       :dtype (dtype toplevel)
 			       :order (order toplevel)
 			       :initial-element 1)))
-	 (body `(lambda ()
-		  ;; TODO: with-adjustable-symbols, with-no-grad,
-		  (let ((,(tensor-id out) ,out))
-		    (declare (ignorable ,(tensor-id out))
-			     ,(compile-option-form compile-mode))
-		    (let ((*no-grad* t))
-		      ,(if set-input-forms
-			   `(with-adjustable-symbols (,@set-input-forms)
-			      ,(compile-backward-chain toplevel out))
-			   (compile-backward-chain toplevel out)))
-		    t))))
-    (compile nil body)))
-
+	 (body `(let ((,(tensor-id out) ,out))
+		  (declare (ignorable ,(tensor-id out))
+			   ,(compile-option-form compile-mode))
+		  (let ((*no-grad* t))
+		    ,(if set-input-forms
+			 `(with-adjustable-symbols (,@set-input-forms)
+			    ,(compile-backward-chain toplevel out))
+			 (compile-backward-chain toplevel out)))
+		  t)))
+    (compile nil `(lambda () ,(place-cached-kernels body)))))
 
 ;; ==========================================
 ;; Rewriting
