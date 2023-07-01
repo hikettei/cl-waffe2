@@ -337,7 +337,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		 (map 'list #'state-reset! ',*node-parameters-tmp*)
 		 (with-adjustable-symbols (,@set-input-forms)
 		   ,body)))
-     *node-parameters-tmp*)))
+     *node-parameters-tmp*
+     set-input-forms)))
 
 ;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed. <- Do it at toplevel
 (defun make-vm-function (toplevel)
@@ -349,7 +350,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
        ,(compile-forward-chain toplevel))))
 
 
-(defun compile-backward-kernel (toplevel &key (compile-mode :default))
+(defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
   (let* ((out (if (scalar-p toplevel)
 		  (make-tensor 1
@@ -365,7 +366,10 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		    (declare (ignorable ,(tensor-id out))
 			     ,(compile-option-form compile-mode))
 		    (let ((*no-grad* t))
-		      ,(compile-backward-chain toplevel out))
+		      ,(if set-input-forms
+			   `(with-adjustable-symbols (,@set-input-forms)
+			      ,(compile-backward-chain toplevel out))
+			   (compile-backward-chain toplevel out)))
 		    t))))
     (compile nil body)))
 
@@ -418,13 +422,13 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (when (some #'symbolp (shape toplevel))
     (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   
-  (multiple-value-bind (forward-kernel vars) (compile-forward-kernel toplevel :compile-mode compile-mode)
+  (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
     ;; Vars - All Variables (including ChainTMP) used in forward.
     (make-instance 'Compiled-Composite
 		   :variables  (construct-variables-table vars)
 		   :compiled-forward forward-kernel
 		   :compiled-backward (when construct-backward?
-					(compile-backward-kernel toplevel :compile-mode compile-mode)))))
+					(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))))
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
