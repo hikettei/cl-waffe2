@@ -411,28 +411,21 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (gethash input-name (nodevariables-variables (compiled-variables model))))
 
 (defun build (toplevel
-	      &key (construct-backward? (not *no-grad*)))
+	      &key
+		(construct-backward? (not *no-grad*))
+		(compile-mode :fastest))
 
   (when (some #'symbolp (shape toplevel))
     (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   
-  (multiple-value-bind (forward-kernel vars) (compile-forward-kernel toplevel)
+  (multiple-value-bind (forward-kernel vars) (compile-forward-kernel toplevel :compile-mode compile-mode)
     ;; Vars - All Variables (including ChainTMP) used in forward.
     (make-instance 'Compiled-Composite
 		   :variables  (construct-variables-table vars)
 		   :compiled-forward forward-kernel
 		   :compiled-backward (when construct-backward?
-					(compile-backward-kernel toplevel)))))
+					(compile-backward-kernel toplevel :compile-mode compile-mode)))))
 
-;; TopLevelでシンボルを初期化 (OK)
-;; tensor-vec/memory-poolを更新
-
-;; TODO:
-;;
-;; 1. Memory-Pool/Tensor-vecを続きやる
-;; 2. Forwardを正しく行う
-;; 3. 適切な場所でSave-For-Backwardが呼び出されているか？Copyが重複していないか？
-;;
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a

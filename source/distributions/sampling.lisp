@@ -70,7 +70,7 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
 					 document
 					 &optional keep-order?)
 	     ;; Set t if use the position of element in the tensor.
-	     `(progn
+	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',function-name)
 		(defun ,function-name (shape ,@args &rest initargs &key &allow-other-keys)
 		  ,(format nil "

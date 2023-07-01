@@ -20,6 +20,5 @@ exec ros -Q -- $0 "$@"
     ((equal (car argv) "gendoc")
      (cl-waffe2.docs:generate))
     (T
-     (asdf:load-system :cl-waffe2)
      (asdf:test-system :cl-waffe2))))
 ;;; vim: set ft=lisp lisp:

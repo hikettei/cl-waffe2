@@ -489,17 +489,18 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 ;; We can also add: Proceed-Auto
 
-(defnode (ProceedNode (myself &key (measure-time nil))
+(defnode (ProceedNode (myself &key (measure-time nil) (compile-mode :default))
 	  :where (A[~] -> A[~])
 	  :slots ((measure-time   :initarg :measure-time :reader measure-time-p)
 		  (compiled-model :accessor proceed-compiled-model)
+		  (compile-mode   :initarg :compile-mode :reader compile-mode)
 		  (result         :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
 
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (let ((compiled-model (build x)))
+		       (let ((compiled-model (build x :compile-mode (compile-mode self))))
 			 (setf (proceed-compiled-model self) compiled-model)
 			 (if (measure-time-p self)
 			     (progn
@@ -524,7 +525,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 			       (!mul 0 ,dout)))))))
 
 ;; TODO: ProceedNode for several outputs
-(defun proceed (tensor &key (measure-time nil))
+(defun proceed (tensor &key (measure-time nil) (compile-mode :default))
   "
 ## [function] proceed
 
@@ -543,7 +544,7 @@ This function will be useful especially when debugging on REPL.
 
 If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes.
 "
-  (let* ((node (ProceedNode :measure-time measure-time))
+  (let* ((node (ProceedNode :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out (forward node tensor)))
     
@@ -556,7 +557,7 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
         (embody-actual-tensor out (proceed-result node)))
     out))
 
-(defun proceed-time (tensor)
+(defun proceed-time (tensor &key (compile-mode :default))
   "
 ## [function] proceed-time
 
@@ -565,9 +566,9 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 ```
 
 An alias for (proceed tensor :measure-time t)"
-  (proceed tensor :measure-time t))
+  (proceed tensor :measure-time t :compile-mode compile-mode))
 
-(defun proceed-backward (tensor)
+(defun proceed-backward (tensor &key (compile-mode :default))
   "
 ## [function] proceed-backward
 
@@ -582,7 +583,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 `T` (which indicates backward is succeed)
 "
   (declare (type AbstractTensor tensor))
-  (let ((compiled-model (build tensor)))
+  (let ((compiled-model (build tensor :compile-mode compile-mode)))
     (forward compiled-model)
     (backward compiled-model)))
 
