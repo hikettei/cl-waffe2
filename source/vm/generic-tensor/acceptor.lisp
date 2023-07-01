@@ -23,7 +23,7 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
 ;; Their computation results
 (defstruct (StateContainer)
   (state :initialized :type (member :initialized :forwarded :backwarded))
-  (forward-out-form nil :type list)
+  (forward-out-form nil :type Compiled-Kernel)
   (forward-result   nil :type list)
 
   (backward-input-variable)
@@ -256,7 +256,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 ;; The Operation hasn't done yet...
 	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
-		 (multiple-value-list (funcall ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 
@@ -416,7 +416,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	      &key
 		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest))
-
+  (declare (type AbstractTensor toplevel))
+  
   (when (some #'symbolp (shape toplevel))
     (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   

@@ -25,6 +25,22 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (deftype list-of-abstracttensor ()
   `(and list (satisfies list-of-abstracttensor-p)))
 
+
+(defvar *call-with-view-route* nil)
+
+(defmacro with-tracing-call-with-view (&body body)
+  `(let ((*call-with-view-route*))
+     ,@body))
+
+(defun vm-kernel-lambda (traceable? name args &rest body)
+  (make-compiled-kernel
+   :name name
+   :body body
+   :args args
+   :cache-p (when (and traceable? *call-with-view-route*) t)
+   :view-route (if (and traceable? *call-with-view-route*)
+		   *call-with-view-route*)))
+
 ;; Is it ok?
 (defun env-parameter-p (sym)
   (equal (aref (symbol-name sym) 0) #\&))
@@ -298,6 +314,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 (defmacro define-impl ((abstract-name
 			&key
 			  (device t)
+			  (cache-when-compiled t)
 			  (reject-p nil))
 		       &key
 			 save-for-backward
@@ -369,16 +386,19 @@ Return nil -> ok
 	 (labels ((,fw-name-expand (,inputs)
 		    (multiple-value-bind (,@forward-args) (apply #'values ,inputs)
 		      ,@(second forward-body)
-		      `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
-			 (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
-			 ,(map-tree #'(lambda (obj)
-					(typecase obj
-					  (AbstractTensor
-					   (if (find (tensor-id obj) ,inputs :key #'tensor-id)
-					       (tensor-id obj)
-					       obj))
-					  (T obj)))
-				    ,@(car forward-body))))))
+		      (with-tracing-call-with-view
+			(vm-kernel-lambda
+			 ,cache-when-compiled ',fw-name-vm ,inputs
+			 `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
+			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
+			    ,(map-tree #'(lambda (obj)
+					   (typecase obj
+					     (AbstractTensor
+					      (if (find (tensor-id obj) ,inputs :key #'tensor-id)
+						  (tensor-id obj)
+						  obj))
+					     (T obj)))
+				       ,@(car forward-body))))))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
 
 	   ;; Forms: Lambda (args) -> outs

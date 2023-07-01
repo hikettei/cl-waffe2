@@ -54,7 +54,9 @@
 (defstruct Compiled-Kernel
   (name nil :type symbol)            ;; SinNode-CPUTENSOR
   (body nil :type list)              ;; (named-lambda ... () ...)
-  (view-identfier nil :type symbol)) ;; 2D 3D Flatten ...
+  (cache-p nil :type boolean)
+  (args nil :type list)
+  (view-route nil :type list)) ;; 2D 3D Flatten ...
 
 ;; the maximum length of symbol-name used in CL shoule be 512? i dont remember ...
 ;; 展開されたS式と一致するか調べるべきか？
@@ -113,7 +115,7 @@ TensorViewNameN depicts the path call-with-view traced.
       ;; n-1 n-2 ... 2 1 0th dim.
       (apply #'symb (reverse name-list)))))
 
-(defun kernel-name (kernel-name kernel-dim tensors)
+(defun kernel-name (compiled-kernel)
 
   ;; 1. compute reductable-p
   ;; 2.
@@ -124,9 +126,12 @@ TensorViewNameN depicts the path call-with-view traced.
   ;; -> そこからカーネル名を生成
   ;; -> 
 
-  ;; :use-lut tをdefine-implに追加する
-  
-  )
+  (symb
+   (compiled-kernel-name compiled-kernel)
+   '-
+   (apply
+    #'symb
+    (map 'list #'(lambda (x) (make-kernel-name x (compiled-kernel-view-route compiled-kernel))) (compiled-kernel-args compiled-kernel)))))
 ;; &rest kernel-name
 
 (defun place-cached-kernels (body)
@@ -151,9 +156,9 @@ Reading *kernel-storeroom*, the function expands the form below.
 		       collect nil)))
      ,@body))
 
-(defun call-kernel ()
+(defmacro call-kernel (kernel-function &rest inputs)
   "A replacement of (funcall fw-compiled)"
-  `(funcall kernel-name var1 var2))
+  `(funcall ,@(compiled-kernel-body kernel-function) ,@inputs))
 
 
 

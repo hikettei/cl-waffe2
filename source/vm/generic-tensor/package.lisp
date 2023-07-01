@@ -8,6 +8,7 @@
    #:*cache-directory*
    #:with-memory-pool
    #:print-current-memory-pool
+   #:make-compiled-kernel
    #:*memory-pool*)
   ;; Tensor classes
   (:export
