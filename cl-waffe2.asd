@@ -18,6 +18,7 @@
 	       (:file "vm/generic-tensor/conditions")
 	       (:file "vm/generic-tensor/utils")
 	       (:file "vm/generic-tensor/dtype")
+	       (:file "vm/generic-tensor/cache")
 	       
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")

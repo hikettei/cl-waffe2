@@ -4,6 +4,8 @@
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl :lparallel)
 
+  (:export
+   #:*cache-directory*)
   ;; Tensor classes
   (:export
    #:AbstractTensor

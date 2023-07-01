@@ -225,7 +225,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (when (detach-p toplevel)
     ;; After reading 
     (setq stop-me t))
-
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
@@ -329,7 +328,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		    if (symbolp shape)
 		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
 	  inputs)
-    
+
     (values
      (compile nil
 	      `(lambda ()
@@ -372,7 +371,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			   (compile-backward-chain toplevel out)))
 		    t))))
     (compile nil body)))
-
 
 
 ;; ==========================================
