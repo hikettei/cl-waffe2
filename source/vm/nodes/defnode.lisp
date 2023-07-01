@@ -391,14 +391,7 @@ Return nil -> ok
 			 ,cache-when-compiled ',fw-name-vm ,inputs
 			 `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
 			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
-			    ,(map-tree #'(lambda (obj)
-					   (typecase obj
-					     (AbstractTensor
-					      (if (find (tensor-id obj) ,inputs :key #'tensor-id)
-						  (tensor-id obj)
-						  obj))
-					     (T obj)))
-				       ,@(car forward-body))))))))
+			    ,,@(car forward-body)))))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
 
 	   ;; Forms: Lambda (args) -> outs

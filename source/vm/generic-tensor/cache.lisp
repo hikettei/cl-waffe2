@@ -158,7 +158,17 @@ Reading *kernel-storeroom*, the function expands the form below.
 
 (defmacro call-kernel (kernel-function &rest inputs)
   "A replacement of (funcall fw-compiled)"
-  `(funcall ,@(compiled-kernel-body kernel-function) ,@inputs))
+  `(funcall ,@(map-tree
+	       #'(lambda (obj)
+		   (typecase obj
+		     (AbstractTensor
+		      (if (find (tensor-id obj) (compiled-kernel-args kernel-function) :key #'tensor-id)
+			  (tensor-id obj)
+			  obj))
+		     (T
+		      obj)))
+	       (compiled-kernel-body kernel-function))
+	    ,@inputs))
 
 
 
