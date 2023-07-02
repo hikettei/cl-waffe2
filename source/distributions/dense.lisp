@@ -59,6 +59,8 @@
 	   (type utype a0)
 	   (type (utype 0e0) a b))
 
+  ;;(warn "[FIXME] cl-waffe2:beta with (min a b) <= 1 is unstable...")
+  
   (unless (<= (min a b) 1.0)
     (error "cl-waffe:!beta failed because of (min a b) <= 1."))
 

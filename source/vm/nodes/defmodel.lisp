@@ -76,6 +76,8 @@ The generic function call is also used to step forward of AbstractNode, that is,
 (defmethod call ((model AbstractNode) &rest inputs)
   (apply #'forward model inputs))
 
+(defmethod call ((model cl-waffe2/vm.generic-tensor:Compiled-Composite) &rest inputs)
+  (apply #'forward model inputs))
 
 (defmacro define-forward-function (model forward-function)
   "forward-function = funcallable function"
