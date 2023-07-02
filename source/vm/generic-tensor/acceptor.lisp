@@ -353,7 +353,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
        ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
        ,(compile-forward-chain toplevel))))
 
-
 (defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
   (let* ((*kernel-storeroom*)
