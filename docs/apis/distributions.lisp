@@ -5,8 +5,8 @@
 
 ;; TODO: Insert Some Examples.
 (with-page *distributions* "Distributions"
-  (with-section "Samples matrices from distribution"
-    (insert "cl-waffe2 provides a package :cl-waffe2/distributions which is used to sample matrices from the distributions.")
+  (with-section "Sampling matrices from distribution"
+    (insert "cl-waffe2 provides a package `:cl-waffe2/distributions` which is used to sample matrices from the distributions.")
 
     (with-section "Common Format to the APIs"
       (insert "All sampling functions are defined in the following format via `define-tensor-initializer` macro.

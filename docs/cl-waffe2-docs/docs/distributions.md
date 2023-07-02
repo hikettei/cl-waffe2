@@ -1,8 +1,8 @@
 
 # Distributions
 
-## Samples matrices from distribution
-cl-waffe2 provides a package :cl-waffe2/distributions which is used to sample matrices from the distributions.
+## Sampling matrices from distribution
+cl-waffe2 provides a package `:cl-waffe2/distributions` which is used to sample matrices from the distributions.
 ## Common Format to the APIs
 All sampling functions are defined in the following format via `define-tensor-initializer` macro.
 
@@ -16,11 +16,11 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 (normal `(10 10) 0.0 1.0 :requires-grad t)
 
 {CPUTENSOR[float] :shape (10 10)  
-  ((0.4068227    1.8300191    -0.6377239   ~ 0.6835943    1.6533868    0.37351918)                    
-   (-0.61583096  0.18741547   1.0138013    ~ 0.24394189   0.43836308   -0.042538162)   
-                 ...
-   (-1.7132758   2.4784043    1.2369128    ~ -0.73461443  -0.35414895  -1.3457016)
-   (-1.9569589   -1.2259408   -0.44174623  ~ 0.20416868   -1.125249    0.86147213))
+  ((0.119613      0.0696617     -0.51845974   ~ 1.7004628     0.4996423     0.4897055)                     
+   (-1.1284642    -0.0064689103 -0.846032     ~ -0.5962948    -1.575406     -0.43004805)   
+                  ...
+   (0.7994743     1.0443226     -0.4768539    ~ -0.48059216   -0.7566383    0.0051765023)
+   (0.30147827    -0.72716165   -0.75564015   ~ -1.5878669    -1.4639511    -0.8897966))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -146,9 +146,9 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 (beta `(3 3) 5.0 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.63958657 0.9093849  0.88275766)
-   (0.9621832  0.6543163  0.95516557)
-   (0.72667587 0.4694664  0.57423055))
+  ((0.95213073 0.6845968  0.89657104)
+   (0.850316   0.9831104  0.6203682)
+   (0.8839493  0.8766788  0.85749966))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -170,9 +170,9 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 (bernoulli `(3 3) 0.3)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.0 1.0 1.0)
-   (0.0 0.0 0.0)
-   (0.0 1.0 0.0))
+  ((0.0 0.0 0.0)
+   (1.0 1.0 0.0)
+   (0.0 0.0 1.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -198,9 +198,9 @@ df - degree of freedom.
 (chisquare `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.0057623996 0.992885     0.002366773)
-   (0.69975215   0.38161486   0.21625721)
-   (3.7606885    1.1638411    1.8734814))
+  ((0.0150622325 5.014997e-4  0.4076707)
+   (0.31016153   0.75013447   0.08534716)
+   (0.33567613   0.01176333   0.14503779))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -227,9 +227,9 @@ The function expotential is a family of initializer functions, and samples the e
 (expotential `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((2.3558202  0.91076595 1.2019328)
-   (2.2057514  0.81595427 0.5702252)
-   (2.5444195  3.7771025  0.4159075))
+  ((0.2955058   0.044480704 2.847021)
+   (1.0309886   1.8820623   0.6307436)
+   (0.013490636 1.9426202   1.9248267))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -252,9 +252,9 @@ The function gamma is a family of initializer functions, and samples matrices fr
 (gamma `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.015033166 0.09699598  0.18563458)
-   (1.6348156   1.5621002   0.4823327)
-   (0.7432411   0.40036893  2.7507722))
+  ((4.3934636  0.48888627 0.2965439)
+   (0.22882245 0.26897842 0.5933608)
+   (0.4539856  0.19267894 0.3890769))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -309,9 +309,9 @@ Input:
 (uniform-random `(3 3) 2 4)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((2.0773187 3.716677  2.846321)
-   (3.867027  2.5273712 3.0160313)
-   (2.3836665 3.7248738 3.0614033))
+  ((2.8210456 3.1823678 2.4381611)
+   (3.0901735 3.1590753 3.1356604)
+   (2.4130378 2.8690228 2.5649626))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -339,9 +339,9 @@ The function randn is a family of initializer functions, and samples the gaussia
 (randn `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((-0.1354243   0.878151     -0.33400086)
-   (0.7053966    -1.0682151   0.8744093)
-   (-0.046237823 -0.17542641  -0.6609302))
+  ((-0.18318851  0.71465474   -0.4738745)
+   (0.93874615   -0.044843636 -0.30596378)
+   (0.5556831    0.8649478    -1.0314406))
   :facet :exist
   :requires-grad NIL
   :backward NIL}

@@ -257,8 +257,6 @@ defmodel is a macro used to describe the model of neural network with `Composite
   6. `on-call->` [One of: nil symbol-name function list]
      on-call-> is used to control the behaviour of *call* function.
 
-  7. `on-print-object` [null or body]
-
 ### Example
 
 ```lisp
@@ -309,7 +307,7 @@ Second case, `on-call->` is symbol-name:
    (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
 ```
 
-   (Complex model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)
+   (Complicated model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)
 
 [Third case] `on-call->` is function (i.e.: lambda):
 
