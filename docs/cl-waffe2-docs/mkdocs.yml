@@ -2,6 +2,7 @@ site_name: cl-waffe2 Documentation
 
 nav:
     - Home: index.md
+    - Install: install.md
     - Tutorials: overview.md
     - Tips: Tips.md
     - cl-waffe2/vm.nodes: nodes.md
