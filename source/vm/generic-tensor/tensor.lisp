@@ -85,7 +85,7 @@ The class provides the fundamental and necessary features for tensors.
 
 7. Trace Informations for JIT to create well-optimized computation node.
 
-### Create a new backend.
+### Creating a new backend.
 
 Users can create a new backend by extending this abstract class.
 
@@ -133,6 +133,18 @@ Now, the name `MyBackend` is available as a brand-new cl-waffe2 backend!
 Users can define a new implementation following `(define-impl (Name :device MyBackend) ...)`
 
 (See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)
+
+### [function] shape
+
+Returns a visible shape of tensor
+
+### [function] dims
+
+Returns the number of axes of tensor
+
+### [function] total
+
+Returns the number of total visible elements in tensor.
 
 ### [slot] orig-shape (List)
 
@@ -220,6 +232,14 @@ Tensors has a two state:
 ...
 
 "))
+
+(defun total (tensor)
+  (declare (type AbstractTensor tensor))
+  (apply #'lazy-mulup (shape tensor)))
+
+(defun dims (tensor)
+  (declare (type AbstractTensor tensor))
+  (length (shape tensor)))
 
 (defmethod tensor-delete ((tensor AbstractTensor))
   ""
@@ -435,17 +455,17 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
   "
 ## [function] make-input
 
-Referring a first-priority of *using-backend* (i.e.: car part), the function make-input creates a InputTensor.
+Referring a first-priority of `*using-backend*` (i.e.: car part), the function make-input creates a InputTensor.
 
 In contrast to `make-tensor`, allocation of `vec` is lazy-evaluated, and `shape` can include symbols. (Lazy-Evaluated Shape).
 
-For example, whichever `(make-input (list 256 256 256 256 256 256) nil)` or `(make-input (list 256) nil)` is called, the memory-usage is the same until `(tensor-vec tensor)` is called but the moment `(tensor-vec tensor)` is called, the first one would cause `CUDA OUT OF MEMORY` or something :(.
+For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or `(make-input (list 256) nil)` is called, the memory-usage is the same until `(tensor-vec tensor)` is called but the moment `(tensor-vec tensor)` is called, the first one would cause `CUDA OUT OF MEMORY` or something :(.
 
 ### Inputs
 
-`Shape` [list] consisted of fixnum or symbol. (e.g.: `(a 10)` is a valid shape.)
+`Shape` [list] consisted of fixnum or symbol. (e.g.: `(a 10)` is OK for make-input.)
 
-`Named` [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name.
+`Named` [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name to `InputTensor` (e.g.: `:training-data` `:train-x`).
 
 `scalar-p` [boolean] set t is the input is scalar.
 
@@ -465,8 +485,11 @@ For example, whichever `(make-input (list 256 256 256 256 256 256) nil)` or `(ma
 		 :facet :input))
 
 (defun mref (tensor &rest subscripts)
-  "Read-only. Only used for printing the tensor.
-Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors."
+  "The function mref is only used to print/initialize tensors, accessing the index of subscripts **with** considering views..
+
+If you cares about performance, dont' use `mref`, but `!view`.
+
+This function is setfable."
   (declare (type list subscripts))
   (assert (not (null (vec tensor)))
 	  nil
@@ -504,11 +527,20 @@ Whether you cares about performance or not, this function shouldn't be used igno
 
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.
 (defmethod vref ((tensor AbstractTensor) index)
-  "vref is a generic-function to access tensor's vec.
+  "`vref` is a generic-function to access the `vec` slot of specific backends tensor, and returns `index`th element on `vec` slot **without** considering views.
 
-Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
+If you added a new backend with having different ptr-type (can't be accessed by aref), override this method and `(setf vref)`.
 
-If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
+### Example
+
+```lisp
+(defmethod vref ((tensor YourBackend) index)
+    (aref (tensor-vec tensor) index))
+
+(defmethod (setf vref) (new-value (tensor YourBackend) index)
+    (setf (aref (tensor-vec tensor) index) new-value))
+```
+"
   (declare (type fixnum index))
   (assert (not (null (vec tensor)))
 	  nil
@@ -516,10 +548,7 @@ If you've created a new backend with having different ptr-type (can't be accesse
   (aref (tensor-vec tensor) index))
 
 (defmethod (setf vref) (new-value (tensor AbstractTensor) index)
-    "Only used for printing the tensor.
-Whether you cares about performance or not, this function shouldn't be used ignoring for printing tensors.
-
-If you've created a new backend with having different ptr-type (can't be accessed by aref), only you have to do is to redefine vref."
+    "An setfable version of vref."
   (declare (type fixnum index))
   (assert (not (null (vec tensor)))
 	  nil
@@ -599,13 +628,23 @@ Note that view is only created for Tensors, not a Scalar.
   tensor)
 
 (defun parameter (tensor)
-  "The function parameter computes all the previous nodes of the given tensor, returning the new tensor with requires-grad=t.
+  "
 
-Example:
+## [function] parameter
+
+```
+(parameter tensor)
+```
+
+The function parameter computes all the previous nodes of the given tensor if any, returning the new tensor with `requires-grad=t`.
+
+### Example
 
 ```lisp
 (parameter (randn `(3 3)))
-```"
+```
+
+"
   
   (declare (type AbstractTensor tensor))
   (let ((out (cl-waffe2/base-impl:proceed tensor)))

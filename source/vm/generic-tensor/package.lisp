@@ -102,6 +102,8 @@
   ;; Backends / Tensor API
   (:export
    #:shape
+   #:total
+   #:dims
    #:make-input
    #:make-tensor
    #:*using-backend*))

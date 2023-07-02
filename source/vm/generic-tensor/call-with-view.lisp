@@ -204,8 +204,24 @@ Return: (values offsets-place form)"
   "
 ## [function] call-with-view
 
-(TODO)
+```lisp
+(call-with-view function tensors &key (at-least-dim 1))
+```
 
+The function `call-with-view` is a utility to expand view-considered `loop` iteration in the `:forward` expansion of `define-impl`.
+
+(TODO: Example/Documents)
+
+`function` [lambda] an lambda function which receives `variable1.view variable2.view ...` as arguments, returning an list being compiled.
+
+`tensors` [list of abstracttensor] tensors to be called with.
+`at-least-dim` [fixnum] ... kernel-size
+
+See also:
+
+`size-of`
+`stride-of`
+`offset-of`
 "
   
   (declare ;;(optimize (speed 3))

@@ -398,7 +398,7 @@ Compiled-Composite is a `callable` CLOS class, and holds compiled forward/backwa
 
 It is NOT possible to construct a computation node after Compiled-Composite, If you need this, try consider using the function `cl-waffe2/base-impl:proceed`.
 
-The class will appear in your project with calling the function `build`, set the toplevel node (e.g.: the result of criterion when the task is optimizing.) to the first argument. cl-waffe2 compiler will instantly construct an lambda function of forward/backward, which is called by `(forward compiled-composite)` or `(backward compiled-composite)` method.
+The class will appear in your project with calling the function `build`, set the toplevel node (e.g.: the result of criterion when the task is optimizing.) to the first argument. cl-waffe2 compiler will instantly construct an lambda function of forward/backward, which is invoked by calling `(forward compiled-composite)` or `(backward compiled-composite)` method.
 
 See also: `build` `set-input` `get-input`.
 

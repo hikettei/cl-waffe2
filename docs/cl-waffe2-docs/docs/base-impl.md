@@ -346,6 +346,8 @@ one of: `MoveTensorNode` `ScalarTensorNode`
 
 `tensor[AbstractTensor]` tensor to be referred.
 
+`force[boolean]` If t, the pruning of operation by cl-waffe2 will never done.
+
 ### Output
 
 Unevaluated Copied Tensor.
@@ -500,6 +502,8 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 ```
 
 An alias for (proceed tensor :measure-time t)
+
+Note that: the proceed-time function invokes forward function twice times, in order for processing system to trace compiled lisp code, and ignoring allocation time.
 ## [function] proceed-backward
 
 ```
@@ -1171,7 +1175,7 @@ OUT_{copy}\gets{loge(X)}
 ## [function] !sum
 
 ```
-(!sum tensor &key (axis t) (-> nil) (keep-repeat nil))
+(!sum tensor &key (axis t) (-> nil) (keepdims nil))
 ```
 
 The function !sum return a node which computes the sum of tensor along the given axis.
@@ -1184,7 +1188,7 @@ The function !sum return a node which computes the sum of tensor along the given
 
 `->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
 
-`keep-repeat`[boolean] If t, the axis reducted is repeated.
+`dims`[boolean] If t, the axis reducted is broadcasted.
 
 Return:
 
@@ -1192,7 +1196,7 @@ Return:
 ## [function] !mean
 
 ```
-(!mean tensor &key (axis t) (-> nil) (keep-repeat nil))
+(!mean tensor &key (axis t) (-> nil) (keepdims nil))
 ```
 
 The function !mean return a node which computes the average of tensor along the given axis.
@@ -1205,7 +1209,7 @@ The function !mean return a node which computes the average of tensor along the 
 
 `->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
 
-`keep-repeat`[boolean] If t, the axis reducted is repeated.
+`keepdims` [boolean] If t, the axis reducted is broadcasted.
 
 ### Return
 
