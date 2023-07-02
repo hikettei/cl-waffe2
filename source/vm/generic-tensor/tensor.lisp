@@ -54,7 +54,6 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    (save-for-backward-space :initform nil :accessor save-for-backward-space)
    (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
-
    
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
    (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
@@ -711,4 +710,5 @@ Example:
 ;; read-save-for-backward is actually working, but the problem is movetensor doesn't tell the variable well.
 (defun read-save-for-backward (tensor)
   (save-for-backward-space tensor))
+
 

@@ -55,6 +55,15 @@
       (proceed-backward (!sin (!sin a)))
       (= (vref (grad a) 0) (* (cos (sin 1)) (cos 1))))))
 
+(defun backward-being-not-destructed ()
+  (with-devices (cl-waffe2/backends.lisp:LispTensor)
+    (let ((a (parameter (make-tensor `(15 15) :initial-element 3 :requires-grad t)))
+	  (b (parameter (make-tensor `(15 15) :initial-element 6 :requires-grad t))))
+      (proceed-backward (!sum (!mul (!sin a) (!sin b))))
+      (and
+       (= (vref a 0) 3.0)
+       (= (vref b 0) 6.0)))))
+
 (test chain-rule-test
   (is (chain-test1))
   (is (chain-test2))
@@ -64,4 +73,7 @@
   (is (chain-test6))
   (is (chain-test7)))
 
+(test backward-side-effect-test
+  (is (backward-being-not-destructed)))
+  
 ;; save-for-backward test
