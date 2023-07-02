@@ -73,6 +73,7 @@
 	       (:file "distributions/dense")
 	       (:file "distributions/sparse")
 	       (:file "distributions/ziggurat")
+	       (:file "distributions/weights")
 
 	       (:file "nn/package")
 	       (:file "nn/activation")
