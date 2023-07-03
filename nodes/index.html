@@ -45,6 +45,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
                 </li>
               </ul>
@@ -55,7 +59,7 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/vm.nodes</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#shaping-apis">Shaping APIs</a>
+    <li class="toctree-l2"><a class="reference internal" href="#shaping-api">Shaping API</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#introducing-subscript-dsl">Introducing Subscript DSL</a>
         <ul>
@@ -65,7 +69,7 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#determine-rules">Determine Rules</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#where-pharse">Where Pharse</a>
+    <li class="toctree-l3"><a class="reference internal" href="#initial-value-of-table">Initial value of table</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#api-create-subscript-p">API: create-subscript-p</a>
     </li>
@@ -133,8 +137,6 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#declare-local-variables">declare-local-variables</a>
-    </li>
     </ul>
                 </li>
               </ul>
@@ -189,8 +191,10 @@
 <pre><code class="language-lisp">defnode  =&gt; called with `forward` 
 defmodel =&gt; called with `call`
 </code></pre>
-<p>Also, defnode is a fundamental unit of operation, while defmodel is consisted of a set of nodes.</p>
-<h2 id="shaping-apis">Shaping APIs</h2>
+<p>Also, defnode is a fundamental unit of operation, while defmodel is a set of nodes.</p>
+<h2 id="shaping-api">Shaping API</h2>
+<p>When defining an operation in cl-waffe2 with a <code>defnode</code> macro, the shape of the matrix used in the operation must also be defined in the <code>:where</code> keyword.</p>
+<p>This is a Shaping API, and responsible for shape inspection of all operations.</p>
 <h2 id="introducing-subscript-dsl">Introducing Subscript DSL</h2>
 <p>I assume you have already seen <code>defnode</code> macro. This macro takes a strange syntax language after :where keyword.</p>
 <pre><code class="language-lisp">(defnode (TransposeNode (myself)
@@ -271,7 +275,7 @@ defmodel =&gt; called with `call`
 <p>On the other hand <code>a</code> and <code>b</code> inside [ ... ], indicates subscripts of <code>A</code> and <code>B</code>, DSL's assigned work is to inference these <strong>undetermined symbols</strong> from:</p>
 <ol>
 <li>
-<p>local variables declared in <code>defnode</code> form or <code>where</code> pharse.</p>
+<p>determined symbol from <code>where</code> pharse and symbols in arguments of constructor.</p>
 </li>
 <li>
 <p>Shape of the given inputs at runtime.</p>
@@ -363,7 +367,7 @@ b = `(1 2) // List consisted of fixnum
 ~ = `(1 2 3) // ~ is a special symbol which represents batched-input.
 </code></pre>
 <p>DSL flattens the list in the subscript. (e.g.: <code>b=(1 2)</code> in <code>A[b]</code> is the equivalent to <code>A[1 2]</code>)</p>
-<p><strong>Note that</strong> ~ is a reserved word and has a special rule:</p>
+<p><strong>Note that</strong> ~ is a reserved word by cl-waffe2 and has a special rule:</p>
 <ol>
 <li>
 <p>~ is used to express dimensions from 0 to N</p>
@@ -396,12 +400,40 @@ b = `(1 2) // List consisted of fixnum
 <p>JIT Compiler can use a shape of given arguments in advance. (If only CL has a const-generics like Rust, Subscript DSL isn't needed anymore!).</p>
 </li>
 </ol>
-<h3 id="where-pharse">Where Pharse</h3>
-<p>With where pharse, you can put local variables like:</p>
+<h3 id="initial-value-of-table">Initial value of table</h3>
+<p>In order to give a initial value to tables, you can declare symbols with initial value.</p>
+<p><strong>Using where pharse in :where form</strong></p>
+<p>Add this form to your <code>:where</code> form.</p>
 <pre><code class="language-lisp">;; Syntax is that: Symbol-Name = Expression
 
-A[i] B[j] -&gt; C[k] where i = (1+ (random 1)) j = (1+ (random 1)) k = (1+ (random 1))
+(defnode (...
+    :where (A[i] B[j] -&gt; C[k] where i = 1 j = 2 k = 3)
+    ....
 </code></pre>
+<p>will produce:</p>
+<pre><code>[TABLE]
+i = 1
+j = 2
+k = 3
+</code></pre>
+<p>Using arguments declared in <code>constructor</code>.</p>
+<pre><code class="language-lisp">(defnode (ExampleNode (self i)
+             :where (A[~] -&gt; A[i]))
+        ...)
+</code></pre>
+<p>Arguments used in constructor, will automatically interpreted as <code>initial value</code>. (e.g.: <code>i</code> is a initial value.)</p>
+<pre><code>[TABLE]
+~ = ?
+i = i
+</code></pre>
+<p>That is, when <code>ExampleNode</code> is initialized with <code>(ExampleNode 3)</code>, the table become:</p>
+<pre><code>[TABLE]
+~ = ?
+i = 3
+</code></pre>
+<ol>
+<li>arguments of constructor</li>
+</ol>
 <h3 id="api-create-subscript-p">API: create-subscript-p</h3>
 <p><code>(create-subscript-p subscripts &amp;key macroexpand fixed return-body)</code></p>
 <p>Inputs:</p>
@@ -598,9 +630,6 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 <p><code>on-call-&gt;</code> [One of: nil symbol-name function list]
      on-call-&gt; is used to control the behaviour of <em>call</em> function.</p>
 </li>
-<li>
-<p><code>on-print-object</code> [null or body]</p>
-</li>
 </ol>
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(defmodel (ExampleLayer (self features)
@@ -635,7 +664,7 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 </code></pre>
 <pre><code class="language-lisp">   (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
 </code></pre>
-<p>(Complex model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)</p>
+<p>(Complicated model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)</p>
 <p>[Third case] <code>on-call-&gt;</code> is function (i.e.: lambda):</p>
 <p>cl-waffe2 calls the given lambda function as a forward propagation.</p>
 <p>[Fourth case] <code>on-call-&gt;</code> is a list:</p>
@@ -723,8 +752,6 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 </code></pre>
 <p>Note that (equal (with-instant-kernel a) a) is NIL, that is, the returned value of this macro must be followed by a calculation node.</p>
 <p>If the return value of Body can be expanded as a macro, the values are compiled together at JIT compile time. Otherwise, the given tensor is returned as is.</p>
-<h2 id="declare-local-variables">declare-local-variables</h2>
-<p>TODO</p>
               
             </div>
           </div><footer>

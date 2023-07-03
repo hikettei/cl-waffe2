@@ -45,6 +45,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
                 </li>
               </ul>
@@ -71,7 +75,7 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/distributions</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#samples-matrices-from-distribution">Samples matrices from distribution</a>
+    <li class="toctree-l2"><a class="reference internal" href="#sampling-matrices-from-distribution">Sampling matrices from distribution</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#common-format-to-the-apis">Common Format to the APIs</a>
         <ul>
@@ -197,8 +201,8 @@
     }
 </style>
 <h1 id="distributions">Distributions</h1>
-<h2 id="samples-matrices-from-distribution">Samples matrices from distribution</h2>
-<p>cl-waffe2 provides a package :cl-waffe2/distributions which is used to sample matrices from the distributions.</p>
+<h2 id="sampling-matrices-from-distribution">Sampling matrices from distribution</h2>
+<p>cl-waffe2 provides a package <code>:cl-waffe2/distributions</code> which is used to sample matrices from the distributions.</p>
 <h2 id="common-format-to-the-apis">Common Format to the APIs</h2>
 <p>All sampling functions are defined in the following format via <code>define-tensor-initializer</code> macro.</p>
 <p><code>(function-name shape [Optional Arguments] &amp;rest args &amp;keys &amp;allow-other-keys)</code></p>
@@ -207,11 +211,11 @@
 <pre><code class="language-lisp">(normal `(10 10) 0.0 1.0 :requires-grad t)
 
 {CPUTENSOR[float] :shape (10 10)  
-  ((1.4823159   -0.46964306 -0.66347426 ~ 0.1336862   -0.17317852 -0.23254742)                   
-   (1.5884124   -1.1133975  1.9798037   ~ 0.7578572   0.66243136  0.4400302)   
-                ...
-   (1.2024113   0.19228306  -0.69422823 ~ -1.1183329  -2.4647195  0.12977293)
-   (-0.41061524 0.69448847  0.45885974  ~ 1.8937484   -0.4626773  0.7627691))
+  ((0.119613      0.0696617     -0.51845974   ~ 1.7004628     0.4996423     0.4897055)                     
+   (-1.1284642    -0.0064689103 -0.846032     ~ -0.5962948    -1.575406     -0.43004805)   
+                  ...
+   (0.7994743     1.0443226     -0.4768539    ~ -0.48059216   -0.7566383    0.0051765023)
+   (0.30147827    -0.72716165   -0.75564015   ~ -1.5878669    -1.4639511    -0.8897966))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -308,9 +312,9 @@ out_n = an + b
 <pre><code class="language-lisp">(beta `(3 3) 5.0 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.95779675 0.78534156 0.97238594)
-   (0.5043175  0.8153589  0.84215444)
-   (0.9688498  0.79584134 0.8444515))
+  ((0.95213073 0.6845968  0.89657104)
+   (0.850316   0.9831104  0.6203682)
+   (0.8839493  0.8766788  0.85749966))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -325,9 +329,9 @@ out_n = an + b
 <pre><code class="language-lisp">(bernoulli `(3 3) 0.3)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.0 1.0 1.0)
-   (0.0 0.0 0.0)
-   (1.0 0.0 0.0))
+  ((0.0 0.0 0.0)
+   (1.0 1.0 0.0)
+   (0.0 0.0 1.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -344,9 +348,9 @@ out_n = an + b
 <pre><code class="language-lisp">(chisquare `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.26887837   0.075598314  0.038562592)
-   (0.15240487   0.020331385  0.0014944144)
-   (0.04257775   1.7627947    1.0678082))
+  ((0.0150622325 5.014997e-4  0.4076707)
+   (0.31016153   0.75013447   0.08534716)
+   (0.33567613   0.01176333   0.14503779))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -371,9 +375,9 @@ out_n = an + b
 <pre><code class="language-lisp">(expotential `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.52079695  2.3378499   0.532929)
-   (0.3156159   0.94859123  1.0433507)
-   (0.32960054  0.014408455 0.53494173))
+  ((0.2955058   0.044480704 2.847021)
+   (1.0309886   1.8820623   0.6307436)
+   (0.013490636 1.9426202   1.9248267))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -390,9 +394,9 @@ out_n = an + b
 <pre><code class="language-lisp">(gamma `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((2.0138345   0.46096373  0.47513118)
-   (0.44766566  0.070686094 1.0288159)
-   (0.24305491  0.5462445   0.32319143))
+  ((4.3934636  0.48888627 0.2965439)
+   (0.22882245 0.26897842 0.5933608)
+   (0.4539856  0.19267894 0.3890769))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -430,9 +434,9 @@ out_n = an + b
 <pre><code class="language-lisp">(uniform-random `(3 3) 2 4)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((2.081888  3.5663512 2.6103349)
-   (2.2481    2.4701407 3.9164069)
-   (2.9929533 2.531603  2.844342))
+  ((2.8210456 3.1823678 2.4381611)
+   (3.0901735 3.1590753 3.1356604)
+   (2.4130378 2.8690228 2.5649626))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -457,9 +461,9 @@ out_n = an + b
 <pre><code class="language-lisp">(randn `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.29577962   1.9735839    -0.62287575)
-   (-0.20879823  -0.008091144 0.07309098)
-   (-2.0688834   0.8136456    -1.0385108))
+  ((-0.18318851  0.71465474   -0.4738745)
+   (0.93874615   -0.044843636 -0.30596378)
+   (0.5556831    0.8649478    -1.0314406))
   :facet :exist
   :requires-grad NIL
   :backward NIL}

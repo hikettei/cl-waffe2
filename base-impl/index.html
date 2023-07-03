@@ -45,6 +45,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
                 </li>
               </ul>
@@ -842,6 +846,7 @@ A\gets{B}
 <h3 id="inputs_17">Inputs</h3>
 <p><code>place[AbstractTensor]</code> tensor to be overwritten.</p>
 <p><code>tensor[AbstractTensor]</code> tensor to be referred.</p>
+<p><code>force[boolean]</code> If t, the pruning of operation by cl-waffe2 will never done.</p>
 <h3 id="output">Output</h3>
 <p>Unevaluated Copied Tensor.</p>
 <h2 id="function-copy">[function] !copy</h2>
@@ -952,6 +957,7 @@ Output: Tensor[AbstractTensor]</p>
 <pre><code>(proceed-time tensor)
 </code></pre>
 <p>An alias for (proceed tensor :measure-time t)</p>
+<p>Note that: the proceed-time function invokes forward function twice times, in order for processing system to trace compiled lisp code, and ignoring allocation time.</p>
 <h2 id="function-proceed-backward">[function] proceed-backward</h2>
 <pre><code>(proceed-backward tensor)
 </code></pre>
@@ -1308,25 +1314,25 @@ OUT_{copy}\gets{loge(X)}
 <h3 id="sideeffects_27">SideEffects</h3>
 <p><code>-&gt;</code> is destructed.</p>
 <h2 id="function-sum">[function] !sum</h2>
-<pre><code>(!sum tensor &amp;key (axis t) (-&gt; nil) (keep-repeat nil))
+<pre><code>(!sum tensor &amp;key (axis t) (-&gt; nil) (keepdims nil))
 </code></pre>
 <p>The function !sum return a node which computes the sum of tensor along the given axis.</p>
 <h3 id="inputs_40">Inputs</h3>
 <p><code>tensor</code>, a tensor to be reducted.</p>
 <p><code>axis</code>[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)</p>
 <p><code>-&gt;</code> [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.</p>
-<p><code>keep-repeat</code>[boolean] If t, the axis reducted is repeated.</p>
+<p><code>dims</code>[boolean] If t, the axis reducted is broadcasted.</p>
 <p>Return:</p>
 <p><code>-&gt;</code>[AbstractTensor] the result.</p>
 <h2 id="function-mean">[function] !mean</h2>
-<pre><code>(!mean tensor &amp;key (axis t) (-&gt; nil) (keep-repeat nil))
+<pre><code>(!mean tensor &amp;key (axis t) (-&gt; nil) (keepdims nil))
 </code></pre>
 <p>The function !mean return a node which computes the average of tensor along the given axis.</p>
 <h3 id="inputs_41">Inputs</h3>
 <p><code>tensor</code>, a tensor to be reducted.</p>
 <p><code>axis</code>[t or fixnum or list] the axis to be reducted. (-1, -2... is ok)</p>
 <p><code>-&gt;</code> [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.</p>
-<p><code>keep-repeat</code>[boolean] If t, the axis reducted is repeated.</p>
+<p><code>keepdims</code> [boolean] If t, the axis reducted is broadcasted.</p>
 <h3 id="return_1">Return</h3>
 <p><code>-&gt;</code>[AbstractTensor] the result.</p>
 <h2 id="function-argmax">[function] !argmax</h2>
