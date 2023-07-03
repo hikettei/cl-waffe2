@@ -9,6 +9,10 @@
       #.(char-code #\T)
       #.(char-code #\N)))
 
+;; Fix: Batched matmul
+;; Fix: Matmul with parameter? !t with save-for-backward is working???
+;;
+
 ;; TODO: 1D Gemm -> Dot Product
 ;; TODO: Fix it.
 ;; TODO: Transpose Tensor.

@@ -92,7 +92,7 @@ Set 2 if the operation is matmul for example.
 			      (nth kth-tensor offsets-place)
 			      `(nth ,target-dim-n (shape ,tensor))
 			      (let ((stride `(nth ,target-dim-n (tensor-stride ,tensor)))
-				    (view    `(subscript-view (nth ,target-dim-n (tensor-view ,tensor)))))
+				    (view   `(subscript-view (nth ,target-dim-n (tensor-view ,tensor)))))
 				(lazy* stride `(compute-stepby ,view))))))))
 
 (defun expand-call-with-view-flatten
@@ -157,7 +157,7 @@ Return: (values offsets-place form)"
 	  ,,@body))))
 
 
-(defmacro with-shape-det-form (tensors &body body)
+(defmacro with-shape-det-form (tensors used-symbol-binding &body body)
   `(let ((used-symbols))
      (mapc #'(lambda (tensor)
 	       (mapc #'(lambda (s)
@@ -166,17 +166,22 @@ Return: (values offsets-place form)"
 		     (shape tensor)))
 	   ,tensors)
      `(with-let-adjustable-symbols (,@used-symbols)
-	,,@body)))
+	(let ((,',used-symbol-binding ',used-symbols))
+	  (declare (ignorable ,',used-symbol-binding))
+	  ,,@body))))
 
 (defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
   ;; Set Strides At Runtime
   ;; Expand Loop
   `(let ((stride-places (tensor-gensym-list ,tensors))
 	 (ith (gensym)))
-     `(let (,@(loop for stride-place in stride-places ;; (place <- stride)
-		     for tensor in ,tensors
+     `(let* (,@(loop for stride-place in stride-places ;; (place <- stride)
+		    for tensor in ,tensors
 		    collect `(,stride-place (nth ,,target-dim (tensor-stride ,tensor))))
-	    (,',endpoint-place ,(car ,end-points)))
+	    (,',endpoint-place ,(car ,end-points))
+	    (,',endpoint-place (if (symbolp ,',endpoint-place)
+				   (read-adjustable-symbol ,',endpoint-place)
+				   ,',endpoint-place)))
 
 	,@(expand-first-offset-adder
 	   ,tensors
@@ -196,6 +201,15 @@ Return: (values offsets-place form)"
 
 (defun update-calling-route (value)
   (push value cl-waffe2/vm.nodes::*call-with-view-route*))
+
+
+(defmacro with-bind-shape (&body body)
+  `(flet ((original-shape (tensor)
+	    (translate-adjustable-shape (original-shape tensor)))
+	  (shape (tensor)
+	    (translate-adjustable-shape (shape tensor))))
+     ,@body))
+
 
 (defun call-with-view (function
 		       tensors
@@ -239,7 +253,7 @@ See also:
 	  "call-with-view failed with assertion: All all tensors has the same dimensions of batch-area, butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
-  (labels ((explore (rest-dim offsets-place &aux (target-dim (- dims rest-dim)))
+  (labels ((explore (rest-dim offsets-place used-symbols &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim target-dim)
 		      (type list offsets-place))
 	     ;; Exploring ND .. 3D 2D 1D
@@ -298,9 +312,10 @@ See also:
 			(tensors offsets-place target-dim start-points end-points)
 		      (explore
 		       (1- rest-dim)
-		       offsets-place))))))))
+		       offsets-place
+		       used-symbols))))))))
 
-    (with-shape-det-form tensors
+    (with-shape-det-form tensors used-symbols
       (with-expand-init-tmp-form offset-place tensors
-	(explore dims offset-place)))))
+	(explore dims offset-place used-symbols)))))
 

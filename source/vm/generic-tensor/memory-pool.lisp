@@ -147,12 +147,14 @@ Reading the *adjustable-shape-table*, the function returns an list consisted of 
 If there's any undetermined one, returns an error (TODO: Add Conditions)"
   (declare (type list shape)
 	   (optimize (speed 3)))
-  (loop for s in shape
-	collect (typecase s
-		  (fixnum s)
-		  (symbol
-		   (or (gethash s *adjustable-shape-table*)
-		       (error "translate-adjustable-shape: encountered unknown symbol: ~a" s))))))
+  (map 'list #'read-adjustable-symbol shape))
+
+(defun read-adjustable-symbol (s)
+  (typecase s
+    (fixnum s)
+    (symbol
+     (or (gethash s *adjustable-shape-table*)
+	 (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
   "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
