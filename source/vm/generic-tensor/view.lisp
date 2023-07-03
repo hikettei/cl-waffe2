@@ -536,6 +536,7 @@ a=1, b=2 => NIL
   (every #'shape-equal list1 list2))
 
 
+(declaim (ftype (function (subscript-t) fixnum) compute-stepby))
 (defun compute-stepby (view)
   ;; view ... list
   (case (viewtype view)

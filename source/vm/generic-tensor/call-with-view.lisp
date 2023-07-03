@@ -67,8 +67,10 @@ Set 2 if the operation is matmul for example.
 			       (nthcdr dim-start-from (tensor-view tensor))))
 	   (or (scalar-p tensor) ;; tensor is scalar
 	       ;; at least one of (nthcdr dim-start-from (tensor-view tensor)) isn't T
-	       (some #'(lambda (v) 
-			 (not (eql (force-list v) t)))
+	       (some #'(lambda (v)
+			 ;; non-reductable dim is: NOT(T) or NOT (:BROADCAST)
+			 (or (not (eql (force-list v) t))
+			     (not (eql (force-list v) :broadcast))))
 		     views))))
     ;; If tensors are consisted of non-projected-tensor...?
     (not (some #'not-reductable-p tensors))))
@@ -90,13 +92,14 @@ Set 2 if the operation is matmul for example.
 			      (nth kth-tensor offsets-place)
 			      `(nth ,target-dim-n (shape ,tensor))
 			      (let ((stride `(nth ,target-dim-n (tensor-stride ,tensor)))
-				    (view (subscript-view (nth target-dim-n (tensor-view tensor)))))
-				(lazy* stride (compute-stepby view))))))))
+				    (view    `(subscript-view (nth ,target-dim-n (tensor-view ,tensor)))))
+				(lazy* stride `(compute-stepby ,view))))))))
 
 (defun expand-call-with-view-flatten
     (function
      tensors
      offset-place
+     target-dim
      &key
        (dim-start-from 0))
   ;; At-least-dim = 1
@@ -125,7 +128,8 @@ Set 2 if the operation is matmul for example.
 	   collect (let ((view (make-viewinstruction
 				(nth k offset-place)
 				(nth k sizes)
-				1)))
+				`(compute-stepby
+				  (subscript-view (nth ,target-dim (tensor-view ,tensor)))))))
 		     (list view))))))
 
 
@@ -252,6 +256,7 @@ See also:
 		  function
 		  tensors
 		  offsets-place
+		  target-dim
 		  :dim-start-from target-dim)))
 	     
 	     (update-calling-route rest-dim)
