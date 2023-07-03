@@ -498,8 +498,9 @@ This function is setfable."
 	(apply #'+
 	       (map 'list
 		    #'(lambda (stride s view shape)
+			(declare (ignore shape))
 			(* stride (compute-stepby (subscript-view view))
-			   (+ s (compute-visible-start-idx (subscript-view view) shape))))
+			   (+ s (compute-visible-start-idx (subscript-view view)))))
 		    (tensor-stride tensor)
 		    subscripts
 		    (tensor-view tensor)
@@ -517,8 +518,9 @@ This function is setfable."
 	      (apply #'+
 		     (map 'list
 			  #'(lambda (stride s view shape)
+			      (declare (ignore shape))
 			      (* stride (compute-stepby (subscript-view view))
-				 (+ s (compute-visible-start-idx (subscript-view view) shape))))
+				 (+ s (compute-visible-start-idx (subscript-view view)))))
 			  (tensor-stride tensor)
 			  subscripts
 			  (tensor-view tensor)

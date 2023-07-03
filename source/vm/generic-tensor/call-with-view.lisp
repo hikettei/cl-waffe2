@@ -88,8 +88,8 @@ Set 2 if the operation is matmul for example.
 		       below (+ rest-dims target-dim)
 		     collect (make-viewinstruction
 			      (nth kth-tensor offsets-place)
-			      (nth target-dim-n (shape tensor))
-			      (let ((stride (nth target-dim-n (tensor-stride tensor)))
+			      `(nth ,target-dim-n (shape ,tensor))
+			      (let ((stride `(nth ,target-dim-n (tensor-stride ,tensor)))
 				    (view (subscript-view (nth target-dim-n (tensor-view tensor)))))
 				(lazy* stride (compute-stepby view))))))))
 
@@ -108,7 +108,7 @@ Set 2 if the operation is matmul for example.
 			 (loop for i upfrom dim-start-from below (length s)
 			       unless (eql (force-list (nth i v)) t)
 				 do (error "Internal Error: call-with-view-1dkernel is only applied to view=t axes.")
-			       collect (nth i s)))
+			       collect `(nth ,i (shape ,tensor))))
 		     tensors))
 	 (sizes (map 'list #'(lambda (x) (apply #'lazy-mulup x)) size-list)))
 
@@ -164,32 +164,31 @@ Return: (values offsets-place form)"
      `(with-let-adjustable-symbols (,@used-symbols)
 	,,@body)))
 
-(defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body)
+(defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
   ;; Set Strides At Runtime
   ;; Expand Loop
   `(let ((stride-places (tensor-gensym-list ,tensors))
 	 (ith (gensym)))
      `(let (,@(loop for stride-place in stride-places ;; (place <- stride)
 		     for tensor in ,tensors
-		     collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor))))))
+		    collect `(,stride-place (nth ,,target-dim (tensor-stride ,tensor))))
+	    (,',endpoint-place ,(car ,end-points)))
 
 	,@(expand-first-offset-adder
 	   ,tensors
 	   ,offset-places
 	   stride-places
 	   ,start-points)
+	
 	;; Expand Multi-Dimensional Looping Forms
 
-	(loop for ,ith fixnum upfrom 0 below ,(car ,end-points)
+	(loop for ,ith fixnum upfrom 0 below ,',endpoint-place
 	      ;; 1. Execute Operation
 	      ;; 2. Adding Offsets
 	      do (progn ,,@body)
-	      unless (= ,ith (1- ,(car ,end-points)))
+	      unless (= ,ith (1- ,',endpoint-place))
 		;; Unless islast, expand it.
 		do (progn ,@(expand-view-stride-adder ,offset-places stride-places ,target-dim ,tensors))))))
-
-(defmacro with-expanding-explore-inlining ((tensors offset-places target-dim start-points end-points) &body body)
-  `(with-expanding-explore-form* (,tensors ,offset-places ,target-dim ,start-points ,end-points) ,@body))
 
 (defun update-calling-route (value)
   (push value cl-waffe2/vm.nodes::*call-with-view-route*))
@@ -261,16 +260,13 @@ See also:
 	     ;; Computing Multi-Dimensional Offsets
 	     (let* ((start-points (loop for tensor in tensors
 					collect
-					(compute-visible-start-idx
-					 (subscript-view (nth target-dim (tensor-view tensor)))
-					 (nth target-dim (slot-value tensor 'orig-shape)))))
+					`(compute-visible-start-idx
+					  (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
 		    (end-points (loop for tensor in tensors
 				      collect
-				      (compute-visible-end-idx
-				       (subscript-view (nth target-dim (tensor-view tensor)))
-				       (nth target-dim (slot-value tensor 'orig-shape)))))
-		    (axis-determined-p (every #'numberp end-points)))
-
+				      `(compute-visible-end-idx
+					(subscript-view (nth ,target-dim (tensor-view ,tensor)))
+					(nth ,target-dim (original-shape ,tensor))))))
 	       (cond
 		 ((<= rest-dim at-least-dim)
 		  ;; funcall form
@@ -278,7 +274,7 @@ See also:
 		    (let ((stride-places (tensor-gensym-list tensors)))
 		      `(let (,@(loop for stride-place in stride-places
 				     for tensor in tensors
-				     collect `(,stride-place (nth ,target-dim (list ,@(tensor-stride tensor))))))
+				     collect `(,stride-place (nth ,target-dim (tensor-stride ,tensor)))))
 			 ,@(expand-first-offset-adder
 			    tensors
 			    offsets-place
@@ -290,17 +286,8 @@ See also:
 			   offsets-place
 			   target-dim
 			   rest-dim)))))
-		 ((and axis-determined-p
-		       (<= (the fixnum *unroll-threshold*) (the fixnum (car end-points))))
-
-		  ;; Currently disabled
-		  (with-update-offset-place offsets-place tensors
-		    (with-expanding-explore-form
-			(tensors offsets-place target-dim start-points end-points)
-		      (explore
-		       (1- rest-dim)
-		       offsets-place))))
 		 (T
+		  ;; batching
 		  (with-update-offset-place offsets-place tensors
 		    (with-expanding-explore-form
 			(tensors offsets-place target-dim start-points end-points)

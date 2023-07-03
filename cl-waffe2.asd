@@ -81,6 +81,7 @@
 	       (:file "nn/criterion")
 	       
 	       (:file "optimizers/package")
+	       (:file "optimizers/defoptimizer")
 
 	       (:file "package")
 	       (:file "utils")
