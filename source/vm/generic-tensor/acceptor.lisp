@@ -257,8 +257,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       `(let*-ignorable (,@(loop for s in next-states ;; p <- s
 				for p in out-places
 				collect `(,p ,s))
-			,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
-				collect `(,(tensor-id v) ,v))
 			(,(tensor-id toplevel) (progn ,toplevel)))
 
 	 ;; The Operation hasn't done yet...
@@ -359,6 +357,13 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 
 (defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
+
+  
+  (when (some #'symbolp (shape toplevel))
+    (error "Can't construct backward, because the shape of tensor is undetermined: ~a
+
+Try again with: (with-no-grad ...) " (shape toplevel)))
+  
   (let* ((*kernel-storeroom*)
 	 (out (if (scalar-p toplevel)
 		  (make-tensor 1
@@ -518,9 +523,6 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 `compile-mode`[compile-mode-t] an keyword to indicate compiling option.
 "
   (declare (type AbstractTensor toplevel))
-
-  (when (some #'symbolp (shape toplevel))
-    (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   
   (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
     ;; Vars - All Variables (including ChainTMP) used in forward.

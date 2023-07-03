@@ -13,11 +13,13 @@
 		#:tensor-id
 		#:tensor-variables
 		#:tensor-state
+		#:tensor-name
 		#:tensor-out-n
 		#:tensor-vec
 		#:tensor-view
 		#:make-tensor
 		#:make-input
+		#:set-input
 		#:movetensor-p
 		#:shaping-error
 		#:shape-equal

@@ -346,6 +346,9 @@ Second case, `on-call->` is symbol-name:
 				      (format out "~a" arg)))
 				  documentation)))
 
+       (defmethod read-where ((model ,name))
+	 ',where)
+       
        ;; Creates a constructor named (linearlayer constructor-arguments)
        (defun ,name (,@constructor-arguments)
 	 ,(format nil "
@@ -383,6 +386,7 @@ An constructor function for ~a."
 				:linter-state2
 				(fourth ,subscript-p2)
 				,@initargs)))
+	       (declare (ignorable ,self-name))
 	       ;; Update IO size
 
 	       (multiple-value-bind (result input)
@@ -440,4 +444,33 @@ An constructor function for ~a."
 	  (class-name (class-of model))
 	  (model-id model)
 	  (render-model-content model)))
+
+(defun composite-symbol-names (composite)
+  (multiple-value-bind (in out) (parse-subscript (read-where composite))
+    (values in out)))
+
+(defun composite-input-tensor (composite ~
+			       &key
+				 (dtype :float)
+				 (order :column)
+				 (scalar-p nil))
+  "Returns (make-input)"
+  (declare (type Composite composite)
+	   (type list ~))
+  (let ((input-shape (composite-input-size composite)))
+    (loop for i upfrom 0
+	  for x in input-shape
+	  collect (make-input (where-arg->shape ~ x)
+			      (->keyword (nth-subscript i))
+			      :scalar-p scalar-p
+			      :dtype dtype
+			      :order order))))
+
+(defun where-arg->shape (~ shape)
+  (flatten
+   (loop for s in shape
+	 if (symbol-eq s '~)
+	   collect ~
+	 else
+	   collect s)))
 

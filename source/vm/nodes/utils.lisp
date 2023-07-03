@@ -126,3 +126,18 @@ Return:
 	      :order (order tensor)
 	      :scalar-p (scalar-p tensor)))
 
+(defun nth-subscript (nth)
+  "Returns nth alphabet"
+  (intern (format nil "Input-~a" (code-char (+ 65 (mod nth 26))))))
+
+(defun ->keyword (symbol)
+  (intern (format nil "~a" symbol) "KEYWORD"))
+
+(defun dim->input-shape (dim)
+  "3 -> (a b c) 2 -> (a b)"
+
+  (when (>= dim 27)
+    (error "Assertion Failed: dim < 27, butgot: ~a" dim))
+  
+  (loop for i upfrom 0 below dim
+	collect (nth-subscript i)))
