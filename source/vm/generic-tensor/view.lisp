@@ -91,50 +91,53 @@
 (defun compute-visible-start-idx (view)
   "Given view, this function returns a offset at the dimension."
   (declare (optimize (speed 3)))
-  (case (viewtype view)
-    (:index view)
-    (:t     0)
-    (:slice      (car view))
-    (:slice-step (if (> (the fixnum (third view)) 0)
-		     (min (the fixnum (car view)) (the fixnum (second view)))
-		     (max (the fixnum (car view)) (the fixnum (second view)))))
-    (:indices 0)
-    (:tflist  0)
-    (:broadcast 0)
-    (T (error "unknown viewtype: ~a" view))))
+  (read-symbol
+   (case (viewtype view)
+     (:index view)
+     (:t     0)
+     (:slice      (car view))
+     (:slice-step (if (> (the fixnum (third view)) 0)
+		      (min (the fixnum (car view)) (the fixnum (second view)))
+		      (max (the fixnum (car view)) (the fixnum (second view)))))
+     (:indices 0)
+     (:tflist  0)
+     (:broadcast 0)
+     (T (error "unknown viewtype: ~a" view)))))
 
 (declaim (ftype (function (subscript-t (or list symbol fixnum)) (or list symbol fixnum)) compute-visible-end-idx))
 (defun compute-visible-end-idx (view size)
   "Given view and size, this function returns a size at the dimension."
-  (case (viewtype view)
-    (:index (1+ (the fixnum view)))
-    (:t     size)
-    (:slice (the fixnum (second view)))
-    ;; FIXME: Should be divided :slice-step
-    (:slice-step
-     (the fixnum
-	  (round (/ (if (> (third view) 0)
-			(max (car view) (second view))
-			(min (car view) (second view)))
-		    (abs (third view))))))
-    (:indices (length (cdr view)))
-    (:tflist  size)
-    (:broadcast (second view))
-    (T (error "unknwon view: ~a" view))))
+  (read-symbol
+   (case (viewtype view)
+     (:index (1+ (the fixnum view)))
+     (:t     size)
+     (:slice (the fixnum (second view)))
+     ;; FIXME: Should be divided :slice-step
+     (:slice-step
+      (the fixnum
+	   (round (/ (if (> (third view) 0)
+			 (max (car view) (second view))
+			 (min (car view) (second view)))
+		     (abs (third view))))))
+     (:indices (length (cdr view)))
+     (:tflist  size)
+     (:broadcast (second view))
+     (T (error "unknwon view: ~a" view)))))
 
 (defun compute-visible-end-idx-actual (view size)
-  (case (viewtype view)
-    (:index (1+ view))
-    (:t     size)
-    (:slice (second view))
-    (:slice-step
-     (round (/ (if (> (third view) 0)
-		   (max (car view) (second view))
-		   (min (car view) (second view)))
-	       (abs (third view)))))
-    (:indices (length (cdr view)))
-    (:tflist  size)
-    (:broadcast 1)))
+  (read-symbol
+   (case (viewtype view)
+     (:index (1+ view))
+     (:t     size)
+     (:slice (second view))
+     (:slice-step
+      (round (/ (if (> (third view) 0)
+		    (max (car view) (second view))
+		    (min (car view) (second view)))
+		(abs (third view)))))
+     (:indices (length (cdr view)))
+     (:tflist  size)
+     (:broadcast 1))))
 
 (defun force-list (view)
   "Returns subscript-t if view is Subscript otherwise returns a view"

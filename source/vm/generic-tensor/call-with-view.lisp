@@ -165,7 +165,7 @@ Return: (values offsets-place form)"
 			   (push s used-symbols)))
 		     (shape tensor)))
 	   ,tensors)
-     `(with-let-adjustable-symbols (,@used-symbols)
+     `(progn
 	(let ((,',used-symbol-binding ',used-symbols))
 	  (declare (ignorable ,',used-symbol-binding))
 	  ,,@body))))
@@ -318,4 +318,3 @@ See also:
     (with-shape-det-form tensors used-symbols
       (with-expand-init-tmp-form offset-place tensors
 	(explore dims offset-place used-symbols)))))
-

@@ -117,6 +117,7 @@ After the body exists, all the temporary tensors in the pool is freed."
 	(progn
 	  (setf (temporary-room-size room) required-size)
 	  (setf (temporary-room-cache-tensor room) tensor)
+	  (setf (tensor-vec (temporary-room-cache-tensor room)) nil)
 	  (assure-and-return-room room tensor))
 	(vec tensor))))
 
@@ -183,9 +184,12 @@ Usage:
 (defmacro with-let-adjustable-symbol (symbol-name &body body)
   `(let ((,symbol-name (gethash ',symbol-name *adjustable-shape-table*)))
      (declare (type fixnum ,symbol-name)
+	      
 	      (ignorable ,symbol-name))
+     (declare (ignore symbol-name))
      ,@body))
 
+;; Fix: symbol conflicts??
 (defmacro with-let-adjustable-symbols ((&rest symbol-names) &body body)
   (labels ((expand (rest-forms)
 	     (if (null rest-forms)
@@ -195,7 +199,11 @@ Usage:
     (expand symbol-names)))
 
 (defun read-symbol (symbol)
-  (gethash symbol *adjustable-shape-table*))
+  (if *adjustable-shape-table*
+      (typecase symbol
+	(symbol (gethash symbol *adjustable-shape-table*))
+	(T symbol))
+      symbol))
 
 (defun get-from-memory-pool (tensor)
   (declare (type AbstractTensor tensor)
