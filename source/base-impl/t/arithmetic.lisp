@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/base-impl.test)
 
-(in-suite :base-impl-test)
-
 ;; == Here, we provide testing framework. ========
 ;;
 ;; You can perform tests like:
@@ -101,11 +99,6 @@
   (define-ss-tester ss-mul-tester !mul * 1 1)
   (define-ss-tester ss-div-tester !div / 1 -1))
 
-(ss-add-tester nil)
-(ss-sub-tester nil)
-(ss-mul-tester nil)
-(ss-div-tester nil)
-
 (define-tester matmul-tester :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
  	 (b (ax+b `(3 3) 1 0 :order :column))
@@ -149,3 +142,10 @@
        (matmul-tester-mnk1 ,backend)
        (matmul-both-transposed ,backend))))
 
+(in-suite :base-impl-test)
+
+
+(ss-add-tester nil)
+(ss-sub-tester nil)
+(ss-mul-tester nil)
+(ss-div-tester nil)

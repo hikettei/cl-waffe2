@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/base-impl.test)
 
-(in-suite :base-impl-test)
-
 ;; == Here, we provide testing framework. ========
 ;;
 ;; You can perform tests like:

@@ -9,6 +9,18 @@
 
 ;; One composite -> a single defun form.
 ;; In order to implemenet "GENERIC" behaviour, we need to wrap composite->defun by higher-order function.
+
+(defun eliminate-undetermined-size (tensor)
+  (let ((place (make-input
+		(cl-waffe2/vm.generic-tensor::translate-adjustable-shape (shape tensor))
+		nil
+		:dtype (dtype tensor)
+		:order (order tensor)
+		:scalar-p (scalar-p tensor))))
+
+    (cl-waffe2/vm.generic-tensor::embody-tensor-vec place tensor)
+    place))
+
 (defun composite->defun (~ composite function-name
 			 &key
 			   (dtype :float)
@@ -46,16 +58,20 @@ Return: defun form
 	 (tmp-fname (gensym (symbol-name function-name)))
 	 (mname     (gensym)))
     (with-no-grad
-      (let ((compiled-kernel (cl-waffe2/vm.generic-tensor:build result :compile-mode compile-mode)))
+      (multiple-value-bind (compiled-kernel set-input-forms) (cl-waffe2/vm.generic-tensor:build result :compile-mode compile-mode :use-setinput-form t)
 
 	`(progn
+	   
 	   ;; Main Body
 	   (defun ,tmp-fname (,self ,@namelist)
 	     (declare (ignore ,self))
 	     ,@(loop for tensor in inputs
 		     for name in namelist
 		     collect `(set-input ,compiled-kernel ,(tensor-name tensor) ,name))
-	     (forward ,compiled-kernel))
+
+	     (let ((outputs (multiple-value-list (forward ,compiled-kernel))))
+	       (cl-waffe2/vm.generic-tensor::with-adjustable-symbols (,@set-input-forms)
+		 (apply #'values (map 'list #'eliminate-undetermined-size outputs)))))
 
 	   (defmodel (,model-name (self)
 		      :where ,(read-where composite)
@@ -104,12 +120,14 @@ Return: defun form
 	  (setf (gethash key polymorphic-table) compiled-f)
 	  compiled-f))))
 
-(defun composite->generic (composite function-name
+(defun composite->generic (composite function-name composite-creator-function
 			   &key
 			     (adjustable-size t)
 			     (compile-mode :default)
 			     (order :column))
   "Polymorphic dispatching kernel"
+  (declare (type Composite composite)
+	   (type symbol function-name))
   (let ((polymorphic-table (make-hash-table))
 	(kernel-place (gensym (format nil "~a-state-" function-name)))
 	(namelist (or (composite-symbol-names composite)
@@ -127,7 +145,8 @@ Return: defun form
 				   `(map 'list #'(lambda (x y) (- (cl-waffe2/vm.generic-tensor:dims x) y)) (list ,@namelist) (list ,@input-det-n-list))))
 		(,target-function (dispatch-method
 				   ,kernel-place (list ,@namelist)
-				   ,composite ',function-name
+				   (funcall ,composite-creator-function)
+				   ',function-name
 				   ,~length-place
 				   :compile-mode ,compile-mode
 				   :order ,order)))
@@ -135,6 +154,7 @@ Return: defun form
 
 (defun composite-function (composite
 			   function-name
+			   composite-creator-function
 			   &key
 			     (compile-mode :default)
 			     (scalar-p-list nil)
@@ -170,7 +190,7 @@ Input:
 			 :compile-mode compile-mode
 			 :scalar-p-list scalar-p-list))
       (T
-       (composite->generic composite function-name
+       (composite->generic composite function-name composite-creator-function
 			   :adjustable-size including~?
 			   :order order
 			   :compile-mode compile-mode)))))
@@ -192,7 +212,13 @@ Tracing the `on-call->` form of a given composite-init-form, the macro `define-c
 	   (type keyword order)
 	   (type compile-option-t compile-mode))
 
-  `(eval (composite-function ,composite-init-form ',function-name
+  `(eval (composite-function ,composite-init-form
+			     ',function-name
+			     #'(lambda ()
+				 (let ((out ,composite-init-form))
+				   (if (typep out 'Composite)
+				       out
+				       (error "define-composite-function: the given initform, `composite-init-form` won't return composite..."))))
 			     :compile-mode ,compile-mode
 			     :dtype ,dtype
 			     :order ,order)))

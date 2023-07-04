@@ -591,6 +591,27 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	)
   t)
 
+(defun embody-tensor-vec (input-tensor actual-tensor)
+  "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor) but shape/strides"
+  (declare (type AbstractTensor input-tensor actual-tensor))
+  
+  (assert (vec actual-tensor)
+	  nil
+	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
+
+  (when (and (numberp (vec input-tensor))
+	     (numberp (vec actual-tensor)))
+    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
+    (return-from embody-tensor-vec t))
+
+  ;; Offsets?
+  (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	(slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
+	(tensor-view input-tensor) (tensor-view actual-tensor)
+	(tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
+	;;(tensor-stride input-tensor) (eval `(list ,@(tensor-stride actual-tensor)))
+	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
+
 (defun view (tensor &rest subscripts)
   "The function view creates a view of given tensor.
 Note that the function *view* doesn't records ANY NODES, while the function *!view* does.

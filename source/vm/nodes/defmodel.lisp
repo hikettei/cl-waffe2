@@ -475,11 +475,13 @@ An constructor function for ~a."
     (let ((input-shape (composite-input-size composite)))
       (loop for i upfrom 0
 	    for x in input-shape
-	    collect (make-input (where-arg->shape (read~ ~ i) x)
-				(->keyword (nth-subscript i))
-				:scalar-p (read-state scalar-p-list i)
-				:dtype (read-state dtype i)
-				:order order)))))
+	    collect
+	    (let ((res (make-input (where-arg->shape (read~ ~ i) x)
+				   (->keyword (nth-subscript i))
+				   :scalar-p (read-state scalar-p-list i)
+				   :dtype (read-state dtype i)
+				   :order order)))
+	      res)))))
 
 (defun where-arg->shape (~ shape)
   (flatten

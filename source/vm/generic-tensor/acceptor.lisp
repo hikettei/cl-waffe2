@@ -481,7 +481,8 @@ Reading all variables in the computation node, the method get-input returns an c
 (defun build (toplevel
 	      &key
 		(construct-backward? (not *no-grad*))
-		(compile-mode :fastest))
+		(compile-mode :fastest)
+		(use-setinput-form nil))
   "
 ## [function] build
 
@@ -530,11 +531,13 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
   
   (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
     ;; Vars - All Variables (including ChainTMP) used in forward.
-    (make-instance 'Compiled-Composite
-		   :variables  (construct-variables-table vars)
-		   :compiled-forward forward-kernel
-		   :compiled-backward (when construct-backward?
-					(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))))
+    (values (make-instance 'Compiled-Composite
+			   :variables  (construct-variables-table vars)
+			   :compiled-forward forward-kernel
+			   :compiled-backward (when construct-backward?
+						(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
+	    
+	    (when use-setinput-form set-input-forms))))
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite

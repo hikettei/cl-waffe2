@@ -112,7 +112,7 @@ Set 2 if the operation is matmul for example.
 			 (loop for i upfrom dim-start-from below (length s)
 			       unless (eql (force-list (nth i v)) t)
 				 do (error "Internal Error: call-with-view-1dkernel is only applied to view=t axes.")
-			       collect `(nth ,i (shape ,tensor))))
+			       collect `(read-symbol (nth ,i (shape ,tensor)))))
 		     tensors))
 	 (sizes (map 'list #'(lambda (x) (apply #'lazy-mulup x)) size-list)))
 

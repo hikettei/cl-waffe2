@@ -19,7 +19,6 @@
 ;;
 
 (def-suite :base-impl-test)
-(in-suite :base-impl-test)
 
 (defparameter *dense-types*  `(:float :double))
 (defparameter *sparse-types* `(:int8 :int16 :int32))

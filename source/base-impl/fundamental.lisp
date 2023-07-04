@@ -122,7 +122,7 @@ Unevaluated Copied Tensor."
       (forward (MoveTensorNode (dtype place) :save-for-backward force) place tensor)))
 
 
-(defun !copy (tensor)
+(defun !copy (tensor &key (force nil))
   "
 ## [function] !copy
 
@@ -156,7 +156,7 @@ Output: Tensor[AbstractTensor]"
 	 (out (if broadcasted-p
 		  (apply #'!view out broadcasts)
 		  out))
-	 (res (!move out tensor)))
+	 (res (!move out tensor :force force)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 

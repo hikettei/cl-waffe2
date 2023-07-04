@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/base-impl.test)
 
-(in-suite :base-impl-test)
-
 ;; sum
 ;; -> = view, α=broadcast_auto, β=0
 ;; sum(x, out) = ->(->(out, α) += x, β)
@@ -49,6 +47,8 @@
 	    :backward)))))
 
 ;;(sum-tester cl-waffe2/backends.lisp:LispTensor)
+
+(in-suite :base-impl-test)
 
 ;; Working on LispTensor is enough for testing !mean
 (mean-tester cl-waffe2/backends.lisp:LispTensor)
