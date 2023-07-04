@@ -50,9 +50,10 @@ X\\gets{X ~a Y}
 " document1 document2 document1))))))
   (define-arithmetic-node AddNode "AddNode" "+"
     ((self dout dx dy)
+     (declare (ignore dx dy))
      ;; forward: next = x + y
      ;; dx = x, dy = y
-     (values (!move dx dout) (!move dy dout))))
+     (values dout dout)))
   (define-arithmetic-node SubNode "SubNode" "-"
     ((self dout dx dy)
      (declare (ignore dx dy))

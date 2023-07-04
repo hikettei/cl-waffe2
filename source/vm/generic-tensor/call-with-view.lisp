@@ -20,8 +20,8 @@
 	collect
 	;; offset += stride * start-points
 	`(incf ,(nth k offset-places)
-	       (%* ,(nth k start-points)
-		   ,(nth k stride-places)))))
+	        (%* ,(nth k start-points)
+		    ,(nth k stride-places)))))
 
 (defun expand-view-stride-adder (offset-places
 				 stride-places
@@ -70,7 +70,8 @@ Set 2 if the operation is matmul for example.
 	       (some #'(lambda (v)
 			 ;; non-reductable dim is: NOT(T) or NOT (:BROADCAST)
 			 (or (not (eql (force-list v) t))
-			     (not (eql (force-list v) :broadcast))))
+			     (not (eql (force-list v) :broadcast))
+			     ))
 		     views))))
     ;; If tensors are consisted of non-projected-tensor...?
     (not (some #'not-reductable-p tensors))))
@@ -79,7 +80,7 @@ Set 2 if the operation is matmul for example.
 (defun expand-funcall-with-view (function tensors offsets-place target-dim rest-dims)
   ""
   ;; (apply function view1 view2 view3 ...)
-  
+
   (apply function
 	 (loop for kth-tensor upfrom 0
 	       for tensor in tensors
@@ -127,7 +128,7 @@ Set 2 if the operation is matmul for example.
 	   for k upfrom 0
 	   collect (let ((view (make-viewinstruction
 				(nth k offset-place)
-				(read-adjustable-symbol (nth k sizes))
+				`(read-adjustable-symbol ,(nth k sizes))
 				`(compute-stepby
 				  (subscript-view (nth ,target-dim (tensor-view ,tensor)))))))
 		     (list view))))))

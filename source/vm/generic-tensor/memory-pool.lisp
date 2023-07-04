@@ -9,6 +9,7 @@
   ;; Gc-able temporary-rooms?
   (temporary-rooms (make-hash-table) :type hash-table))
 
+;; TODO: AddState :using :freenow
 (defparameter *memory-pool* (make-memory-pool) "Memory-Pool is a place to store caching tensors.")
 
 (defvar *adjustable-shape-table* nil "An hash-table: Symbol -> Size.")
@@ -66,6 +67,7 @@
   ;; TODO
   ;; *memory-pool*
   ;; (maphash ... tensor-delete)
+  (setf *memory-pool* (make-memory-pool))
   )
 
 (defmacro with-memory-pool (&body body)
@@ -96,8 +98,9 @@ After the body exists, all the temporary tensors in the pool is freed."
   (declare (type Temporary-Room room)
 	   (type AbstractTensor tensor)
 	   (optimize (speed 3)))
-  (let ((required-size (apply #'* (translate-adjustable-shape (actual-shape tensor))))
+  (let ((required-size (apply #'* (translate-adjustable-shape (original-shape tensor))))
 	(vec           (vec (temporary-room-cache-tensor room))))
+
     ;; Checking required-size, is done at toplevel.
     ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
 
@@ -108,18 +111,16 @@ After the body exists, all the temporary tensors in the pool is freed."
 
     ;; Each time update room, the operation works correctly???
 
-    (when (null vec)
+    (when (or (null vec)
+	      (> (the fixnum required-size) (temporary-room-size room)))
       (setf (temporary-room-size room) required-size)
       (setf (tensor-vec (temporary-room-cache-tensor room))
 	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
-    
-    (if (> (the fixnum required-size) (temporary-room-size room))
-	(progn
-	  (setf (temporary-room-size room) required-size)
-	  (setf (temporary-room-cache-tensor room) tensor)
-	  (setf (tensor-vec (temporary-room-cache-tensor room)) nil)
-	  (assure-and-return-room room tensor))
-	(vec tensor))))
+
+    (when (null (vec tensor))
+      (setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room))))
+
+    (vec tensor)))
 
 (defun chaintmp-find-mem-pool (tensor)
   (declare (type AbstractTensor)

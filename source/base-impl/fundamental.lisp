@@ -157,7 +157,6 @@ Output: Tensor[AbstractTensor]"
 		  (apply #'!view out broadcasts)
 		  out))
 	 (res (!move out tensor)))
-    
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 
@@ -208,9 +207,7 @@ This function is also used to adjust memory alignment of tensor."
 			   #'!view
 			   (!move dx (apply #'!view dout inp-sub))
 			   out-sub)))
-		(values
-		 nil
-		 (!move dy res)))))
+		(values nil res))))
 
 
 (defun !view (tensor &rest subscripts)

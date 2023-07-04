@@ -120,12 +120,6 @@ Return:
   (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) state)
   tensor)
 
-(defun make-clone (tensor)
-  (make-input (shape tensor) nil
-	      :dtype (dtype tensor)
-	      :order (order tensor)
-	      :scalar-p (scalar-p tensor)))
-
 (defun nth-subscript (nth)
   "Returns nth alphabet"
   (intern (format nil "Input-~a" (code-char (+ 65 (mod nth 26))))))

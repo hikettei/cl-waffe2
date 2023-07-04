@@ -119,6 +119,7 @@ Here's a list of reports.
 
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
+
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
@@ -340,14 +341,15 @@ Use the define-impl macro to give definitions for the node and forward them.
 
 (defun adjust-bw-place (bw-node place)
   "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
+  
   (when bw-node
     (if (movetensor-p (tensor-backward bw-node))
 	bw-node
 	(with-shape-checkpoint (:moving nil)
 	  (let ((out (cl-waffe2/base-impl:!move place bw-node :force t)))
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
-		out
-		bw-node))))))
+		out ;; In-place
+		bw-node)))))) ;; Make-copy
 
 (defun expand-backward (node dout &rest inputs-in)
   "

@@ -329,9 +329,7 @@ Note:
     (setf (slot-value tensor 'orig-shape)  orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
 
-    (setf (slot-value tensor 'ancestor-param-p)
-	  (or (ancestor-param-p tensor)
-	      (eql (tensor-facet tensor) :exist)))
+    (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor))
     
     (cond
       ((eql (getf initargs :facet) :input)
@@ -589,6 +587,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	(tensor-stride input-tensor) (tensor-stride actual-tensor)
 	(tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
 
+	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)
 	)
   t)
 
@@ -753,7 +752,6 @@ The function parameter computes all the previous nodes of the given tensor if an
       (setf (save-for-backward-space result) tensor)
       ;; result = space-tmp
       result)))
-
 
 ;; read-save-for-backward is actually working, but the problem is movetensor doesn't tell the variable well.
 (defun read-save-for-backward (tensor)

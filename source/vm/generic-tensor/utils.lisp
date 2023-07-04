@@ -78,10 +78,23 @@
 
 
 (defun make-clone (tensor &optional name)
-  (make-input (shape tensor) (or name nil)
-	      :dtype (dtype tensor)
-	      :order (order tensor)
-	      :scalar-p (scalar-p tensor)))
+  (let* ((out (make-input (shape tensor) (or name nil)
+			  :dtype (dtype tensor)
+			  :order (order tensor)
+			  :scalar-p (scalar-p tensor)))
+	 (broadcasted-p)
+	 (broadcasts (loop for size in (shape tensor)
+			   for view in (tensor-view tensor)
+			   if (eql :broadcast (viewtype (force-list view)))
+			     collect (and
+				      (setq broadcasted-p t)
+				      `(:broadcast ,size))
+			   else
+			     collect t))
+	 (out (if broadcasted-p
+		  (apply #'view out broadcasts)
+		  out)))
+    out))
 
 (deftype compile-option-t ()
   `(and keyword

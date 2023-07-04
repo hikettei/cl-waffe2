@@ -7,24 +7,6 @@
 ;; Node      <-> Function
 ;;
 
-;; TODO:
-;; 1. Composite Functionを作る
-;; Issuesを解消する
-
-
-(defmodel (DotProduct (self)
-	   :where ([~] [~] -> [~])
-	   :on-call-> ((self x y)
-		       (declare (ignore self))
-		       (cl-waffe2/base-impl:!sum (cl-waffe2/base-impl:!mul x y)))))
-
-(defmodel (DotProduct-2D (self)
-	   :where (A[a b] B[a b] -> [scal] where scal = 1)
-	   :on-call-> ((self x y)
-		       (declare (ignore self))
-		       (cl-waffe2/base-impl:!sum (cl-waffe2/base-impl:!mul x y)))))
-
-
 ;; One composite -> a single defun form.
 ;; In order to implemenet "GENERIC" behaviour, we need to wrap composite->defun by higher-order function.
 (defun composite->defun (~ composite function-name
@@ -203,7 +185,7 @@ Input:
   "
 ## [macro] define-composite-function
 
-
+Tracing the `on-call->` form of a given composite-init-form, the macro `define-composite-function` defines a function of calling `on-call->` statically.
 
 "
   (declare (type (or t keyword) dtype)
@@ -214,10 +196,4 @@ Input:
 			     :compile-mode ,compile-mode
 			     :dtype ,dtype
 			     :order ,order)))
-
-(define-composite-function (DotProduct-2D) !dot2d-float :dtype :float)
-
-(define-composite-function (DotProduct-2D) !dot2d)
-
-(define-composite-function (DotProduct) !dotproduct)
 
