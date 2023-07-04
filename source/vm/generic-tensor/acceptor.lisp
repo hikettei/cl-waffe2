@@ -125,15 +125,16 @@ See also: `set-input`"
 	 #'(lambda (key value)
 	     (let ((max-val (gethash key maxsize)))
 	       
-	       #|
 	       (when (and (not (null max-val))
 			  (> value max-val))
-		 (error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
-			key
-			value
-			key
-			max-val))
-	       |#
+		 
+		 ;;(error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
+		;;	key
+		;;	value
+		;;	key
+		;;	max-val)
+		 (setf (gethash key maxsize) value))
+	       
 
 	       (when (null max-val)
 		 (setf (gethash key maxsize) value))))

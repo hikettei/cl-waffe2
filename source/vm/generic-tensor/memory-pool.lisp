@@ -97,7 +97,7 @@ After the body exists, all the temporary tensors in the pool is freed."
 	   (type AbstractTensor tensor)
 	   (optimize (speed 3)))
   (let ((required-size (apply #'* (translate-adjustable-shape (shape tensor))))
-	(vec (vec (temporary-room-cache-tensor room))))
+	(vec           (vec (temporary-room-cache-tensor room))))
     ;; Checking required-size, is done at toplevel.
     ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
 
@@ -106,22 +106,19 @@ After the body exists, all the temporary tensors in the pool is freed."
     ;; when assure-and-return-room is called:
     ;; find :free-now and required-size is enough caches, and return it.
 
-    (when (or
-	   (null vec)
-	   (> (the fixnum required-size) (temporary-room-size room)))
-      (setf (temporary-room-size room) required-size)
-      (setf vec (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
+    ;; Each time update room, the operation works correctly???
 
-    #|
-    ;; 4 debugging
-    (unless (<= (the fixnum required-size) (temporary-room-size room))
-      (error "Required size is too small! ~a is allocated but ~a is required!"
-	     (temporary-room-size room)
-    required-size))
-    |#
+    (when (null vec)
+      (setf (temporary-room-size room) required-size)
+      (setf (tensor-vec (temporary-room-cache-tensor room))
+	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
     
-    (setf (tensor-vec tensor) vec)
-    vec))
+    (if (> (the fixnum required-size) (temporary-room-size room))
+	(progn
+	  (setf (temporary-room-size room) required-size)
+	  (setf (temporary-room-cache-tensor room) tensor)
+	  (assure-and-return-room room tensor))
+	(vec tensor))))
 
 (defun chaintmp-find-mem-pool (tensor)
   (declare (type AbstractTensor)
@@ -212,7 +209,8 @@ Usage:
     ;; The Tensor is Scalar
     ((scalar-p tensor)
      (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
-       (setf (tensor-vec tensor) (vec tmp-tensor))))
+       (setf (tensor-vec tensor) (vec tmp-tensor))
+       (vec tensor)))
     ((stringp (tensor-name tensor))
      (chaintmp-find-mem-pool tensor))
     ;; The Tensor is InputTensor (ChainTMP)

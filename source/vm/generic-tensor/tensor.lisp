@@ -276,10 +276,17 @@ Note:
 2. this function is setfable
 "
   (declare (type AbstractTensor tensor))
-  (if (or (null (tensor-name tensor))
-	  (vec tensor))
-      (vec tensor) ;; tensor is created by make-tensor
-      (get-from-memory-pool tensor)))
+
+  (cond
+    ((and
+      (not (scalar-p tensor))
+      (stringp (tensor-name tensor))) ;; ChainTMP Vector -> get-from-memory-pool is MUST
+     (get-from-memory-pool tensor))
+    (T
+     (if (or (null (tensor-name tensor))
+	     (vec tensor))
+	 (vec tensor) ;; tensor is created by make-tensor
+	 (get-from-memory-pool tensor)))))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))

@@ -141,3 +141,26 @@ Return:
   
   (loop for i upfrom 0 below dim
 	collect (nth-subscript i)))
+
+(defun include~p (composite)
+  "Returns t if composite's input definiton has ~"
+  (some #'(lambda (x) (some #'(lambda (x) (symbol-eq '~ x)) x)) (composite-input-size composite)))
+    
+
+
+(defun tensor-keyname (tensor)
+  (symb ;; {BackendName[Dtype]}
+   '{
+   (class-name (class-of tensor))
+   '[
+   (intern (symbol-name (dtype tensor)))
+   ']
+   '}))
+
+
+(defun input-det-n-list (composite)
+  "returns the number of subscripts ignored ~"
+  (loop for i in (composite-input-size composite)
+	collect (- (length i) (count '~ i :test #'symbol-eq))))
+
+

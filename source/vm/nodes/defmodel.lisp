@@ -459,18 +459,27 @@ An constructor function for ~a."
 			       &key
 				 (dtype :float)
 				 (order :column)
-				 (scalar-p nil))
+				 (scalar-p-list nil))
   "Returns (make-input)"
   (declare (type Composite composite)
 	   (type list ~))
-  (let ((input-shape (composite-input-size composite)))
-    (loop for i upfrom 0
-	  for x in input-shape
-	  collect (make-input (where-arg->shape ~ x)
-			      (->keyword (nth-subscript i))
-			      :scalar-p scalar-p
-			      :dtype dtype
-			      :order order))))
+  (flet ((read-state (state nth)
+	   (if (keywordp state)
+	       state
+	       (nth nth state)))
+	 (read~      (~ nth)
+	   (if (listp (car ~))
+	       (nth nth ~)
+	       ~)))
+    
+    (let ((input-shape (composite-input-size composite)))
+      (loop for i upfrom 0
+	    for x in input-shape
+	    collect (make-input (where-arg->shape (read~ ~ i) x)
+				(->keyword (nth-subscript i))
+				:scalar-p (read-state scalar-p-list i)
+				:dtype (read-state dtype i)
+				:order order)))))
 
 (defun where-arg->shape (~ shape)
   (flatten

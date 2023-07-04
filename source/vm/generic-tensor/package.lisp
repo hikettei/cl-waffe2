@@ -46,6 +46,8 @@
    #:parameter
    #:*with-printing-tensor-omitted*
    #:tensor-id
+
+   #:compile-option-t
    )
 
   (:export
