@@ -21,6 +21,7 @@
    #:trans-b?
    #:!matmul
    #:transposed-p
+   #:read-untransposed
    #:!t
    #:A+=B)
   (:export

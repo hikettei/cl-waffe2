@@ -27,30 +27,31 @@
 			    (!move dy dy-out :force t)
 			    dy-out))))
 	  :documentation "
-Move all the visible elements of `B` into visible areas of `A`.
+Moves all the visible elements of `B` into visible areas of `A`.
 
 ```math
 A\\gets{B}
 ```
 
-### Constraints
+### Behaviour
 
-In order to implement the behaviour for compilers of eliminating unused copies, all the implementations must satisfy as follows:
+All cl-waffe2 operations follow this rule: `Make a copy for now, disable later`. (e.g.: the function `(!add x y)` makes an copy of `x` and `y` for now, but this copy operation is ignored, if they're concluded not to be needed, by tracing computation node.)
 
-On forward:
+In order to disable a useless copy operations, MoveTensorNode must follow this behaviour:
 
-1. If (movetensor-ignore-me self) is t, return `B` without doing anything.
+1. Reading (movetensor-ignore-me self) in runtime, the forward makes a copy of given tensor only after the slot is `nil`.
 
-2. Otherwise, Move all the visible elements of `B` into `A`, and return `A`.
+2. Otherwise, return `B`
 
-(Note that: until `(tensor-vec A)` is called, `A` is never allocated.)
+Don't worry the allocation won't be done until `(tensor-vec A)` is called.
+
+For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for example) would be helpful!.
 
 ### Constructor
 
 `(MoveTensorNode dtype)`
 
 `dtype` dtype to use.
-
 "))
 
 (defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
@@ -109,7 +110,7 @@ one of: `MoveTensorNode` `ScalarTensorNode`
 
 `tensor[AbstractTensor]` tensor to be referred.
 
-`force[boolean]` If t, the operation is never pruned by cl-waffe2.
+`force[boolean]` If t, the pruning of operation by cl-waffe2 will never done.
 
 ### Output
 
@@ -121,7 +122,7 @@ Unevaluated Copied Tensor."
       (forward (MoveTensorNode (dtype place) :save-for-backward force) place tensor)))
 
 
-(defun !copy (tensor)
+(defun !copy (tensor &key (force nil))
   "
 ## [function] !copy
 
@@ -155,8 +156,7 @@ Output: Tensor[AbstractTensor]"
 	 (out (if broadcasted-p
 		  (apply #'!view out broadcasts)
 		  out))
-	 (res (!move out tensor)))
-    
+	 (res (!move out tensor :force force)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 
@@ -207,9 +207,7 @@ This function is also used to adjust memory alignment of tensor."
 			   #'!view
 			   (!move dx (apply #'!view dout inp-sub))
 			   out-sub)))
-		(values
-		 nil
-		 (!move dy res)))))
+		(values nil res))))
 
 
 (defun !view (tensor &rest subscripts)
@@ -506,7 +504,9 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 			     (progn
 			       ;; TODO
 			       ;; Display Both: First-Time-Call/Second-Time-Call
-			       (forward compiled-model)
+			       (format t "Proceed-Time: First Trying~%")
+			       (time (forward compiled-model))
+			       (format t "Proceed-Time: Second Trying~%")
 			       (setf (proceed-result self) (time (forward compiled-model))))
 			     (setf (proceed-result self) (forward compiled-model)))
 			 ;; Tell cl-waffe2 VM the returned value's type
@@ -543,6 +543,8 @@ This function will be useful especially when debugging on REPL.
 ### Inputs
 
 If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes.
+
+`compile-mode` is a keyword, type of `compile-mode-t`.
 "
   (let* ((node (ProceedNode :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
@@ -565,7 +567,9 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 (proceed-time tensor)
 ```
 
-An alias for (proceed tensor :measure-time t)"
+An alias for (proceed tensor :measure-time t)
+
+Note that: the proceed-time function invokes forward function twice times, in order for processing system to trace compiled lisp code, and ignoring allocation time."
   (declare (type AbstractTensor tensor))
   (proceed tensor :measure-time t :compile-mode compile-mode))
 
@@ -621,3 +625,4 @@ Note that added axes could be broadcasted automatically when the operation calle
   (let ((out (forward (Flexible-Rank-Node) tensor)))
     (setf (tensor-flexible-p out) t)
     out))
+

@@ -13,6 +13,7 @@
 (in-package :cl-waffe2/backends.lisp.test)
 
 (def-suite :lisp-backend-test)
+
 (in-suite  :lisp-backend-test)
 
 (add-tester LispTensor)

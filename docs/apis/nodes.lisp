@@ -17,15 +17,19 @@ defnode  => called with `forward`
 defmodel => called with `call`
 ```
 
-Also, defnode is a fundamental unit of operation, while defmodel is consisted of a set of nodes.
+Also, defnode is a fundamental unit of operation, while defmodel is a set of nodes.
 ")
 
   (macrolet ((with-doc (name type &body body)
 	       `(with-section (format nil "~(~a~)" (symbol-name ,name))
 		  (placedoc ,name ,type)
 		  ,@body)))
-    (with-section "Shaping APIs"
+    (with-section "Shaping API"
       (insert "
+
+When defining an operation in cl-waffe2 with a `defnode` macro, the shape of the matrix used in the operation must also be defined in the `:where` keyword.
+
+This is a Shaping API, and responsible for shape inspection of all operations.
 
 ## Introducing Subscript DSL
 
@@ -229,7 +233,7 @@ b = `(1 2) // List consisted of fixnum
 
 DSL flattens the list in the subscript. (e.g.: `b=(1 2)` in `A[b]` is the equivalent to `A[1 2]`)
 
-**Note that** ~~ is a reserved word and has a special rule:
+**Note that** ~~ is a reserved word by cl-waffe2 and has a special rule:
 
 1. ~~ is used to express dimensions from 0 to N
 
@@ -324,7 +328,7 @@ Outputs:
 Example: (TODO)
 
 "))
-    
+
     (with-section "defnode"
       (insert "
 ```lisp
@@ -478,9 +482,7 @@ Step forward of the given `node`, node is a subclass of `AbstractNode`.
 
 Note that `forward` can't handle with `Composite`."))
 
-    (with-doc 'defmodel 'macro
-
-      )
+    (with-doc 'defmodel 'macro)
 
     (with-doc 'call 'function
       (insert "~%~%`[generic-function]` (call model &rest inputs)"))
@@ -512,8 +514,5 @@ Note that `forward` can't handle with `Composite`."))
 
     (with-doc 'with-instant-kernel 'macro
       )
-
-    (with-doc 'declare-local-variables 'function
-      (insert "TODO"))
 
     ))

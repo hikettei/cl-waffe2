@@ -2,8 +2,6 @@
 
 (in-package :cl-waffe2/base-impl.test)
 
-(in-suite :base-impl-test)
-
 ;; Testing APIs provides by cl-waffe2/base-impl
 
 ;; !add !sub !mul !div
@@ -16,6 +14,8 @@
 ;; =============================================================
 ;; Testing general-purpose arithmetic APIs: !add !sub !mul !div.
 ;; =============================================================
+
+(in-suite :base-impl-test)
 
 (test test-add-form
   ;; Scalar And Scalar

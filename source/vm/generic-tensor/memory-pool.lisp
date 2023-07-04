@@ -9,6 +9,7 @@
   ;; Gc-able temporary-rooms?
   (temporary-rooms (make-hash-table) :type hash-table))
 
+;; TODO: AddState :using :freenow
 (defparameter *memory-pool* (make-memory-pool) "Memory-Pool is a place to store caching tensors.")
 
 (defvar *adjustable-shape-table* nil "An hash-table: Symbol -> Size.")
@@ -20,7 +21,7 @@
 		   (shape-first (shape input-tensor)))))
   ;; Adjustable Tensor Size
   (shape-first shape-first :type list)
-  (size (apply #'* (shape input-tensor)) :type fixnum)
+  (size (apply #'* (translate-adjustable-shape (shape input-tensor))) :type fixnum)
   (cache-tensor input-tensor :type AbstractTensor))
 
 (defun print-current-memory-pool (&key (stream t))
@@ -66,6 +67,7 @@
   ;; TODO
   ;; *memory-pool*
   ;; (maphash ... tensor-delete)
+  (setf *memory-pool* (make-memory-pool))
   )
 
 (defmacro with-memory-pool (&body body)
@@ -96,8 +98,9 @@ After the body exists, all the temporary tensors in the pool is freed."
   (declare (type Temporary-Room room)
 	   (type AbstractTensor tensor)
 	   (optimize (speed 3)))
-  (let ((required-size (apply #'* (translate-adjustable-shape (shape tensor))))
-	(vec (vec (temporary-room-cache-tensor room))))
+  (let ((required-size (apply #'* (translate-adjustable-shape (original-shape tensor))))
+	(vec           (vec (temporary-room-cache-tensor room))))
+
     ;; Checking required-size, is done at toplevel.
     ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
 
@@ -106,22 +109,18 @@ After the body exists, all the temporary tensors in the pool is freed."
     ;; when assure-and-return-room is called:
     ;; find :free-now and required-size is enough caches, and return it.
 
-    (when (or
-	   (null vec)
-	   (> (the fixnum required-size) (temporary-room-size room)))
-      (setf (temporary-room-size room) required-size)
-      (setf vec (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
+    ;; Each time update room, the operation works correctly???
 
-    #|
-    ;; 4 debugging
-    (unless (<= (the fixnum required-size) (temporary-room-size room))
-      (error "Required size is too small! ~a is allocated but ~a is required!"
-	     (temporary-room-size room)
-    required-size))
-    |#
-    
-    (setf (tensor-vec tensor) vec)
-    vec))
+    (when (or (null vec)
+	      (> (the fixnum required-size) (temporary-room-size room)))
+      (setf (temporary-room-size room) required-size)
+      (setf (tensor-vec (temporary-room-cache-tensor room))
+	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
+
+    (when (null (vec tensor))
+      (setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room))))
+
+    (vec tensor)))
 
 (defun chaintmp-find-mem-pool (tensor)
   (declare (type AbstractTensor)
@@ -147,12 +146,14 @@ Reading the *adjustable-shape-table*, the function returns an list consisted of 
 If there's any undetermined one, returns an error (TODO: Add Conditions)"
   (declare (type list shape)
 	   (optimize (speed 3)))
-  (loop for s in shape
-	collect (typecase s
-		  (fixnum s)
-		  (symbol
-		   (or (gethash s *adjustable-shape-table*)
-		       (error "translate-adjustable-shape: encountered unknown symbol: ~a" s))))))
+  (map 'list #'read-adjustable-symbol shape))
+
+(defun read-adjustable-symbol (s)
+  (typecase s
+    (fixnum s)
+    (symbol
+     (or (gethash s *adjustable-shape-table*)
+	 (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
   "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
@@ -184,9 +185,12 @@ Usage:
 (defmacro with-let-adjustable-symbol (symbol-name &body body)
   `(let ((,symbol-name (gethash ',symbol-name *adjustable-shape-table*)))
      (declare (type fixnum ,symbol-name)
+	      
 	      (ignorable ,symbol-name))
+     (declare (ignore symbol-name))
      ,@body))
 
+;; Fix: symbol conflicts??
 (defmacro with-let-adjustable-symbols ((&rest symbol-names) &body body)
   (labels ((expand (rest-forms)
 	     (if (null rest-forms)
@@ -196,7 +200,11 @@ Usage:
     (expand symbol-names)))
 
 (defun read-symbol (symbol)
-  (gethash symbol *adjustable-shape-table*))
+  (if *adjustable-shape-table*
+      (typecase symbol
+	(symbol (gethash symbol *adjustable-shape-table*))
+	(T symbol))
+      symbol))
 
 (defun get-from-memory-pool (tensor)
   (declare (type AbstractTensor tensor)
@@ -210,7 +218,8 @@ Usage:
     ;; The Tensor is Scalar
     ((scalar-p tensor)
      (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
-       (setf (tensor-vec tensor) (vec tmp-tensor))))
+       (setf (tensor-vec tensor) (vec tmp-tensor))
+       (vec tensor)))
     ((stringp (tensor-name tensor))
      (chaintmp-find-mem-pool tensor))
     ;; The Tensor is InputTensor (ChainTMP)

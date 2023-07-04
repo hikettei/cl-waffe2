@@ -1,7 +1,11 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-(defparameter *no-grad* nil "If t, all operations don't create gradients.")
+;;
+;; acceptor.lisp provides an compiler of given nodes, and general-purpose APIs to handle with cl-waffe2 nodes.
+;;
+
+(defparameter *no-grad* nil "If t, no gradients are made for backwards.")
 
 (defmacro with-no-grad (&body body)
   "
@@ -11,7 +15,7 @@
 (with-no-grad &body body)
 ```
 
-Set `*np-grad*` `t` under the `body` execution, no gradients are made for backward.
+Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built nodes are regarded as: no gradients are made for backwards.
 "
   `(let ((*no-grad* t))
      ,@body))
@@ -54,7 +58,7 @@ Set `*np-grad*` `t` under the `body` execution, no gradients are made for backwa
 	 (table (make-print-table)))
     (format
      stream
-     "+= [NodeVariables Information] =======+
+     "+= [Tensors in the computation node] =======+
 
 Subscripts:
 ~a
@@ -92,9 +96,10 @@ Variables:
      (length (nodevariables-parameters node)))))
 
 
-;; Rewrite
 (defun embody-input (nodevars variable-name actual-tensor)
-  "(embody-input variables :a tensor)"
+  "(embody-input variables :a tensor)
+
+See also: `set-input`"
   (declare (type NodeVariables nodevars))
   
   (let ((input-tensor (gethash variable-name (nodevariables-variables nodevars))))
@@ -119,13 +124,17 @@ Variables:
 	(maphash
 	 #'(lambda (key value)
 	     (let ((max-val (gethash key maxsize)))
+	       
 	       (when (and (not (null max-val))
 			  (> value max-val))
-		 (error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
-			key
-			value
-			key
-			max-val))
+		 
+		 ;;(error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
+		;;	key
+		;;	value
+		;;	key
+		;;	max-val)
+		 (setf (gethash key maxsize) value))
+	       
 
 	       (when (null max-val)
 		 (setf (gethash key maxsize) value))))
@@ -208,14 +217,14 @@ Variables:
 	  (push tensor *node-parameters-tmp*)))))
 
 ;; ==============================================================================
-;; Kernel Constructor
+;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================
 
 (defun compile-forward-chain (toplevel &key (stop-me nil))
   "
 ## [function] compile-forward-chain
 
-Tracing until one of variables reached a toplevel tensor (detach-p is t or no backwards), returning an S-expression which can be compiled.
+Tracing until one of variables reached a toplevel tensor (detach-p is t or no backwards), returning an S-expression which can be compiled by processing systems.
 "
   (declare (type AbstractTensor toplevel))
 
@@ -252,8 +261,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       `(let*-ignorable (,@(loop for s in next-states ;; p <- s
 				for p in out-places
 				collect `(,p ,s))
-			,@(loop for v in (cl-waffe2/vm.nodes:node-local-variables (tensor-backward toplevel))
-				collect `(,(tensor-id v) ,v))
 			(,(tensor-id toplevel) (progn ,toplevel)))
 
 	 ;; The Operation hasn't done yet...
@@ -287,8 +294,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       ;; Rewrite
       
       ;; Memo: All backward nodes, are ends with MoveTensorNode
-
-
       
       `(let (,@(loop for var in (tensor-variables toplevel)
 		     for kernel in outs
@@ -307,6 +312,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		   collect (compile-backward-chain var var))))))
 
 ;; Toplevel
+;; This is not for users.
 (defun compile-forward-kernel (toplevel
 			       &key
 				 (compile-mode :default))
@@ -355,6 +361,13 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 
 (defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
+
+  
+  (when (some #'symbolp (shape toplevel))
+    (error "Can't construct backward, because the shape of tensor is undetermined: ~a
+
+Try again with: (with-no-grad ...) " (shape toplevel)))
+  
   (let* ((*kernel-storeroom*)
 	 (out (if (scalar-p toplevel)
 		  (make-tensor 1
@@ -376,33 +389,78 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (compile nil `(lambda () ,(place-cached-kernels body)))))
 
 ;; ==========================================
-;; Rewriting
+;; General-Purpose APIs
 ;; ==========================================
 
+;; In acceptor.lisp:
+;; Compiled-Composite forward backward set-input get-input is all you need!
 
 (defclass Compiled-Composite ()
   ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
    (compiled-backward :initarg :compiled-backward :type (or null function) :reader compiled-backward)
    (variables :initarg :variables :reader compiled-variables)
-   (first-call-p :initform nil :accessor composite-first-call-p :type boolean)))
+   (first-call-p :initform nil :accessor composite-first-call-p :type boolean))
+  (:documentation "
+## [class] Compiled-Composite
+
+Compiled-Composite is a `callable` CLOS class, and holds compiled forward/backward function of all the computation node to all the endpoints from the top of the models' neural network. Also, this class holds information of all variables used in the node.
+
+It is NOT possible to construct a computation node after Compiled-Composite, If you need this, try consider using the function `cl-waffe2/base-impl:proceed`.
+
+The class will appear in your project with calling the function `build`, set the toplevel node (e.g.: the result of criterion when the task is optimizing.) to the first argument. cl-waffe2 compiler will instantly construct an lambda function of forward/backward, which is invoked by calling `(forward compiled-composite)` or `(backward compiled-composite)` method.
+
+See also: `build` `set-input` `get-input`.
+
+### Examples
+
+(TODO)
+
+"))
+
+(defun all-embodied? (model)
+  "Invokes an simple-error when model has still unembodied tensor"
+  (declare (type Compiled-Composite model))
+  (let ((vars (nodevariables-variables (compiled-variables model)))
+	(unembodied))
+    (loop for key being the hash-keys in vars using (hash-value val)
+	  if (null (vec val))
+	    do (push (cons key val) unembodied))
+
+    (when unembodied
+      (error "Can't call forward of the given model,
+because there's still unembodied tensors:
+~a"
+	     (with-output-to-string (out)
+	       (dolist (k unembodied) (format out "~% :~a - ~a Tensor." (car k) (shape (cdr k)))))))))
+
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
-  ;; Keywords :A A :B B ...
-  ;; forward
   (when inputs
-    (warn "forward: Inputs are ignored"))
-  
+    (warn "forward: Inputs for compiled-composite are ignored"))
+
+  ;; Check if all the inputs are embodied?
+  (all-embodied? model)
+
   (funcall (compiled-forward model)))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
 
   (when inputs
-    (warn "backward: Inputs are ignored"))
+    (warn "backward: Inputs for compiled-composite are ignored"))
   (funcall (compiled-backward model)))
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)
   "
 ## [method] set-input
+
+```
+(set-input (model Compiled-Composite) input-name actual-value)
+```
+
+Embodies an `InputTensor` in the model. All unembodied tensors in the model can be accessed by printing the model.
+
+`input-name` could be a keyword indicating input-tensor, `actual-value` is a `AbstractTensor` whose facet = `:exist` (created by `make-tensor`).
+
 
 "
   (embody-input (compiled-variables model) input-name actual-value))
@@ -411,25 +469,75 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   "
 ## [method] get-input
 
+```
+(get-input (model Compiled-Composite) input-name)
+```
+
+Reading all variables in the computation node, the method get-input returns an corresponding `InputTensor` of model.
+
 "
   (gethash input-name (nodevariables-variables (compiled-variables model))))
 
 (defun build (toplevel
 	      &key
 		(construct-backward? (not *no-grad*))
+		(compile-mode :fastest)
+		(use-setinput-form nil))
+  "
+## [function] build
+
+```lisp
+(build toplevel
+	      &key
+		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest))
+```
+
+Receiving the toplevel node in the neural network, the function `build` constructs a optimal forward/backward function, returning `Compiled-Composite`.
+
+### The constraints of toplevel tensor.
+
+The shape of topleve mustn't include a `symbol`.
+
+For example, this cl-waffe2 operation is invaild. because the function `(!sin x)` still returns `(A B)` tensor.
+
+```lisp
+(build (!sin (make-input `(A B) :Input)))
+```
+
+In order to build this operation correctly, calling `criterion` (intrinsically, `!sum` or `!mean`) is a vaild option for neural network tasks.
+
+```lisp
+(build (!sum (!sin (make-input `(A B) :input)))) ;; Passes Correctly!
+```
+
+After working with adjustable shape tensor, don't forget to embody the InputTensor!
+
+```lisp
+(let ((compiled-model (build (!sum (!sin (make-input `(A B) :input))))))
+    (set-input compiled-model :input (randn `(10 10)))
+    (forward compiled-model))
+```
+
+### Inputs
+
+`toplevel [AbstractTensor]` the end of nodes. for neural network tasks, this should be scalartensor or tensors with total elements is 1, but since cl-waffe2 is intended to be applied other tasks, cl-waffe2 never produce warning while other frameworks like PyTorch will return error if `<<(10 10)Tensor>>.backward()` is invoked for example.
+
+`construct-backward?` [boolean] If t, the backward construction won't be done.
+
+`compile-mode`[compile-mode-t] an keyword to indicate compiling option.
+"
   (declare (type AbstractTensor toplevel))
-  
-  (when (some #'symbolp (shape toplevel))
-    (error "Can't construct forward, because the shape of tensor is undetermined: ~a" (shape toplevel)))
   
   (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
     ;; Vars - All Variables (including ChainTMP) used in forward.
-    (make-instance 'Compiled-Composite
-		   :variables  (construct-variables-table vars)
-		   :compiled-forward forward-kernel
-		   :compiled-backward (when construct-backward?
-					(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))))
+    (values (make-instance 'Compiled-Composite
+			   :variables  (construct-variables-table vars)
+			   :compiled-forward forward-kernel
+			   :compiled-backward (when construct-backward?
+						(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
+	    
+	    (when use-setinput-form set-input-forms))))
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite

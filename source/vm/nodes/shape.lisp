@@ -38,7 +38,7 @@
 		  :msg (format nil "The token anticipated to come is: [
 However, got ~a.
 When: ~a
-At  : ~ath symbol, ~a"
+At  : ~a symbol, ~a"
 			       exp
 			       exps
 			       pointer
@@ -205,6 +205,15 @@ Return:
 		      (bnf-parse-variables output-part)
 		      (bnf-parse-let-phase (cdr let-part))))))))))
 
+(defun preprocess-list (subscripts)
+  (read-from-string
+   (regex-replace-all "\\]"
+		      (regex-replace-all
+		       "\\["
+		       (format nil "~a" subscripts)
+		       " [ ")
+		      " ] ")))
+
 ;; export
 (defun parse-subscript (subscripts &key (fixed nil))
   "Subscripts are following format:
@@ -240,14 +249,7 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
   ;; replace [a b] into [ a b ] (couldn't intepreted as a separated token)
   (multiple-value-bind (inputs outputs first-state out-state let-binding)
       (bnf-parse-subscripts-toplevel
-       (let ((out
-	       (read-from-string
-		(regex-replace-all "\\]"
-				   (regex-replace-all
-				    "\\["
-				    (format nil "~a" subscripts)
-				    " [ ")
-				   " ] "))))
+       (let ((out (preprocess-list subscripts)))
 	 (if fixed
 	     (loop for s in out
 		   unless (symbol-eq s '~)

@@ -13,11 +13,14 @@
 		#:tensor-id
 		#:tensor-variables
 		#:tensor-state
+		#:tensor-name
 		#:tensor-out-n
 		#:tensor-vec
 		#:tensor-view
 		#:make-tensor
 		#:make-input
+		#:set-input
+		#:compile-option-t
 		#:movetensor-p
 		#:shaping-error
 		#:shape-equal
@@ -35,6 +38,7 @@
   (:export
    #:create-subscript-p
    #:composite-where
+   #:define-composite-function
    #:forward
    #:backward
    #:expand-backward

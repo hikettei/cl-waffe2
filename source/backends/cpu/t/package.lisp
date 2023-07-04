@@ -13,5 +13,4 @@
 (in-package :cl-waffe2/backends.cpu.test)
 
 (def-suite :test-backends-cpu)
-(in-suite :test-backends-cpu)
 

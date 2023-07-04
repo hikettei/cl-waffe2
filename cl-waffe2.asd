@@ -42,6 +42,7 @@
 	       (:file "vm/nodes/defnode")
 	       (:file "vm/nodes/defmodel")
 	       (:file "vm/nodes/utils")
+	       (:file "vm/nodes/function")
 
 	       
 	       (:file "base-impl/arithmetic")
@@ -73,6 +74,7 @@
 	       (:file "distributions/dense")
 	       (:file "distributions/sparse")
 	       (:file "distributions/ziggurat")
+	       (:file "distributions/weights")
 
 	       (:file "nn/package")
 	       (:file "nn/activation")
@@ -80,6 +82,7 @@
 	       (:file "nn/criterion")
 	       
 	       (:file "optimizers/package")
+	       (:file "optimizers/defoptimizer")
 
 	       (:file "package")
 	       (:file "utils")
@@ -113,17 +116,18 @@
 	       (:file "vm/nodes/t/parser")
 	       (:file "vm/nodes/t/shape")
 	       (:file "vm/nodes/t/nodes")
+	       (:file "vm/nodes/t/composite")
 
 	       (:file "base-impl/t/package")
 	       (:file "base-impl/t/reduction")
 	       (:file "base-impl/t/arithmetic")
 	       (:file "base-impl/t/mathematical")
 	       (:file "base-impl/t/apis")
-
-	       (:file "backends/lisp/t/package")
 	       
 	       (:file "backends/cpu/t/package")
 	       (:file "backends/cpu/t/arithmetic")
+
+	       (:file "backends/lisp/t/package")
 	       
 	       )
   :perform (test-op (o s)

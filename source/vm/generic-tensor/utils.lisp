@@ -17,13 +17,19 @@
                            :initial-value (apply fn1 args))))
       #'identity))
 
+(defun wrap-x (x)
+  (typecase x
+    (number `(the fixnum ,x))
+    (symbol `(the fixnum (read-symbol ',x)))
+    (T `(the fixnum ,x))))
+
 (defun lazy* (x y)
-  (if (and (typep x 'number)
-	   (typep y 'number))
+  (if (and (numberp x)
+	   (numberp y))
       (* x y)
       `(the fixnum
-	    (* (the fixnum ,x)
-	       (the fixnum ,y)))))
+	    (* ,(wrap-x x)
+	       ,(wrap-x y)))))
 
 (defun lazy-mulup (&rest args)
   (let ((res 1))
@@ -72,10 +78,23 @@
 
 
 (defun make-clone (tensor &optional name)
-  (make-input (shape tensor) (or name nil)
-	      :dtype (dtype tensor)
-	      :order (order tensor)
-	      :scalar-p (scalar-p tensor)))
+  (let* ((out (make-input (shape tensor) (or name nil)
+			  :dtype (dtype tensor)
+			  :order (order tensor)
+			  :scalar-p (scalar-p tensor)))
+	 (broadcasted-p)
+	 (broadcasts (loop for size in (shape tensor)
+			   for view in (tensor-view tensor)
+			   if (eql :broadcast (viewtype (force-list view)))
+			     collect (and
+				      (setq broadcasted-p t)
+				      `(:broadcast ,size))
+			   else
+			     collect t))
+	 (out (if broadcasted-p
+		  (apply #'view out broadcasts)
+		  out)))
+    out))
 
 (deftype compile-option-t ()
   `(and keyword

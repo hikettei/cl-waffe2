@@ -76,6 +76,8 @@ The generic function call is also used to step forward of AbstractNode, that is,
 (defmethod call ((model AbstractNode) &rest inputs)
   (apply #'forward model inputs))
 
+(defmethod call ((model cl-waffe2/vm.generic-tensor:Compiled-Composite) &rest inputs)
+  (apply #'forward model inputs))
 
 (defmacro define-forward-function (model forward-function)
   "forward-function = funcallable function"
@@ -165,6 +167,8 @@ Here's a list of reports:
   "
 ## [function] composite-where
 
+Predicts next output given inputs.
+
 ### Inputs
 
 `inputs` ... nil or list
@@ -178,6 +182,7 @@ Here's a list of reports:
   ;; (funcall Linter-Function model nil   input-state1 input-state2)
   ;; Fixnums
   ;; (funcall Linter-Function model shape input-state1 input-state2)
+  
   (with-slots ((linter-function subscript-linter)
 	       (state1 linter-state1)
 	       (state2 linter-state2))
@@ -255,8 +260,6 @@ defmodel is a macro used to describe the model of neural network with `Composite
   6. `on-call->` [One of: nil symbol-name function list]
      on-call-> is used to control the behaviour of *call* function.
 
-  7. `on-print-object` [null or body]
-
 ### Example
 
 ```lisp
@@ -307,7 +310,7 @@ Second case, `on-call->` is symbol-name:
    (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
 ```
 
-   (Complex model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)
+   (Complicated model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)
 
 [Third case] `on-call->` is function (i.e.: lambda):
 
@@ -346,6 +349,9 @@ Second case, `on-call->` is symbol-name:
 				      (format out "~a" arg)))
 				  documentation)))
 
+       (defmethod read-where ((model ,name))
+	 ',where)
+       
        ;; Creates a constructor named (linearlayer constructor-arguments)
        (defun ,name (,@constructor-arguments)
 	 ,(format nil "
@@ -360,6 +366,9 @@ An constructor function for ~a."
 				   `(multiple-value-list (subscript ,where :fixed :t :allow-symbol t :constructor-args ,constructor-arguments)))))
 	   (declare (ignorable ,subscript-p1 ,subscript-p2))
 	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
+		      ;; inputs  = 
+		      ;; inputs1 = 
+		      ;; inputs2 = 
 		      (declare (ignorable ,self-place1 ,inputs ,inputs1 ,inputs2))
 		      ,(if use-linter-p
 			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
@@ -383,6 +392,7 @@ An constructor function for ~a."
 				:linter-state2
 				(fourth ,subscript-p2)
 				,@initargs)))
+	       (declare (ignorable ,self-name))
 	       ;; Update IO size
 
 	       (multiple-value-bind (result input)
@@ -441,3 +451,57 @@ An constructor function for ~a."
 	  (model-id model)
 	  (render-model-content model)))
 
+(defun composite-symbol-names (composite)
+  (multiple-value-bind (in out) (parse-subscript (read-where composite))
+    (values in out)))
+
+(defun composite-input-tensor (composite ~
+			       &key
+				 (dtype :float)
+				 (order :column)
+				 (scalar-p-list nil))
+  "Returns (make-input)"
+  (declare (type Composite composite)
+	   (type list ~))
+  (flet ((read-state (state nth)
+	   (if (keywordp state)
+	       state
+	       (nth nth state)))
+	 (read~      (~ nth)
+	   (if (listp (car ~))
+	       (nth nth ~)
+	       ~)))
+    
+    (let ((input-shape (composite-input-size composite)))
+      (loop for i upfrom 0
+	    for x in input-shape
+	    collect
+	    (let ((res (make-input (where-arg->shape (read~ ~ i) x)
+				   (->keyword (nth-subscript i))
+				   :scalar-p (read-state scalar-p-list i)
+				   :dtype (read-state dtype i)
+				   :order order)))
+	      res)))))
+
+(defun where-arg->shape (~ shape)
+  (flatten
+   (loop for s in shape
+	 if (symbol-eq s '~)
+	   collect ~
+	 else
+	   collect s)))
+
+
+(defun shape-compatible? (composite &rest inputs)
+  "
+## [function] shape-compatible?
+
+Returns t if inputs are compatible with given composite, otherwise return an error.
+
+Inputs: An list of input tensors
+Return: (values output-shape input-shape-determined)
+
+"
+  (let ((linter-function (composite-linter-f composite))
+	(inputs (map 'list #'shape inputs)))
+    (funcall linter-function composite inputs inputs inputs)))

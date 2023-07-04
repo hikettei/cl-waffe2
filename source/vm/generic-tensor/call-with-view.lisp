@@ -20,8 +20,8 @@
 	collect
 	;; offset += stride * start-points
 	`(incf ,(nth k offset-places)
-	       (%* ,(nth k start-points)
-		   ,(nth k stride-places)))))
+	        (%* ,(nth k start-points)
+		    ,(nth k stride-places)))))
 
 (defun expand-view-stride-adder (offset-places
 				 stride-places
@@ -67,8 +67,11 @@ Set 2 if the operation is matmul for example.
 			       (nthcdr dim-start-from (tensor-view tensor))))
 	   (or (scalar-p tensor) ;; tensor is scalar
 	       ;; at least one of (nthcdr dim-start-from (tensor-view tensor)) isn't T
-	       (some #'(lambda (v) 
-			 (not (eql (force-list v) t)))
+	       (some #'(lambda (v)
+			 ;; non-reductable dim is: NOT(T) or NOT (:BROADCAST)
+			 (or (not (eql (force-list v) t))
+			     ;;(not (eql (force-list v) :broadcast))
+			     ))
 		     views))))
     ;; If tensors are consisted of non-projected-tensor...?
     (not (some #'not-reductable-p tensors))))
@@ -77,7 +80,7 @@ Set 2 if the operation is matmul for example.
 (defun expand-funcall-with-view (function tensors offsets-place target-dim rest-dims)
   ""
   ;; (apply function view1 view2 view3 ...)
-  
+
   (apply function
 	 (loop for kth-tensor upfrom 0
 	       for tensor in tensors
@@ -88,15 +91,16 @@ Set 2 if the operation is matmul for example.
 		       below (+ rest-dims target-dim)
 		     collect (make-viewinstruction
 			      (nth kth-tensor offsets-place)
-			      (nth target-dim-n (shape tensor))
-			      (let ((stride (nth target-dim-n (tensor-stride tensor)))
-				    (view (subscript-view (nth target-dim-n (tensor-view tensor)))))
-				(lazy* stride (compute-stepby view))))))))
+			      `(read-adjustable-symbol (nth ,target-dim-n (shape ,tensor)))
+			      (let ((stride `(nth ,target-dim-n (list ,@(tensor-stride tensor))))
+				    (view   `(subscript-view (nth ,target-dim-n (tensor-view ,tensor)))))
+				(lazy* stride `(compute-stepby ,view))))))))
 
 (defun expand-call-with-view-flatten
     (function
      tensors
      offset-place
+     target-dim
      &key
        (dim-start-from 0))
   ;; At-least-dim = 1
@@ -108,7 +112,7 @@ Set 2 if the operation is matmul for example.
 			 (loop for i upfrom dim-start-from below (length s)
 			       unless (eql (force-list (nth i v)) t)
 				 do (error "Internal Error: call-with-view-1dkernel is only applied to view=t axes.")
-			       collect (nth i s)))
+			       collect `(read-symbol (nth ,i (shape ,tensor)))))
 		     tensors))
 	 (sizes (map 'list #'(lambda (x) (apply #'lazy-mulup x)) size-list)))
 
@@ -124,8 +128,9 @@ Set 2 if the operation is matmul for example.
 	   for k upfrom 0
 	   collect (let ((view (make-viewinstruction
 				(nth k offset-place)
-				(nth k sizes)
-				1)))
+				`(read-adjustable-symbol ,(nth k sizes))
+				`(compute-stepby
+				  (subscript-view (nth ,target-dim (tensor-view ,tensor)))))))
 		     (list view))))))
 
 
@@ -153,7 +158,7 @@ Return: (values offsets-place form)"
 	  ,,@body))))
 
 
-(defmacro with-shape-det-form (tensors &body body)
+(defmacro with-shape-det-form (tensors used-symbol-binding &body body)
   `(let ((used-symbols))
      (mapc #'(lambda (tensor)
 	       (mapc #'(lambda (s)
@@ -161,38 +166,51 @@ Return: (values offsets-place form)"
 			   (push s used-symbols)))
 		     (shape tensor)))
 	   ,tensors)
-     `(with-let-adjustable-symbols (,@used-symbols)
-	,,@body)))
+     `(progn
+	(let ((,',used-symbol-binding ',used-symbols))
+	  (declare (ignorable ,',used-symbol-binding))
+	  ,,@body))))
 
-(defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body)
+(defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
   ;; Set Strides At Runtime
   ;; Expand Loop
   `(let ((stride-places (tensor-gensym-list ,tensors))
 	 (ith (gensym)))
-     `(let (,@(loop for stride-place in stride-places ;; (place <- stride)
-		     for tensor in ,tensors
-		     collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor))))))
+     `(let* (,@(loop for stride-place in stride-places ;; (place <- stride)
+		    for tensor in ,tensors
+		    collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor)))))
+	    (,',endpoint-place ,(car ,end-points))
+	    (,',endpoint-place (if (symbolp ,',endpoint-place)
+				   (read-adjustable-symbol ,',endpoint-place)
+				   ,',endpoint-place)))
 
 	,@(expand-first-offset-adder
 	   ,tensors
 	   ,offset-places
 	   stride-places
 	   ,start-points)
+	
 	;; Expand Multi-Dimensional Looping Forms
 
-	(loop for ,ith fixnum upfrom 0 below ,(car ,end-points)
+	(loop for ,ith fixnum upfrom 0 below ,',endpoint-place
 	      ;; 1. Execute Operation
 	      ;; 2. Adding Offsets
 	      do (progn ,,@body)
-	      unless (= ,ith (1- ,(car ,end-points)))
+	      unless (= ,ith (1- ,',endpoint-place))
 		;; Unless islast, expand it.
 		do (progn ,@(expand-view-stride-adder ,offset-places stride-places ,target-dim ,tensors))))))
 
-(defmacro with-expanding-explore-inlining ((tensors offset-places target-dim start-points end-points) &body body)
-  `(with-expanding-explore-form* (,tensors ,offset-places ,target-dim ,start-points ,end-points) ,@body))
-
 (defun update-calling-route (value)
   (push value cl-waffe2/vm.nodes::*call-with-view-route*))
+
+
+(defmacro with-bind-shape (&body body)
+  `(flet ((original-shape (tensor)
+	    (translate-adjustable-shape (original-shape tensor)))
+	  (shape (tensor)
+	    (translate-adjustable-shape (shape tensor))))
+     ,@body))
+
 
 (defun call-with-view (function
 		       tensors
@@ -204,8 +222,24 @@ Return: (values offsets-place form)"
   "
 ## [function] call-with-view
 
-(TODO)
+```lisp
+(call-with-view function tensors &key (at-least-dim 1))
+```
 
+The function `call-with-view` is a utility to expand view-considered `loop` iteration in the `:forward` expansion of `define-impl`.
+
+(TODO: Example/Documents)
+
+`function` [lambda] an lambda function which receives `variable1.view variable2.view ...` as arguments, returning an list being compiled.
+
+`tensors` [list of abstracttensor] tensors to be called with.
+`at-least-dim` [fixnum] ... kernel-size
+
+See also:
+
+`size-of`
+`stride-of`
+`offset-of`
 "
   
   (declare ;;(optimize (speed 3))
@@ -220,7 +254,7 @@ Return: (values offsets-place form)"
 	  "call-with-view failed with assertion: All all tensors has the same dimensions of batch-area, butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
-  (labels ((explore (rest-dim offsets-place &aux (target-dim (- dims rest-dim)))
+  (labels ((explore (rest-dim offsets-place used-symbols &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim target-dim)
 		      (type list offsets-place))
 	     ;; Exploring ND .. 3D 2D 1D
@@ -237,6 +271,7 @@ Return: (values offsets-place form)"
 		  function
 		  tensors
 		  offsets-place
+		  target-dim
 		  :dim-start-from target-dim)))
 	     
 	     (update-calling-route rest-dim)
@@ -245,16 +280,13 @@ Return: (values offsets-place form)"
 	     ;; Computing Multi-Dimensional Offsets
 	     (let* ((start-points (loop for tensor in tensors
 					collect
-					(compute-visible-start-idx
-					 (subscript-view (nth target-dim (tensor-view tensor)))
-					 (nth target-dim (slot-value tensor 'orig-shape)))))
+					`(compute-visible-start-idx
+					  (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
 		    (end-points (loop for tensor in tensors
 				      collect
-				      (compute-visible-end-idx
-				       (subscript-view (nth target-dim (tensor-view tensor)))
-				       (nth target-dim (slot-value tensor 'orig-shape)))))
-		    (axis-determined-p (every #'numberp end-points)))
-
+				      `(compute-visible-end-idx
+					(subscript-view (nth ,target-dim (tensor-view ,tensor)))
+					(nth ,target-dim (original-shape ,tensor))))))
 	       (cond
 		 ((<= rest-dim at-least-dim)
 		  ;; funcall form
@@ -274,25 +306,16 @@ Return: (values offsets-place form)"
 			   offsets-place
 			   target-dim
 			   rest-dim)))))
-		 ((and axis-determined-p
-		       (<= (the fixnum *unroll-threshold*) (the fixnum (car end-points))))
-
-		  ;; Currently disabled
-		  (with-update-offset-place offsets-place tensors
-		    (with-expanding-explore-form
-			(tensors offsets-place target-dim start-points end-points)
-		      (explore
-		       (1- rest-dim)
-		       offsets-place))))
 		 (T
+		  ;; batching
 		  (with-update-offset-place offsets-place tensors
 		    (with-expanding-explore-form
 			(tensors offsets-place target-dim start-points end-points)
 		      (explore
 		       (1- rest-dim)
-		       offsets-place))))))))
+		       offsets-place
+		       used-symbols))))))))
 
-    (with-shape-det-form tensors
+    (with-shape-det-form tensors used-symbols
       (with-expand-init-tmp-form offset-place tensors
-	(explore dims offset-place)))))
-
+	(explore dims offset-place used-symbols)))))

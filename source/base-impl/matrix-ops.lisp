@@ -33,6 +33,7 @@ C\\gets{gemm(1.0, A, B, 0.0, C)}
 
 (defnode (LazyTransposeNode (self)
 	  :where (A[~ i j] -> A[~ j i])
+	  :slots ((raw-tensor :accessor raw-tensor))
 	  :documentation "LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.
 
 Internally, This Node Returns The Given A itself but taking transpose of A's shape.
@@ -43,7 +44,13 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 		     (values (!t dout)))))
 
 (define-impl (LazyTransposeNode :device t)
-	     :forward ((self x) `(progn ,x)))
+	     :forward ((self x) (setf (raw-tensor self) x) `(progn ,x)))
+
+(defun read-untransposed (tensor)
+  ""
+  (if (transposed-p tensor)
+      (raw-tensor (tensor-backward tensor))
+      tensor))
 
 (defun transposed-p (tensor)
   "Return T if previous-node is LazyTransposeNode"

@@ -8,6 +8,7 @@
    ;;#:*cache-directory*
    #:with-memory-pool
    #:print-current-memory-pool
+   #:free-current-memory-pool
    #:make-compiled-kernel
    #:*memory-pool*)
   ;; Tensor classes
@@ -46,6 +47,8 @@
    #:parameter
    #:*with-printing-tensor-omitted*
    #:tensor-id
+
+   #:compile-option-t
    )
 
   (:export
@@ -86,6 +89,7 @@
   (:export
    #:make-vm-function
    #:compile-forward-chain)
+  
   (:export
    #:movetensor-p
    #:shape-equal)
@@ -93,6 +97,7 @@
   (:export
    #:embody-input
    #:embody-actual-tensor
+   #:compiled-composite
    #:build
    #:set-input
    #:get-input)
@@ -100,6 +105,8 @@
   ;; Backends / Tensor API
   (:export
    #:shape
+   #:total
+   #:dims
    #:make-input
    #:make-tensor
    #:*using-backend*))

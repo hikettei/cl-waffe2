@@ -120,9 +120,41 @@ Return:
   (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) state)
   tensor)
 
-(defun make-clone (tensor)
-  (make-input (shape tensor) nil
-	      :dtype (dtype tensor)
-	      :order (order tensor)
-	      :scalar-p (scalar-p tensor)))
+(defun nth-subscript (nth)
+  "Returns nth alphabet"
+  (intern (format nil "Input-~a" (code-char (+ 65 (mod nth 26))))))
+
+(defun ->keyword (symbol)
+  (intern (format nil "~a" symbol) "KEYWORD"))
+
+(defun dim->input-shape (dim)
+  "3 -> (a b c) 2 -> (a b)"
+
+  (when (>= dim 27)
+    (error "Assertion Failed: dim < 27, butgot: ~a" dim))
+  
+  (loop for i upfrom 0 below dim
+	collect (nth-subscript i)))
+
+(defun include~p (composite)
+  "Returns t if composite's input definiton has ~"
+  (some #'(lambda (x) (some #'(lambda (x) (symbol-eq '~ x)) x)) (composite-input-size composite)))
+    
+
+
+(defun tensor-keyname (tensor)
+  (symb ;; {BackendName[Dtype]}
+   '{
+   (class-name (class-of tensor))
+   '[
+   (intern (symbol-name (dtype tensor)))
+   ']
+   '}))
+
+
+(defun input-det-n-list (composite)
+  "returns the number of subscripts ignored ~"
+  (loop for i in (composite-input-size composite)
+	collect (- (length i) (count '~ i :test #'symbol-eq))))
+
 

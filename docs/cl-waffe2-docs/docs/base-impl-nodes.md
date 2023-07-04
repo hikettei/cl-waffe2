@@ -67,7 +67,7 @@ X\gets{X - Y}
 ✅ Already defined. 
 
 ```lisp
-((self dout dx dy) (values (!move dx dout) (!move dy (!mul -1 dout))))
+((self dout dx dy) (declare (ignore dx dy)) (values dout (!mul -1 dout)))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -323,30 +323,31 @@ No need to implement backwards at `define-impl`. (they'd be ignored.)
 ### Description
 
 
-Move all the visible elements of `B` into visible areas of `A`.
+Moves all the visible elements of `B` into visible areas of `A`.
 
 ```math
 A\gets{B}
 ```
 
-### Constraints
+### Behaviour
 
-In order to implement the behaviour for compilers of eliminating unused copies, all the implementations must satisfy as follows:
+All cl-waffe2 operations follow this rule: `Make a copy for now, disable later`. (e.g.: the function `(!add x y)` makes an copy of `x` and `y` for now, but this copy operation is ignored, if they're concluded not to be needed, by tracing computation node.)
 
-On forward:
+In order to disable a useless copy operations, MoveTensorNode must follow this behaviour:
 
-1. If (movetensor-ignore-me self) is t, return `B` without doing anything.
+1. Reading (movetensor-ignore-me self) in runtime, the forward makes a copy of given tensor only after the slot is `nil`.
 
-2. Otherwise, Move all the visible elements of `B` into `A`, and return `A`.
+2. Otherwise, return `B`
 
-(Note that: until `(tensor-vec A)` is called, `A` is never allocated.)
+Don't worry the allocation won't be done until `(tensor-vec A)` is called.
+
+For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for example) would be helpful!.
 
 ### Constructor
 
 `(MoveTensorNode dtype)`
 
 `dtype` dtype to use.
-
 
 
 ### Backward
@@ -361,10 +362,10 @@ On forward:
             (!copy dout))))
    (values
     (if (eql (tensor-attribute dx) chain)
-        (!move dx dout)
+        (!move dx dout force t)
         dout)
     (if (eql (tensor-attribute dy) chain)
-        (!move dy dy-out)
+        (!move dy dy-out force t)
         dy-out))))
 ```
 

@@ -1,30 +1,12 @@
 
 (in-package :cl-waffe2/base-impl)
 
-
-;;========================================================================
-;; !sum semantics:
-;; Let A be a 3 x 3 Tensor, the operation is to sum up A along axis=1.
-;; 1. Prepare A
-;; +++
-;; +++
-;; +++
-;; 2. Prepare A-out 3 * 1
-;; +++
-;; 3. Broadcast A-out along axis=1
-;; +++
-;; ---
-;; ---
-;; 4. Adds A and A-out element-wise.
-;; This could be applied whenever the given axis is consisted of axes of list.
-;;=========================================================================
-
-(defun !sum (tensor &key (axis t) (-> nil) (keep-repeat nil))
+(defun !sum (tensor &key (axis t) (-> nil) (keepdims nil))
   "
 ## [function] !sum
 
 ```
-(!sum tensor &key (axis t) (-> nil) (keep-repeat nil))
+(!sum tensor &key (axis t) (-> nil) (keepdims nil))
 ```
 
 The function !sum return a node which computes the sum of tensor along the given axis.
@@ -37,13 +19,13 @@ The function !sum return a node which computes the sum of tensor along the given
 
 `->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
 
-`keep-repeat`[boolean] If t, the axis reducted is repeated.
+`dims`[boolean] If t, the axis reducted is broadcasted.
 
 Return:
 
 `->`[AbstractTensor] the result."
   (declare (type AbstractTensor tensor)
-	   (type boolean keep-repeat)
+	   (type boolean keepdims)
 	   (type (or t list fixnum) axis))
   (let* ((shape (copy-list (shape tensor)))
 	 (view-args (make-list (length shape) :initial-element t))
@@ -82,16 +64,16 @@ Return:
 
       ;; Main Parts
       (multiple-value-bind (out* reverser) (apply #'!view out view-args)
-	(if keep-repeat
+	(if keepdims
 	    (A+=B out* tensor)
 	    (apply #'!view (A+=B out* tensor) reverser))))))
 
-(defun !mean (tensor &key (axis t) (-> nil) (keep-repeat nil))
+(defun !mean (tensor &key (axis t) (-> nil) (keepdims nil))
   "
 ## [function] !mean
 
 ```
-(!mean tensor &key (axis t) (-> nil) (keep-repeat nil))
+(!mean tensor &key (axis t) (-> nil) (keepdims nil))
 ```
 
 The function !mean return a node which computes the average of tensor along the given axis.
@@ -104,12 +86,12 @@ The function !mean return a node which computes the average of tensor along the 
 
 `->` [AbstractTensor or nil] the place to set the result. If nil, creates a new tensor.
 
-`keep-repeat`[boolean] If t, the axis reducted is repeated.
+`keepdims` [boolean] If t, the axis reducted is broadcasted.
 
 ### Return
 
 `->`[AbstractTensor] the result."
-  (let* ((result (!sum tensor :axis axis :-> -> :keep-repeat keep-repeat))
+  (let* ((result (!sum tensor :axis axis :-> -> :keepdims keepdims))
 	 (dims (length (shape tensor)))
 	 (reducted-elements 1))
     

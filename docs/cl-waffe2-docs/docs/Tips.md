@@ -1,7 +1,7 @@
 
 # Tips
 
-## Backend/Kernel Abstraction
+## Kernel Abstraction
 
 ## Adding a new backend
 

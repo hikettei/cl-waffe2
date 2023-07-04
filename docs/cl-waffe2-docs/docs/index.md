@@ -11,9 +11,9 @@
     <br />
     <a href="https://github.com/hikettei/cl-waffe2/issues">Issues</a>
     ·
-    <a href="https://github.com/hikettei/cl-waffe2">Benchmarks</a>
+    <a href="./install">Installing</a>
     ·
-    <a href="https://github.com/hikettei/cl-waffe2">Tutorials</a>
+    <a href="./overview">Tutorials</a>
   </p>
 </p>
 
@@ -33,12 +33,6 @@ The primary concepts and goals of this project is following
 **Everything in this documentation is incomplete! I guess should be much more polished!**
 
 #
-
-## Install
-
-```
-Coming Soon...
-```
 
 ## Benchmarks
 
