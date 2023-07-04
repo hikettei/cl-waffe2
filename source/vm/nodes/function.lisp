@@ -7,6 +7,10 @@
 ;; Node      <-> Function
 ;;
 
+;; 1. Composite Functionを作る
+;; Issuesを解消する
+
+
 (defmodel (DotProduct (self)
 	   :where ([~] [~] -> [~])
 	   :on-call-> ((self x y)
@@ -49,14 +53,37 @@ Return: (values input-names lambda-function)
 	 (namelist (or (composite-symbol-names composite)
 		       (loop for i upfrom 0 below (length inputs)
 			     collect (nth-subscript i))))
-	 (result (apply #'call composite inputs)))
+	 (result (apply #'call composite inputs))
+	 (self   (gensym))
+	 (model-name (symb 'compiled-
+			   function-name
+			   '-
+			   (intern (format nil "~a" dtype))
+			   '-
+			   (intern (format nil "~a" ~))))
+	 (tmp-fname (gensym (symbol-name function-name)))
+	 (mname     (gensym)))
     (with-no-grad
       (let ((compiled-kernel (cl-waffe2/vm.generic-tensor:build result :compile-mode compile-mode)))
-	`(defun ,function-name (,@namelist)
-	   ,@(loop for tensor in inputs
-		   for name in namelist
-		   collect `(set-input ,compiled-kernel ,(tensor-name tensor) ,name))
-	   (forward ,compiled-kernel))))))
+	
+	`(progn
+	   ;; Model Caller
+	   (defun ,function-name  (,@namelist)
+	     (let ((,mname (,model-name)))
+	       (shape-compatible? ,mname ,@namelist)
+	       (call ,mname ,@namelist)))
+
+	   ;; Main Body
+	   (defun ,tmp-fname (,self ,@namelist)
+	     (declare (ignore ,self))
+	     ,@(loop for tensor in inputs
+		     for name in namelist
+		     collect `(set-input ,compiled-kernel ,(tensor-name tensor) ,name))
+	     (forward ,compiled-kernel))
+
+	   (defmodel (,model-name (self)
+		      :where ,(read-where composite)
+		      :on-call-> ,tmp-fname)))))))
 
 (defun composite->generic (composite function-name)
 

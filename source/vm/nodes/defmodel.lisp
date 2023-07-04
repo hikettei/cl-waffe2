@@ -167,6 +167,8 @@ Here's a list of reports:
   "
 ## [function] composite-where
 
+Predicts next output given inputs.
+
 ### Inputs
 
 `inputs` ... nil or list
@@ -180,6 +182,7 @@ Here's a list of reports:
   ;; (funcall Linter-Function model nil   input-state1 input-state2)
   ;; Fixnums
   ;; (funcall Linter-Function model shape input-state1 input-state2)
+  
   (with-slots ((linter-function subscript-linter)
 	       (state1 linter-state1)
 	       (state2 linter-state2))
@@ -363,6 +366,9 @@ An constructor function for ~a."
 				   `(multiple-value-list (subscript ,where :fixed :t :allow-symbol t :constructor-args ,constructor-arguments)))))
 	   (declare (ignorable ,subscript-p1 ,subscript-p2))
 	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
+		      ;; inputs  = 
+		      ;; inputs1 = 
+		      ;; inputs2 = 
 		      (declare (ignorable ,self-place1 ,inputs ,inputs1 ,inputs2))
 		      ,(if use-linter-p
 			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
@@ -474,3 +480,17 @@ An constructor function for ~a."
 	 else
 	   collect s)))
 
+
+(defun shape-compatible? (composite &rest inputs)
+  "
+## [function] shape-compatible?
+
+Returns t if inputs are compatible with given composite, otherwise return an error.
+
+Inputs: An list of input tensors
+Return: (values output-shape input-shape-determined)
+
+"
+  (let ((linter-function (composite-linter-f composite))
+	(inputs (map 'list #'shape inputs)))
+    (funcall linter-function composite inputs inputs inputs)))

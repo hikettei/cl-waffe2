@@ -124,6 +124,8 @@ See also: `set-input`"
 	(maphash
 	 #'(lambda (key value)
 	     (let ((max-val (gethash key maxsize)))
+	       
+	       #|
 	       (when (and (not (null max-val))
 			  (> value max-val))
 		 (error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
@@ -131,6 +133,7 @@ See also: `set-input`"
 			value
 			key
 			max-val))
+	       |#
 
 	       (when (null max-val)
 		 (setf (gethash key maxsize) value))))
