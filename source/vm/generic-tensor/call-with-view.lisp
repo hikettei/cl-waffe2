@@ -70,7 +70,7 @@ Set 2 if the operation is matmul for example.
 	       (some #'(lambda (v)
 			 ;; non-reductable dim is: NOT(T) or NOT (:BROADCAST)
 			 (or (not (eql (force-list v) t))
-			     (not (eql (force-list v) :broadcast))
+			     ;;(not (eql (force-list v) :broadcast))
 			     ))
 		     views))))
     ;; If tensors are consisted of non-projected-tensor...?
