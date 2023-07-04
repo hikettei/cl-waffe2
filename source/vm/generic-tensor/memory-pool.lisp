@@ -96,7 +96,7 @@ After the body exists, all the temporary tensors in the pool is freed."
   (declare (type Temporary-Room room)
 	   (type AbstractTensor tensor)
 	   (optimize (speed 3)))
-  (let ((required-size (apply #'* (translate-adjustable-shape (shape tensor))))
+  (let ((required-size (apply #'* (translate-adjustable-shape (actual-shape tensor))))
 	(vec           (vec (temporary-room-cache-tensor room))))
     ;; Checking required-size, is done at toplevel.
     ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
