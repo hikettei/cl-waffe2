@@ -20,7 +20,7 @@
 		   (shape-first (shape input-tensor)))))
   ;; Adjustable Tensor Size
   (shape-first shape-first :type list)
-  (size (apply #'* (shape input-tensor)) :type fixnum)
+  (size (apply #'* (translate-adjustable-shape (shape input-tensor))) :type fixnum)
   (cache-tensor input-tensor :type AbstractTensor))
 
 (defun print-current-memory-pool (&key (stream t))

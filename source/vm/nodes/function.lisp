@@ -13,12 +13,18 @@
 		       (declare (ignore self))
 		       (cl-waffe2/base-impl:!sum (cl-waffe2/base-impl:!mul x y)))))
 
-(defun composite->function (~ composite function-name
-			    &key
-			      (dtype :float)
-			      (order :column)
-			      (scalar-p nil)
-			      (compile-mode :default))
+(defmodel (DotProduct-2D (self)
+	   :where ([a b] [a b] -> [scal] where scal = 1)
+	   :on-call-> ((self x y)
+		       (declare (ignore self))
+		       (cl-waffe2/base-impl:!sum (cl-waffe2/base-impl:!mul x y)))))
+
+(defun composite->defun (~ composite function-name
+			 &key
+			   (dtype :float)
+			   (order :column)
+			   (scalar-p nil)
+			   (compile-mode :default))
   "
 ## [function] composite->function
 
@@ -52,14 +58,20 @@ Return: (values input-names lambda-function)
 		   collect `(set-input ,compiled-kernel ,(tensor-name tensor) ,name))
 	   (forward ,compiled-kernel))))))
 
+(defun composite->generic (composite function-name)
 
-(defmacro define-composite-det-function (composite-init-form function-name)
+  )
+
+
+(defmacro define-composite-solid-function (composite-init-form function-name)
   "
-## [macro] define-composite-det-function
+## [macro] define-composite-solid-function
 
 "
 
-  `(eval (composite->function `(a b) ,composite-init-form ',function-name)))
+  `(eval (composite->defun nil ,composite-init-form ',function-name)))
+
+(define-composite-solid-function (DotProduct-2D) !dot2d)
 
 (define-composite-det-function (DotProduct) !dotproduct)
 

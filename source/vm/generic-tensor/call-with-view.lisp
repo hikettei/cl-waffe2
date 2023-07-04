@@ -90,8 +90,8 @@ Set 2 if the operation is matmul for example.
 		       below (+ rest-dims target-dim)
 		     collect (make-viewinstruction
 			      (nth kth-tensor offsets-place)
-			      `(nth ,target-dim-n (shape ,tensor))
-			      (let ((stride `(nth ,target-dim-n (tensor-stride ,tensor)))
+			      `(read-adjustable-symbol (nth ,target-dim-n (shape ,tensor)))
+			      (let ((stride `(nth ,target-dim-n (list ,@(tensor-stride tensor))))
 				    (view   `(subscript-view (nth ,target-dim-n (tensor-view ,tensor)))))
 				(lazy* stride `(compute-stepby ,view))))))))
 
@@ -127,7 +127,7 @@ Set 2 if the operation is matmul for example.
 	   for k upfrom 0
 	   collect (let ((view (make-viewinstruction
 				(nth k offset-place)
-				(nth k sizes)
+				(read-adjustable-symbol (nth k sizes))
 				`(compute-stepby
 				  (subscript-view (nth ,target-dim (tensor-view ,tensor)))))))
 		     (list view))))))
@@ -177,7 +177,7 @@ Return: (values offsets-place form)"
 	 (ith (gensym)))
      `(let* (,@(loop for stride-place in stride-places ;; (place <- stride)
 		    for tensor in ,tensors
-		    collect `(,stride-place (nth ,,target-dim (tensor-stride ,tensor))))
+		    collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor)))))
 	    (,',endpoint-place ,(car ,end-points))
 	    (,',endpoint-place (if (symbolp ,',endpoint-place)
 				   (read-adjustable-symbol ,',endpoint-place)
@@ -293,7 +293,7 @@ See also:
 		    (let ((stride-places (tensor-gensym-list tensors)))
 		      `(let (,@(loop for stride-place in stride-places
 				     for tensor in tensors
-				     collect `(,stride-place (nth ,target-dim (tensor-stride ,tensor)))))
+				     collect `(,stride-place (nth ,target-dim (list ,@(tensor-stride tensor))))))
 			 ,@(expand-first-offset-adder
 			    tensors
 			    offsets-place
