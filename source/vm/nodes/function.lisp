@@ -222,4 +222,3 @@ Tracing the `on-call->` form of a given composite-init-form, the macro `define-c
 			     :compile-mode ,compile-mode
 			     :dtype ,dtype
 			     :order ,order)))
-
