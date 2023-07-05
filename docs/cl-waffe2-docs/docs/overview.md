@@ -298,16 +298,14 @@ The devices to use can be switched `with-devices` macro.
 
 This is because `MyTensor` and `LispTensor` are pointer compatible, and `AddNode` for `LispTensor` is used instead of undefined implementation, `AddNode` for `MyTensor`.
 
-Of cource
+Therefore, after defining a new backend, it is **NOT** necessary to give a re-implementation for all standard implementations in cl-waffe2. Select the appropriate backends in order of array compatibility.
 
-
-
-After defining a new backend, it is **NOT** necessary to give a re-implementation for all standard implementations in cl-waffe2. Select the appropriate backends in order of array compatibility.
-
-Anyway, this is how AddNode is defined for LispTensor in cl-waffe2.
+The macro `define-impl` adds a new implementation of `device`.
 
 ```lisp
-(define-impl (AddNode :device LispTensor)
+;; The code below is NOT working on REPL, but working in :cl-waffe2/backends.lisp package
+
+(define-impl (AddNode-Revisit :device MyTensor)
 	     :forward ((self x y)
 		       (let ((adder (matrix-add (dtype x))))
 			 `(,@(call-with-view
@@ -325,72 +323,60 @@ Anyway, this is how AddNode is defined for LispTensor in cl-waffe2.
 			   ,x))))
 ```
 
-In `:forward` write the expansion expression for the operation in the same way as when defining a macro with `defmacro`. (see below for details).
+In `:forward` write the expansion expression for the operation in the same way as when defining a macro with `defmacro`. The `call-with-view` function is a general-purpose function to iterate the given tensor with computing offsets.
 
-Why define-impl takes such a roundabout approach?
+(P.S.: I believe that ideas on this macro needed to be given more thoughts, indeed, this is ugly... but I guess `composite-function` can be install without writing macros, not tested.)
 
-1. To generate a fast code depending on the matrix size and data type at runtime.
-
-2. To pre-calculate all Indexes
-
-3. It is possible to generate, for example, C code without necessarily performing the same operations.
-
-(I believe that ideas on this macro needed to be given more thoughts, indeed, this is ugly...)
-
-Let's Perform operations with the defined AddNode!
+The forward definition of node can be called with `(forward node &rest inputs)` function.
 
 ```lisp
-(forward (AddNode) (randn `(10 10)) (randn `(10 10)))
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP9412 
+(forward (AddNode :float) (randn `(10 10)) (randn `(10 10)))
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP28407 
   :vec-state [maybe-not-computed]
-  ((-0.33475596  1.0127474    -0.060175765 ~ 1.4573603    -0.987001    -1.0165008)                    
-   (-0.045512    -0.17995936  0.23593931   ~ 0.8409552    2.6434622    -0.5789532)   
+  ((-0.93102205  -0.25396287  0.45237574   ~ 0.54063225   0.56266963   -0.77444124)                    
+   (-0.55870235  -0.9794068   -0.21233901  ~ 1.1901267    -0.83241004  -0.69876736)   
                  ...
-   (0.13282542   1.9386152    0.16213055   ~ 0.4363958    0.8294802    -0.1558509)
-   (1.1732875    -1.5769591   -1.2152125   ~ -0.2833903   -0.81108683  0.9846606))
+   (-0.5366255   -0.9118863   1.274197     ~ 0.19851275   0.21501832   1.064277)
+   (-0.65124494  0.15393624   -0.6625119   ~ -1.1875637   -2.007647    0.5431197))
   :facet :input
   :requires-grad NIL
   :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
 ```
 
-Look at :vec-state, at that moment, the operation is still not done yet. The tensor displayed is the equivalent to the first argument.
+Closely Looking at :vec-state, it says the operation isn't done yet. The embodied elements are displayed but this is because `AddNode` is defined as in-place operation, returning the first argument.
 
-In cl-waffe2, all operations are lazy-evaluated, being JIT-compiled/Optimized/Parallelized via `build`, or `proceed` function.
-
-You would think that this style programming would make your task more complex, but don't worry, we provide APIs that is as close as possible to defined-by-run, and REPL-Friendly.
+To accept this, we can use `proceed`.
 
 ```lisp
-(proceed (!add (AddNode) (randn `(10 10)) (randn `(10 10))))
-
-;; proceed-time function measures execution time without compiling time.
-(proceed-time (!add (AddNode) (randn `(10 10)) (randn `(10 10))))
+(proceed (forward (AddNode :float) (randn `(10 10)) (randn `(10 10))) :measure-time t)
+Proceed-Time: First Trying
 Evaluation took:
   0.000 seconds of real time
-  0.000014 seconds of total run time (0.000014 user, 0.000000 system)
+  0.000028 seconds of total run time (0.000019 user, 0.000009 system)
   100.00% CPU
-  30,512 processor cycles
+  26,990 processor cycles
   0 bytes consed
   
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP9447 
+Proceed-Time: Second Trying
+Evaluation took:
+  0.000 seconds of real time
+  0.000003 seconds of total run time (0.000003 user, 0.000000 system)
+  100.00% CPU
+  6,300 processor cycles
+  0 bytes consed
+  
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP28477 
   :vec-state [computed]
-  ((-1.5820543   2.2804832    -0.5613338   ~ 1.1143546    -1.3096298   -1.3756635)                    
-   (-1.5208249   0.21621853   2.660368     ~ -1.032644    0.25917292   -1.9737494)   
-                 ...
-   (2.2557664    2.4791012    -0.04298857  ~ -1.2520232   1.8216541    -2.818116)
-   (0.8615336    0.92017823   -0.25378937  ~ 0.9697968    -0.6300591   1.5660275))
+  ((2.843876    2.3477855   3.3252454   ~ -1.0901415  -1.211004   -2.268893)                   
+   (-2.7236757  -0.60536575 -0.61465085 ~ 2.383132    -0.22351071 -0.6449351)   
+                ...
+   (-0.7634125  0.7340392   2.7052975   ~ 1.1768849   3.609434    -1.3465445)
+   (4.1204114   3.696868    -2.1895533  ~ -1.5550013  2.6361299   0.31319892))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-You can switch backends via `(with-devices (&rest devices) &body body)` macro seamlessly.
-
-```lisp
-(with-devices (LispTensor CPUTensor)
-   ;; The priority of dispatching backends is: LispTensor(First) -> CPUTensor(Second)
-   ;; If there's no any impls on LispTensor, use CPUTensor instead.
-    (!add (randn `(10 10)) (randn `(10 10))))
-```
 
 ## JIT compile, In-place optimizing
 
