@@ -1,70 +1,93 @@
 
-# Concepts
+# A road to cl-waffe2
 
 ## Project Structure
 
-cl-waffe2 consists of the following systems.
+Thank you for having interest in my project. Before we start the tutorial, let me explain the structure of cl-waffe2 package.
+
+Mainly, cl-waffe2 consists of the following packages.
 
 ### Fundamental System
+
+These two package form the basis of cl-waffe2:
 
 ```
 :cl-waffe2/vm.nodes
 :cl-waffe2/vm.generic-tensor
 ```
 
-`:cl-waffe2/vm.nodes` provides a system on constructing networks (e.g.: `AbstractNode` and `defnode`, `Composite` and `defmodel` etc...), and management to shape (e.g.: `:where pharse`, `subscript` etc...).
+The package `:cl-waffe2/vm.nodes` provides a system for constructing neural networks, including `AbstractNode`, `Composite`, `Shaping API` etc...
 
-`:cl-waffe2/vm.generic-tensor` provides on the other hand a system on differentiable `AbstractTensor` (e.g.: `build` `make-tensor` `make-input` etc...)
-
-All other packages are built on this package.
+On the other hand, `:cl-waffe2/vm.generic-tensor` provides features on `AbstractTensor`, including `JIT Compiler`, `NodeTensor`, `Memory-Pool` etc...
 
 ### Standard APIs
+
+```lisp
+(Figure: Dependencies of cl-waffe2)
+
+                            [CPUBackend ]
+            [base-impl] --- [LispBackend]
+                |           [CUDABackend] ...
+	            |
+   [vm.generic-tensor] [vm.nodes]
+   
+```
 
 ```
 :cl-waffe2/base-impl
 ```
 
-`:cl-waffe2/base-impl` provides a standard implementation for operations (e.g.: `!add` `proceed` `!view` etc...), including `defnode` definition and defun parts.
+Using the basic system of cl-waffe2, `:cl-waffe2/vm.generic-tensor` and `:cl-waffe2/vm.nodes`, the package `:cl-waffe2/base-impl` provides a standard implementation of matrix (sometimes scalar) tensor operations. The operation we say is including: `defun` parts, and abstract definition of operation.
+
+Before we go any futher: cl-waffe2 is working on `AbstractTensor` (inspired in Julia's great idea, `AbstractArray`), which separates **implementation** of the operation from the
+**definition.** In that respect, `:cl-waffe2/base-impl` provides the **definition** of operations, while the packages we about to mention provides **implementation** of operations.
 
 ### Standard Backends/Implemenetations
+
+As of this writing (2023/07/05), we provide two standard implementation of `:cl-waffe2/base-impl`, both of them are working on CPU.
 
 ```
 :cl-waffe2/backends.lisp
 :cl-waffe2/backends.cpu    
 ```
 
-Both of them are standard implementation of `:cl-waffe2/base-impl` for CPU.
-
-As of this writing (2023/06/20), cl-waffe2 has a only impls for CPU, however, If only time and money would permit, I'm willing to implement CUDA/Metal Backends.
+If only time and money would permit, I'm willing to implement CUDA/Metal Backends.
 
 :cl-waffe2/backends.lisp is `work enough` first, it is Portable (based on ANSI Common Lisp) and supports AVX2 but far from `full speed`.
 
 On the other hand :cl-waffe2/backends.cpu is accelerated by OpenBLAS (maybe MKL is ok) and other foreign backends, this is SBCL-Dependant and sometimes could be unsafe, but provides `full speed`.
 
 
+TODO:
+
 ```
 :cl-waffe2/backends.fastmath (NOT IMPLEMENTED YET!)
 ```
 
-(TODO)
+(TO BE) Supporting vectorized mathematical functions, AVX512 instructions.
 
-### Other Utils
+### Neural Network
 
-```
-:cl-waffe2 ;; Provides multi-threading APIs and config macros!
+```lisp
 :cl-waffe2/nn ;; Provides Basic neural-network Implementations.
 :cl-waffe2/optimizers ;; Provides Basic Optimizers
-:cl-waffe2/viz ;; Provides Vizualizing APIs
+```
+
+### Utils
+
+```lisp
+:cl-waffe2     ;; Provides multi-threading APIs and config macros!
+:cl-waffe2/viz ;; Provides Vizualizing APIs of computation node
 etc...
 ```
 
 ### To Get Started!
 
-It is recommended to load the system to be used when defining the package.
+If you're going to start with defining a new package, It is recommended to `:use` the package to be used.
 
-Please pick up the packages that you need depending on your needs.
+Read the description above and select and describe the packages you think you need. (or you can just copy and paste it.)
 
-For Example:
+This is an example case of `:your-project-name` package.
 ```lisp
 
 (in-package :cl-user)
@@ -88,78 +111,196 @@ For Example:
 
 ```
 
-cl-waffe2 does not cause name clashes with other libraries or existing functions.
-In addition, with regard to the function that generates the node is `!`, there is a rule that functions that create a node must start with `!` (ignoring the exception of the `proceed` function).
+If you're working with REPL (or new to Common Lisp?), you can try cl-waffe2 features like this:
 
-## Differentiable operations based on multiple backends
 
-All operations in cl-waffe2 can be performed in the following form.
-
+```sh
+$ ros run
+> (load "cl-waffe2.asd") # cl-waffe2.asd should be placed where SBCL can read it.
+> (ql:quickload :cl-waffe2)
+> (in-package :cl-waffe2-repl) ;; this is a playground place, and all features are available
 ```
+
+The tutorials below should be also working on REPL, (indeed, cl-waffe2 is REPL-friendly!), you can learn how cl-waffe2 works by copying and pasting the example codes.
+
+## Basic: Building Computation Nodes Lazily
+
+Since `Do not run until the node is optimized` is a one of cl-waffe2 policy, all operations in cl-waffe2 is lazy evaluation unless defined by a special macro.
+
+Therefore, calling `!add` function which finds a sum of given arguments, the retuend tensor isn't still computed, but `:vec-state` = `[maybe-not-computed]`
+
+```lisp
+(!add 3.0 2.0)
+```
+
+```lisp
+{SCALARTENSOR[float]  :named ChainTMP23305 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (1) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: SCALARANDSCALARADD-SCALARTENSOR (A[SCAL] B[SCAL] -> A[SCAL]
+                                                    WHERE SCAL = 1)>}
+```
+
+`:vec-state` indicates the computation state of tensor, and it says exactly what it says.
+
+You can continue the operation by connecting the returned tensor and next operation.
+
+For example, the figure below in cl-waffe is representece as:
+
+```math
+out = 3 + 2 * 4
+```
+
+```lisp
+(defparameter out (!add 3 (!mul 2 4))) ;; out <- 3 + 2 * 4
+```
+
+To obtain the state in which the operation is performed, calling the function `(proceed toplevel)` is a vaild option.
+
+```lisp
+(proceed out)
+
+{SCALARTENSOR[int32]  :named ChainTMP28326 
+  :vec-state [computed]
+    11
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+`proceed` is a differentiable operation which instantly compiles and executes all the previous node of `toplevel`. In addition, there's another way to accept nodes: `(build out)` or `(define-composite-function)`, but they're a little complicated, so explained in the other sections.
+
+The moment compiling function is called, cl-waffe2 prunes all unused copying, computes all `View Offsets`, schedules memory allocation and (Currently it's not working though) multi-threading.
+
+## AbstractTensor - One operation, Multiple implementations.
+
+### Background
+
+```lisp
+(Operations in cl-waffe2)
+
                            [AbstractNode]
 	                             |
             |--------------------|------------------------|
  [CPU Implementation1] [CPU Implementation2] [CUDA Implementation1] ...
 ```
 
-AbstractNode is a class declared via `defnode` macro, and each implementation is implemented via `define-impl` macro.
+`Julia` has introduced [AbstractArray](https://docs.julialang.org/en/v1/base/arrays/) in their libraries, separating the common (generic) parts of the array from each backend implementation. Since `AbstractTensor` increased portability between devices on which they run (even on CPU!), cl-waffe2 wholly introduced this feature.
 
-There can be more than one implementation for a single device. (e.g.: it is possible to have a normal implementation and an approximate implementation for the exp function).
 
-One of the concepts is to minimise code re-writing by defining abstract nodes and switching the backends that executes them depending on the device they run on and the speed required.
+In cl-waffe2, The generic definition of operations, `AbstractNode` is a class declared via the `defnode` macro, and depending on the devices we use, the `define-impl` macro defines an implementation.
 
-As an example, consider implementing the addition operation `!add`.
+Conveniently, there can be more than one implementation for a single device. (e.g.: it is possible to have a normal implementation and an approximate implementation for the exp function on single CPU).
 
-The addition operation `AddNode` is the operation of finding the sum of two given matrices A and B and storing the result in A.
+One of the policy is to minimise code re-writing by defining abstract nodes and switching the backends that executes them depending on the device they run on and the speed required.
+
+
+### Example: AddNode
+
+Here's an example of how I've implemented the operation `!add`.
+
+`AddNode-Revisit` is `AbstractNode` of finding the sum of two given matrices A and B and storing the result in A. Here's the segment from the source code.
 
 ```lisp
-(defnode (AddNode (myself)
+;; Reimplementation of AddNode
+(defnode (AddNode-Revisit (myself dtype)
             :where (A[~] B[~] -> A[~])
-	    :documentation "A <- A + B"
-	    :backward ((self dout dx dy)
-	               (declare (ignore dx dy))
-		       (values dout dout))
-    ;; Here follows constructor's body
-    ;; AddNode class initialized is passed as *myself*
-    )
+	        :documentation "A <- A + B"
+	        :backward ((self dout dx dy)
+	                   (declare (ignore dx dy))
+		               (values dout dout))))
 ```
 
-Here,
+`AbstractNode` is a CLOS class with the following operation.
 
-`:where` describes how matrices are performed. Before -> clause refers to the arguments, after -> clause refers to the shape of matrix after the operation.
+1. shape changes before and after the operation, and which pointer to use? is described in `:where`. Before `->` clause refers to the arguments, after `->` clause refers to the shape of matrix after the operation.
 
-It describes:
+It says:
 
 1. Takes A and B as arguments and returns a matrix of pointers of A
 2. All matrices have the same shape before and after the operation.
 
-`:backward` defines the operation of backward. This declaration can be made either in `defnode` or in `define-impl`, whichever you declare.
+Also, `:backward` defines the operation of backward. This declaration can be made either in `defnode` or in `define-impl`, whichever you declare.
 
-The declared node can be initialized using the function `(AddNode)`, but seems returning errors.
+The declared node can be initialized using the function `(AddNode-Revisit dtype)`, but seems returning errors.
 
 ```lisp
-(AddNode)
+(AddNode-Revisit :float)
 ;; -> Couldn't find any implementation of AddNode for (CPUTENSOR LISPTENSOR).
 ```
 
-This is because there is not yet a single implementation for `AddNode`, so let's define how AddNode works via `define-impl` macro.
+This is because there is not yet a single implementation for `AddNode-Revisit`.
 
-One operation can be defined for a backend that can be declared by inheriting from the cl-waffe2/vm.generic-tensor:AbstractTensor class.
-
-As of this writing(2023/06/20), cl-waffe2 provides following backends as standard.
-
-1. LispTensor - Portable/Safety First, speed comes second. Everything works on ANSI Common Lisp.
-
-
-2. CPUTensor - This is SBCL-dependant, but supports OpenBLAS linear-algebra APIs.
-
-Of course, if necessary, you can create a new backend.
+One operation can be defined for a backend that can be declared by extending the `cl-waffe2/vm.generic-tensor:AbstractTensor` class. Here's `LispTensor`, and `CPUTensor`, and of course, if necessary, you can create a new backend like:
 
 ```lisp
 (defclass MyTensor (AbstractTensor) nil)
+
+;; Initializer/Allocator
+(defmethod initialize-instance :before ((tensor MyTensor)
+					&rest initargs
+					&key &allow-other-keys)
+  ;; if projected-p -> alloc new vec
+  (let* ((shape (getf initargs :shape))
+	 (dtype (dtype->lisp-type (getf initargs :dtype)))
+	 (vec   (getf initargs :vec))
+	 (facet (getf initargs :facet))
+	 (initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
+    (when (eql facet :exist)
+      (if vec
+	  (setf (tensor-vec tensor) vec)
+	  (setf (tensor-vec tensor)
+		(make-array
+		 (apply #'* shape)
+		 :element-type dtype
+		 :initial-element initial-element))))))
+
+;; If data storage is differ from CL Array, override vref and (setf vref) method.
 ```
 
 (See also: [tensor.lisp](https://github.com/hikettei/cl-waffe2/blob/master/source/backends/lisp/tensor.lisp))
+
+The devices to use can be switched `with-devices` macro.
+
+```lisp
+(with-devices (MyTensor LispTensor) ;; The further to the left, the higher the priority.
+    (make-tensor `(10 10)))
+
+;; -> MyTensor is created
+{MYTENSOR[float] :shape (10 10)  
+  ((0.0 0.0 0.0 ~ 0.0 0.0 0.0)           
+   (0.0 0.0 0.0 ~ 0.0 0.0 0.0)   
+        ...
+   (0.0 0.0 0.0 ~ 0.0 0.0 0.0)
+   (0.0 0.0 0.0 ~ 0.0 0.0 0.0))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL}
+```
+
+`MyTensor` has no implementation of any operations, but the code below is working.
+
+```lisp
+(with-devices (MyTensor LispTensor)
+    (proceed (!add (randn `(3 3)) (randn `(3 3)))))
+
+{MYTENSOR[float] :shape (3 3) :named ChainTMP28398 
+  :vec-state [computed]
+  ((-1.4494231  1.0320233   -1.8852448)
+   (1.0886636   -0.37185743 0.99227524)
+   (2.2778857   -0.82929707 2.3525782))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+This is because `MyTensor` and `LispTensor` are pointer compatible, and `AddNode` for `LispTensor` is used instead of undefined implementation, `AddNode` for `MyTensor`.
+
+Of cource
+
+
 
 After defining a new backend, it is **NOT** necessary to give a re-implementation for all standard implementations in cl-waffe2. Select the appropriate backends in order of array compatibility.
 
@@ -252,6 +393,9 @@ You can switch backends via `(with-devices (&rest devices) &body body)` macro se
 ```
 
 ## JIT compile, In-place optimizing
+
+
+### Lazy Evaluation
 
 As I said `Everything is lazy-evaluated, and compiled`, JIT Compiling is a one of main idea of this project.
 
@@ -356,6 +500,10 @@ Making operations in-place is a rational way to optimize your programs, but this
 Let's take another example.
 
 ```math
+f(x) = sin(MaybeCopy(x))
+```
+
+```math
 out = f(Input) + f(f(Tensor))
 ```
 
@@ -389,13 +537,13 @@ out = f(Input) + f(f(Tensor))
 (TODO)
 
 
-## Broadcasting APIs, View APIs
+## Optional Broadcasting, and View APIs
 
 !flexible
 
 !view
 
-## REPL-Friendly function, proceed
+## Proceed, Build, Composite-Function
 
 Proceed
 
@@ -403,12 +551,14 @@ Proceed-backward
 
 Proceed-time
 
-## Strong Shaping APIs
+Composite-Function
+
+## Shaping API with DSL
 
 syntax of :where pharse
 Shape Error Reports
 
-## Constructing networks with defnode/defmodel
+## Basic Unit: AbstractNode and Composite
 
 defnode
 
@@ -418,11 +568,13 @@ call
 
 forward
 
-## Data Structures
+Composite
+
+## Multiple facet of Tensor
 
 Parameter/Tensor/Input/ScalarTensor
 
-## Optimizing Parameters
+## Optimizing Model Parameter
 
 defoptimizer
 
