@@ -52,6 +52,10 @@
 	     (LinearLayer hidden-dim out-features)
 	     (asnode #'!softmax))
 
+(defsequence LinearModel (in-features)
+	     (LinearLayer in-features 30)
+	     (asnode #'!relu))
+
 (defun train ()
   (let ((model (MLP-Sequence 784 256 10)))
     (with-build (forward backward vars params)

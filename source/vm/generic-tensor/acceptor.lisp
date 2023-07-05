@@ -344,6 +344,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	      `(lambda ()
 		 (declare ,(compile-option-form compile-mode))
 		 ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
+		 (state-reset! ,toplevel)
 		 ,(place-cached-kernels
 		   `(with-adjustable-symbols (,@set-input-forms)
 		      ,body))))

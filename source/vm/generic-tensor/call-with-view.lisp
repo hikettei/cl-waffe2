@@ -226,7 +226,7 @@ Return: (values offsets-place form)"
 (call-with-view function tensors &key (at-least-dim 1))
 ```
 
-The function `call-with-view` is a utility to expand view-considered `loop` iteration in the `:forward` expansion of `define-impl`.
+`call-with-view` is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.
 
 (TODO: Example/Documents)
 
