@@ -608,13 +608,139 @@ $ dot -Tpng ./assets/opt_node.dot > ./assets/opt_node.png
 
 `ExistTensor` (created by `make-tensor`, or tensors whose requires-grad=t) is never overwritten.
 
-## Optional Broadcasting, and View APIs
 
-!flexible
+## Network Units: Node and Composite
 
-!view
+In this section, we learn to formulate neural networks in cl-waffe2.
 
-## Proceed, Build, Composite-Function
+### Composite and Nodes
+
+
+```lisp
+(defmodel (Sin-Inlined (self)
+	   :where (X[~] -> [~])
+	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       (!sin x))))
+
+(define-composite-function (Sin-Inlined) !sin-inline)
+```
+
+
+```lisp
+(let ((a (ax+b `(1 1) 0 1)))
+			(proceed-time (!sin a)))
+Proceed-Time: First Trying
+Evaluation took:
+  0.000 seconds of real time
+  0.000077 seconds of total run time (0.000054 user, 0.000023 system)
+  100.00% CPU
+  141,818 processor cycles
+  0 bytes consed
+  
+Proceed-Time: Second Trying
+Evaluation took:
+  0.000 seconds of real time
+  0.000007 seconds of total run time (0.000006 user, 0.000001 system)
+  100.00% CPU
+  11,790 processor cycles
+  0 bytes consed
+  
+(let ((a (ax+b `(1000 1000) 0 1)))
+			(proceed-time (!sin a)))
+Proceed-Time: First Trying
+Evaluation took:
+  0.019 seconds of real time
+  0.019118 seconds of total run time (0.017191 user, 0.001927 system)
+  100.00% CPU
+  44,118,196 processor cycles
+  8,000,032 bytes consed
+  
+Proceed-Time: Second Trying
+Evaluation took:
+  0.015 seconds of real time
+  0.015628 seconds of total run time (0.015613 user, 0.000015 system)
+  106.67% CPU
+  36,025,586 processor cycles
+  0 bytes consed
+```
+
+
+```lisp
+(let ((a (ax+b `(1 1) 0 1)))
+			(time (!sin-inline a)))
+Evaluation took:
+  0.000 seconds of real time
+  0.000103 seconds of total run time (0.000098 user, 0.000005 system)
+  100.00% CPU
+  231,840 processor cycles
+  0 bytes consed
+  
+  
+(let ((a (ax+b `(1000 1000) 0 1)))
+			(time (!sin-inline a)))
+Evaluation took:
+  0.015 seconds of real time
+  0.015862 seconds of total run time (0.015813 user, 0.000049 system)
+  106.67% CPU
+  36,632,326 processor cycles
+  0 bytes consed
+```
+
+### Sequence Model
+
+```lisp
+(defsequence MLP-Sequence (in-features hidden-dim out-features
+			   &key (activation #'!tanh))
+	     "3 Layers MLP"
+	     (LinearLayer in-features hidden-dim)
+	     (asnode activation)
+	     (LinearLayer hidden-dim hidden-dim)
+	     (asnode activation)
+	     (LinearLayer hidden-dim out-features)
+	     (asnode #'!softmax))
+```
+	     
+```lisp
+(MLP-Sequence 784 512 256)
+
+<Composite: MLP-SEQUENCE{W23852}(
+    <<6 Layers Sequence>>
+
+[1/6]          ↓ 
+<Composite: LINEARLAYER{W23682}(
+    <Input : ((~ BATCH-SIZE 784)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 784)
+    BIAS    -> (512)
+)>
+[2/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23680}(
+    #<FUNCTION !TANH>
+)>
+[3/6]          ↓ 
+<Composite: LINEARLAYER{W23510}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 512)
+    BIAS    -> (512)
+)>
+[4/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23508}(
+    #<FUNCTION !TANH>
+)>
+[5/6]          ↓ 
+<Composite: LINEARLAYER{W23338}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 256))>
+
+    WEIGHTS -> (256 512)
+    BIAS    -> (256)
+)>
+[6/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23336}(
+    #<FUNCTION CL-WAFFE2/NN:!SOFTMAX>
+)>)>
+```
 
 Proceed
 
@@ -624,12 +750,6 @@ Proceed-time
 
 Composite-Function
 
-## Shaping API with DSL
-
-syntax of :where pharse
-Shape Error Reports
-
-## Basic Unit: AbstractNode and Composite
 
 defnode
 
@@ -641,14 +761,24 @@ forward
 
 Composite
 
-## Multiple facet of Tensor
+## Shaping API with DSL
 
-Parameter/Tensor/Input/ScalarTensor
+See also: vm.generic-tensor docs
+
+
+## Optional Broadcasting, and View APIs
+
+!flexible
+
+!view
 
 ## Optimizing Model Parameter
 
 defoptimizer
 
+deftrainer
+
+parameter
 
 Tutorials Over!
 
