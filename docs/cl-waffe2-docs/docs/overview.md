@@ -603,8 +603,8 @@ $ dot -Tpng ./assets/opt_node.dot > ./assets/opt_node.png
 
 ### Before Optimized Vs After Optimized.
 
-<img alt="bf" src="../../../assets/bad_node.png" width="45%">
-<img alt="bf" src="../../../assets/opt_node.png" width="45%">
+<img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/bad_node.png?raw=true" width="45%">
+<img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/opt_node.png?raw=true" width="45%">
 
 `ExistTensor` (created by `make-tensor`, or tensors whose requires-grad=t) is never overwritten.
 
