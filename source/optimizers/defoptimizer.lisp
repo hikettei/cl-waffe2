@@ -23,10 +23,10 @@
 (define-composite-function (ComposedFunction) !composed)
 
 (defmodel (Sin-Inlined (self)
-	   :where (X[~] OUT[~] -> [~])
-	   :on-call-> ((self x out)
+	   :where (X[~] -> [~])
+	   :on-call-> ((self x)
 		       (declare (ignore self))
-		       (forward (SinNode) x out))))
+		       (!sin x))))
 
 (define-composite-function (Sin-Inlined) !sin-inline)
 
