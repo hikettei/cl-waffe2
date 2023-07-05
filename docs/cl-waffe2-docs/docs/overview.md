@@ -378,11 +378,113 @@ Evaluation took:
 ```
 
 
-## JIT compile, In-place optimizing
+## Compiling, and In-place optimizing
 
 ### Compiled Model
 
-pass
+Compiling Common Lisp Code at runtime is certainly fast, but isn't enough. In order to re-use compiled nodes, there is `Compiled-Composite` class to manage the state.
+
+`Compiled-Composite` can be obtained by calling `(build toplevel)`
+
+```lisp
+(let* ((out (!sum (!add (randn `(10 10)) (randn `(10 10)))))
+       (compiled-model (build out)))
+    compiled-model)
+
+<Compiled-Composite
+    forward:  #<FUNCTION (LAMBDA ()) {53D7ED1B}>
+    backward: #<FUNCTION (LAMBDA ()) {53D4D78B}>
+
++= [Tensors in the computation node] =======+
+
+Subscripts:
+
+
+Variables:
+ NAMES |  SIZE | 
+
+
+ - The number of tmp variables : 15
+ - The number of parameters    : 0
++========================================+
+>
+```
+
+`(forward compiled-composite)`, `(backward compiled-composite)` calls forward/backward functions respectively.
+
+```lisp
+(let* ((out (!sum (!add (randn `(10 10)) (randn `(10 10)))))
+       (compiled-model (build out)))
+     (print (forward compiled-model))
+     (print (backward compiled-model)))
+
+{CPUTENSOR[float] :shape (1 1) -> :view (<0> <0>) -> :visible-shape (1 1) :named ChainTMP29625 
+  ((-24.876368))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL} 
+T 
+```
+
+But what if one wants to change the value of first argument? Replace `(make-tensor)` to be replaced later with a `(make-input)` function.
+
+```lisp
+(make-input shape input-name)
+```
+
+`shape` can include symbols, to be determined later.
+
+```lisp
+(let* ((out (!sum (!add (make-input `(a b) :InputA) (randn `(10 10)))))
+       (compiled-model (build out)))
+     compiled-model)
+     
+<Compiled-Composite
+    forward:  #<FUNCTION (LAMBDA ()) {53D9AF7B}>
+    backward: #<FUNCTION (LAMBDA ()) {53D9D53B}>
+
++= [Tensors in the computation node] =======+
+
+Subscripts:
+     [A -> ?, max=?]
+     [B -> ?, max=?]
+
+
+Variables:
+ NAMES  |  SIZE  | 
+––––––––––––––––––
+ INPUTA |  (A B) | 
+
+
+ - The number of tmp variables : 15
+ - The number of parameters    : 0
++========================================+
+>
+```
+
+The function `(make-input)` itself, doesn't have a vector storage. (as long as `(tensor-vec tensor)` function isn't called). Accordingly, someone has to **embody** the storage of InputTensor with `ExistTensor`.
+
+`(set-input compiled-composite input-name actual-tensor)` embodies given InputTensor in the computation node with actual-tensor.
+
+```lisp
+(let* ((out (!sum (!add (make-input `(a b) :InputA) (randn `(10 10)))))
+       (compiled-model (build out)))
+
+    (set-input compiled-model :InputA (randn `(10 10)))
+    (print (forward compiled-model))
+    (print (backward compiled-model))
+
+    (set-input compiled-model :InputA (randn `(10 10)))
+    ;; ... working on another input
+    )
+
+{CPUTENSOR[float] :shape (1 1) -> :view (<0> <0>) -> :visible-shape (1 1) :named ChainTMP29804 
+  ((17.631124))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL} 
+T 
+```
 
 ### In-place optimizing
 
@@ -481,7 +583,7 @@ Formulating the same network in cl-waffe2:
     (forward (F-Node) (!copy x)))
 ```
 
-Let's visualizing how the operation is performed via `:cl-waffe2/viz`.
+Let's visualize how the operation is performed via `:cl-waffe2/viz`.
 
 ```lisp
 ;; (make-input ... nil) creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
@@ -491,6 +593,8 @@ Let's visualizing how the operation is performed via `:cl-waffe2/viz`.
 	    (build k) ;; optimized
                (cl-waffe2/viz:viz-computation-node k "assets/opt_node.dot"))
 ```
+
+The result is written in `dot language`.
 
 ```sh
 $ dot -Tpng ./assets/bad_node.dot > ./assets/bad_node.png
@@ -502,8 +606,7 @@ $ dot -Tpng ./assets/opt_node.dot > ./assets/opt_node.png
 <img alt="bf" src="../../../assets/bad_node.png" width="45%">
 <img alt="bf" src="../../../assets/opt_node.png" width="45%">
 
-(TODO)
-
+`ExistTensor` (created by `make-tensor`, or tensors whose requires-grad=t) is never overwritten.
 
 ## Optional Broadcasting, and View APIs
 
