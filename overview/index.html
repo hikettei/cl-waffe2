@@ -88,6 +88,12 @@
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#network-units-node-and-composite">Network Units: Node and Composite</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#composite-and-nodes">Composite and Nodes</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sequence-model">Sequence Model</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#shaping-api-with-dsl">Shaping API with DSL</a>
     </li>
@@ -608,10 +614,125 @@ out = f(Input) + f(f(Tensor))
 $ dot -Tpng ./assets/opt_node.dot &gt; ./assets/opt_node.png
 </code></pre>
 <h3 id="before-optimized-vs-after-optimized">Before Optimized Vs After Optimized.</h3>
-<p><img alt="bf" src="../../../assets/bad_node.png" width="45%">
-<img alt="bf" src="../../../assets/opt_node.png" width="45%"></p>
+<p><img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/bad_node.png?raw=true" width="45%">
+<img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/opt_node.png?raw=true" width="45%"></p>
 <p><code>ExistTensor</code> (created by <code>make-tensor</code>, or tensors whose requires-grad=t) is never overwritten.</p>
 <h2 id="network-units-node-and-composite">Network Units: Node and Composite</h2>
+<p>In this section, we learn to formulate neural networks in cl-waffe2.</p>
+<h3 id="composite-and-nodes">Composite and Nodes</h3>
+<pre><code class="language-lisp">(defmodel (Sin-Inlined (self)
+       :where (X[~] -&gt; [~])
+       :on-call-&gt; ((self x)
+               (declare (ignore self))
+               (!sin x))))
+
+(define-composite-function (Sin-Inlined) !sin-inline)
+</code></pre>
+<pre><code class="language-lisp">(let ((a (ax+b `(1 1) 0 1)))
+            (proceed-time (!sin a)))
+Proceed-Time: First Trying
+Evaluation took:
+  0.000 seconds of real time
+  0.000077 seconds of total run time (0.000054 user, 0.000023 system)
+  100.00% CPU
+  141,818 processor cycles
+  0 bytes consed
+
+Proceed-Time: Second Trying
+Evaluation took:
+  0.000 seconds of real time
+  0.000007 seconds of total run time (0.000006 user, 0.000001 system)
+  100.00% CPU
+  11,790 processor cycles
+  0 bytes consed
+
+(let ((a (ax+b `(1000 1000) 0 1)))
+            (proceed-time (!sin a)))
+Proceed-Time: First Trying
+Evaluation took:
+  0.019 seconds of real time
+  0.019118 seconds of total run time (0.017191 user, 0.001927 system)
+  100.00% CPU
+  44,118,196 processor cycles
+  8,000,032 bytes consed
+
+Proceed-Time: Second Trying
+Evaluation took:
+  0.015 seconds of real time
+  0.015628 seconds of total run time (0.015613 user, 0.000015 system)
+  106.67% CPU
+  36,025,586 processor cycles
+  0 bytes consed
+</code></pre>
+<pre><code class="language-lisp">(let ((a (ax+b `(1 1) 0 1)))
+            (time (!sin-inline a)))
+Evaluation took:
+  0.000 seconds of real time
+  0.000103 seconds of total run time (0.000098 user, 0.000005 system)
+  100.00% CPU
+  231,840 processor cycles
+  0 bytes consed
+
+
+(let ((a (ax+b `(1000 1000) 0 1)))
+            (time (!sin-inline a)))
+Evaluation took:
+  0.015 seconds of real time
+  0.015862 seconds of total run time (0.015813 user, 0.000049 system)
+  106.67% CPU
+  36,632,326 processor cycles
+  0 bytes consed
+</code></pre>
+<h3 id="sequence-model">Sequence Model</h3>
+<pre><code class="language-lisp">(defsequence MLP-Sequence (in-features hidden-dim out-features
+               &amp;key (activation #'!tanh))
+         &quot;3 Layers MLP&quot;
+         (LinearLayer in-features hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim out-features)
+         (asnode #'!softmax))
+</code></pre>
+<pre><code class="language-lisp">(MLP-Sequence 784 512 256)
+
+&lt;Composite: MLP-SEQUENCE{W23852}(
+    &lt;&lt;6 Layers Sequence&gt;&gt;
+
+[1/6]          ↓ 
+&lt;Composite: LINEARLAYER{W23682}(
+    &lt;Input : ((~ BATCH-SIZE 784)) -&gt; Output: ((~ BATCH-SIZE 512))&gt;
+
+    WEIGHTS -&gt; (512 784)
+    BIAS    -&gt; (512)
+)&gt;
+[2/6]          ↓ 
+&lt;Composite: ENCAPSULATED-NODE{W23680}(
+    #&lt;FUNCTION !TANH&gt;
+)&gt;
+[3/6]          ↓ 
+&lt;Composite: LINEARLAYER{W23510}(
+    &lt;Input : ((~ BATCH-SIZE 512)) -&gt; Output: ((~ BATCH-SIZE 512))&gt;
+
+    WEIGHTS -&gt; (512 512)
+    BIAS    -&gt; (512)
+)&gt;
+[4/6]          ↓ 
+&lt;Composite: ENCAPSULATED-NODE{W23508}(
+    #&lt;FUNCTION !TANH&gt;
+)&gt;
+[5/6]          ↓ 
+&lt;Composite: LINEARLAYER{W23338}(
+    &lt;Input : ((~ BATCH-SIZE 512)) -&gt; Output: ((~ BATCH-SIZE 256))&gt;
+
+    WEIGHTS -&gt; (256 512)
+    BIAS    -&gt; (256)
+)&gt;
+[6/6]          ↓ 
+&lt;Composite: ENCAPSULATED-NODE{W23336}(
+    #&lt;FUNCTION CL-WAFFE2/NN:!SOFTMAX&gt;
+)&gt;)&gt;
+</code></pre>
 <p>Proceed</p>
 <p>Proceed-backward</p>
 <p>Proceed-time</p>
