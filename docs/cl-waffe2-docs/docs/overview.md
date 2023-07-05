@@ -233,7 +233,7 @@ The declared node can be initialized using the function `(AddNode-Revisit dtype)
 
 This is because there is not yet a single implementation for `AddNode-Revisit`.
 
-One operation can be defined for a backend that can be declared by extending the `cl-waffe2/vm.generic-tensor:AbstractTensor` class. Here's `LispTensor`, and `CPUTensor`, and of course, if necessary, you can create a new backend like:
+One operation can be defined for a backend that can be declared by extending the `cl-waffe2/vm.generic-tensor:AbstractTensor` class. Here's `LispTensor`, and `CPUTensor`, and of course, if necessary, you can create a new backend `MyTensor` by just copying them:
 
 ```lisp
 (defclass MyTensor (AbstractTensor) nil)
@@ -380,66 +380,10 @@ Evaluation took:
 
 ## JIT compile, In-place optimizing
 
+### Compiled Model
 
-### Lazy Evaluation
+pass
 
-As I said `Everything is lazy-evaluated, and compiled`, JIT Compiling is a one of main idea of this project.
-
-Mainly, this produces two benefits.
-
-### Infinite number of Epochs, No Overheads of funcall.
-
-As all lisper know, there is a unignorable overhead when calling methods.
-
-```lisp
-(defmethod test-method ((a fixnum) (b fixnum))
-	(+ a b))
-
-(defmethod test-method ((a single-float) (b single-float))
-	(+ a b))
-
-(time (dotimes (i 100000000) (test-method 1.0 1.0)))
-Evaluation took:
-  0.560 seconds of real time
-  0.554936 seconds of total run time (0.551612 user, 0.003324 system)
-  99.11% CPU
-  1,291,693,656 processor cycles
-  0 bytes consed
-
-(defun test-fun (a b)
-	(declare (type single-float a b))
-	(+ a b))
-
-;; Also, defun can be inlined at the end.
-(time (dotimes (i 100000000) (test-fun 1.0 1.0)))
-Evaluation took:
-  0.298 seconds of real time
-  0.297827 seconds of total run time (0.296968 user, 0.000859 system)
-  100.00% CPU
-  688,686,522 processor cycles
-  0 bytes consed
-```
-
-In this project, which uses a large number of generic functions!, this overhead becomes non-negligible at every Epoch, especially when the matrix size is small.
-
-Therefore, we took the approach of defining a new function by cutting out the necessary operations from the lazy-evaluated nodes, part by part.
-
-;; cl-waffe2's benchmark
-
-TODO: Update This section
-
-```lisp
-(let ((f (build (!sin 1.0))))
-	(time (dotimes (i 100000) (funcall f))))
-
-;; Fix: tensor-reset!'s overhead...
-(defun test-f (x)
-    (sin (sin (sin (sin x)))))
-
-(time (dotimes (i 100000) (test-f 1.0)))
-```
-
-	
 ### In-place optimizing
 
 This is a usual function in cl-waffe2, which finds the sum of A and B.
@@ -448,13 +392,16 @@ This is a usual function in cl-waffe2, which finds the sum of A and B.
 (!add a b)
 ```
 
-But internally, the operation makes a copy not to produce side effects.
+However, this is how `!add` is defined internally. This makes a copy twice times not to make side effects.
 
 ```lisp
-(forward (AddNode) (!copy a) b)
+;; In source/base-impl/arithmetic.lisp
+
+(forward (AddNode dtype) (!copy a) (!copy b))
 ```
 
-Without making a copy, the value of A would be destructed instead of having to allocate extra memory.
+Without copying, the content of `a` is overwritten:
+
 
 ```lisp
 (let ((a (make-tensor `(3 3) :initial-element 1.0)))
@@ -476,49 +423,84 @@ Without making a copy, the value of A would be destructed instead of having to a
       ;;   :facet :exist
       ;;   :requires-grad NIL
       ;;   :backward NIL} )
-
 ```
 
-Operations that do not allocate extra space are called **in-place** (or sometimes destructive operations?).
+However, it is natural to think this copy is just a waste of memory. In this case, disabling `!copy` is a rational way to optimize the performance of the program. (i.e.: In-place).
 
-Making operations in-place is a rational way to optimize your programs, but this is a trade-off with readability, because the coding style is more like a programming notation than a mathematical notation.
+Owing to lazy evaluation of cl-waffe2, unnecessary `(!copy)` operation can be deleted automatically by checking the number of tensor references in a node.
 
-Let's take another example.
+Let f(x) be a operation defined as:
 
 ```math
 f(x) = sin(MaybeCopy(x))
 ```
 
+Let the computation node be below:
+
 ```math
 out = f(Input) + f(f(Tensor))
 ```
 
-(TODO)
+Formulating the same network in cl-waffe2:
 
 ```lisp
-(defnode (1DFunc (self)
-	  :where (A[~] -> A[~])))
+;; (Let me define the utilities to be used in defnode in advance)
 
-(define-impl (1DFunc :device LispTensor)
-	     :forward ((self x)
-	               `(progn ,x))
-	     :backward ((self dout dx) (values dout)))
+;; Tips:
+;; Obtain function of :lazy-evaluation -> immediate execution.
 
-(defun f (tensor)
-    (forward (1DFunc) (!copy tensor)))
+(defmodel (SinModel (self)
+             :where  (X[~] -> [~])
+             :on-call-> ((self x)
+	                     (declare (ignore self))
+			             (!sin x))))
+	     
+(define-composite-function (SinModel) !sin-static :dtype :float)
+
+;; (!sin-static (randn `(10 10))) is instantly executed. not lazy-evaluated.
 ```
 
 ```lisp
-(let ((k (!add (make-input `(3 3) nil) (f (f (randn `(3 3) :requires-grad t))))))
+;; Basic Units in the network:
 
-	(build k)
-        (cl-waffe2/viz:viz-computation-node k "assets/1d_fn_arg.dot"))
+;; General Definition of f(x)
+(defnode (F-Node (self)
+          :documentation "f(x) = sin(x)"
+	      :where (A[~] -> A[~])))
+
+;; Implementation of f(x)
+;; Setting :device = t, -> the impl is working on all devices.
+
+(define-impl (F-Node :device t)
+	     :forward ((self x) `(!sin-static ,x))
+	     :backward ((self dout dx) (values (!mul dx (!cos dout)))))
+
+;; The caller of f(x)
+
+(defun !f (x)
+    (forward (F-Node) (!copy x)))
+```
+
+Let's visualizing how the operation is performed via `:cl-waffe2/viz`.
+
+```lisp
+;; (make-input ... nil) creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
+(let ((k (!add (make-input `(3 3) nil)
+               (!f (!f (randn `(3 3) :requires-grad t))))))
+        (cl-waffe2/viz:viz-computation-node k "assets/bad_node.dot")
+	    (build k) ;; optimized
+               (cl-waffe2/viz:viz-computation-node k "assets/opt_node.dot"))
+```
+
+```sh
+$ dot -Tpng ./assets/bad_node.dot > ./assets/bad_node.png
+$ dot -Tpng ./assets/opt_node.dot > ./assets/opt_node.png
 ```
 
 ### Before Optimized Vs After Optimized.
 
-<img alt="bf" src="../../../assets/1d_fn_arg.png" width="45%">
-<img alt="bf" src="../../../assets/1d_fn_arg_optimized.png" width="45%">
+<img alt="bf" src="../../../assets/bad_node.png" width="45%">
+<img alt="bf" src="../../../assets/opt_node.png" width="45%">
 
 (TODO)
 
