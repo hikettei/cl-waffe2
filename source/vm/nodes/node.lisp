@@ -124,11 +124,13 @@ Here's a list of reports.
   ;; Update Computation Nodes
 
   ;; TODO: Put warning when !t without matmul
-  
+
   (let* ((save-for-backward (node-save-for-backward node))
 	 (inputs (loop for i in inputs
 		       for k upfrom 0
-		       if (nth k save-for-backward) ;; If T?
+		       if (and
+			   (not *no-grad*)
+			   (nth k save-for-backward)) ;; If T?
 			 collect (set-save-for-backward i)
 		       else
 			 collect i))

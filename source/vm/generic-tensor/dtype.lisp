@@ -48,3 +48,27 @@
 (defun coerce-into-dtype (scalar)
   (coerce scalar (dtype-of scalar)))
 
+(defstruct Lazy-Variable
+  (variable)
+  (dtype))
+
+(defmethod print-object ((model lazy-variable) stream)
+  (format stream "<LazyVariable> (the '~a ~a)"
+	  (lazy-variable-dtype model)
+	  (lazy-variable-variable model)))
+
+(defun read-lazy-var (lazy-var)
+  (declare (type lazy-variable lazy-var))
+
+  (coerce (read-adjustable-symbol (lazy-variable-variable lazy-var))
+	  (lazy-variable-dtype lazy-var)))
+
+(defun coerce-lazy (scalar dtype)
+  "If scalar is number, coerce to dtype, otherwise lazily evalute"
+  (if (numberp scalar)
+      (coerce scalar dtype)
+      (if (symbolp scalar)
+	  (make-lazy-variable :variable scalar :dtype dtype)
+	  scalar)))
+
+

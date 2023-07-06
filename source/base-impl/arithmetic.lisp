@@ -19,8 +19,12 @@
   (if (numberp scalar)
       (make-tensor scalar :dtype (if (numberp tensor)
 				     (dtype-of tensor)
-				     (dtype tensor)))
-      scalar))
+				     (if (typep tensor 'AbstractTensor)
+					 (dtype tensor)
+					 (dtype-of scalar))))
+      (if (symbolp scalar)
+	  (make-tensor scalar :dtype :uint32)
+	  scalar)))
 
 ;; ===============================================================
 ;; Defnode Parts
@@ -96,7 +100,7 @@ A\\gets{1 / A}
 	     `(progn
 		(export ',name)
 		(defnode (,name (myself dtype)
-			  :where (A[scal] B[~] -> B[~] where scal = 1)
+			  :where (A[~] Scalar[scal] -> A[~] where scal = 1)
 			  :backward ,backward
 			  :documentation ,(format nil
 						  "~a is a node which computes following operation element-wise.
@@ -120,13 +124,13 @@ X\\gets{X ~a scalar}
     "ScalarAdd"
     "+"
     ((self dout dx dy)
-     ;; dx <- scalar
-     ;; dy <- matrix
+     ;; dx <- matrix
+     ;; dy <- scalar
      ;; A+=scal.view(A.shape),
      (declare (ignore dx dy))
      (values
-      (->scal (!mean dout))
-      dout)))
+      dout
+      (->scal (!mean dout)))))
   
   (define-scalar-mat-node
       ScalarSub
@@ -135,8 +139,8 @@ X\\gets{X ~a scalar}
     ((self dout dx dy)
      (declare (ignore dx dy))
      (values
-      (->scal (!mul -1.0 (!mean dout)))
-      dout)))
+      dout
+      (->scal (!mul -1.0 (!mean dout))))))
 
   (define-scalar-mat-node
       ScalarMul
@@ -147,9 +151,9 @@ X\\gets{X ~a scalar}
      ;; dy ... matrix
 
      (values
-      (->scal (!mean (!mul dy dout)))
-      (!mul dout dx))))
-
+      (!mul dout dx)
+      (->scal (!mean (!mul dy dout))))))
+  
   (define-scalar-mat-node
       ScalarDiv
     "ScalarDiv"
@@ -157,9 +161,10 @@ X\\gets{X ~a scalar}
     ((self dout dx dy)
      ;; dx ... scalar
      ;; dy ... matrix
+     ;; out = 1/dx * dy
      (values
-      (->scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))
-      (!div dout dx)))))
+      (!div dout dx)
+      (->scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))))))
 
 ;; ===============================================================
 ;; Defun Parts
@@ -203,6 +208,7 @@ None.
 			   (if *no-grad*
 			       y ;; !copy y is always ignored.
 			       (!copy y)))))))
+  
   (define-arithmetic-node-caller
       !matrix-add
     AddNode
@@ -250,7 +256,7 @@ tensor[ScalarTensor/AbstractTensor/Number]
 		  (make-tensor tensor)
 		  tensor)))
       (if (scalar-p X)
-	  (!div 1 X)
+	  (!sas-div 1 X)
 	  (forward (InverseTensorNode (dtype X)) (!copy X))))))
 
 ;; update docs
@@ -283,7 +289,8 @@ The function ~a computes following operation with calling `~a`, returning a new 
 			   (symbol-name node-name)
 			   document)
 		  (forward (,node-name (dtype x))
-			   (number->stensor scalar x) (!copy x))))))
+			   (!copy x)
+			   (!copy (number->stensor scalar x)))))))
   (define-scalar-mat-node-caller
       !scalar-add ScalarAdd
     "X_{copy}\\gets{X + scalar}")
@@ -559,8 +566,8 @@ A\\gets{A ~a scalar}
 			   (symbol-name matrix-operation)
 			   op)
 		  (if (numberp scalar)
-		      (forward (,matrix-operation (dtype A)) (make-tensor scalar) A)
-		      (forward (,matrix-operation (dtype A)) scalar A)))))
+		      (forward (,matrix-operation (dtype A)) A (make-tensor scalar))
+		      (forward (,matrix-operation (dtype A)) A scalar)))))
 	   (define-darith-function1 (name broadcast op op1 arg op-name)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -587,8 +594,8 @@ A\\gets{A ~a scalar}
 			   (symbol-name name)
 			   op-name)
 		  (if (numberp scalar)
-		      (,broadcast (,op  (number->stensor scalar A)) A)
-		      (,broadcast (,op1 ,arg (number->stensor scalar A)) A))))))
+		      (,broadcast A (,op  (number->stensor scalar A)))
+		      (,broadcast A (,op1 ,arg (number->stensor scalar A))))))))
   (define-darith-function  A+=scal ScalarAdd "+")
   (define-darith-function1 A-=scal A+=scal - !mul -1 "-")
   (define-darith-function  A*=scal ScalarMul "*")
