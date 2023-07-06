@@ -615,7 +615,7 @@ In this section, we learn the two key units, `Node` and `Composite`, to construc
 
 ### Node and Composite
 
-`Node(AbstractNode)` is the smallest unit of operation with forward and backward propagation. Its abstract definition is defined by a `defnode` macro, and It is implemented by a `(define-impl)` macro.
+`Node(AbstractNode)` is the smallest unit of operation with forward and backward propagation. Its abstract definition is defined by a `defnode` macro, and It is implemented by a `(define-impl)` macro. The defined node is invoked by `(forward node &rest inputs)` function, at the same time, computation nodes are constructed.
 
 ```lisp
 (defnode (SinNode-Revisit (self)
@@ -651,8 +651,7 @@ In this section, we learn the two key units, `Node` and `Composite`, to construc
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-On the other hand, `Composite` is a unit made up of several `Nodes`, defined by a `defmodel` macro. ノードに対するサブルーチンとも言える
-
+On the other hand, `Composite` is a unit made up of several `Nodes`, defined by a `defmodel` macro. `(call model &rest inputs)` method invokes the `on-call->` form lazily, being compiled in the same way as nodes. Moreover, the defined `Composite` also can define a function for immeditate function by using the macro, `define-composite-function`. The behaviour is similar to `TorchScript`, cl-waffe2 traces the computation node, calling `(build toplevel)` and defines a `Composite-function`.
 
 ```lisp
 (defmodel (Softmax-Model (self)
@@ -663,9 +662,47 @@ On the other hand, `Composite` is a unit made up of several `Nodes`, defined by 
 	                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
                            (!div (!exp x1) z)))))
 
+;; won't be evaluated until proceed/build is called.
+(call (Softmax-Model) (randn `(10 10))
+
+(proceed *)
+
+			 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6184 
+  :vec-state [computed]
+  ((0.29810402  0.11953584  0.16032213  ~ 0.033787794 0.01729085  0.03808046)                   
+   (0.032921903 0.085420445 0.10371924  ~ 0.06863596  0.10435363  0.07114864)   
+                ...
+   (0.23044951  0.14320189  0.16871664  ~ 0.019123536 0.03614414  0.10644407)
+   (0.0377036   0.034945846 0.28327137  ~ 0.07359542  0.40399343  0.020138593))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+;; Works at toplevel
 (define-composite-function (Softmax-Model) !softmax-static)
+
+;; No overheads of compiling, but there's a little overhead to dispatch the method.
+(time (!softmax-static (randn `(10 10))))
+Evaluation took:
+  0.000 seconds of real time
+  0.000301 seconds of total run time (0.000253 user, 0.000048 system)
+  100.00% CPU
+  691,808 processor cycles
+  32,496 bytes consed
+  
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6195 
+  ((0.042827643  0.13156936   0.06729175   ~ 0.059296332  0.17645036   0.04613843)                    
+   (0.32095885   0.030778391  0.091331415  ~ 0.09311637   0.28322798   0.040707175)   
+                 ...
+   (0.045369238  0.045168925  0.12002338   ~ 0.2656273    0.01337298   0.41475114)
+   (0.020064427  0.01839381   0.013036524  ~ 0.20158055   0.3377756    0.061546378))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
 ```
 
+### Proceed vs Composite-function
 
 ```lisp
 (let ((a (ax+b `(1 1) 0 1)))
@@ -728,6 +765,8 @@ Evaluation took:
 ```
 
 ### Sequence Model
+
+Tracing neural network structure lazily.
 
 ```lisp
 (defsequence MLP-Sequence (in-features hidden-dim out-features
