@@ -89,7 +89,9 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#network-units-node-and-composite">Network Units: Node and Composite</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#composite-and-nodes">Composite and Nodes</a>
+    <li class="toctree-l3"><a class="reference internal" href="#node-and-composite">Node and Composite</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#proceed-vs-composite-function">Proceed vs Composite-function</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#sequence-model">Sequence Model</a>
     </li>
@@ -618,18 +620,95 @@ $ dot -Tpng ./assets/opt_node.dot &gt; ./assets/opt_node.png
 <img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/opt_node.png?raw=true" width="45%"></p>
 <p><code>ExistTensor</code> (created by <code>make-tensor</code>, or tensors whose requires-grad=t) is never overwritten.</p>
 <h2 id="network-units-node-and-composite">Network Units: Node and Composite</h2>
-<p>In this section, we learn to formulate neural networks in cl-waffe2.</p>
-<h3 id="composite-and-nodes">Composite and Nodes</h3>
-<pre><code class="language-lisp">(defmodel (Sin-Inlined (self)
-       :where (X[~] -&gt; [~])
+<p>In this section, we learn the two key units, <code>Node</code> and <code>Composite</code>, to construct neural networks in cl-waffe2.</p>
+<h3 id="node-and-composite">Node and Composite</h3>
+<p><code>Node(AbstractNode)</code> is the smallest unit of operation with forward and backward propagation. Its abstract definition is defined by a <code>defnode</code> macro, and It is implemented by a <code>(define-impl)</code> macro. The defined node is invoked by <code>(forward node &amp;rest inputs)</code> function, at the same time, computation nodes are constructed.</p>
+<pre><code class="language-lisp">(defnode (SinNode-Revisit (self)
+            :where (X[~] -&gt; X[~])
+        :save-for-backward (t)
+        :backward ((self dout x)
+                   (values (!mul dout (!cos x))))))
+
+(define-impl (SinNode-Revisit :device t)
+       :forward ((self x) `(!sin-static ,x)))
+
+
+(forward (SinNode-Revisit) (randn `(10 10)))
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP32968 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: SINNODE-REVISIT-T (X[~] -&gt; X[~])&gt;}
+
+(proceed *)
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP32955 
+  :vec-state [computed]
+  ((0.43090457   -0.24942507  -0.99978673  ~ 0.97256666   -0.9993819   0.37133723)                    
+   (0.050297778  -0.048203766 0.11011651   ~ -0.28100008  -0.89788723  0.12841338)   
+                 ...
+   (0.32419643   0.15791988   -0.95573443  ~ 0.079026684  -0.4924342   0.99993217)
+   (-0.04615228  -0.2262427   -0.6637178   ~ 0.8855889    -0.72787035  -0.65471023))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<p>On the other hand, <code>Composite</code> is a unit made up of several <code>Nodes</code>, defined by a <code>defmodel</code> macro. <code>(call model &amp;rest inputs)</code> method invokes the <code>on-call-&gt;</code> form lazily, being compiled in the same way as nodes. Moreover, the defined <code>Composite</code> also can define a function for immeditate function by using the macro, <code>define-composite-function</code>. The behaviour is similar to <code>TorchScript</code>, cl-waffe2 traces the computation node, calling <code>(build toplevel)</code> and defines a <code>Composite-function</code>.</p>
+<pre><code class="language-lisp">(defmodel (Softmax-Model (self)
+       :where (X[~] -&gt; [~]) ;; :where for Composite is optional!
        :on-call-&gt; ((self x)
                (declare (ignore self))
-               (!sin x))))
+               (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                          (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                           (!div (!exp x1) z)))))
 
-(define-composite-function (Sin-Inlined) !sin-inline)
+;; won't be evaluated until proceed/build is called.
+(call (Softmax-Model) (randn `(10 10))
+
+(proceed *)
+
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6184 
+  :vec-state [computed]
+  ((0.29810402  0.11953584  0.16032213  ~ 0.033787794 0.01729085  0.03808046)                   
+   (0.032921903 0.085420445 0.10371924  ~ 0.06863596  0.10435363  0.07114864)   
+                ...
+   (0.23044951  0.14320189  0.16871664  ~ 0.019123536 0.03614414  0.10644407)
+   (0.0377036   0.034945846 0.28327137  ~ 0.07359542  0.40399343  0.020138593))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+
+;; Works at toplevel
+(define-composite-function (Softmax-Model) !softmax-static)
+
+;; No overheads of compiling, but there's a little overhead to dispatch the method.
+(time (!softmax-static (randn `(10 10))))
+Evaluation took:
+  0.000 seconds of real time
+  0.000301 seconds of total run time (0.000253 user, 0.000048 system)
+  100.00% CPU
+  691,808 processor cycles
+  32,496 bytes consed
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6195 
+  ((0.042827643  0.13156936   0.06729175   ~ 0.059296332  0.17645036   0.04613843)                    
+   (0.32095885   0.030778391  0.091331415  ~ 0.09311637   0.28322798   0.040707175)   
+                 ...
+   (0.045369238  0.045168925  0.12002338   ~ 0.2656273    0.01337298   0.41475114)
+   (0.020064427  0.01839381   0.013036524  ~ 0.20158055   0.3377756    0.061546378))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
 </code></pre>
-<pre><code class="language-lisp">(let ((a (ax+b `(1 1) 0 1)))
-            (proceed-time (!sin a)))
+<h3 id="proceed-vs-composite-function">Proceed vs Composite-function</h3>
+<p>Compared to <code>Proceed</code>, <code>Composite-function</code> and codes which consisted of it have a small overhead in calling a function, but it becomes negligible as the matrix size increases.</p>
+<pre><code class="language-lisp">;; Proceed
+;; 1 * 1 Matrix
+(let ((a (ax+b `(1 1) 0 1)))
+    (proceed-time (!sin a)))
 Proceed-Time: First Trying
 Evaluation took:
   0.000 seconds of real time
@@ -646,8 +725,11 @@ Evaluation took:
   11,790 processor cycles
   0 bytes consed
 
+;; Proceed
+;; 1000 * 1000 Matrix
+
 (let ((a (ax+b `(1000 1000) 0 1)))
-            (proceed-time (!sin a)))
+    (proceed-time (!sin a)))
 Proceed-Time: First Trying
 Evaluation took:
   0.019 seconds of real time
@@ -664,8 +746,10 @@ Evaluation took:
   36,025,586 processor cycles
   0 bytes consed
 </code></pre>
-<pre><code class="language-lisp">(let ((a (ax+b `(1 1) 0 1)))
-            (time (!sin-inline a)))
+<pre><code class="language-lisp">;; Composite-Function
+;; 1 * 1 Matrix
+(let ((a (ax+b `(1 1) 0 1)))
+     (time (!sin-inline a)))
 Evaluation took:
   0.000 seconds of real time
   0.000103 seconds of total run time (0.000098 user, 0.000005 system)
@@ -673,9 +757,10 @@ Evaluation took:
   231,840 processor cycles
   0 bytes consed
 
-
+;; Composite-Function
+;; 1000 * 1000 Matrix
 (let ((a (ax+b `(1000 1000) 0 1)))
-            (time (!sin-inline a)))
+     (time (!sin-inline a)))
 Evaluation took:
   0.015 seconds of real time
   0.015862 seconds of total run time (0.015813 user, 0.000049 system)
@@ -683,7 +768,10 @@ Evaluation took:
   36,632,326 processor cycles
   0 bytes consed
 </code></pre>
+<p>(Tips: the <code>call</code> method is designed to invoke <code>Composite</code>, but it is also applicatable into <code>AbstractNode</code>, that is, <code>call</code> is a general-purpose method to invoke nodes.)</p>
 <h3 id="sequence-model">Sequence Model</h3>
+<p>Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked the execution.</p>
+<p>In the code below, <code>defsequence</code> is a macro to define <code>Composite</code> sequentially, <code>(asnode function)</code> is a macro which coerce function into <code>Composite</code>.</p>
 <pre><code class="language-lisp">(defsequence MLP-Sequence (in-features hidden-dim out-features
                &amp;key (activation #'!tanh))
          &quot;3 Layers MLP&quot;
@@ -694,6 +782,7 @@ Evaluation took:
          (LinearLayer hidden-dim out-features)
          (asnode #'!softmax))
 </code></pre>
+<p>All composites/nodes that used to define <code>MLP-Sequence</code> has also a definition of shape.</p>
 <pre><code class="language-lisp">(MLP-Sequence 784 512 256)
 
 &lt;Composite: MLP-SEQUENCE{W23852}(
@@ -733,15 +822,7 @@ Evaluation took:
     #&lt;FUNCTION CL-WAFFE2/NN:!SOFTMAX&gt;
 )&gt;)&gt;
 </code></pre>
-<p>Proceed</p>
-<p>Proceed-backward</p>
-<p>Proceed-time</p>
-<p>Composite-Function</p>
-<p>defnode</p>
-<p>defmodel</p>
-<p>call</p>
-<p>forward</p>
-<p>Composite</p>
+<p>Not an operation is performed, nor a matrix is allocated at the moment <code>MLP-Sequence</code> is initialized, but done when compiling/invoking the computation node.</p>
 <h2 id="shaping-api-with-dsl">Shaping API with DSL</h2>
 <p>See also: vm.generic-tensor docs</p>
 <h2 id="optional-broadcasting-and-view-apis">Optional Broadcasting, and View APIs</h2>
