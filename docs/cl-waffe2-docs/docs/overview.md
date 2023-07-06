@@ -87,7 +87,8 @@ If you're going to start with defining a new package, It is recommended to `:use
 
 Read the description above and select and describe the packages you think you need. (or you can just copy and paste it.)
 
-This is an example case of `:your-project-name` package.
+The lisp code below demonstrates an example case of `:your-project-name` package.
+
 ```lisp
 
 (in-package :cl-user)
@@ -127,7 +128,7 @@ The tutorials below should be also working on REPL, (indeed, cl-waffe2 is REPL-f
 
 Since `Do not run until the node is optimized` is a one of cl-waffe2 policy, all operations in cl-waffe2 is lazy evaluation unless defined by a special macro.
 
-Therefore, calling `!add` function which finds a sum of given arguments, the retuend tensor isn't still computed, but `:vec-state` = `[maybe-not-computed]`
+Therefore, calling `!add` function which finds a sum of given arguments, the retuend tensor isn't still computed, only setting `:vec-state` = `[maybe-not-computed]`.
 
 ```lisp
 (!add 3.0 2.0)
@@ -190,7 +191,7 @@ The moment compiling function is called, cl-waffe2 prunes all unused copying, co
 `Julia` has introduced [AbstractArray](https://docs.julialang.org/en/v1/base/arrays/) in their libraries, separating the common (generic) parts of the array from each backend implementation. Since `AbstractTensor` increased portability between devices on which they run (even on CPU!), cl-waffe2 wholly introduced this feature.
 
 
-In cl-waffe2, The generic definition of operations, `AbstractNode` is a class declared via the `defnode` macro, and depending on the devices we use, the `define-impl` macro defines an implementation.
+In cl-waffe2, The generic definition of operations, `AbstractNode` is a class declared via the `defnode` macro, and depending on the devices we're working on, the `define-impl` macro defines an implementation.
 
 Conveniently, there can be more than one implementation for a single device. (e.g.: it is possible to have a normal implementation and an approximate implementation for the exp function on single CPU).
 
@@ -323,7 +324,7 @@ The macro `define-impl` adds a new implementation of `device`.
 			   ,x))))
 ```
 
-In `:forward` write the expansion expression for the operation in the same way as when defining a macro with `defmacro`. The `call-with-view` function is a general-purpose function to iterate the given tensor with computing offsets.
+In `:forward`, write the expansion expression for the operation in the same way as when defining a macro with `defmacro`. The `call-with-view` function is a general-purpose function to iterate the given tensor with computing offsets.
 
 (P.S.: I believe that ideas on this macro needed to be given more thoughts, indeed, this is ugly... but I guess `composite-function` can be install without writing macros, not tested.)
 
@@ -345,7 +346,7 @@ The forward definition of node can be called with `(forward node &rest inputs)` 
 
 Closely Looking at :vec-state, it says the operation isn't done yet. The embodied elements are displayed but this is because `AddNode` is defined as in-place operation, returning the first argument.
 
-To accept this, we can use `proceed`.
+To accept this state instantly, we can use `proceed`.
 
 ```lisp
 (proceed (forward (AddNode :float) (randn `(10 10)) (randn `(10 10))) :measure-time t)
@@ -504,7 +505,6 @@ However, this is how `!add` is defined internally. This makes a copy twice times
 
 Without copying, the content of `a` is overwritten:
 
-
 ```lisp
 (let ((a (make-tensor `(3 3) :initial-element 1.0)))
       (print a)
@@ -527,7 +527,7 @@ Without copying, the content of `a` is overwritten:
       ;;   :backward NIL} )
 ```
 
-However, it is natural to think this copy is just a waste of memory. In this case, disabling `!copy` is a rational way to optimize the performance of the program. (i.e.: In-place).
+To put it bluntly, it is natural to think this copy is just a waste of memory. However, In this case, disabling `!copy` is a rational way to optimize the performance of the program. (i.e.: replace with in-place operation).
 
 Owing to lazy evaluation of cl-waffe2, unnecessary `(!copy)` operation can be deleted automatically by checking the number of tensor references in a node.
 
@@ -583,15 +583,15 @@ Formulating the same network in cl-waffe2:
     (forward (F-Node) (!copy x)))
 ```
 
-Let's visualize how the operation is performed via `:cl-waffe2/viz`.
+Through `:cl-waffe2/viz` package, we can visualize how the operation is performed.
 
 ```lisp
-;; (make-input ... nil) creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
+;; (make-input ... nil): creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
 (let ((k (!add (make-input `(3 3) nil)
                (!f (!f (randn `(3 3) :requires-grad t))))))
         (cl-waffe2/viz:viz-computation-node k "assets/bad_node.dot")
 	    (build k) ;; optimized
-               (cl-waffe2/viz:viz-computation-node k "assets/opt_node.dot"))
+           (cl-waffe2/viz:viz-computation-node k "assets/opt_node.dot"))
 ```
 
 The result is written in `dot language`.
@@ -841,10 +841,14 @@ Not an operation is performed, nor a matrix is allocated at the moment `MLP-Sequ
 
 ## Shaping API with DSL
 
+(TODO)
+
 See also: vm.generic-tensor docs
 
 
 ## Optional Broadcasting, and View APIs
+
+(TODO)
 
 !flexible
 
