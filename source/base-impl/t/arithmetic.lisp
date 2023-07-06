@@ -21,6 +21,10 @@
 ;; Memo:
 ;; Check that operations are correctly defined and executed, node by node.
 ;; Composite several nodes -> testing will be done at generic-tensor/t
+
+
+(in-suite :base-impl-test)
+
 (macrolet ((define-arith-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
 		(let ((a (make-tensor `(100 100) :initial-element 10))
@@ -141,9 +145,6 @@
        (matmul-tester-mnk ,backend)
        (matmul-tester-mnk1 ,backend)
        (matmul-both-transposed ,backend))))
-
-(in-suite :base-impl-test)
-
 
 (ss-add-tester nil)
 (ss-sub-tester nil)

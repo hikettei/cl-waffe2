@@ -136,7 +136,6 @@
 		    (symbol-call :fiveam :run! :base-impl-test)
 		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
-		    
 		    ))
 
 
