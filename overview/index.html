@@ -218,7 +218,7 @@ etc...
 <h3 id="to-get-started">To Get Started!</h3>
 <p>If you're going to start with defining a new package, It is recommended to <code>:use</code> the package to be used.</p>
 <p>Read the description above and select and describe the packages you think you need. (or you can just copy and paste it.)</p>
-<p>This is an example case of <code>:your-project-name</code> package.</p>
+<p>The lisp code below demonstrates an example case of <code>:your-project-name</code> package.</p>
 <pre><code class="language-lisp">
 (in-package :cl-user)
 
@@ -249,7 +249,7 @@ etc...
 <p>The tutorials below should be also working on REPL, (indeed, cl-waffe2 is REPL-friendly!), you can learn how cl-waffe2 works by copying and pasting the example codes.</p>
 <h2 id="basic-building-computation-nodes-lazily">Basic: Building Computation Nodes Lazily</h2>
 <p>Since <code>Do not run until the node is optimized</code> is a one of cl-waffe2 policy, all operations in cl-waffe2 is lazy evaluation unless defined by a special macro.</p>
-<p>Therefore, calling <code>!add</code> function which finds a sum of given arguments, the retuend tensor isn't still computed, but <code>:vec-state</code> = <code>[maybe-not-computed]</code></p>
+<p>Therefore, calling <code>!add</code> function which finds a sum of given arguments, the retuend tensor isn't still computed, only setting <code>:vec-state</code> = <code>[maybe-not-computed]</code>.</p>
 <pre><code class="language-lisp">(!add 3.0 2.0)
 </code></pre>
 <pre><code class="language-lisp">{SCALARTENSOR[float]  :named ChainTMP23305 
@@ -262,7 +262,7 @@ etc...
 </code></pre>
 <p><code>:vec-state</code> indicates the computation state of tensor, and it says exactly what it says.</p>
 <p>You can continue the operation by connecting the returned tensor and next operation.</p>
-<p>For example, the figure below in cl-waffe is representece as:</p>
+<p>For example, the figure below in cl-waffe is represented as:</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>=</mo><mn>3</mn><mo>+</mo><mn>2</mn><mo>∗</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">
 out = 3 + 2 * 4
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">2</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">4</span></span></span></span></span></p>
@@ -290,7 +290,7 @@ out = 3 + 2 * 4
  [CPU Implementation1] [CPU Implementation2] [CUDA Implementation1] ...
 </code></pre>
 <p><code>Julia</code> has introduced <a href="https://docs.julialang.org/en/v1/base/arrays/">AbstractArray</a> in their libraries, separating the common (generic) parts of the array from each backend implementation. Since <code>AbstractTensor</code> increased portability between devices on which they run (even on CPU!), cl-waffe2 wholly introduced this feature.</p>
-<p>In cl-waffe2, The generic definition of operations, <code>AbstractNode</code> is a class declared via the <code>defnode</code> macro, and depending on the devices we use, the <code>define-impl</code> macro defines an implementation.</p>
+<p>In cl-waffe2, The generic definition of operations, <code>AbstractNode</code> is a class declared via the <code>defnode</code> macro, and depending on the devices we're working on, the <code>define-impl</code> macro defines an implementation.</p>
 <p>Conveniently, there can be more than one implementation for a single device. (e.g.: it is possible to have a normal implementation and an approximate implementation for the exp function on single CPU).</p>
 <p>One of the policy is to minimise code re-writing by defining abstract nodes and switching the backends that executes them depending on the device they run on and the speed required.</p>
 <h3 id="example-addnode">Example: AddNode</h3>
@@ -394,7 +394,7 @@ out = 3 + 2 * 4
                   `(,x ,y))
                ,x))))
 </code></pre>
-<p>In <code>:forward</code> write the expansion expression for the operation in the same way as when defining a macro with <code>defmacro</code>. The <code>call-with-view</code> function is a general-purpose function to iterate the given tensor with computing offsets.</p>
+<p>In <code>:forward</code>, write the expansion expression for the operation in the same way as when defining a macro with <code>defmacro</code>. The <code>call-with-view</code> function is a general-purpose function to iterate the given tensor with computing offsets.</p>
 <p>(P.S.: I believe that ideas on this macro needed to be given more thoughts, indeed, this is ugly... but I guess <code>composite-function</code> can be install without writing macros, not tested.)</p>
 <p>The forward definition of node can be called with <code>(forward node &amp;rest inputs)</code> function.</p>
 <pre><code class="language-lisp">(forward (AddNode :float) (randn `(10 10)) (randn `(10 10)))
@@ -410,7 +410,7 @@ out = 3 + 2 * 4
   :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
 </code></pre>
 <p>Closely Looking at :vec-state, it says the operation isn't done yet. The embodied elements are displayed but this is because <code>AddNode</code> is defined as in-place operation, returning the first argument.</p>
-<p>To accept this, we can use <code>proceed</code>.</p>
+<p>To accept this state instantly, we can use <code>proceed</code>.</p>
 <pre><code class="language-lisp">(proceed (forward (AddNode :float) (randn `(10 10)) (randn `(10 10))) :measure-time t)
 Proceed-Time: First Trying
 Evaluation took:
@@ -558,7 +558,7 @@ T
       ;;   :requires-grad NIL
       ;;   :backward NIL} )
 </code></pre>
-<p>However, it is natural to think this copy is just a waste of memory. In this case, disabling <code>!copy</code> is a rational way to optimize the performance of the program. (i.e.: In-place).</p>
+<p>To put it bluntly, it is natural to think this copy is just a waste of memory. However, In this case, disabling <code>!copy</code> is a rational way to optimize the performance of the program. (i.e.: replace with in-place operation).</p>
 <p>Owing to lazy evaluation of cl-waffe2, unnecessary <code>(!copy)</code> operation can be deleted automatically by checking the number of tensor references in a node.</p>
 <p>Let f(x) be a operation defined as:</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>s</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mi>M</mi><mi>a</mi><mi>y</mi><mi>b</mi><mi>e</mi><mi>C</mi><mi>o</mi><mi>p</mi><mi>y</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
@@ -603,13 +603,13 @@ out = f(Input) + f(f(Tensor))
 (defun !f (x)
     (forward (F-Node) (!copy x)))
 </code></pre>
-<p>Let's visualize how the operation is performed via <code>:cl-waffe2/viz</code>.</p>
-<pre><code class="language-lisp">;; (make-input ... nil) creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
+<p>Through <code>:cl-waffe2/viz</code> package, we can visualize how the operation is performed.</p>
+<pre><code class="language-lisp">;; (make-input ... nil): creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
 (let ((k (!add (make-input `(3 3) nil)
                (!f (!f (randn `(3 3) :requires-grad t))))))
         (cl-waffe2/viz:viz-computation-node k &quot;assets/bad_node.dot&quot;)
         (build k) ;; optimized
-               (cl-waffe2/viz:viz-computation-node k &quot;assets/opt_node.dot&quot;))
+           (cl-waffe2/viz:viz-computation-node k &quot;assets/opt_node.dot&quot;))
 </code></pre>
 <p>The result is written in <code>dot language</code>.</p>
 <pre><code class="language-sh">$ dot -Tpng ./assets/bad_node.dot &gt; ./assets/bad_node.png
@@ -770,7 +770,7 @@ Evaluation took:
 </code></pre>
 <p>(Tips: the <code>call</code> method is designed to invoke <code>Composite</code>, but it is also applicatable into <code>AbstractNode</code>, that is, <code>call</code> is a general-purpose method to invoke nodes.)</p>
 <h3 id="sequence-model">Sequence Model</h3>
-<p>Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked the execution.</p>
+<p>Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked before the execution.</p>
 <p>In the code below, <code>defsequence</code> is a macro to define <code>Composite</code> sequentially, <code>(asnode function)</code> is a macro which coerce function into <code>Composite</code>.</p>
 <pre><code class="language-lisp">(defsequence MLP-Sequence (in-features hidden-dim out-features
                &amp;key (activation #'!tanh))
@@ -824,8 +824,10 @@ Evaluation took:
 </code></pre>
 <p>Not an operation is performed, nor a matrix is allocated at the moment <code>MLP-Sequence</code> is initialized, but done when compiling/invoking the computation node.</p>
 <h2 id="shaping-api-with-dsl">Shaping API with DSL</h2>
+<p>(TODO)</p>
 <p>See also: vm.generic-tensor docs</p>
 <h2 id="optional-broadcasting-and-view-apis">Optional Broadcasting, and View APIs</h2>
+<p>(TODO)</p>
 <p>!flexible</p>
 <p>!view</p>
 <h2 id="optimizing-model-parameter">Optimizing Model Parameter</h2>
