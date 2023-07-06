@@ -35,7 +35,7 @@
 		    ((or (eql viewtype :index)
 			 (eql viewtype :broadcast))
 		     ;; when Tensor[Index], iternum = 1 therefore there's no need to incr offsets.
-		     ;; when :broadcast, freeze the axis.
+		     ;; when :broadcast, freeze the axis stride.
 		     nil)
 		    ((or (eql viewtype :t)
 			 (eql viewtype :slice))
