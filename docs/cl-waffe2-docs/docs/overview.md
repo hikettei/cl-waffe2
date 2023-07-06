@@ -147,7 +147,7 @@ Therefore, calling `!add` function which finds a sum of given arguments, the ret
 
 You can continue the operation by connecting the returned tensor and next operation.
 
-For example, the figure below in cl-waffe is representece as:
+For example, the figure below in cl-waffe is represented as:
 
 ```math
 out = 3 + 2 * 4
@@ -778,7 +778,7 @@ Evaluation took:
 
 ### Sequence Model
 
-Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked the execution.
+Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked before the execution.
 
 In the code below, `defsequence` is a macro to define `Composite` sequentially, `(asnode function)` is a macro which coerce function into `Composite`.
 

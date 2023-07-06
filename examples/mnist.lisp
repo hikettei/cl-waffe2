@@ -12,6 +12,12 @@
 
 (in-package :mnist-example)
 
+;; Things to add:
+;; !matmul !t !t backward tests
+;; defoptimizer/deftrainer
+;; Numpy tensor loadder
+;; Training MLP
+
 ;; To ADD:
 ;; call->
 ;; sequence
@@ -24,8 +30,9 @@
 ;; ugly...
 ;; call -> Node
 
-;; one more ogly part: defmodel
+;; one more ugly part: defmodel
 
+#|
 (defmodel (MLP-Model (self)
 	   :slots ((layer1 :initarg :layer1 :accessor mlp-layer1)
 		   (layer2 :initarg :layer2 :accessor mlp-layer2)
@@ -41,9 +48,12 @@
 			       (asnode #'!tanh)
 			       (slot-value self 'layer3)
 			       (asnode #'!softmax)))))
+|#
 
+;; compiling softmax is slow.
+;; softmax is maybe unstable?
 (defsequence MLP-Sequence (in-features hidden-dim out-features
-			   &key (activation #'!tanh))
+			   &key (activation #'!relu))
 	     "3 Layers MLP"
 	     (LinearLayer in-features hidden-dim)
 	     (asnode activation)
@@ -52,9 +62,11 @@
 	     (LinearLayer hidden-dim out-features)
 	     (asnode #'!softmax))
 
-(defsequence LinearModel (in-features)
-	     (LinearLayer in-features 30)
-	     (asnode #'!relu))
+(defsequence LinearModel (in-features out-features)
+	     "Linear"
+	     (LinearLayer in-features out-features)
+	     ;;(asnode #'!)
+	     )
 
 (defun train ()
   (let ((model (MLP-Sequence 784 256 10)))

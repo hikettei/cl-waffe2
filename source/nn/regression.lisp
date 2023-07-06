@@ -14,14 +14,11 @@
 	   :documentation "In-Features -> Out-Features")
 
   ;; Initialize Weights
-  (setf (linear-weight self)
-	(parameter (!mul 0.01 (randn `(,out-features ,in-features)))))
+  (setf (linear-weight self) (xavier-uniform `(,out-features ,in-features) :requires-grad t))
   
   ;; Init with Xavier
   (when use-bias?
-    (setf (linear-bias self)
-	  (make-tensor `(,out-features)
-		       :requires-grad t))))
+    (setf (linear-bias self) (uniform-random `(,out-features) -0.01 0.01 :requires-grad t))))
 
 ;; TODO:
 ;; Broadcasting (with regard to axes)
