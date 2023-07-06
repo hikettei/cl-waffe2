@@ -147,12 +147,12 @@ X\\gets{X ~a scalar}
     "ScalarMul"
     "*"
     ((self dout dx dy)
-     ;; dx ... scalar
-     ;; dy ... matrix
+     ;; dx ... matrix
+     ;; dy ... scalar
 
      (values
-      (!mul dout dx)
-      (->scal (!mean (!mul dy dout))))))
+      (!mul dout dy)
+      (->scal (!mean (!mul dx dout))))))
   
   (define-scalar-mat-node
       ScalarDiv
@@ -163,8 +163,8 @@ X\\gets{X ~a scalar}
      ;; dy ... matrix
      ;; out = 1/dx * dy
      (values
-      (!div dout dx)
-      (->scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))))))
+      (!div dout dy)
+      (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!square dy))))))))
 
 ;; ===============================================================
 ;; Defun Parts
