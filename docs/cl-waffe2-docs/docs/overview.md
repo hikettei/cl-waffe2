@@ -655,7 +655,7 @@ On the other hand, `Composite` is a unit made up of several `Nodes`, defined by 
 
 ```lisp
 (defmodel (Softmax-Model (self)
-	   :where (X[~] -> [~])
+	   :where (X[~] -> [~]) ;; :where for Composite is optional!
 	   :on-call-> ((self x)
 		       (declare (ignore self))
 		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
@@ -704,9 +704,13 @@ Evaluation took:
 
 ### Proceed vs Composite-function
 
+Compared to `Proceed`, `Composite-function` and codes which consisted of it have a small overhead in calling a function, but it becomes negligible as the matrix size increases.
+
 ```lisp
+;; Proceed
+;; 1 * 1 Matrix
 (let ((a (ax+b `(1 1) 0 1)))
-			(proceed-time (!sin a)))
+    (proceed-time (!sin a)))
 Proceed-Time: First Trying
 Evaluation took:
   0.000 seconds of real time
@@ -722,9 +726,12 @@ Evaluation took:
   100.00% CPU
   11,790 processor cycles
   0 bytes consed
-  
+
+;; Proceed
+;; 1000 * 1000 Matrix
+
 (let ((a (ax+b `(1000 1000) 0 1)))
-			(proceed-time (!sin a)))
+    (proceed-time (!sin a)))
 Proceed-Time: First Trying
 Evaluation took:
   0.019 seconds of real time
@@ -744,8 +751,10 @@ Evaluation took:
 
 
 ```lisp
+;; Composite-Function
+;; 1 * 1 Matrix
 (let ((a (ax+b `(1 1) 0 1)))
-			(time (!sin-inline a)))
+     (time (!sin-inline a)))
 Evaluation took:
   0.000 seconds of real time
   0.000103 seconds of total run time (0.000098 user, 0.000005 system)
@@ -753,9 +762,10 @@ Evaluation took:
   231,840 processor cycles
   0 bytes consed
   
-  
+;; Composite-Function
+;; 1000 * 1000 Matrix
 (let ((a (ax+b `(1000 1000) 0 1)))
-			(time (!sin-inline a)))
+     (time (!sin-inline a)))
 Evaluation took:
   0.015 seconds of real time
   0.015862 seconds of total run time (0.015813 user, 0.000049 system)
@@ -764,9 +774,13 @@ Evaluation took:
   0 bytes consed
 ```
 
+(Tips: the `call` method is designed to invoke `Composite`, but it is also applicatable into `AbstractNode`, that is, `call` is a general-purpose method to invoke nodes.)
+
 ### Sequence Model
 
-Tracing neural network structure lazily.
+Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked the execution.
+
+In the code below, `defsequence` is a macro to define `Composite` sequentially, `(asnode function)` is a macro which coerce function into `Composite`.
 
 ```lisp
 (defsequence MLP-Sequence (in-features hidden-dim out-features
@@ -779,6 +793,8 @@ Tracing neural network structure lazily.
 	     (LinearLayer hidden-dim out-features)
 	     (asnode #'!softmax))
 ```
+
+ All composites/nodes that used to define `MLP-Sequence` has also a definition of shape.
 	     
 ```lisp
 (MLP-Sequence 784 512 256)
@@ -821,24 +837,7 @@ Tracing neural network structure lazily.
 )>)>
 ```
 
-Proceed
-
-Proceed-backward
-
-Proceed-time
-
-Composite-Function
-
-
-defnode
-
-defmodel
-
-call
-
-forward
-
-Composite
+Not an operation is performed, nor a matrix is allocated at the moment `MLP-Sequence` is initialized, but done when compiling/invoking the computation node.
 
 ## Shaping API with DSL
 
