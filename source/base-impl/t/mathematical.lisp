@@ -144,7 +144,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'mathematical-test-set)
   (defmacro mathematical-test-set (backend)
-    `(progn
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
        (abs-tester ,backend)
        (sign-tester ,backend)
        (sqrt-tester ,backend)

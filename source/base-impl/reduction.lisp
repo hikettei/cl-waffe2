@@ -92,22 +92,26 @@ The function !mean return a node which computes the average of tensor along the 
 
 `->`[AbstractTensor] the result."
   (let* ((result (!sum tensor :axis axis :-> -> :keepdims keepdims))
-	 (dims (length (shape tensor)))
-	 (reducted-elements 1))
+	 (dims   (length (shape tensor)))
+	 (reducted-elements (make-tensor 1 :dtype (dtype tensor))))
     
     (typecase axis
       (fixnum
        (if (< axis 0)
 	   (setq axis (+ axis dims)))
 
-       (setq reducted-elements (nth axis (shape tensor))))
+       (setq reducted-elements (make-tensor (nth axis (shape tensor)) :dtype (dtype tensor))))
       (list
        (dolist (dim axis)
 	 (let ((tgt (if (< dim 0)
 			(+ dim dims)
 			dim)))
-	   (setq reducted-elements (* reducted-elements (nth tgt (shape tensor)))))))
-      (T (setq reducted-elements (apply #'* (shape tensor)))))
-
-    (!scalar-div reducted-elements result)))
+	   (setq reducted-elements (!mul reducted-elements (nth tgt (shape tensor)))))))
+      (T
+       (mapc
+	#'(lambda (s)
+	    (setq reducted-elements (!mul reducted-elements s)))
+	(shape tensor))))
+    
+    (!div result reducted-elements)))
 

@@ -277,16 +277,19 @@ Note:
 "
   (declare (type AbstractTensor tensor))
 
-  (cond
-    ((and
-      (not (scalar-p tensor))
-      (stringp (tensor-name tensor))) ;; ChainTMP Vector -> get-from-memory-pool is MUST
-     (get-from-memory-pool tensor))
-    (T
-     (if (or (null (tensor-name tensor))
-	     (vec tensor))
-	 (vec tensor) ;; tensor is created by make-tensor
-	 (get-from-memory-pool tensor)))))
+  (let ((result (cond
+		  ((and
+		    (not (scalar-p tensor))
+		    (stringp (tensor-name tensor))) ;; ChainTMP Vector -> get-from-memory-pool is MUST
+		   (get-from-memory-pool tensor))
+		  (T
+		   (if (or (null (tensor-name tensor))
+			   (vec tensor))
+		       (vec tensor) ;; tensor is created by make-tensor
+		       (get-from-memory-pool tensor))))))
+    (if (lazy-variable-p result)
+	(read-lazy-var result)
+	result)))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))
@@ -442,7 +445,7 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 		     :view view)
       (make-instance 'ScalarTensor
 		     :scalar-p t
-		     :vec (coerce shape-or-scalar (dtype->lisp-type dtype))
+		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
 		     :shape nil
 		     :dtype dtype
 		     :requires-grad requires-grad
@@ -774,7 +777,6 @@ The function parameter computes all the previous nodes of the given tensor if an
       ;; result = space-tmp
       result)))
 
-;; read-save-for-backward is actually working, but the problem is movetensor doesn't tell the variable well.
 (defun read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 

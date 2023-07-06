@@ -31,7 +31,7 @@
   (declare (type (member :dense :sparse :all) op-type)
 	   #+sbcl(sb-ext:muffle-conditions cl:style-warning))
   
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
+  `(progn;;eval-when (:compile-toplevel :load-toplevel :execute)
      (export ',name)
      ;; You can use this macro for testing other backends, other dtypes.
      

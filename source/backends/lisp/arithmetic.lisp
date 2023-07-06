@@ -137,7 +137,7 @@
 
 (define-impl (ScalarAdd :device LispTensor)
 	     :forward
-	     ((self scalar x)
+	     ((self x scalar)
 	      (let ((adder (scalar-add (dtype x))))
 		`(,@(call-with-view
 		     #'(lambda (x-view)
@@ -153,7 +153,7 @@
 
 (define-impl (ScalarSub :device LispTensor)
 	     :forward
-	     ((self scalar x)
+	     ((self x scalar)
 	      (let ((subber (scalar-sub (dtype x))))
 		`(,@(call-with-view
 		     #'(lambda (x-view)
@@ -171,7 +171,7 @@
 (define-impl (ScalarMul :device LispTensor)
 	     :save-for-backward (t t)
 	     :forward
-	     ((self scalar x)
+	     ((self x scalar)
 	      (let ((multiplier (scalar-mul (dtype x))))
 		`(,@(call-with-view
 		     #'(lambda (x-view)
@@ -188,7 +188,7 @@
 (define-impl (ScalarDiv :device LispTensor)
 	     :save-for-backward (t t)
 	     :forward
-	     ((self scalar x)
+	     ((self x scalar)
 	      (let ((divider (scalar-div (dtype x))))
 		`(,@(call-with-view
 		     #'(lambda (x-view)

@@ -603,27 +603,67 @@ $ dot -Tpng ./assets/opt_node.dot > ./assets/opt_node.png
 
 ### Before Optimized Vs After Optimized.
 
-<img alt="bf" src="../../../assets/bad_node.png" width="45%">
-<img alt="bf" src="../../../assets/opt_node.png" width="45%">
+<img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/bad_node.png?raw=true" width="45%">
+<img alt="bf" src="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/assets/opt_node.png?raw=true" width="45%">
 
 `ExistTensor` (created by `make-tensor`, or tensors whose requires-grad=t) is never overwritten.
 
 
 ## Network Units: Node and Composite
 
-In this section, we learn to formulate neural networks in cl-waffe2.
+In this section, we learn the two key units, `Node` and `Composite`, to construct neural networks in cl-waffe2.
 
-### Composite and Nodes
+### Node and Composite
+
+`Node(AbstractNode)` is the smallest unit of operation with forward and backward propagation. Its abstract definition is defined by a `defnode` macro, and It is implemented by a `(define-impl)` macro.
+
+```lisp
+(defnode (SinNode-Revisit (self)
+            :where (X[~] -> X[~])
+	    :save-for-backward (t)
+	    :backward ((self dout x)
+	               (values (!mul dout (!cos x))))))
+
+(define-impl (SinNode-Revisit :device t)
+       :forward ((self x) `(!sin-static ,x)))
+
+
+(forward (SinNode-Revisit) (randn `(10 10)))
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP32968 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (10 10) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: SINNODE-REVISIT-T (X[~] -> X[~])>}
+
+(proceed *)
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP32955 
+  :vec-state [computed]
+  ((0.43090457   -0.24942507  -0.99978673  ~ 0.97256666   -0.9993819   0.37133723)                    
+   (0.050297778  -0.048203766 0.11011651   ~ -0.28100008  -0.89788723  0.12841338)   
+                 ...
+   (0.32419643   0.15791988   -0.95573443  ~ 0.079026684  -0.4924342   0.99993217)
+   (-0.04615228  -0.2262427   -0.6637178   ~ 0.8855889    -0.72787035  -0.65471023))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+On the other hand, `Composite` is a unit made up of several `Nodes`, defined by a `defmodel` macro. ノードに対するサブルーチンとも言える
 
 
 ```lisp
-(defmodel (Sin-Inlined (self)
+(defmodel (Softmax-Model (self)
 	   :where (X[~] -> [~])
 	   :on-call-> ((self x)
 		       (declare (ignore self))
-		       (!sin x))))
+		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+	                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                           (!div (!exp x1) z)))))
 
-(define-composite-function (Sin-Inlined) !sin-inline)
+(define-composite-function (Softmax-Model) !softmax-static)
 ```
 
 

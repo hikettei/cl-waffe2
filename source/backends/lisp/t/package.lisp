@@ -16,6 +16,8 @@
 
 (in-suite  :lisp-backend-test)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  
 (add-tester LispTensor)
 (sub-tester LispTensor)
 (mul-tester LispTensor)
@@ -30,4 +32,5 @@
 (sum-tester LispTensor)
 
 (mathematical-test-set LispTensor)
+)
 
