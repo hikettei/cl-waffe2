@@ -877,6 +877,16 @@ There are two principle operations in cl-waffe2 to do this:
   :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
 ```
 
+(ここら辺は推敲の余地あり)
+
+話す要点：
+
+1. In-placeにBroadcastingするのを明示したい (上記のIn-place optimizingと合わさって, cl-waffe2ならnumpyだとoutパラメーター用意しないといけないところを自動でコピーとか用意できる)
+
+2. numpy 本来は、batch-size=2前提でコード書いている。waffe2のShapeはシンボルか`<1 x N>`でいいのでデータ構造に情報をあるだけ詰めている. バグを防ぐ
+
+3. Rank up rule umm...
+
 The function `(!flexible)` adds the `broadcastable dimensions` of the given tensor. In `<1 x N>` parts, 1 is repeated, 1 is added if any. In `1` parts, never broadcasted.
 
 
@@ -884,7 +894,11 @@ The function `(!flexible)` adds the `broadcastable dimensions` of the given tens
 (!view a `(:broadcast 10))
 ```
 
-This explicts: in which tensor, is broadcasting applied?, that is, no useless copy is also removed.
+Mem:
+
+If both of given tensors is broadcasted, we may need to make a copy to store the result since there's no array of broadcasted size.
+
+This explicts: in which tensor, is broadcasting applied?, that is, there's more likely to useless copy is also removed. in-place broadcasting.
 
 ### Case1 - To higher, Batched Operation
 
@@ -901,6 +915,10 @@ TODO: `(with-broadcasting (a1 b1 (a b)) ...)` macro.
 also !view
 
 ## Optimizing Model Parameter
+
+### Backward semantics
+
+x_in <- x_out
 
 defoptimizer
 

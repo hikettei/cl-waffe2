@@ -18,7 +18,7 @@
    #:with-row-major
    #:with-cpu
    ;;#:with-cuda
-   #:with-build)
+   )
 
   ;; network utils
   (:export
