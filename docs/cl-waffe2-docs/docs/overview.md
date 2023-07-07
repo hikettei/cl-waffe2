@@ -841,18 +841,64 @@ Not an operation is performed, nor a matrix is allocated at the moment `MLP-Sequ
 
 ## Shaping API with DSL
 
-(TODO)
+See also: [Introducing Subscript DSL](../nodes/#introducing-subscript-dsl)
 
-See also: vm.generic-tensor docs
+## View APIs
+
+### Optional Broadcasting
+
+In cl-waffe2, operations with several arguments must be called with the same shape of tensors as `:where` says. In the code below, since `!add` is declared as `A[~] B[~] -> A[~]`, the first and second argument, must have the same shape, same ranks. However, opeartions isn't always performed within the same ranks. In practice, `!add` isn't always used as just a element-wise operation because the total elements of tensor can be found via `!add`, adding biases to the given tensor is also realised by using `!add`. Indeed, `broadcasting` is a convinient operation when expressing matrix iterations without using `(loop for ...)`.
+
+```lisp
+(!add (randn `(3 3)) (randn `(3)))
+; Evaluation aborted on #<CL-WAFFE2/VM.GENERIC-TENSOR:SHAPING-ERROR {100376BD13}>.
+```
+
+The same code would being broadcasted well and works on libraries which supports `Numpy Semantics Broadcasting`, but not working on cl-waffe2 as you can see.
+
+This is because cl-waffe2 do not support `automatically broadcasting` but support `manually broadcasting`. That is, each place broadcast is needed, you also have to declare the tensor is broadcasted, since the condition of `broadcastable` is less restrictive which sometimes produce a unintended behaviour with no any errors even though broadcasting is only used in a limited situation.
+
+`Numpy Semantic Broadcasting` has two rules:
+
+1. Rank up: If matrices with different number of axes are called in a one operation, `one` is added to the tensor with smallest ranks to straighten up the number of dimensions.
+
+2. Repeating 1: If the dimension at corresponding position do not match, and either one is `1`. `1` is repeated with the other.
+
+There are two principle operations in cl-waffe2 to do this:
+
+```lisp
+(!flexible (randn `(1 1)))
+
+{CPUTENSOR[float] :shape (<1 x N> 1 1) :named ChainTMP2614 
+  :vec-state [maybe-not-computed]
+  ((0.6495824))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+```
+
+The function `(!flexible)` adds the `broadcastable dimensions` of the given tensor. In `<1 x N>` parts, 1 is repeated, 1 is added if any. In `1` parts, never broadcasted.
 
 
-## Optional Broadcasting, and View APIs
+```lisp
+(!view a `(:broadcast 10))
+```
 
-(TODO)
+This explicts: in which tensor, is broadcasting applied?, that is, no useless copy is also removed.
 
-!flexible
+### Case1 - To higher, Batched Operation
 
-!view
+(!matmul (!flexible ...) (!flexible ...))
+
+### Case2 - To lower,  add biases to columns
+
+(!add a (!view x ...))
+
+TODO: `(with-broadcasting (a1 b1 (a b)) ...)` macro.
+
+### Multidimensional Offsets.
+
+also !view
 
 ## Optimizing Model Parameter
 
@@ -863,6 +909,8 @@ deftrainer
 parameter
 
 Tutorials Over!
+
+(TO ADD: ./Examples, training MNIST, Image processing, NLP etc...)
 
 I'll keep my finger crossed.
 

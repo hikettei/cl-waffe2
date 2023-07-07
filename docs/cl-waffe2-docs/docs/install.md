@@ -42,21 +42,41 @@ I guess It's a pity to write Common Lisp without REPL. There are a lot of option
 
 ## Installing cl-waffe2
 
-With roswell:
+With roswell, the latest repository can be fetched which is also recognised by `quicklisp`
 
 ```sh
 $ ros install hikettei/cl-waffe2
 ```
 
+Another option is to load `cl-waffe2.asd` configurations manually after cloning cl-waffe2 github repos.
+
+```sh
+$ git clone <Repository>
+$ cd ./cl-waffe2
+$ ros run # start repl
+$ (load "cl-waffe2.asd")
+$ (ql:quickload :cl-waffe2)
+$ (in-pacakge :cl-waffe2-repl)
+```
+
+
 With quicklisp:
 
-It's going to take a while...
+(It's going to take a while...)
 
-## Working with OpenBLAS backend!
+## OpenBLAS Backend
 
-In your init file, (e.g.: `~/.roswell/init.lisp` or `~/.sbclrc`)...
+In your init file, (e.g.: `~/.roswell/init.lisp` or `~/.sbclrc`), add the code below for example. (change the path depending on your environment).
 
-(TODO)
+```lisp
+;; In ~~/.sbclrc for example:
+(defparameter *cl-waffe-config*
+    `((:libblas \"libblas.dylib for example\")))
+```
 
--> `*cl-waffe-config*`
+One of cl-waffe2 backends `CPUTensor` loads the OpenBLAS shared library of the path written in the `cl-user::*cl-waffe-config*` parameter when cl-waffe2 loaded.
+
+## CUDA Backend
+
+(Currently not supported yet...)
 
