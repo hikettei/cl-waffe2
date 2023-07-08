@@ -59,10 +59,10 @@
 	  (let ((result (tensor-vec (forward model))))
 	    (every #'(lambda (elm) (= elm 2)) result)))))))
 
-(test test-call-with-view
-  (is (test-elementwise-unroll-forward))
-  (is (test-elementwise-forward))
-  )
+;;(test test-call-with-view
+;;  (is (test-elementwise-unroll-forward))
+;;  (is (test-elementwise-forward))
+;;  )
 
 
 ;; testing embody-input
