@@ -344,18 +344,29 @@ Use the define-impl macro to give definitions for the node and forward them.
 ;; 2. ChainTMP otherwise
 ;;
 
-(defun adjust-bw-place (bw-node place)
+(defun select-return-place (place argn nth-trying)
+  (if (or ;;(tensor-projected-p place)
+	  (not (= argn nth-trying)))
+      (make-input (shape place) nil
+		  :dtype (dtype place)
+		  :order (order place)
+		  :scalar-p (scalar-p place))
+      place))
+
+(defun adjust-bw-place (bw-node place argn nth-trying)
   "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
   
   (when bw-node
     (if (movetensor-p (tensor-backward bw-node))
 	bw-node
 	(with-shape-checkpoint (:moving nil)
-	  (let ((out (cl-waffe2/base-impl:!move (cl-waffe2/vm.generic-tensor:make-clone place) bw-node :force t)))
-	    
+	  (let ((out (cl-waffe2/base-impl:!move
+		      (select-return-place place argn nth-trying)
+		      bw-node
+		      :force t)))
 	    ;; F(x, y, ...)
 	    ;; x.state = :chain / :input?
-	    
+
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
 		out ;; ni modosu bw-node demo ugoku beki.
 		bw-node)))))) ;; Make-copy
@@ -397,7 +408,11 @@ inputs      ... inputs called with
 	 (out-kernels (apply #'backward node dout inputs-in))
 	 (dout-place  (gensym "dout"))
 	 ;; out-kernels = (list x.g y.g)
-	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs-out)))
+	 (out-kernels (loop with argn fixnum = (length inputs-in)
+			    for x in out-kernels
+			    for y in inputs-out
+			    for i upfrom 0
+			    collect (adjust-bw-place x y argn i))))
 
     (loop for kernel in out-kernels
 	  collect

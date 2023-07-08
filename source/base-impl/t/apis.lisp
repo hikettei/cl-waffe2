@@ -163,25 +163,26 @@
 	  (composed-proceed a1 b1 c1)
 	(let ((cp (list `(,ag ,ag1)
 			`(,bg ,bg1)
-			`(,cg ,cg1))))
-	  (print ag)
-	  (print bg)
-	  (print cg)
-	  (M= (car (nth n cp))
-	      (second (nth n cp))))))))
+			`(,cg ,cg1)))
+	      (ans `(2 3 1)))
+	  (and
+	   (= (vref (car (nth n cp)) 0)
+	      (nth n ans))
+	   (= (vref (car (nth n cp)) 11)
+	      (nth n ans))
+	   (M= (car (nth n cp))
+	       (second (nth n cp)))))))))
 
 (defun normal-proceed (a b c)
   ;;(proceed-backward (lazy-print (!mul a b)))
-  ;; sumbackwardのバグ(related to view)
-  ;; in-out backward semanticのバグ
-  (proceed-backward (lazy-print (!mul a b)))
-  ;; sum with other ops? -> broadcast went anywhere nobody knows...
+  ;; SumBackward bug
+  ;; Side effect bug...
+  (proceed-backward (!sum (!add c (!mul a b))))
   (values (grad a) (grad b) (grad c)))
 
 (defun composed-proceed (a b c)
   (let* ((k (proceed (!mul a b)))
  	 (out (!add k c)))
-    
     (proceed-backward (!sum out))
     (values (grad a) (grad b) (grad c))))
 

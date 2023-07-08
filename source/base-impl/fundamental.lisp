@@ -12,20 +12,14 @@
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
+		     (declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
 				 (!copy dout :force t))))
-		       ;; X <- Y
-		       (values
-			(if (eql (tensor-attribute dx) :chain)
-			    (!move dx dout :force t)
-			    dout)
-			(if (eql (tensor-attribute dy) :chain)
-			    (!move dy dy-out :force t)
-			    dy-out))))
+		       (values nil dy-out)))
 	  :documentation "
 Moves all the visible elements of `B` into visible areas of `A`.
 

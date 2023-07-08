@@ -302,11 +302,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		  (tensor-variables toplevel)))
 	   (next-dys   (map 'list #'car outs))
 	   (outs       (map 'list #'cdr outs)))
-
-      (print (tensor-backward toplevel))
-      ;; Rewrite
-      
-      ;; Memo: All backward nodes, are ends with MoveTensorNode
       
       `(let (,@(loop for kernel in outs
 		     for out in next-dys
