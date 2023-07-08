@@ -299,27 +299,31 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		  ;; Here, we trace the definition of backward.
 		  (tensor-backward toplevel)
 		  past-dy
-		  (tensor-variables toplevel))))
+		  (tensor-variables toplevel)))
+	   (next-dys   (map 'list #'car outs))
+	   (outs       (map 'list #'cdr outs)))
 
+      (print (tensor-backward toplevel))
       ;; Rewrite
       
       ;; Memo: All backward nodes, are ends with MoveTensorNode
       
-      `(let (,@(loop for var in (tensor-variables toplevel)
-		     for kernel in outs
+      `(let (,@(loop for kernel in outs
+		     for out in next-dys
 		     if kernel
-		       collect `(,(tensor-id var) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
-	 (declare (ignorable ,@(loop for var in (tensor-variables toplevel)
-				     for kernel in outs
-				     if kernel collect (tensor-id var))))
+		       collect `(,(tensor-id out) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
+	 (declare (ignorable ,@(loop for o in next-dys if o collect (tensor-id o))))
 	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs
+		 for next-dy in next-dys
+		 
 		 if (slot-value var 'requires-grad)
-		   collect `(add-grads ,var ,(tensor-id var))
+		   collect `(add-grads ,var ,(tensor-id past-dy))
+		 
 		 if (and kernel
 			 (ancestor-param-p var))
-		   collect (compile-backward-chain var var))))))
+		   collect (compile-backward-chain var next-dy))))))
 
 ;; Toplevel
 ;; This is not for users.

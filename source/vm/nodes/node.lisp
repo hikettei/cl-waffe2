@@ -351,13 +351,13 @@ Use the define-impl macro to give definitions for the node and forward them.
     (if (movetensor-p (tensor-backward bw-node))
 	bw-node
 	(with-shape-checkpoint (:moving nil)
-	  (let ((out (cl-waffe2/base-impl:!move place bw-node :force t)))
+	  (let ((out (cl-waffe2/base-impl:!move (cl-waffe2/vm.generic-tensor:make-clone place) bw-node :force t)))
 	    
 	    ;; F(x, y, ...)
 	    ;; x.state = :chain / :input?
 	    
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
-		out
+		out ;; ni modosu bw-node demo ugoku beki.
 		bw-node)))))) ;; Make-copy
 
 (defun expand-backward (node dout &rest inputs-out)
@@ -402,14 +402,17 @@ inputs      ... inputs called with
     (loop for kernel in out-kernels
 	  collect
 	  (when kernel
-	    `(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
-	       
-	       (cl-waffe2/vm.generic-tensor:embody-actual-tensor
-		,dout
-		,dout-place)
-	       
-	       ,(with-no-grad
-		  (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))
+	    (let ((out (cl-waffe2/vm.generic-tensor:make-clone kernel)))
+	      (cons
+	       out
+	       `(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
+		  
+		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
+		   ,dout
+		   ,dout-place)
+
+		  ,(with-no-grad
+		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
 
 ;; the method backward constructs backward function
 ;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp
