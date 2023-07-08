@@ -684,36 +684,3 @@ dout   ... dout values"
 
   (forward (PrintNode stream result dout mark) tensor))
 
-
-;; Save For Backward Utils
-
-(defmodel (Save-For-Backward-kernel (self)
-	   :where (place[~] X[~] -> place[~])
-	   :on-call-> ((self place x)
-		       (declare (ignore self))
-		       (!move place x :force t))))
-
-(define-composite-function (Save-For-Backward-Kernel) !save-for-backward)
-
-(define-and-impl-node (Save-For-Backward-Node (self)
-		       :where (Input[~] Place[~] -> Input[~])
-		       :forward ((self x place)
-				 (let ((copier (!save-for-backward place x :return-lambda t)))
-				   (setf (out-scalar-p self) (scalar-p x))
-				   `(progn
-				      (when (not *no-grad*)
-
-					(if (out-scalar-p ,self)
-					    (setf (tensor-vec ,place) (tensor-vec ,x))
-					    (progn
-					      ;; Alloc
-					      (tensor-vec ,place)
-					      (tensor-vec ,x)
-
-					      (funcall ,copier ,place ,x))))
-				      ,x)))
-		       :backward ((self dout x place)
-				  (declare (ignore x place))
-				  (values dout))))
-
-
