@@ -19,6 +19,7 @@
 		#:tensor-view
 		#:make-tensor
 		#:make-input
+		#:actual-shape
 		#:set-input
 		#:compile-option-t
 		#:movetensor-p

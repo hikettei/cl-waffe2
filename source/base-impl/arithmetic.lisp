@@ -33,6 +33,8 @@
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defnode (,name (myself dtype)
+			  ;; In backward:
+			  ;;       dx   dy     dout
 			  :where (A[~] B[~] -> A[~])
 			  :backward ,backward
 			  :documentation ,(format nil "`~a` is a node which computes following operation element-wise.
@@ -55,8 +57,6 @@ X\\gets{X ~a Y}
   (define-arithmetic-node AddNode "AddNode" "+"
     ((self dout dx dy)
      (declare (ignore dx dy))
-     ;; forward: next = x + y
-     ;; dx = x, dy = y
      (values dout dout)))
   (define-arithmetic-node SubNode "SubNode" "-"
     ((self dout dx dy)

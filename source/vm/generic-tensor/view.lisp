@@ -452,10 +452,16 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
 			   before
 			   after
 			   size)
-  "Tensor[:broadcast 10][1]"
+  "Tensor[:broadcast 10][1] -> Tensor[:broadcast 1]"
   ;; TODO: ADD CONSTRAINTS
-  (setf (subscript-view after) 0)
-  (step-subscript :t :index before after size))
+  ;; (setf (subscript-view after) 0)
+  ;;(step-subscript :t :index before after size)
+  (setf (subscript-view after) `(:broadcast 1))
+  
+  (step-subscript :t :broadcast
+		  before
+		  after
+		  size))
 
 (defmethod step-subscript ((x (eql :broadcast))
 			   (y (eql :broadcast))
@@ -478,7 +484,7 @@ Changes the number of broadcasting."
 			 :determined-p t
 			 :view t)))
 	 (view (make-subscript
-		:determined-p determined-p
+		:determined-p determined-p ;; includes symbol?
 		:view subscript)))
 
     (step-subscript

@@ -15,6 +15,8 @@
    #:SubNode
    #:MulNode
    #:DivNode
+   #:Save-For-Backward-Node
+   #:!save-for-backward
    #:MatmulNode
    #:InverseTensorNode
    #:trans-a?

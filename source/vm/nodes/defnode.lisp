@@ -434,7 +434,7 @@ Return nil -> ok
 ## [macro] define-and-impl-node
 
 Defines device=t node and impl"
-  `(progn
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defnode (,abstract-name (,self ,@constructor-arguments)
 	       :where ,where
 	       :out-scalar-p ,out-scalar-p
@@ -446,3 +446,4 @@ Defines device=t node and impl"
      (define-impl (,abstract-name :device ,device :cache-when-compiled ,cache-when-compiled :reject-p ,reject-p)
 		  :save-for-backward ,save-for-backward
 		  :forward ,forward)))
+

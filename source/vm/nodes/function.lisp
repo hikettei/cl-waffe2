@@ -140,7 +140,7 @@ Return: defun form
     `(progn
        (defparameter ,kernel-place ,polymorphic-table)
 
-       (defun ,function-name (,@namelist)
+       (defun ,function-name (,@namelist &key (return-lambda nil))
 	 (let* ((,~length-place ,(when adjustable-size
 				   `(map 'list #'(lambda (x y) (- (cl-waffe2/vm.generic-tensor:dims x) y)) (list ,@namelist) (list ,@input-det-n-list))))
 		(,target-function (dispatch-method
@@ -150,7 +150,9 @@ Return: defun form
 				   ,~length-place
 				   :compile-mode ,compile-mode
 				   :order ,order)))
-	   (funcall ,target-function ,@namelist))))))
+	   (if return-lambda
+	       ,target-function
+	       (funcall ,target-function ,@namelist)))))))
 
 (defun composite-function (composite
 			   function-name

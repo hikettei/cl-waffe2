@@ -17,7 +17,7 @@
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (!copy dout))))
+				 (!copy dout :force t))))
 		       ;; X <- Y
 		       (values
 			(if (eql (tensor-attribute dx) :chain)
@@ -66,7 +66,7 @@ For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for ex
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (!copy dout))))
+				 (!copy dout :force t))))
 		       
 		       ;; dx/dy never shares pointer, so just moving to dx/dy is enough i guess.
 		       
@@ -645,17 +645,18 @@ Note that added axes could be broadcasted automatically when the operation calle
 ;; ===============================================================
 
 
-(define-and-impl-node (PrintNode (self stream print-result print-dout)
+(define-and-impl-node (PrintNode (self stream print-result print-dout mark)
 		       :slots ((stream :initform nil :initarg :stream :reader print-stream)
 			       (print-result :initform nil :initarg :print-result :reader print-result)
-			       (print-dout :initform nil :initarg :print-dout :reader print-dout))
+			       (print-dout :initform nil :initarg :print-dout :reader print-dout)
+			       (mark       :initform nil :initarg :mark :reader print-mark))
 		       :where (A[~] -> A[~])
 		       :forward ((self x)
 				 (if (print-result self)
 				     `(locally (declare (optimize (speed 1)))
 					(format
 					 (print-stream ,self)
-					 "~%[Forward] PrintNode: ~a =========~%~a" ,self ,x)
+					 "~%===> [Forward] PrintNode: ~a ~a =========>~%~a" ,self ,(print-mark self) ,x)
 					,x)
 				     `(progn ,x)))
 		       :backward ((self dout dx)
@@ -666,10 +667,11 @@ Note that added axes could be broadcasted automatically when the operation calle
 					 `(locally (declare (optimize (speed 1)))
 					    (format
 					     (print-stream ,self)
-					     "~%[Backward] PrintNode: ~a ========
+					     "~%<== [Backward] PrintNode: ~a ~a <========
 Previous dout:
 ~a"
 					     ,self
+					     ,(print-mark self)
 					     ,dout)
 					    ,dout)))
 				      (values dout)))))
@@ -678,12 +680,46 @@ Previous dout:
 		   &key
 		     (stream t)
 		     (result t)
-		     (dout t))
+		     (dout t)
+		     (mark ""))
   "
 ## [function] lazy-print
 
 result ... result
 dout   ... dout values"
 
-  (forward (PrintNode stream result dout) tensor))
-				 
+  (forward (PrintNode stream result dout mark) tensor))
+
+
+;; Save For Backward Utils
+
+(defmodel (Save-For-Backward-kernel (self)
+	   :where (place[~] X[~] -> place[~])
+	   :on-call-> ((self place x)
+		       (declare (ignore self))
+		       (!move place x :force t))))
+
+(define-composite-function (Save-For-Backward-Kernel) !save-for-backward)
+
+(define-and-impl-node (Save-For-Backward-Node (self)
+		       :where (Input[~] Place[~] -> Input[~])
+		       :forward ((self x place)
+				 (let ((copier (!save-for-backward place x :return-lambda t)))
+				   (setf (out-scalar-p self) (scalar-p x))
+				   `(progn
+				      (when (not *no-grad*)
+
+					(if (out-scalar-p ,self)
+					    (setf (tensor-vec ,place) (tensor-vec ,x))
+					    (progn
+					      ;; Alloc
+					      (tensor-vec ,place)
+					      (tensor-vec ,x)
+
+					      (funcall ,copier ,place ,x))))
+				      ,x)))
+		       :backward ((self dout x place)
+				  (declare (ignore x place))
+				  (values dout))))
+
+
