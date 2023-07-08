@@ -36,7 +36,8 @@
 	       (:file "vm/generic-tensor/acceptor")
 	       
 	       (:file "vm/generic-tensor/scheduling")
-	       
+
+	       (:file "vm/nodes/shape-error")
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
