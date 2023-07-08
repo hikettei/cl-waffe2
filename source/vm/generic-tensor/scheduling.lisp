@@ -41,9 +41,11 @@
   (declare (type AbstractTensor tensor))
   (let ((name (tensor-name tensor)))
     (typecase name
-      (string  :chain) ;; :chain = auto-generated
-      (keyword :input)
-      (T       :input))))
+      (string
+       (if (eql (tensor-facet tensor) :input)
+	   :chain
+	   :input)) ;; :chain = auto-generated
+      (T :input))))
 
 (defun trace-and-explore-nodes! (out-tensor)
   "Incf tensor-ref-n

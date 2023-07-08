@@ -410,7 +410,39 @@ Return nil -> ok
   (or (node-save-for-backward1 node)
       (node-save-for-backward2 node)))
 
+
+;; Not used anymore
 (defun declare-local-variables (self &rest tensors)
   ""
   (setf (node-local-variables self) tensors))
 
+(defmacro define-and-impl-node ((abstract-name
+				 (self &rest constructor-arguments)
+				 &key
+				   (device t)
+				   (cache-when-compiled t)
+				   (reject-p nil)
+				   (where t)
+				   (out-scalar-p nil)
+				   (slots nil)
+				   (save-for-backward nil)
+				   (forward nil)
+				   (backward nil)
+				   (documentation ""))
+				&body constructor-body)
+  "
+## [macro] define-and-impl-node
+
+Defines device=t node and impl"
+  `(progn
+     (defnode (,abstract-name (,self ,@constructor-arguments)
+	       :where ,where
+	       :out-scalar-p ,out-scalar-p
+	       :slots ,slots
+	       :save-for-backward ,save-for-backward
+	       :backward ,backward
+	       :documentation ,documentation)
+       ,@constructor-body)
+     (define-impl (,abstract-name :device ,device :cache-when-compiled ,cache-when-compiled :reject-p ,reject-p)
+		  :save-for-backward ,save-for-backward
+		  :forward ,forward)))

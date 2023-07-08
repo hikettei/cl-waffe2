@@ -505,3 +505,4 @@ Return: (values output-shape input-shape-determined)
   (let ((linter-function (composite-linter-f composite))
 	(inputs (map 'list #'shape inputs)))
     (funcall linter-function composite inputs inputs inputs)))
+

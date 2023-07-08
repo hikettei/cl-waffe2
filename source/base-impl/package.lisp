@@ -36,7 +36,8 @@
    #:!flexible
    #:proceed
    #:proceed-time
-   #:proceed-backward)
+   #:proceed-backward
+   #:lazy-print)
   (:export
    :node-x
    :node-y))

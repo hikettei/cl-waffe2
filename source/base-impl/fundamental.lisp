@@ -490,7 +490,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 (defnode (ProceedNode (myself &key (measure-time nil) (compile-mode :default))
 	  :where (A[~] -> A[~])
 	  :slots ((measure-time   :initarg :measure-time :reader measure-time-p)
-		  (compiled-model :accessor proceed-compiled-model)
+		  (compiled-model :initform nil :accessor proceed-compiled-model)
 		  (compile-mode   :initarg :compile-mode :reader compile-mode)
 		  (result         :accessor proceed-result))
 	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
@@ -498,20 +498,30 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (let ((compiled-model (build x :compile-mode (compile-mode self))))
+		       (let ((compiled-model (or
+					      (proceed-compiled-model self)
+					      (build x :compile-mode (compile-mode self)))))
+			 ;; Compiled-Composite
 			 (setf (proceed-compiled-model self) compiled-model)
+			 
 			 (if (measure-time-p self)
 			     (progn
 			       ;; TODO
 			       ;; Display Both: First-Time-Call/Second-Time-Call
-			       (format t "Proceed-Time: First Trying~%")
+			       (format t "Proceed-Time: With allocation time:~%")
 			       (time (forward compiled-model))
-			       (format t "Proceed-Time: Second Trying~%")
+			       (format t "Proceed-Time: Without allocation time:~%")
 			       (setf (proceed-result self) (time (forward compiled-model))))
 			     (setf (proceed-result self) (forward compiled-model)))
 			 ;; Tell cl-waffe2 VM the returned value's type
 			 (setf (out-scalar-p self) (scalar-p (proceed-result self)))
-			 `(progn ,x)))
+
+			 ;; The result is returned.
+			 `(progn
+			    ;; Tell top compiling funtion the compiled-function
+			    (cl-waffe2/vm.generic-tensor::declare-compiled-composite ,compiled-model)
+			    
+			    ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
 			(let ((compiled-model (proceed-compiled-model self)))
@@ -519,7 +529,9 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 			   (with-instant-kernel dout
 			     `(and
 			       ,(if (measure-time-p self)
-				    `(time (backward ,compiled-model))
+				    `(progn
+				       (format t "Proceed-Time: Backward Time")
+				       (time (backward ,compiled-model)))
 				    `(backward ,compiled-model))
 			       ;; Delete Gradients.
 			       (!mul 0 ,dout)))))))
@@ -552,6 +564,7 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
     
     ;; Cut off previous backwards
     (setf (tensor-backward tensor) nil)
+    (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) t)
 
     ;; Out is still unallocated, so set the result.
     (if (scalar-p out)
@@ -626,3 +639,51 @@ Note that added axes could be broadcasted automatically when the operation calle
     (setf (tensor-flexible-p out) t)
     out))
 
+
+;; ===============================================================
+;; Logging
+;; ===============================================================
+
+
+(define-and-impl-node (PrintNode (self stream print-result print-dout)
+		       :slots ((stream :initform nil :initarg :stream :reader print-stream)
+			       (print-result :initform nil :initarg :print-result :reader print-result)
+			       (print-dout :initform nil :initarg :print-dout :reader print-dout))
+		       :where (A[~] -> A[~])
+		       :forward ((self x)
+				 (if (print-result self)
+				     `(locally (declare (optimize (speed 1)))
+					(format
+					 (print-stream ,self)
+					 "~%[Forward] PrintNode: ~a =========~%~a" ,self ,x)
+					,x)
+				     `(progn ,x)))
+		       :backward ((self dout dx)
+				  (declare (ignore dx))
+				  (if (print-dout self)
+				      (values
+				       (with-instant-kernel dout
+					 `(locally (declare (optimize (speed 1)))
+					    (format
+					     (print-stream ,self)
+					     "~%[Backward] PrintNode: ~a ========
+Previous dout:
+~a"
+					     ,self
+					     ,dout)
+					    ,dout)))
+				      (values dout)))))
+
+(defun lazy-print (tensor
+		   &key
+		     (stream t)
+		     (result t)
+		     (dout t))
+  "
+## [function] lazy-print
+
+result ... result
+dout   ... dout values"
+
+  (forward (PrintNode stream result dout) tensor))
+				 

@@ -216,6 +216,16 @@ See also: `set-input`"
       (unless (find tensor *node-parameters-tmp* :test #'equal)
 	  (push tensor *node-parameters-tmp*)))))
 
+(defun declare-compiled-composite (model)
+  "Extends into *node-parameters-info*, about the given model's variable informations."
+  (declare (type Compiled-Composite model))
+  (let ((variables-info (compiled-variables model)))
+    (register-variables
+     (nodevariables-tmp-variables variables-info))
+    (register-variables
+     (nodevariables-parameters variables-info))
+    nil))
+
 ;; ==============================================================================
 ;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================

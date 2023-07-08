@@ -388,7 +388,7 @@ inputs      ... inputs called with
 		       collect (detach (or (read-save-for-backward input) input) t)))
 	 ;; Tracing User-Defined-Backward, still not yet compiled.
 	 (out-kernels (apply #'backward node dout inputs))
-	 (dout-place (gensym "dout"))
+	 (dout-place  (gensym "dout"))
 	 ;; out-kernels = (list x.g y.g)
 	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs-in)))
 

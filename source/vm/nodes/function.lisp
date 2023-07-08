@@ -205,7 +205,19 @@ Input:
   "
 ## [macro] define-composite-function
 
+```lisp
+(define-composite-function composite-init-form
+		       	     function-name
+	       		     &key
+      			       (dtype t)
+			       (order :column)
+		       	       (compile-mode :default))
+```
+
 Tracing the `on-call->` form of a given composite-init-form, the macro `define-composite-function` defines a function of calling `on-call->` statically.
+
+On the condition where composite should be defined as polymorphic, the function is defined as generic definition/dispatching, otherwise, defines as a single defun form.
+
 
 "
   (declare (type (or t keyword) dtype)

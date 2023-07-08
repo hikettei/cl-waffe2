@@ -69,7 +69,8 @@
    #:*facet-monopoly-mode*)
   (:export
    #:defnode
-   #:define-impl)
+   #:define-impl
+   #:define-and-impl-node)
   ;; Reject-p-utils
   (:export
    #:supported-dtypes-are)
