@@ -56,6 +56,10 @@
                 <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../utils/">cl-waffe2</a>
+                </li>
+              </ul>
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/vm.nodes</a>
     <ul class="current">
@@ -75,7 +79,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#defnode">defnode</a>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-defnode">[macro] defnode</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
     </li>
@@ -83,11 +87,15 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#useful-tips">Useful Tips</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#how-and-when-to-define-backward">How and When to define backward?</a>
+    <li class="toctree-l3"><a class="reference internal" href="#when-to-define-backward">When to define backward?</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#how-to-define-backward">How to define backward?</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#define-impl">define-impl</a>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-impl">[macro] define-impl</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
     </li>
@@ -97,17 +105,29 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#forward">forward</a>
+    <li class="toctree-l2"><a class="reference internal" href="#generic-forward">[generic] forward</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#defmodel">defmodel</a>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#class-defmodel">[class] defmodel</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#effects_1">Effects</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_2">Inputs</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#describe-forward-propagation">Describe Forward Propagation</a>
+    <li class="toctree-l3"><a class="reference internal" href="#how-to-use-on-call-form">How to use on-call-&gt; form?</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#on-call-nil">on-call-&gt; = nil</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#on-call-is-a-symbol-name">on-call-&gt; is a symbol-name</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#on-call-is-a-function-name-or-a-lambda">on-call-&gt; is a function name or a lambda.</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#on-call-is-a-list">on-call-&gt; is a list</a>
     </li>
         </ul>
     </li>
@@ -115,11 +135,21 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#with-devices">with-devices</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#input">Input</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#composite">Composite</a>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-and-impl-node">[macro] define-and-impl-node</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-composite-function">[macro] define-composite-function</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#class-composite">[class] Composite</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#extend-composite-class-slightly-complicated">Extend Composite Class (Slightly Complicated)</a>
     </li>
@@ -127,7 +157,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#abstractnode">AbstractNode</a>
+    <li class="toctree-l2"><a class="reference internal" href="#class-abstractnode">[class] AbstractNode</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#with-instant-kernel">with-instant-kernel</a>
         <ul>
@@ -156,6 +186,14 @@
                 <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
       </div>
     </div>
     </nav>
@@ -179,19 +217,29 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="formulate-neural-networks">Formulate Neural Networks</h1>
-<p>The package <code>:cl-waffe2/vm.nodes</code> provides a fundamental system for building neural networks.</p>
+                <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css"
+  integrity="sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs"
+  crossorigin="anonymous" />
+
+<style type="text/css">
+    .katex img {
+      object-fit: fill;
+      padding: unset;
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: inherit;
+    }
+</style>
+<h1 id="formulate-neural-networks">Formulate Neural Networks</h1>
+<p>The package <code>:cl-waffe2/vm.nodes</code> provides a fundamental system for building neural networks using <code>AbstractTensor</code>.</p>
 <p>This package can be divided into three main parts.</p>
 <ol>
-<li>Shaping APIs</li>
-<li>defnode  (Differentiable Operations)</li>
-<li>defmodel (Operations consisted of defnode)</li>
+<li>Shaping APIs (<code>:where</code>)</li>
+<li>defnode  (The smallest unit of differentiable operations)</li>
+<li>defmodel (Operations consisted of defnode, and static functions)</li>
 </ol>
-<p>Note that there's a clear distinction between node and model.</p>
-<pre><code class="language-lisp">defnode  =&gt; called with `forward` 
-defmodel =&gt; called with `call`
-</code></pre>
-<p>Also, defnode is a fundamental unit of operation, while defmodel is a set of nodes.</p>
 <h2 id="shaping-api">Shaping API</h2>
 <p>When defining an operation in cl-waffe2 with a <code>defnode</code> macro, the shape of the matrix used in the operation must also be defined in the <code>:where</code> keyword.</p>
 <p>This is a Shaping API, and responsible for shape inspection of all operations.</p>
@@ -451,40 +499,41 @@ i = 3
 <p>Outputs:</p>
 <p><code>(values compiled-function To-Refer-Pointer-Idx Broadcastable_List)</code></p>
 <p>Example: (TODO)</p>
-<h2 id="defnode">defnode</h2>
+<h2 id="macro-defnode">[macro] defnode</h2>
 <pre><code class="language-lisp">(defnode ((abstract-name
            (self &amp;rest constructor-arguments)
             &amp;key
               (where t)
               (out-scalar-p nil)
+                      (save-for-backward nil)
               (slots nil)
               (backward nil)
               (documentation &quot;&quot;))
            &amp;body constructor-body))
 </code></pre>
-<p>defnode is a macro which is used to define a subclass of <code>AbstractNode</code>.</p>
-<p>The defined class is named after <code>abstract-name</code>, which has:</p>
+<p><code>defnode</code> is a macro to define computation nodes in cl-waffe2, which is a subclass of <code>AbstractNode</code>.</p>
+<p>The class defined is named after <code>abstract-name</code>, and they possess the following datum:</p>
 <ol>
 <li>
-<p>Subscript DSL</p>
+<p>Generic definition of forward, including <code>Subscript DSL</code>, (whch is transimission state of the operation), and <code>slots</code> which is shared at forward and backward time.</p>
 </li>
 <li>
-<p>Slots that are shared at forward/backward time.</p>
-</li>
-<li>
-<p>Generic definition of backward</p>
+<p>(Optional) Generic definition of backward.</p>
 </li>
 </ol>
 <h3 id="inputs">Inputs</h3>
 <ol>
 <li>
-<p><code>abstract-name</code> the class is named after it</p>
+<p><code>abstract-name</code> the macro defines a new class named after it.</p>
 </li>
 <li>
 <p><code>where</code>  the place to put Subscript DSL</p>
 </li>
 <li>
-<p><code>backward</code> the general definition of backward (Optional). Place S-expression here If you wanna ignore define-impl's backward, otherwise define-impl's one is used.</p>
+<p><code>save-for-backward</code> corresponding position of input arguments will produce a copy, which is used at backward time.</p>
+</li>
+<li>
+<p><code>backward</code> (Optional) Any back-propagation described in define-impl is disabled; instead, the definitions given here are used.</p>
 </li>
 <li>
 <p><code>documentation</code> docstring</p>
@@ -509,7 +558,7 @@ i = 3
 
 (slot-value (ExampleNode 10) 'arg) ;; =&gt; 10
 </code></pre>
-<h3 id="how-and-when-to-define-backward">How and When to define backward?</h3>
+<h3 id="when-to-define-backward">When to define backward?</h3>
 <p>The backward follows this format:</p>
 <pre><code class="language-lisp">((self dout dx dy ... dn)
  (values dx.grad dy.grad ... dn.grad))
@@ -537,17 +586,72 @@ AddNode (defnode) &lt;- Backward=nil
 =================================================================
 </code></pre>
 <p>Depending on <code>*using-backend*</code>, the implementation to use is determined at node-building time. See also: with-devices.</p>
-<h2 id="define-impl">define-impl</h2>
+<h3 id="how-to-define-backward">How to define backward?</h3>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>g</mi><mo stretchy="false">(</mo><mi>d</mi><mi>o</mi><mi>u</mi><mi>t</mi><mo separator="true">,</mo><mi>d</mi><msub><mi>x</mi><mrow><mi>i</mi><mi>n</mi></mrow></msub><mo separator="true">,</mo><mi>d</mi><msub><mi>y</mi><mrow><mi>i</mi><mi>n</mi></mrow></msub><mo separator="true">,</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo separator="true">,</mo><mi>d</mi><msub><mi>n</mi><mrow><mi>i</mi><mi>n</mi></mrow></msub><mo stretchy="false">)</mo><mo>≜</mo><mspace linebreak="newline"></mspace><mi>M</mi><mi>o</mi><mi>v</mi><mi>e</mi><mo stretchy="false">(</mo><mi>d</mi><msub><mi>x</mi><mrow><mi>o</mi><mi>u</mi><mi>t</mi></mrow></msub><mo separator="true">,</mo><mrow><mi>d</mi><mi>o</mi><mi>u</mi><mi>t</mi></mrow><mo>×</mo><mrow><mi>d</mi><msub><mi>x</mi><mrow><mi>g</mi><mi>r</mi><mi>a</mi><mi>d</mi></mrow></msub></mrow><mo stretchy="false">)</mo><mo separator="true">,</mo><mspace linebreak="newline"></mspace><mi>M</mi><mi>o</mi><mi>v</mi><mi>e</mi><mo stretchy="false">(</mo><mi>d</mi><msub><mi>x</mi><mrow><mi>o</mi><mi>u</mi><mi>t</mi></mrow></msub><mo separator="true">,</mo><mrow><mi>d</mi><mi>o</mi><mi>u</mi><mi>t</mi></mrow><mo>×</mo><mrow><mi>d</mi><msub><mi>y</mi><mrow><mi>g</mi><mi>r</mi><mi>a</mi><mi>d</mi></mrow></msub></mrow><mo stretchy="false">)</mo><mo separator="true">,</mo><mspace linebreak="newline"></mspace><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo separator="true">,</mo><mspace linebreak="newline"></mspace><mi>M</mi><mi>o</mi><mi>v</mi><mi>e</mi><mo stretchy="false">(</mo><mi>d</mi><msub><mi>x</mi><mrow><mi>o</mi><mi>u</mi><mi>t</mi></mrow></msub><mo separator="true">,</mo><mrow><mi>d</mi><mi>o</mi><mi>u</mi><mi>t</mi></mrow><mo>×</mo><mrow><mi>d</mi><msub><mi>n</mi><mrow><mi>g</mi><mi>r</mi><mi>a</mi><mi>d</mi></mrow></msub></mrow><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
+g(dout, dx_{in}, dy_{in}, ..., dn_{in}) \triangleq \\
+ Move(dx_{out}, {dout} \times {dx_{grad}}),\\
+ Move(dx_{out}, {dout} \times {dy_{grad}}),\\
+ ...,\\
+ Move(dx_{out}, {dout} \times {dn_{grad}})
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.1667em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">in</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">in</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">...</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">in</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel amsrm">≜</span></span><span class="mspace newline"></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">o</span><span class="mord mathnormal mtight">u</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span><span class="mord mathnormal mtight" style="margin-right:0.02778em;">r</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mpunct">,</span></span><span class="mspace newline"></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">o</span><span class="mord mathnormal mtight">u</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span><span class="mord mathnormal mtight" style="margin-right:0.02778em;">r</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mpunct">,</span></span><span class="mspace newline"></span><span class="base"><span class="strut" style="height:0.3em;vertical-align:-0.1944em;"></span><span class="mord">...</span><span class="mpunct">,</span></span><span class="mspace newline"></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">o</span><span class="mord mathnormal mtight">u</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span><span class="mord mathnormal mtight" style="margin-right:0.02778em;">r</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span></p>
+<pre><code class="language-lisp">:save-for-backward (t t)
+:backward ((self dout dx dy)
+           (values
+               (!mul dout dy)
+               (!mul dout dx)))
+</code></pre>
+<p><code>self</code> is a place to pass the node class. <code>dout</code> is a <code>AbstractTensor</code> of previous node's gradient. <code>dx, dy, ..., dn</code> are variables used in forward. In the case of the tensor is computed as <code>In-place</code>, there's no guarantee that variables aren't destructed. So, to ensure that variables remains as it was, set <code>:save-for-backward</code> at corresponding positions if the variable is needed to compute gradient.</p>
+<p>According to <code>the derivative of the composite function</code>, <code>:backward</code> definition should return next node's <code>dout</code> following this form:</p>
+<p><code>(values dx.grad dy.grad ... dn.grad)</code></p>
+<p>After the computing, cl-waffe2 automatically selects where to store the result, and moves it.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.16em" columnspacing="1em"><mtr><mtd class ="mtr-glue"></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><msub><mi>x</mi><mrow><mi>i</mi><mi>n</mi></mrow></msub><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.36em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>x</mi><mrow><mi>s</mi><mi>a</mi><mi>v</mi><mi>e</mi><mi>f</mi><mi>o</mi><mi>r</mi><mi>b</mi><mi>a</mi><mi>c</mi><mi>k</mi><mi>w</mi><mi>a</mi><mi>r</mi><mi>d</mi></mrow></msub></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>SaveForBackward is t</mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>x</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>otherwise</mtext></mstyle></mtd></mtr></mtable></mrow></mrow></mstyle></mtd><mtd class ="mtr-glue"></mtd><mtd class ="mml-eqn-num"></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{equation}
+  x_{in}=
+  \begin{cases}
+    x_{saveforbackward} &amp; \text{SaveForBackward is t} \\
+    \text{x} &amp; \text{otherwise}
+  \end{cases}
+\end{equation}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">in</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">s</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">v</span><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight" style="margin-right:0.10764em;">f</span><span class="mord mathnormal mtight" style="margin-right:0.02778em;">or</span><span class="mord mathnormal mtight">ba</span><span class="mord mathnormal mtight">c</span><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight" style="margin-right:0.02778em;">r</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">x</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">SaveForBackward is t</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.16em" columnspacing="1em"><mtr><mtd class ="mtr-glue"></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><msub><mi>x</mi><mrow><mi>o</mi><mi>u</mi><mi>t</mi></mrow></msub><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.36em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><msub><mi>x</mi><mrow><mi>c</mi><mi>o</mi><mi>p</mi><mi>y</mi></mrow></msub></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>If the tensor is a ExistTensor or cause conflicts</mtext></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>x</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>If the tensor make no conflicts.</mtext></mstyle></mtd></mtr></mtable></mrow></mrow></mstyle></mtd><mtd class ="mtr-glue"></mtd><mtd class ="mml-eqn-num"></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{equation}
+  x_{out}=
+  \begin{cases}
+    x_{copy} &amp; \text{If the tensor is a ExistTensor or cause conflicts} \\
+    \text{x} &amp; \text{If the tensor make no conflicts.}
+  \end{cases}
+\end{equation}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">o</span><span class="mord mathnormal mtight">u</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">co</span><span class="mord mathnormal mtight">p</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">x</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">If the tensor is a ExistTensor or cause conflicts</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">If the tensor make no conflicts.</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
+<p>(<code>x</code> is a variable called with <code>(forward node &amp;rest inputs)</code> function.)</p>
+<h3 id="example">Example</h3>
+<pre><code class="language-lisp">
+(defnode (MatMulNode (myself dtype &amp;key transpose-a transpose-b)
+      :where (A[~ i j] B[~ j k] C[~ i k] -&gt; C[~ i k])
+      :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
+          (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+          :documentation &quot;gemm&quot;
+      :backward ((self dout da db do)
+             (declare (ignore do))
+             (values
+              (!matmul dout (!t db))
+              (!matmul (!t da) dout)
+              nil))))
+
+(MatmulNode :float)
+;; &lt;Node: MATMULNODE-CPUTENSOR (A[~ I J] B[~ J K] C[~ I K] -&gt; C[~ I K])&gt;
+</code></pre>
+<h2 id="macro-define-impl">[macro] define-impl</h2>
 <pre><code class="language-lisp">(define-impl ((abstract-name
             &amp;key
               (device t)
+                          (cache-when-compiled t)
               (reject-p nil))
                &amp;key
              save-for-backward
              forward
              backward)
 </code></pre>
-<p>Defines a implementation of AbstractNode of <code>device</code>.</p>
+<p>Gives an implementation to <code>AbstractNode</code>.</p>
 <h3 id="inputs_1">Inputs</h3>
 <ol>
 <li>
@@ -558,6 +662,9 @@ AddNode (defnode) &lt;- Backward=nil
 </li>
 <li>
 <p><code>save-for-backward</code> The corresponding variable which is t will be made a copy when forward. (e.g.: <code>forward=(x y)</code> and <code>save-for-backward=(t nil)</code>, x is copied, y isn't copied.)</p>
+</li>
+<li>
+<p><code>cache-when-compiled[boolean]</code> If t, <code>call-with-view</code> function used in <code>:forward</code> will be cached when compiling. Set nil to disable this behaviour.</p>
 </li>
 <li>
 <p><code>forward</code> Place the expanded lisp-code for forward propagation.</p>
@@ -582,21 +689,36 @@ AddNode (defnode) &lt;- Backward=nil
 <pre><code class="language-lisp">((self &amp;rest arguments)
  body)
 </code></pre>
-<h2 id="forward">forward</h2>
+<h2 id="generic-forward">[generic] forward</h2>
 <p><code>(forward node &amp;rest inputs)</code>
-Step forward of the given <code>node</code>, node is a subclass of <code>AbstractNode</code>.</p>
-<p>Note that <code>forward</code> can't handle with <code>Composite</code>.</p>
-<h2 id="defmodel">defmodel</h2>
+Reading an state of <code>*using-devies*</code> and the given nodes, the method <code>forward</code> returns a new tensor with applied the forward definition of a given <code>node</code> with inputs lazily.</p>
+<p>The moment <code>forward</code> is called, the computation node is constructed for building forward/backward kernel. Since then, <code>forward</code> is <code>AbstractNode</code> dedicated operation, not applied into calling <code>Composite</code>.</p>
+<h3 id="example_1">Example</h3>
+<pre><code class="language-lisp">(forward (AddNode :float) (randn `(3 3)) (randn `(3 3)))
+
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP31939 
+  :vec-state [maybe-not-computed]
+  ((0.109944925 0.42675912  1.9701254)
+   (1.5735719   0.7928889   1.1698933)
+   (0.08926714  0.0937486   -1.1063566))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
+</code></pre>
+<h2 id="class-defmodel">[class] defmodel</h2>
 <pre><code>(defmodel ((name
          (self-name &amp;rest constructor-arguments)
               &amp;key
                (slots nil)
                (initargs)
+                       (where nil)
                (on-call-&gt; nil)
                (documentation &quot;&quot;))
             &amp;body constructor-body)
 </code></pre>
-<p>defmodel is a macro used to describe the model of neural network with <code>Composite</code> class.</p>
+<p><code>defmodel</code> defines a new <code>Composite</code> class which describes network structures with using lazy-evaluated tensor. Viewing the set of <code>AbstractNode</code> as a single cohesive entity, you can formulate the forward propagation in <code>on-call-&gt;</code> keyword.</p>
+<p><code>Composite</code> is used as a <code>neural network model</code> if used as a merely data structure, but combined with <code>define-composite-function</code>, <code>Composite</code> can also define a single statically-operation function from a set of nodes.</p>
+<p>A new <code>Composite</code> class is initialized with <code>(name &amp;rest inputs)</code> function, being called with a <code>call</code> method.</p>
 <h3 id="effects_1">Effects</h3>
 <ol>
 <li>
@@ -608,30 +730,30 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 </ol>
 <h3 id="inputs_2">Inputs</h3>
 <ol>
-<li>name[Symbol]  All models, and constructors for the model, are named after it.</li>
 <li>
-<p>(self-name &amp;rest constructor-arguments)
-    The constructor function is defined as:
-    (defun ,name (self-name ,@constructor-arguments)
-       ...)</p>
+<p><code>name[Symbol]</code> the macro defines an class and constructor function named after it.</p>
 </li>
 <li>
-<p>slots ((slot-option1) (slot-option2) ...)
-    Parameters of the inherited Composite class. It has the same syntax as defclass slots</p>
+<p><code>(self-name &amp;rest constructor-arguments)</code> An initializer form of <code>constructor function</code>.</p>
 </li>
 <li>
-<p>initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...
-    Unlike CL's structure, classes are tend to rebundant when writing the process of initializing slots. To make this simple, this argument was introduced. It works like a structure's constructor!</p>
+<p><code>slots ((slot-option1) (slot-option2) ...)</code> Parameters of the inherited Composite class. It has the same syntax as defclass slots</p>
 </li>
 <li>
-<p>documentation[String]</p>
+<p><code>initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...</code> Unlike structures, CLOS classes are somewhat more cumbersome to initialise. To make this simple, this argument was introduced. Describe here initializer form in advance.</p>
 </li>
 <li>
-<p><code>on-call-&gt;</code> [One of: nil symbol-name function list]
-     on-call-&gt; is used to control the behaviour of <em>call</em> function.</p>
+<p><code>documentation[String]</code></p>
+</li>
+<li>
+<p><code>on-call-&gt; [One of: nil symbol-name function list]</code>
+     on-call-&gt; is used to control the behaviour of <strong>call</strong> function.</p>
+</li>
+<li>
+<p><code>where[Subscript DSL] (Optional)</code> Describe the state of the Tensor before and after <code>on-call-&gt;</code></p>
 </li>
 </ol>
-<h3 id="example">Example</h3>
+<h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(defmodel (ExampleLayer (self features)
                ;; Options/Utils Here,
                :slots    ((param :initarg :param))
@@ -649,58 +771,135 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 (let ((layer (ExampleLayer 10)))
     (call layer ...))
 </code></pre>
-<h3 id="describe-forward-propagation">Describe Forward Propagation</h3>
-<p>The option <code>on-call-&gt;</code> can control the behaviour of <em>call</em> function.</p>
-<p><code>on-call-&gt;</code> could be one of these case:</p>
-<p>First case,  <code>on-call-&gt;</code> is nil:</p>
-<p>cl-waffe2 calls the <strong>call</strong> function when doing forward propagation of the model.</p>
-<p>Second case, <code>on-call-&gt;</code> is symbol-name:</p>
-<p>cl-waffe2 calls the specified function at on-call-&gt; parameter, when doing forward propagation of the model.</p>
-<p>symbol-name could be also one of: method's name function's name.</p>
-<p>For example, set <code>:on-call-&gt; = call-example-layer</code> which defined as:</p>
-<pre><code class="language-lisp">   (defmethod call-example-layer ((model ExampleLayer) x y)
-       (print &quot;call-example-layer is used!&quot;)
-       ...)
+<pre><code class="language-lisp">(defmodel (Softmax-Model (self)
+       :where (X[~] -&gt; [~])
+       :on-call-&gt; ((self x)
+               (declare (ignore self))
+               (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                          (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                           (!div (!exp x1) z)))))
+
+;; Using Lazily...
+(proceed (call (Softmax-Model) (randn `(10 10)))
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP33497 
+  :vec-state [computed]
+  ((0.04800622   0.118814774  0.050377533  ~ 0.053051848  0.050124187  0.25575548)                    
+   (0.15909052   0.11368358   0.12642372   ~ 0.114795394  0.033397682  0.07605342)   
+                 ...
+   (0.035624444  0.24828684   0.109363265  ~ 0.020787988  0.027314318  0.04515641)
+   (0.030307569  0.24117047   0.03900468   ~ 0.014522874  0.036584295  0.0971196))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+
+
+;; Defines a statically working function.
+(define-composite-function (Softmax-Model) !softmax-static)
+
+(!softmax-static (randn `(10 10)))
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP33788 
+  ((0.16722792   0.018530384  0.014159603  ~ 0.035353966  0.06128503   0.13559735)                    
+   (0.14498742   0.11881006   0.0692616    ~ 0.03911829   0.10358454   0.02131605)   
+                 ...
+   (0.055657785  0.44042623   0.030706322  ~ 0.11048273   0.0097645    0.11959953)
+   (0.059088983  0.11067564   0.120767005  ~ 0.15042976   0.06570089   0.20548664))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
 </code></pre>
-<pre><code class="language-lisp">   (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
+<h3 id="how-to-use-on-call-form">How to use on-call-&gt; form?</h3>
+<p>In the keyword <code>on-call-&gt;</code>, describe the behaviour when called with a <code>call</code> function following this forms:</p>
+<h3 id="on-call-nil"><code>on-call-&gt;</code> = nil</h3>
+<p>In that case, cl-waffe2 calls the <code>call</code> method when doing forward propagation of the model.</p>
+<h3 id="on-call-is-a-symbol-name"><code>on-call-&gt;</code> is a symbol-name</h3>
+<p>cl-waffe2 calls the function named <code>symbol-name</code>.</p>
+<p>For example, setting <code>:on-call-&gt; = call-example-layer</code> and defining a <code>call-example-layer</code> method.</p>
+<pre><code class="language-lisp">(defmethod call-example-layer ((model ExampleLayer) x y)
+    (print &quot;call-example-layer is used!&quot;))
 </code></pre>
-<p>(Complicated model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)</p>
-<p>[Third case] <code>on-call-&gt;</code> is function (i.e.: lambda):</p>
+<pre><code class="language-lisp">(call (ExampleLayer 10) tensor) ;; call-example-layer is used!
+</code></pre>
+<h3 id="on-call-is-a-function-name-or-a-lambda">on-call-&gt; is a function name or a lambda.</h3>
 <p>cl-waffe2 calls the given lambda function as a forward propagation.</p>
-<p>[Fourth case] <code>on-call-&gt;</code> is a list:</p>
-<p>The List, should be this format.</p>
-<p><code>((arguments) body)</code></p>
+<h3 id="on-call-is-a-list"><code>on-call-&gt;</code> is a list</h3>
+<pre><code class="language-lisp">(Example)
+:on-call-&gt; ((self x) (!sin x))
+</code></pre>
 <p>This argument is expanded into <code>#'(lambda ,@on-call-&gt;)</code> and works as well as 3.</p>
 <h2 id="call">call</h2>
-<p>All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.</p>
-<p>The generic function call is also used to step forward of AbstractNode, that is, works as if forward.</p>
-<p><code>[generic-function]</code> (call model &amp;rest inputs)</p>
+<pre><code class="language-lisp">(call model &amp;rest inputs)
+</code></pre>
+<p><code>call</code> is a generic function which is used to <code>:forward</code>/<code>:on-call-&gt;</code> forms for an <code>AbstractNode</code>/<code>Composite</code> class respectively.</p>
 <h2 id="with-devices">with-devices</h2>
-<p>The macro with-devices declares the node's priority for the function <em>forward</em> to be used.</p>
-<p>Input:
-   - backend-priority
-     An list of device's name (e.g.: CPUTensor, LispTensor...)
-     Devices on the left have higher priority.</p>
-<p>Example:</p>
-<p>Let ATensor and BTensor be compatible (i.e.: pointers are the same type), and subclass of AbstractNode, and all the operations they have are as follows:</p>
+<p>The macro <code>with-devices</code> declares the priority of dispatching nodes.</p>
+<h3 id="input">Input</h3>
+<ol>
+<li><code>backend-priority</code> An list of device's name (e.g.: CPUTensor, LispTensor...) Devices on the left have higher priority.</li>
+</ol>
+<h3 id="example_3">Example</h3>
+<p>Let <code>ATensor</code> and <code>BTensor</code> be a pointer compatible, and subclass of <code>AbstractTensor</code>, and operations defined is following:</p>
 <ol>
 <li>ATensor has !add.</li>
 <li>BTensor has !mul.</li>
 </ol>
-<p>This code works:</p>
-<p>(setq a (make-tensor `(10 10))) ;; The tensor a is ATensor.</p>
-<p>;; (Priority1=ATensor Priority2=BTensor)
+<pre><code class="language-lisp">(setq a (make-tensor `(10 10))) ;; The tensor a is ATensor.
+
+;; (Priority1=ATensor Priority2=BTensor)
 (with-devices (ATensor BTensor)
-   (!add a (!mul a a)))</p>
-<p>ATensor doesn't have any implementation of !mul, but it does work. This is because cl-waffe2's compatible backend system.</p>
+   (!add a (!mul a a)))
+</code></pre>
 <p>cl-waffe2's backend dispatching rule is following:</p>
 <p>If the priority 1 backend does not have an implementation of the specified operation, check if the priority 2 backend does, if it still does not have it, 3, 4... and so on.</p>
 <p>The order of priority would be `(,@backend-priority ScalarTensor t). (t is a special name, and it implys the implement works for all the backends.)</p>
-<h3 id="example_1">Example</h3>
 <pre><code class="language-lisp">(with-devices (LispTensor CPUTensor)
    (!add a b))
 </code></pre>
-<h2 id="composite">Composite</h2>
+<h2 id="macro-define-and-impl-node">[macro] define-and-impl-node</h2>
+<pre><code class="language-lisp">(define-and-impl-node (abstract-name
+                 (self &amp;rest constructor-arguments)
+                 &amp;key
+                   (device t)
+                   (cache-when-compiled t)
+                   (reject-p nil)
+                   (where t)
+                   (out-scalar-p nil)
+                   (slots nil)
+                   (save-for-backward nil)
+                   (forward nil)
+                   (backward nil)
+                   (documentation &quot;&quot;)))
+</code></pre>
+<p>Expands <code>defnode</code> and <code>define-impl</code> at the same time.</p>
+<h2 id="macro-define-composite-function">[macro] define-composite-function</h2>
+<pre><code class="language-lisp">(define-composite-function composite-init-form
+                     function-name
+                     &amp;key
+                       (dtype t)
+                   (order :column)
+                       (compile-mode :default))
+</code></pre>
+<p>Tracing the <code>on-call-&gt;</code> form of a given composite-init-form, the macro <code>define-composite-function</code> defines a function of calling <code>on-call-&gt;</code> statically.</p>
+<p>On the condition where composite should be defined as polymorphic, the function is also defined as generic definition/dispatching, otherwise, defines as a single defun form.</p>
+<h3 id="inputs_3">Inputs</h3>
+<ol>
+<li>
+<p><code>composite-init-form</code> Set here an initform of <code>Composite</code>, to be traced.</p>
+</li>
+<li>
+<p><code>function-name</code> the compiled function is defined as this name.</p>
+</li>
+<li>
+<p><code>:dtype[boolean or keyword]</code> Set t to make compiled function work on any dtypes, or set <code>keyword</code> to use.</p>
+</li>
+<li>
+<p><code>order[keyword]</code> Element major.</p>
+</li>
+<li>
+<p><code>compile-mode[compile-mode-t]</code> compiling option.</p>
+</li>
+</ol>
+<h2 id="class-composite">[class] Composite</h2>
 <p>[class] Composite</p>
 <p>Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.</p>
 <p>In cl-waffe2, All models should be a subtype of this class, and shall return a forward propagation computation node using the <strong>call</strong> function.</p>
@@ -719,7 +918,7 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 <p><code>(call (make-instance 'LinearModel in-features out-features) args1 ...)</code></p>
 <h3 id="using-defmodel-macro">Using defmodel macro</h3>
 <p>The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &amp;rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.</p>
-<h2 id="abstractnode">AbstractNode</h2>
+<h2 id="class-abstractnode">[class] AbstractNode</h2>
 <p>[class] AbstractNode</p>
 <p>The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.</p>
 <p>AbstractNode must possess following:</p>
@@ -735,9 +934,9 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 </li>
 </ol>
 <h2 id="with-instant-kernel">with-instant-kernel</h2>
-<p>Creates an instant-kernel following tensor.</p>
-<p>This macro is used to embed condition-free Lisp code either in the process of creating a node or after it has been compiled.</p>
-<p>Use case:</p>
+<pre><code class="language-lisp">(with-instant-kernel tensor &amp;body body)
+</code></pre>
+<p>Continues the computation node following tensor with embedding an <code>instant-kernel</code>. <code>Instant</code> is Lisp code that can be embedded in compiled functions.</p>
 <h3 id="embedding-lisp-code-for-building-time">Embedding Lisp Code for building-time.</h3>
 <pre><code class="language-lisp">(setq a (randn `(10 10)))
 (with-instant-kernel a
@@ -750,13 +949,13 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
 
 (funcall (build *)) ;; -&gt; (print a) will be evaluated.
 </code></pre>
-<p>Note that (equal (with-instant-kernel a) a) is NIL, that is, the returned value of this macro must be followed by a calculation node.</p>
-<p>If the return value of Body can be expanded as a macro, the values are compiled together at JIT compile time. Otherwise, the given tensor is returned as is.</p>
+<p>Note that <code>(equal (with-instant-kernel a) a)</code> is <code>NIL</code>, that is, the returned value of this macro must be followed by a calculation node.</p>
+<p>If the return value of <code>body</code> can be expanded as a macro, the values are compiled together at JIT compile time. Otherwise, the given tensor is returned as is.</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../Tips/" class="btn btn-neutral float-left" title="Tips"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../utils/" class="btn btn-neutral float-left" title="cl-waffe2"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../generic-tensor/" class="btn btn-neutral float-right" title="cl-waffe2/vm.generic-tensor">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -780,7 +979,7 @@ Step forward of the given <code>node</code>, node is a subclass of <code>Abstrac
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href="../Tips/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../utils/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../generic-tensor/" style="color: #fcfcfc">Next &raquo;</a></span>

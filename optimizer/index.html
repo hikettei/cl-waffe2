@@ -5,15 +5,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Install - cl-waffe2 Documentation</title>
+    <title>cl-waffe2/optimizers - cl-waffe2 Documentation</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Install";
-        var mkdocs_page_input_path = "install.md";
+        var mkdocs_page_name = "cl-waffe2/optimizers";
+        var mkdocs_page_input_path = "optimizer.md";
         var mkdocs_page_url = null;
       </script>
     
@@ -44,26 +44,8 @@
                 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
                 </li>
               </ul>
-              <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="./">Install</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#are-you-new-to-common-lisp">Are you new to Common Lisp?</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#1-installing-roswell">1. Installing Roswell</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#2-installing-sbcl">2. Installing SBCL</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#3-setting-up-ide-optional">3. Setting up IDE (Optional)</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#installing-cl-waffe2">Installing cl-waffe2</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#openblas-backend">OpenBLAS Backend</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#cuda-backend">CUDA Backend</a>
-    </li>
-    </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
                 </li>
               </ul>
               <ul>
@@ -102,8 +84,10 @@
                 <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
                 </li>
               </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/optimizers</a>
+    <ul class="current">
+    </ul>
                 </li>
               </ul>
       </div>
@@ -120,7 +104,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
-      <li>Install</li>
+      <li>cl-waffe2/optimizers</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -129,56 +113,12 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="setting-up-environments">Setting up Environments</h1>
-<h2 id="are-you-new-to-common-lisp">Are you new to Common Lisp?</h2>
-<p>I know... there are few people who are attempted to do ML/DL in Common Lisp! while other languages provide a strong baseline and good platforms. However, I still believe in the clear benefits of doing such tasks on Common Lisp.</p>
-<p>I've been working with Common Lisp for the past two years, but I realise the attraction that no other language can replace it. At first glance, indeed this language has a strange syntax, and some features of the language may seem too much. but believe me! One day you will learn to use it. In fact, I guess cl-waffe2 is portable to ANSI Common Lisp, but not portable to non-lisp languages.</p>
-<p>Anyway, the first step is to set up Common Lisp Environment.</p>
-<p>I don't know which is best, and this is just my recommendations.</p>
-<h3 id="1-installing-roswell">1. Installing Roswell</h3>
-<p>Roswell is environment manager of Common Lisp (and much more!)</p>
-<p><a href="https://github.com/roswell/roswell">https://github.com/roswell/roswell</a></p>
-<p>See the <code>Readme.md</code> and install Roswell</p>
-<h3 id="2-installing-sbcl">2. Installing SBCL</h3>
-<p>There are many implementations of Common Lisp, and SBCL is one of the processing system.</p>
-<p>As of this writing(2023/07/02), some features of cl-waffe2 are SBCL-dependent, so this one is recommended.</p>
-<p>With roswell:</p>
-<pre><code class="language-sh">$ ros install sbcl
-$ ros use &lt;Installed SBCL Version&gt;
-$ ros run # REPL is launched.
-</code></pre>
-<p>should work.</p>
-<h3 id="3-setting-up-ide-optional">3. Setting up IDE (Optional)</h3>
-<p>I guess It's a pity to write Common Lisp without REPL. There are a lot of options, but as far as I know, <code>Emacs with SLIME</code> or <code>Lem</code> is widely supported choice.</p>
-<h2 id="installing-cl-waffe2">Installing cl-waffe2</h2>
-<p>With roswell, the latest repository can be fetched which is also recognised by <code>quicklisp</code></p>
-<pre><code class="language-sh">$ ros install hikettei/cl-waffe2
-</code></pre>
-<p>Another option is to load <code>cl-waffe2.asd</code> configurations manually after cloning cl-waffe2 github repos.</p>
-<pre><code class="language-sh">$ git clone &lt;Repository&gt;
-$ cd ./cl-waffe2
-$ ros run # start repl
-$ (load &quot;cl-waffe2.asd&quot;)
-$ (ql:quickload :cl-waffe2)
-$ (in-pacakge :cl-waffe2-repl)
-</code></pre>
-<p>With quicklisp:</p>
-<p>(It's going to take a while...)</p>
-<h2 id="openblas-backend">OpenBLAS Backend</h2>
-<p>In your init file, (e.g.: <code>~/.roswell/init.lisp</code> or <code>~/.sbclrc</code>), add the code below for example. (change the path depending on your environment).</p>
-<pre><code class="language-lisp">;; In ~~/.sbclrc for example:
-(defparameter *cl-waffe-config*
-    `((:libblas \&quot;libblas.dylib for example\&quot;)))
-</code></pre>
-<p>One of cl-waffe2 backends <code>CPUTensor</code> loads the OpenBLAS shared library of the path written in the <code>cl-user::*cl-waffe-config*</code> parameter when cl-waffe2 loaded.</p>
-<h2 id="cuda-backend">CUDA Backend</h2>
-<p>(Currently not supported yet...)</p>
+                <h1 id="cl-waffe2optimizers">cl-waffe2/optimizers</h1>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../overview/" class="btn btn-neutral float-right" title="Tutorials">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../nn/" class="btn btn-neutral float-left" title="cl-waffe2/nn"><span class="icon icon-circle-arrow-left"></span> Previous</a>
     </div>
 
   <hr/>
@@ -201,10 +141,8 @@ $ (in-pacakge :cl-waffe2-repl)
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../nn/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
-    
-      <span><a href="../overview/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

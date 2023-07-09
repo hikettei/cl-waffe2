@@ -57,6 +57,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../utils/">cl-waffe2</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
                 </li>
               </ul>
@@ -558,6 +562,14 @@
                 <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
       </div>
     </div>
     </nav>
@@ -612,7 +624,7 @@ X\gets{X + Y}
 <p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
 <h3 id="backward">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx dy) (values (!move dx dout) (!move dy dout)))
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx dy)) (values dout dout))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-subnode">[node] SUBNODE</h2>
@@ -688,7 +700,7 @@ A\gets{1 / A}
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-scalaradd">[node] SCALARADD</h2>
-<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+<pre><code>(A[~] SCALAR[SCAL] -&gt; A[~] WHERE SCAL = 1)
 </code></pre>
 <h3 id="description_5">Description</h3>
 <p>ScalarAdd is a node which computes following operation element-wise.</p>
@@ -702,11 +714,11 @@ X\gets{X + scalar}
 <p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
 <h3 id="backward_5">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx dy)) (values (-&gt;scal (!mean dout)) dout))
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx dy)) (values dout (-&gt;scal (!mean dout))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-scalarsub">[node] SCALARSUB</h2>
-<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+<pre><code>(A[~] SCALAR[SCAL] -&gt; A[~] WHERE SCAL = 1)
 </code></pre>
 <h3 id="description_6">Description</h3>
 <p>ScalarSub is a node which computes following operation element-wise.</p>
@@ -721,11 +733,11 @@ X\gets{X - scalar}
 <h3 id="backward_6">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx dy))
- (values (-&gt;scal (!mul -1.0 (!mean dout))) dout))
+ (values dout (-&gt;scal (!mul -1.0 (!mean dout)))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-scalarmul">[node] SCALARMUL</h2>
-<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+<pre><code>(A[~] SCALAR[SCAL] -&gt; A[~] WHERE SCAL = 1)
 </code></pre>
 <h3 id="description_7">Description</h3>
 <p>ScalarMul is a node which computes following operation element-wise.</p>
@@ -739,11 +751,11 @@ X\gets{X * scalar}
 <p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
 <h3 id="backward_7">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx dy) (values (-&gt;scal (!mean (!mul dy dout))) (!mul dout dx)))
+<pre><code class="language-lisp">((self dout dx dy) (values (!mul dout dy) (-&gt;scal (!mean (!mul dx dout)))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-scalardiv">[node] SCALARDIV</h2>
-<pre><code>(A[SCAL] B[~] -&gt; B[~] WHERE SCAL = 1)
+<pre><code>(A[~] SCALAR[SCAL] -&gt; A[~] WHERE SCAL = 1)
 </code></pre>
 <h3 id="description_8">Description</h3>
 <p>ScalarDiv is a node which computes following operation element-wise.</p>
@@ -758,8 +770,8 @@ X\gets{X / scalar}
 <h3 id="backward_8">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout dx dy)
- (values (-&gt;scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))
-         (!div dout dx)))
+ (values (!div dout dy)
+         (-&gt;scal (!mean (!div (!mul dx (!mul -1 dout)) (!square dy))))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-movetensornode">[node] MOVETENSORNODE</h2>
@@ -788,18 +800,12 @@ A\gets{B}
 <p><code>dtype</code> dtype to use.</p>
 <h3 id="backward_9">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx dy)
+<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx))
  (let ((dy-out
         (if (and (eql (tensor-attribute dy) chain) (movetensor-ignore-me self))
             dout
-            (!copy dout))))
-   (values
-    (if (eql (tensor-attribute dx) chain)
-        (!move dx dout force t)
-        dout)
-    (if (eql (tensor-attribute dy) chain)
-        (!move dy dy-out force t)
-        dy-out))))
+            (!copy dout force t))))
+   (values nil dy-out)))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-absnode">[node] ABSNODE</h2>

@@ -57,6 +57,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../utils/">cl-waffe2</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
                 </li>
               </ul>
@@ -590,6 +594,14 @@
                 <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
       </div>
     </div>
     </nav>
@@ -953,6 +965,7 @@ Output: Tensor[AbstractTensor]</p>
 <p>This function will be useful especially when debugging on REPL.</p>
 <h3 id="inputs_19">Inputs</h3>
 <p>If <code>measure-time</code>=t, ProceedNode wraps with time macro when calling <strong>COMPILED</strong> forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes.</p>
+<p><code>compile-mode</code> is a keyword, type of <code>compile-mode-t</code>.</p>
 <h2 id="function-proceed-time">[function] proceed-time</h2>
 <pre><code>(proceed-time tensor)
 </code></pre>

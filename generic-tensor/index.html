@@ -57,6 +57,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../utils/">cl-waffe2</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
                 </li>
               </ul>
@@ -192,6 +196,14 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
                 </li>
               </ul>
       </div>
@@ -469,7 +481,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP37143 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP39821 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -482,10 +494,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/private/var/tmp/slimetgnSEO.fasl&quot;) {53A1450B}&gt;
+                           &quot;/private/var/tmp/slimeDvMNag.fasl&quot;) {53B83D2B}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/private/var/tmp/slimetgnSEO.fasl&quot;) {53A1510B}&gt;
+                           &quot;/private/var/tmp/slimeDvMNag.fasl&quot;) {53B84C8B}&gt;
 
 += [Tensors in the computation node] =======+
 
@@ -502,7 +514,8 @@ Variables:
  - The number of tmp variables : 4
  - The number of parameters    : 0
 +========================================+
-&gt;)
+&gt;
+ NIL)
 </code></pre>
 <h2 id="method-set-input">[method] set-input</h2>
 <pre><code>(set-input (model Compiled-Composite) input-name actual-value)
@@ -530,7 +543,7 @@ Variables:
 <h2 id="function-call-with-view">[function] call-with-view</h2>
 <pre><code class="language-lisp">(call-with-view function tensors &amp;key (at-least-dim 1))
 </code></pre>
-<p>The function <code>call-with-view</code> is a utility to expand view-considered <code>loop</code> iteration in the <code>:forward</code> expansion of <code>define-impl</code>.</p>
+<p><code>call-with-view</code> is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.</p>
 <p>(TODO: Example/Documents)</p>
 <p><code>function</code> [lambda] an lambda function which receives <code>variable1.view variable2.view ...</code> as arguments, returning an list being compiled.</p>
 <p><code>tensors</code> [list of abstracttensor] tensors to be called with.

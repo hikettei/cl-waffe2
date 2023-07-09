@@ -99,7 +99,17 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#shaping-api-with-dsl">Shaping API with DSL</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#optional-broadcasting-and-view-apis">Optional Broadcasting, and View APIs</a>
+    <li class="toctree-l2"><a class="reference internal" href="#view-apis">View APIs</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#optional-broadcasting">Optional Broadcasting</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#case1-to-higher-batched-operation">Case1 - To higher, Batched Operation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#case2-to-lower-add-biases-to-columns">Case2 - To lower,  add biases to columns</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#multidimensional-offsets">Multidimensional Offsets.</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#optimizing-model-parameter">Optimizing Model Parameter</a>
     </li>
@@ -108,6 +118,10 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../utils/">cl-waffe2</a>
                 </li>
               </ul>
               <ul>
@@ -128,6 +142,14 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
                 </li>
               </ul>
       </div>
@@ -824,17 +846,71 @@ Evaluation took:
 </code></pre>
 <p>Not an operation is performed, nor a matrix is allocated at the moment <code>MLP-Sequence</code> is initialized, but done when compiling/invoking the computation node.</p>
 <h2 id="shaping-api-with-dsl">Shaping API with DSL</h2>
+<p>See also: <a href="../nodes/#introducing-subscript-dsl">Introducing Subscript DSL</a></p>
+<h2 id="view-apis">View APIs</h2>
 <p>(TODO)</p>
-<p>See also: vm.generic-tensor docs</p>
-<h2 id="optional-broadcasting-and-view-apis">Optional Broadcasting, and View APIs</h2>
+<h3 id="optional-broadcasting">Optional Broadcasting</h3>
+<p>In cl-waffe2, operations with several arguments must be called with the same shape of tensors as <code>:where</code> says. In the code below, since <code>!add</code> is declared as <code>A[~] B[~] -&gt; A[~]</code>, the first and second argument, must have the same shape, same ranks. However, opeartions isn't always performed within the same ranks. In practice, <code>!add</code> isn't always used as just an element-wise operation because the total elements of tensor can be found via <code>!add</code>, adding biases to the given tensor is also realised by using <code>!add</code>. Indeed, <code>broadcasting</code> is a convenient operation when expressing matrix iterations without using <code>(loop for ...)</code>.</p>
+<pre><code class="language-lisp">(!add (randn `(3 3)) (randn `(3)))
+; Evaluation aborted on #&lt;CL-WAFFE2/VM.GENERIC-TENSOR:SHAPING-ERROR {100376BD13}&gt;.
+</code></pre>
+<p>The same code would being broadcasted well and works on libraries which supports <code>Numpy Semantics Broadcasting</code>, but not working on cl-waffe2 as you can see.</p>
+<p>This is because cl-waffe2 do not support <code>automatically broadcasting</code> but support <code>manually broadcasting</code>. That is, each place broadcast is needed, you also have to declare the tensor is broadcasted, since the condition of <code>broadcastable</code> is less restrictive which sometimes produce an unintended behaviour with no any errors even though broadcasting is only used in a limited situation.</p>
+<p><code>Numpy Semantic Broadcasting</code> has two rules:</p>
+<ol>
+<li>
+<p>Rank up: If matrices with different number of axes are called in a one operation, <code>one</code> is added to the tensor with smallest ranks to straighten up the number of dimensions.</p>
+</li>
+<li>
+<p>Repeating 1: If the dimension at corresponding position do not match, and either one is <code>1</code>. <code>1</code> is repeated with the other.</p>
+</li>
+</ol>
+<p>There are two corresponding operations in cl-waffe2:</p>
+<pre><code>(Two main parts of broadcasting)
+   (&lt;1 x N&gt; 1 1)
+     ↑       ↑
+  !flexible !view
+</code></pre>
+<pre><code class="language-lisp">(!flexible (randn `(1 1)))
+
+{CPUTENSOR[float] :shape (&lt;1 x N&gt; 1 1) :named ChainTMP2614 
+  :vec-state [maybe-not-computed]
+  ((0.6495824))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: FLEXIBLE-RANK-NODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<pre><code class="language-lisp">(!view (randn `(1)) `(:broadcast 100))
+
+{CPUTENSOR[float] :shape (1) -&gt; :view (&lt;(BROADCAST 100)&gt;) -&gt; :visible-shape (100) :named ChainTMP4406 
+  :vec-state [maybe-not-computed]
+  (-0.5008113 -0.5008113 -0.5008113 ~ -0.5008113 -0.5008113 -0.5008113)
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -&gt; A[RESULT])&gt;}
+(0)
+
+</code></pre>
+<p>The function <code>(!flexible)</code> adds the <code>broadcastable dimensions</code> of the given tensor. In <code>&lt;1 x N&gt;</code> parts, 1 is repeated, 1 is added if any. In <code>1</code> parts, never broadcasted.</p>
+<pre><code class="language-lisp">(!view a `(:broadcast 10))
+</code></pre>
+<p>Mem:</p>
+<p>If both of given tensors is broadcasted, we may need to make a copy to store the result since there's no array of broadcasted size.</p>
+<p>This explicts: in which tensor, is broadcasting applied?, that is, there's more likely to useless copy is also removed. in-place broadcasting.</p>
+<h3 id="case1-to-higher-batched-operation">Case1 - To higher, Batched Operation</h3>
+<p>(!matmul (!flexible ...) (!flexible ...))</p>
+<h3 id="case2-to-lower-add-biases-to-columns">Case2 - To lower,  add biases to columns</h3>
+<p>(!add a (!view x ...))</p>
+<p>TODO: <code>(with-broadcasting (a1 b1 (a b)) ...)</code> macro.</p>
+<h3 id="multidimensional-offsets">Multidimensional Offsets.</h3>
 <p>(TODO)</p>
-<p>!flexible</p>
-<p>!view</p>
 <h2 id="optimizing-model-parameter">Optimizing Model Parameter</h2>
+<p>(TODO)</p>
 <p>defoptimizer</p>
 <p>deftrainer</p>
 <p>parameter</p>
 <p>Tutorials Over!</p>
+<p>(TO ADD: ./Examples, training MNIST, Image processing, NLP etc...)</p>
 <p>I'll keep my finger crossed.</p>
               
             </div>
