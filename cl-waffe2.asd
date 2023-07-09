@@ -86,6 +86,8 @@
 	       (:file "optimizers/package")
 	       (:file "optimizers/defoptimizer")
 
+	       (:file "optimizers/impls/sgd")
+
 	       (:file "package")
 	       (:file "utils")
 	       (:file "network")
