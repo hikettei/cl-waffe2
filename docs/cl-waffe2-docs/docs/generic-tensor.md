@@ -360,7 +360,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP37143 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP19233 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -376,10 +376,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimetgnSEO.fasl") {53A1450B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53A3AE5B}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimetgnSEO.fasl") {53A1510B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53B83D1B}>
 
 += [Tensors in the computation node] =======+
 
@@ -396,7 +396,8 @@ Variables:
  - The number of tmp variables : 4
  - The number of parameters    : 0
 +========================================+
->)
+>
+ NIL)
 ```
 
 ## [method] set-input
@@ -454,7 +455,7 @@ The function parameter computes all the previous nodes of the given tensor if an
 (call-with-view function tensors &key (at-least-dim 1))
 ```
 
-The function `call-with-view` is a utility to expand view-considered `loop` iteration in the `:forward` expansion of `define-impl`.
+`call-with-view` is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.
 
 (TODO: Example/Documents)
 

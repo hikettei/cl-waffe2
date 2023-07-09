@@ -864,8 +864,7 @@ This is because cl-waffe2 do not support `automatically broadcasting` but suppor
 
 2. Repeating 1: If the dimension at corresponding position do not match, and either one is `1`. `1` is repeated with the other.
 
-There are two principle operations in cl-waffe2 to do this:
-
+There are two corresponding operations in cl-waffe2:
 
 ```
 (Two main parts of broadcasting)
@@ -897,10 +896,14 @@ There are two principle operations in cl-waffe2 to do this:
 (0)
 
 ```
+
+(MEMO, TODO)
+
 (ここら辺は推敲の余地あり)
 
 話す要点：
 
+This avoid unexcepted broadcasting
 1. In-placeにBroadcastingするのを明示したい (上記のIn-place optimizingと合わさって, cl-waffe2ならnumpyだとoutパラメーター用意しないといけないところを自動でコピーとか用意できる)
 
 2. numpy 本来は、batch-size=2前提でコード書いている。waffe2のShapeはシンボルか`<1 x N>`でいいのでデータ構造に情報をあるだけ詰めている. バグを防ぐ
