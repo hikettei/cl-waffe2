@@ -411,9 +411,9 @@ Depending on `*using-backend*`, the implementation to use is determined at node-
 ```math
 g(dout, dx_{in}, dy_{in}, ..., dn_{in}) \triangleq \\
  Move(dx_{out}, {dout} \times {dx_{grad}}),\\
- Move(dx_{out}, {dout} \times {dy_{grad}}),\\
+ Move(dy_{out}, {dout} \times {dy_{grad}}),\\
  ...,\\
- Move(dx_{out}, {dout} \times {dn_{grad}})
+ Move(dn_{out}, {dout} \times {dn_{grad}})
 ```
 
 ```lisp
