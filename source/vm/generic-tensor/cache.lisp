@@ -111,7 +111,7 @@ TensorViewNameN depicts the path call-with-view traced.
 	      do (push (template dim) name-list))
       ;; call-with-view traces following
       ;; n-1 n-2 ... 2 1 0th dim.
-      (apply #'symb (reverse name-list) (list (intern (format nil "~a" (shape tensor))))))))
+      (apply #'symb (reverse name-list) (list (intern (format nil "~a" (actual-shape tensor))))))))
 
 (defun kernel-name (compiled-kernel)
   (symb
@@ -146,7 +146,6 @@ Reading *kernel-storeroom*, the function expands the form below.
   (let ((caches (make-hash-table)))
     (dolist (fn *kernel-storeroom*)
       (setf (gethash (kernel-name fn) caches) (cache-kernel-form fn)))
-
     `(labels (,@(loop for body being the hash-values in caches
 		      collect body))
        ,@body)))

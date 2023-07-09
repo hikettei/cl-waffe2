@@ -31,12 +31,4 @@
   
   (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
 	 (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
-    (!div (!exp x1) (with-instant-kernel z
-		      `(progn
-			 ;; cacheの作り方が悪いかも？
-			 (print ,z)
-			 (print (tensor-vec ,z))
-			 ;; #(31.786076 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0)
-			 ;; Called with MLP Sequence...
-			 ,z
-			 )))))
+    (!div (!exp x1) z)))
