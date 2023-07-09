@@ -140,7 +140,7 @@ Return: defun form
     `(progn
        (defparameter ,kernel-place ,polymorphic-table)
 
-       (defun ,function-name (,@namelist)
+       (defun ,function-name (,@namelist &key (return-lambda nil))
 	 (let* ((,~length-place ,(when adjustable-size
 				   `(map 'list #'(lambda (x y) (- (cl-waffe2/vm.generic-tensor:dims x) y)) (list ,@namelist) (list ,@input-det-n-list))))
 		(,target-function (dispatch-method
@@ -150,7 +150,9 @@ Return: defun form
 				   ,~length-place
 				   :compile-mode ,compile-mode
 				   :order ,order)))
-	   (funcall ,target-function ,@namelist))))))
+	   (if return-lambda
+	       ,target-function
+	       (funcall ,target-function ,@namelist)))))))
 
 (defun composite-function (composite
 			   function-name
@@ -203,10 +205,30 @@ Input:
 				       (order :column)
 				       (compile-mode :default))
   "
-## [macro] define-composite-function
+```lisp
+(define-composite-function composite-init-form
+		       	     function-name
+	       		     &key
+      			       (dtype t)
+			       (order :column)
+		       	       (compile-mode :default))
+```
 
 Tracing the `on-call->` form of a given composite-init-form, the macro `define-composite-function` defines a function of calling `on-call->` statically.
 
+On the condition where composite should be defined as polymorphic, the function is also defined as generic definition/dispatching, otherwise, defines as a single defun form.
+
+### Inputs
+
+1. `composite-init-form` Set here an initform of `Composite`, to be traced.
+
+2. `function-name` the compiled function is defined as this name.
+
+3. `:dtype[boolean or keyword]` Set t to make compiled function work on any dtypes, or set `keyword` to use.
+
+4. `order[keyword]` Element major.
+
+5. `compile-mode[compile-mode-t]` compiling option.
 "
   (declare (type (or t keyword) dtype)
 	   (type keyword order)
@@ -222,3 +244,4 @@ Tracing the `on-call->` form of a given composite-init-form, the macro `define-c
 			     :compile-mode ,compile-mode
 			     :dtype ,dtype
 			     :order ,order)))
+

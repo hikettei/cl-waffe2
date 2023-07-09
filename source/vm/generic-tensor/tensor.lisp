@@ -22,6 +22,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (declare (type keyword name))
   (or (eql name :column) (eql name :row)))
 
+;; orig-shape    ... An using size of storage vec.
+;; visible-shape ... The shape treated in network
+;; actual-shape  ... visible-shape ignored broarcasting
+
 (defclass AbstractTensor ()
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
 
@@ -65,6 +69,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
+   (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
   (:documentation "
 AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.
@@ -768,16 +773,45 @@ The function parameter computes all the previous nodes of the given tensor if an
 
 ;; FixME:
 ;; The Problem is that: after calling forward :around, set-save-for-backward is called.
-(defun set-save-for-backward (tensor)
+
+
+(defun set-save-for-backward (tensor &aux (transposed? (cl-waffe2/base-impl:transposed-p tensor)))
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
-  (let ((space-tmp (make-clone tensor)))
-    ;;(setf (save-for-backward-space tensor) tensor)
-    (let ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
+  (let ((space-tmp (make-clone (cl-waffe2/base-impl:read-untransposed tensor))))
+    ;; for save-for-backward
+    ;; (setf (save-for-backward-space tensor) space-tmp)
+    (let* ((result (cl-waffe2/base-impl:!move space-tmp (cl-waffe2/base-impl:read-untransposed tensor) :force t))
+	   (result (if transposed?
+		       (cl-waffe2/base-impl:!t result)
+		       result)))
       (setf (save-for-backward-space result) tensor)
       ;; result = space-tmp
       result)))
 
+
+#|
+(defun set-save-for-backward (tensor)
+  (let* ((space-tmp (make-clone tensor))
+	 (transposed? (cl-waffe2/base-impl:transposed-p tensor)))
+    
+    (let ((res (cl-waffe2/vm.nodes:forward
+		(cl-waffe2/base-impl:Save-For-Backward-Node)
+		(cl-waffe2/base-impl:read-untransposed tensor)
+		space-tmp)))
+      
+      ;; res = tensor
+      (let* ((out (cl-waffe2/base-impl::extend-states res tensor)) ;; update !flexible
+	     (out (if transposed?
+		      (cl-waffe2/base-impl:!t out)
+		      out)))
+	
+	(setf (save-for-backward-space out)
+	      (if transposed?
+		  (cl-waffe2/base-impl:!t space-tmp)
+		  space-tmp))
+out))))
+|#
+	
 (defun read-save-for-backward (tensor)
   (save-for-backward-space tensor))
-
 

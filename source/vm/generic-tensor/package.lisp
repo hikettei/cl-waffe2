@@ -7,9 +7,11 @@
   (:export
    ;;#:*cache-directory*
    #:with-memory-pool
+   #:make-clone
    #:print-current-memory-pool
    #:free-current-memory-pool
    #:make-compiled-kernel
+   #:compile-forward-kernel
    #:*memory-pool*)
   ;; Tensor classes
   (:export
@@ -26,6 +28,7 @@
    #:tensor-name
    #:dtype
    #:tensor-attribute
+   #:tensor-protect-me
    #:requires-grad
    #:ancestor-param-p
    #:actual-shape
@@ -34,6 +37,7 @@
    #:grad
    #:order
    #:scalar-p
+   #:detach-p
    #:tensor-projected-p
    #:tensor-flexible-p
    #:view

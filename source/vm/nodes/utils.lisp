@@ -29,11 +29,12 @@
         tree)))
 
 (defmacro with-instant-kernel (tensor &body body)
-  "Creates an instant-kernel following tensor.
+  "
+```lisp
+(with-instant-kernel tensor &body body)
+```
 
-This macro is used to embed condition-free Lisp code either in the process of creating a node or after it has been compiled.
-
-Use case:
+Continues the computation node following tensor with embedding an `instant-kernel`. `Instant` is Lisp code that can be embedded in compiled functions.
 
 ### Embedding Lisp Code for building-time.
 
@@ -53,10 +54,9 @@ Use case:
 (funcall (build *)) ;; -> (print a) will be evaluated.
 ```
 
-Note that (equal (with-instant-kernel a) a) is NIL, that is, the returned value of this macro must be followed by a calculation node.
+Note that `(equal (with-instant-kernel a) a)` is `NIL`, that is, the returned value of this macro must be followed by a calculation node.
 
-If the return value of Body can be expanded as a macro, the values are compiled together at JIT compile time. Otherwise, the given tensor is returned as is.
-
+If the return value of `body` can be expanded as a macro, the values are compiled together at JIT compile time. Otherwise, the given tensor is returned as is.
 "
   (let ((kernel-name (gensym "InstantKernel")))
     `(flet ((,kernel-name ()

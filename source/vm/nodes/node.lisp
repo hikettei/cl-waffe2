@@ -241,8 +241,11 @@ Here's a list of reports.
 			       ;; Extend Views, Strides, Orig-Shapes, etc..
 
 			       (when extend-from
+				 ;; FixME: A[i j] -> A[j i] is invaild beucase before and after the operation, indicates the same pointer but shapes arenot the same.
 				 ;; Detect Errors
 				 (let ((input (nth extend-from inputs)))
+				   ;; Extend View Forms
+				   ;; (!add a b) -> <<It is Unknown the returned tensor is broadcasted>>
 				   (setf (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 					 (slot-value input       'cl-waffe2/vm.generic-tensor::orig-shape)
 					 
@@ -341,19 +344,34 @@ Use the define-impl macro to give definitions for the node and forward them.
 ;; 2. ChainTMP otherwise
 ;;
 
-(defun adjust-bw-place (bw-node place)
+(defun select-return-place (place argn nth-trying)
+  (if (or ;;(tensor-projected-p place)
+	  (not (= argn nth-trying)))
+      (make-input (shape place) nil
+		  :dtype (dtype place)
+		  :order (order place)
+		  :scalar-p (scalar-p place))
+      place))
+
+(defun adjust-bw-place (bw-node place argn nth-trying)
   "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
   
   (when bw-node
     (if (movetensor-p (tensor-backward bw-node))
 	bw-node
 	(with-shape-checkpoint (:moving nil)
-	  (let ((out (cl-waffe2/base-impl:!move place bw-node :force t)))
+	  (let ((out (cl-waffe2/base-impl:!move
+		      (select-return-place place argn nth-trying)
+		      bw-node
+		      :force t)))
+	    ;; F(x, y, ...)
+	    ;; x.state = :chain / :input?
+
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
-		out ;; In-place
+		out ;; ni modosu bw-node demo ugoku beki.
 		bw-node)))))) ;; Make-copy
 
-(defun expand-backward (node dout &rest inputs-in)
+(defun expand-backward (node dout &rest inputs-out)
   "
 ## [function] expand-backward
 
@@ -384,26 +402,32 @@ inputs      ... inputs called with
   
   ;; Collecting x_in
   (detach dout t)
-  (let* ((inputs (loop for input in inputs-in
-		       collect (detach (or (read-save-for-backward input) input) t)))
+  (let* ((inputs-in (loop for input in inputs-out
+			  collect (detach (or (read-save-for-backward input) input) t)))
 	 ;; Tracing User-Defined-Backward, still not yet compiled.
-	 (out-kernels (apply #'backward node dout inputs))
-	 (dout-place (gensym "dout"))
+	 (out-kernels (apply #'backward node dout inputs-in))
+	 (dout-place  (gensym "dout"))
 	 ;; out-kernels = (list x.g y.g)
-	 (out-kernels (map 'list #'adjust-bw-place out-kernels inputs-in)))
+	 (out-kernels (loop with argn fixnum = (length inputs-in)
+			    for x in out-kernels
+			    for y in inputs-out
+			    for i upfrom 0
+			    collect (adjust-bw-place x y argn i))))
 
-    (prog1
-	(loop for kernel in out-kernels
-	      collect
-	      (when kernel
-		`(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
-		   (cl-waffe2/vm.generic-tensor:embody-actual-tensor
-		    ,dout
-		    ,dout-place)
-		   ,(with-no-grad
-		      (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))
-      (detach dout t)
-      (map 'list #'(lambda (x) (detach x t)) inputs))))
+    (loop for kernel in out-kernels
+	  collect
+	  (when kernel
+	    (let ((out (cl-waffe2/vm.generic-tensor:make-clone kernel)))
+	      (cons
+	       out
+	       `(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
+		  
+		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
+		   ,dout
+		   ,dout-place)
+
+		  ,(with-no-grad
+		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
 
 ;; the method backward constructs backward function
 ;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp

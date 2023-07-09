@@ -87,7 +87,8 @@ If you're going to start with defining a new package, It is recommended to `:use
 
 Read the description above and select and describe the packages you think you need. (or you can just copy and paste it.)
 
-This is an example case of `:your-project-name` package.
+The lisp code below demonstrates an example case of `:your-project-name` package.
+
 ```lisp
 
 (in-package :cl-user)
@@ -127,7 +128,7 @@ The tutorials below should be also working on REPL, (indeed, cl-waffe2 is REPL-f
 
 Since `Do not run until the node is optimized` is a one of cl-waffe2 policy, all operations in cl-waffe2 is lazy evaluation unless defined by a special macro.
 
-Therefore, calling `!add` function which finds a sum of given arguments, the retuend tensor isn't still computed, but `:vec-state` = `[maybe-not-computed]`
+Therefore, calling `!add` function which finds a sum of given arguments, the retuend tensor isn't still computed, only setting `:vec-state` = `[maybe-not-computed]`.
 
 ```lisp
 (!add 3.0 2.0)
@@ -147,7 +148,7 @@ Therefore, calling `!add` function which finds a sum of given arguments, the ret
 
 You can continue the operation by connecting the returned tensor and next operation.
 
-For example, the figure below in cl-waffe is representece as:
+For example, the figure below in cl-waffe is represented as:
 
 ```math
 out = 3 + 2 * 4
@@ -190,7 +191,7 @@ The moment compiling function is called, cl-waffe2 prunes all unused copying, co
 `Julia` has introduced [AbstractArray](https://docs.julialang.org/en/v1/base/arrays/) in their libraries, separating the common (generic) parts of the array from each backend implementation. Since `AbstractTensor` increased portability between devices on which they run (even on CPU!), cl-waffe2 wholly introduced this feature.
 
 
-In cl-waffe2, The generic definition of operations, `AbstractNode` is a class declared via the `defnode` macro, and depending on the devices we use, the `define-impl` macro defines an implementation.
+In cl-waffe2, The generic definition of operations, `AbstractNode` is a class declared via the `defnode` macro, and depending on the devices we're working on, the `define-impl` macro defines an implementation.
 
 Conveniently, there can be more than one implementation for a single device. (e.g.: it is possible to have a normal implementation and an approximate implementation for the exp function on single CPU).
 
@@ -323,7 +324,7 @@ The macro `define-impl` adds a new implementation of `device`.
 			   ,x))))
 ```
 
-In `:forward` write the expansion expression for the operation in the same way as when defining a macro with `defmacro`. The `call-with-view` function is a general-purpose function to iterate the given tensor with computing offsets.
+In `:forward`, write the expansion expression for the operation in the same way as when defining a macro with `defmacro`. The `call-with-view` function is a general-purpose function to iterate the given tensor with computing offsets.
 
 (P.S.: I believe that ideas on this macro needed to be given more thoughts, indeed, this is ugly... but I guess `composite-function` can be install without writing macros, not tested.)
 
@@ -345,7 +346,7 @@ The forward definition of node can be called with `(forward node &rest inputs)` 
 
 Closely Looking at :vec-state, it says the operation isn't done yet. The embodied elements are displayed but this is because `AddNode` is defined as in-place operation, returning the first argument.
 
-To accept this, we can use `proceed`.
+To accept this state instantly, we can use `proceed`.
 
 ```lisp
 (proceed (forward (AddNode :float) (randn `(10 10)) (randn `(10 10))) :measure-time t)
@@ -504,7 +505,6 @@ However, this is how `!add` is defined internally. This makes a copy twice times
 
 Without copying, the content of `a` is overwritten:
 
-
 ```lisp
 (let ((a (make-tensor `(3 3) :initial-element 1.0)))
       (print a)
@@ -527,7 +527,7 @@ Without copying, the content of `a` is overwritten:
       ;;   :backward NIL} )
 ```
 
-However, it is natural to think this copy is just a waste of memory. In this case, disabling `!copy` is a rational way to optimize the performance of the program. (i.e.: In-place).
+To put it bluntly, it is natural to think this copy is just a waste of memory. However, In this case, disabling `!copy` is a rational way to optimize the performance of the program. (i.e.: replace with in-place operation).
 
 Owing to lazy evaluation of cl-waffe2, unnecessary `(!copy)` operation can be deleted automatically by checking the number of tensor references in a node.
 
@@ -583,15 +583,15 @@ Formulating the same network in cl-waffe2:
     (forward (F-Node) (!copy x)))
 ```
 
-Let's visualize how the operation is performed via `:cl-waffe2/viz`.
+Through `:cl-waffe2/viz` package, we can visualize how the operation is performed.
 
 ```lisp
-;; (make-input ... nil) creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
+;; (make-input ... nil): creates a caching tensor, being the elements of it isn't guaranteed to be 0.0.
 (let ((k (!add (make-input `(3 3) nil)
                (!f (!f (randn `(3 3) :requires-grad t))))))
         (cl-waffe2/viz:viz-computation-node k "assets/bad_node.dot")
 	    (build k) ;; optimized
-               (cl-waffe2/viz:viz-computation-node k "assets/opt_node.dot"))
+           (cl-waffe2/viz:viz-computation-node k "assets/opt_node.dot"))
 ```
 
 The result is written in `dot language`.
@@ -615,7 +615,7 @@ In this section, we learn the two key units, `Node` and `Composite`, to construc
 
 ### Node and Composite
 
-`Node(AbstractNode)` is the smallest unit of operation with forward and backward propagation. Its abstract definition is defined by a `defnode` macro, and It is implemented by a `(define-impl)` macro.
+`Node(AbstractNode)` is the smallest unit of operation with forward and backward propagation. Its abstract definition is defined by a `defnode` macro, and It is implemented by a `(define-impl)` macro. The defined node is invoked by `(forward node &rest inputs)` function, at the same time, computation nodes are constructed.
 
 ```lisp
 (defnode (SinNode-Revisit (self)
@@ -651,25 +651,66 @@ In this section, we learn the two key units, `Node` and `Composite`, to construc
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-On the other hand, `Composite` is a unit made up of several `Nodes`, defined by a `defmodel` macro. ノードに対するサブルーチンとも言える
-
+On the other hand, `Composite` is a unit made up of several `Nodes`, defined by a `defmodel` macro. `(call model &rest inputs)` method invokes the `on-call->` form lazily, being compiled in the same way as nodes. Moreover, the defined `Composite` also can define a function for immeditate function by using the macro, `define-composite-function`. The behaviour is similar to `TorchScript`, cl-waffe2 traces the computation node, calling `(build toplevel)` and defines a `Composite-function`.
 
 ```lisp
 (defmodel (Softmax-Model (self)
-	   :where (X[~] -> [~])
+	   :where (X[~] -> [~]) ;; :where for Composite is optional!
 	   :on-call-> ((self x)
 		       (declare (ignore self))
 		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
 	                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
                            (!div (!exp x1) z)))))
 
+;; won't be evaluated until proceed/build is called.
+(call (Softmax-Model) (randn `(10 10))
+
+(proceed *)
+
+			 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6184 
+  :vec-state [computed]
+  ((0.29810402  0.11953584  0.16032213  ~ 0.033787794 0.01729085  0.03808046)                   
+   (0.032921903 0.085420445 0.10371924  ~ 0.06863596  0.10435363  0.07114864)   
+                ...
+   (0.23044951  0.14320189  0.16871664  ~ 0.019123536 0.03614414  0.10644407)
+   (0.0377036   0.034945846 0.28327137  ~ 0.07359542  0.40399343  0.020138593))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+;; Works at toplevel
 (define-composite-function (Softmax-Model) !softmax-static)
+
+;; No overheads of compiling, but there's a little overhead to dispatch the method.
+(time (!softmax-static (randn `(10 10))))
+Evaluation took:
+  0.000 seconds of real time
+  0.000301 seconds of total run time (0.000253 user, 0.000048 system)
+  100.00% CPU
+  691,808 processor cycles
+  32,496 bytes consed
+  
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6195 
+  ((0.042827643  0.13156936   0.06729175   ~ 0.059296332  0.17645036   0.04613843)                    
+   (0.32095885   0.030778391  0.091331415  ~ 0.09311637   0.28322798   0.040707175)   
+                 ...
+   (0.045369238  0.045168925  0.12002338   ~ 0.2656273    0.01337298   0.41475114)
+   (0.020064427  0.01839381   0.013036524  ~ 0.20158055   0.3377756    0.061546378))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
 ```
 
+### Proceed vs Composite-function
+
+Compared to `Proceed`, `Composite-function` and codes which consisted of it have a small overhead in calling a function, but it becomes negligible as the matrix size increases.
 
 ```lisp
+;; Proceed
+;; 1 * 1 Matrix
 (let ((a (ax+b `(1 1) 0 1)))
-			(proceed-time (!sin a)))
+    (proceed-time (!sin a)))
 Proceed-Time: First Trying
 Evaluation took:
   0.000 seconds of real time
@@ -685,9 +726,12 @@ Evaluation took:
   100.00% CPU
   11,790 processor cycles
   0 bytes consed
-  
+
+;; Proceed
+;; 1000 * 1000 Matrix
+
 (let ((a (ax+b `(1000 1000) 0 1)))
-			(proceed-time (!sin a)))
+    (proceed-time (!sin a)))
 Proceed-Time: First Trying
 Evaluation took:
   0.019 seconds of real time
@@ -707,8 +751,10 @@ Evaluation took:
 
 
 ```lisp
+;; Composite-Function
+;; 1 * 1 Matrix
 (let ((a (ax+b `(1 1) 0 1)))
-			(time (!sin-inline a)))
+     (time (!sin-inline a)))
 Evaluation took:
   0.000 seconds of real time
   0.000103 seconds of total run time (0.000098 user, 0.000005 system)
@@ -716,9 +762,10 @@ Evaluation took:
   231,840 processor cycles
   0 bytes consed
   
-  
+;; Composite-Function
+;; 1000 * 1000 Matrix
 (let ((a (ax+b `(1000 1000) 0 1)))
-			(time (!sin-inline a)))
+     (time (!sin-inline a)))
 Evaluation took:
   0.015 seconds of real time
   0.015862 seconds of total run time (0.015813 user, 0.000049 system)
@@ -727,7 +774,13 @@ Evaluation took:
   0 bytes consed
 ```
 
+(Tips: the `call` method is designed to invoke `Composite`, but it is also applicatable into `AbstractNode`, that is, `call` is a general-purpose method to invoke nodes.)
+
 ### Sequence Model
+
+Since the shape of matrices is declared everywhere operation, cl-waffe2 can trace the structure of neural networks lazily, and being checked before the execution.
+
+In the code below, `defsequence` is a macro to define `Composite` sequentially, `(asnode function)` is a macro which coerce function into `Composite`.
 
 ```lisp
 (defsequence MLP-Sequence (in-features hidden-dim out-features
@@ -740,6 +793,8 @@ Evaluation took:
 	     (LinearLayer hidden-dim out-features)
 	     (asnode #'!softmax))
 ```
+
+ All composites/nodes that used to define `MLP-Sequence` has also a definition of shape.
 	     
 ```lisp
 (MLP-Sequence 784 512 256)
@@ -782,37 +837,98 @@ Evaluation took:
 )>)>
 ```
 
-Proceed
-
-Proceed-backward
-
-Proceed-time
-
-Composite-Function
-
-
-defnode
-
-defmodel
-
-call
-
-forward
-
-Composite
+Not an operation is performed, nor a matrix is allocated at the moment `MLP-Sequence` is initialized, but done when compiling/invoking the computation node.
 
 ## Shaping API with DSL
 
-See also: vm.generic-tensor docs
+See also: [Introducing Subscript DSL](../nodes/#introducing-subscript-dsl)
+
+## View APIs
+
+(TODO)
+
+### Optional Broadcasting
+
+In cl-waffe2, operations with several arguments must be called with the same shape of tensors as `:where` says. In the code below, since `!add` is declared as `A[~] B[~] -> A[~]`, the first and second argument, must have the same shape, same ranks. However, opeartions isn't always performed within the same ranks. In practice, `!add` isn't always used as just an element-wise operation because the total elements of tensor can be found via `!add`, adding biases to the given tensor is also realised by using `!add`. Indeed, `broadcasting` is a convenient operation when expressing matrix iterations without using `(loop for ...)`.
+
+```lisp
+(!add (randn `(3 3)) (randn `(3)))
+; Evaluation aborted on #<CL-WAFFE2/VM.GENERIC-TENSOR:SHAPING-ERROR {100376BD13}>.
+```
+
+The same code would being broadcasted well and works on libraries which supports `Numpy Semantics Broadcasting`, but not working on cl-waffe2 as you can see.
+
+This is because cl-waffe2 do not support `automatically broadcasting` but support `manually broadcasting`. That is, each place broadcast is needed, you also have to declare the tensor is broadcasted, since the condition of `broadcastable` is less restrictive which sometimes produce an unintended behaviour with no any errors even though broadcasting is only used in a limited situation.
+
+`Numpy Semantic Broadcasting` has two rules:
+
+1. Rank up: If matrices with different number of axes are called in a one operation, `one` is added to the tensor with smallest ranks to straighten up the number of dimensions.
+
+2. Repeating 1: If the dimension at corresponding position do not match, and either one is `1`. `1` is repeated with the other.
+
+There are two corresponding operations in cl-waffe2:
+
+```
+(Two main parts of broadcasting)
+   (<1 x N> 1 1)
+     ↑       ↑
+  !flexible !view
+```
+
+```lisp
+(!flexible (randn `(1 1)))
+
+{CPUTENSOR[float] :shape (<1 x N> 1 1) :named ChainTMP2614 
+  :vec-state [maybe-not-computed]
+  ((0.6495824))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+```
+
+```lisp
+(!view (randn `(1)) `(:broadcast 100))
+
+{CPUTENSOR[float] :shape (1) -> :view (<(BROADCAST 100)>) -> :visible-shape (100) :named ChainTMP4406 
+  :vec-state [maybe-not-computed]
+  (-0.5008113 -0.5008113 -0.5008113 ~ -0.5008113 -0.5008113 -0.5008113)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+(0)
+
+```
+
+The function `(!flexible)` adds the `broadcastable dimensions` of the given tensor. In `<1 x N>` parts, 1 is repeated, 1 is added if any. In `1` parts, never broadcasted.
 
 
-## Optional Broadcasting, and View APIs
+```lisp
+(!view a `(:broadcast 10))
+```
 
-!flexible
+Mem:
 
-!view
+If both of given tensors is broadcasted, we may need to make a copy to store the result since there's no array of broadcasted size.
+
+This explicts: in which tensor, is broadcasting applied?, that is, there's more likely to useless copy is also removed. in-place broadcasting.
+
+### Case1 - To higher, Batched Operation
+
+(!matmul (!flexible ...) (!flexible ...))
+
+### Case2 - To lower,  add biases to columns
+
+(!add a (!view x ...))
+
+TODO: `(with-broadcasting (a1 b1 (a b)) ...)` macro.
+
+### Multidimensional Offsets.
+
+(TODO)
 
 ## Optimizing Model Parameter
+
+(TODO)
 
 defoptimizer
 
@@ -821,6 +937,8 @@ deftrainer
 parameter
 
 Tutorials Over!
+
+(TO ADD: ./Examples, training MNIST, Image processing, NLP etc...)
 
 I'll keep my finger crossed.
 

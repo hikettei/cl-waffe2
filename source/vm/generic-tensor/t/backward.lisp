@@ -42,6 +42,7 @@
       (= (vref (grad a) 0) (float (/ (* 15 15)))))))
 ;; =======================================================================
 
+;; ???
 (defun chain-test6 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t))

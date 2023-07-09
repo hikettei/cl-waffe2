@@ -16,6 +16,7 @@
 ```
 
 Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built nodes are regarded as: no gradients are made for backwards.
+
 "
   `(let ((*no-grad* t))
      ,@body))
@@ -216,6 +217,16 @@ See also: `set-input`"
       (unless (find tensor *node-parameters-tmp* :test #'equal)
 	  (push tensor *node-parameters-tmp*)))))
 
+(defun declare-compiled-composite (model)
+  "Extends into *node-parameters-info*, about the given model's variable informations."
+  (declare (type Compiled-Composite model))
+  (let ((variables-info (compiled-variables model)))
+    (register-variables
+     (nodevariables-tmp-variables variables-info))
+    (register-variables
+     (nodevariables-parameters variables-info))
+    nil))
+
 ;; ==============================================================================
 ;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================
@@ -289,27 +300,26 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 		  ;; Here, we trace the definition of backward.
 		  (tensor-backward toplevel)
 		  past-dy
-		  (tensor-variables toplevel))))
-
-      ;; Rewrite
+		  (tensor-variables toplevel)))
+	   (next-dys   (map 'list #'car outs))
+	   (outs       (map 'list #'cdr outs)))
       
-      ;; Memo: All backward nodes, are ends with MoveTensorNode
-      
-      `(let (,@(loop for var in (tensor-variables toplevel)
-		     for kernel in outs
+      `(let (,@(loop for kernel in outs
+		     for out in next-dys
 		     if kernel
-		       collect `(,(tensor-id var) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
-	 (declare (ignorable ,@(loop for var in (tensor-variables toplevel)
-				     for kernel in outs
-				     if kernel collect (tensor-id var))))
+		       collect `(,(tensor-id out) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
+	 (declare (ignorable ,@(loop for o in next-dys if o collect (tensor-id o))))
 	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs
+		 for next-dy in next-dys
+		 
 		 if (slot-value var 'requires-grad)
-		   collect `(add-grads ,var ,(tensor-id var))
+		   collect `(add-grads ,var ,(tensor-id past-dy))
+		 
 		 if (and kernel
 			 (ancestor-param-p var))
-		   collect (compile-backward-chain var var))))))
+		   collect (compile-backward-chain var next-dy))))))
 
 ;; Toplevel
 ;; This is not for users.

@@ -32,7 +32,7 @@ X\gets{X + Y}
 ✅ Already defined. 
 
 ```lisp
-((self dout dx dy) (values (!move dx dout) (!move dy dout)))
+((self dout dx dy) (declare (ignore dx dy)) (values dout dout))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -178,7 +178,7 @@ No need to implement backwards at `define-impl`. (they'd be ignored.)
 ## [node] SCALARADD
 
 ```
-(A[SCAL] B[~] -> B[~] WHERE SCAL = 1)
+(A[~] SCALAR[SCAL] -> A[~] WHERE SCAL = 1)
 ```
 
 ### Description
@@ -205,14 +205,14 @@ X\gets{X + scalar}
 ✅ Already defined. 
 
 ```lisp
-((self dout dx dy) (declare (ignore dx dy)) (values (->scal (!mean dout)) dout))
+((self dout dx dy) (declare (ignore dx dy)) (values dout (->scal (!mean dout))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
 ## [node] SCALARSUB
 
 ```
-(A[SCAL] B[~] -> B[~] WHERE SCAL = 1)
+(A[~] SCALAR[SCAL] -> A[~] WHERE SCAL = 1)
 ```
 
 ### Description
@@ -240,14 +240,14 @@ X\gets{X - scalar}
 
 ```lisp
 ((self dout dx dy) (declare (ignore dx dy))
- (values (->scal (!mul -1.0 (!mean dout))) dout))
+ (values dout (->scal (!mul -1.0 (!mean dout)))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
 ## [node] SCALARMUL
 
 ```
-(A[SCAL] B[~] -> B[~] WHERE SCAL = 1)
+(A[~] SCALAR[SCAL] -> A[~] WHERE SCAL = 1)
 ```
 
 ### Description
@@ -274,14 +274,14 @@ X\gets{X * scalar}
 ✅ Already defined. 
 
 ```lisp
-((self dout dx dy) (values (->scal (!mean (!mul dy dout))) (!mul dout dx)))
+((self dout dx dy) (values (!mul dout dy) (->scal (!mean (!mul dx dout)))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
 ## [node] SCALARDIV
 
 ```
-(A[SCAL] B[~] -> B[~] WHERE SCAL = 1)
+(A[~] SCALAR[SCAL] -> A[~] WHERE SCAL = 1)
 ```
 
 ### Description
@@ -309,8 +309,8 @@ X\gets{X / scalar}
 
 ```lisp
 ((self dout dx dy)
- (values (->scal (!mean (!div (!mul dy (!mul -1 dout)) (!square dx))))
-         (!div dout dx)))
+ (values (!div dout dy)
+         (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!square dy))))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -355,18 +355,12 @@ For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for ex
 ✅ Already defined. 
 
 ```lisp
-((self dout dx dy)
+((self dout dx dy) (declare (ignore dx))
  (let ((dy-out
         (if (and (eql (tensor-attribute dy) chain) (movetensor-ignore-me self))
             dout
-            (!copy dout))))
-   (values
-    (if (eql (tensor-attribute dx) chain)
-        (!move dx dout force t)
-        dout)
-    (if (eql (tensor-attribute dy) chain)
-        (!move dy dy-out force t)
-        dy-out))))
+            (!copy dout force t))))
+   (values nil dy-out)))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)

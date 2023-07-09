@@ -5,8 +5,16 @@
 
 ;; sampling initializer function
 
-
-(define-tensor-initializer
+(defmacro define-tensor-initializer-export (function-name
+					    (&rest args)
+					    initializer-lambda
+					    document
+					    &key (keep-order? nil))
+  `(progn
+     (export ',function-name)
+     (define-tensor-initializer ,function-name (,@args) ,initializer-lambda ,document :keep-order? ,keep-order?)))
+  
+(define-tensor-initializer-export
     xavier-uniform
     nil
     (let* ((in-features  (car    (last shape 2)))
@@ -17,7 +25,7 @@
 	  (* coeff (sample-uniform-random -1.0 1.0))))
     "")
 
-(define-tensor-initializer
+(define-tensor-initializer-export
     xavier-gaussian
     nil
     (let* ((in-features  (car    (last shape 2)))

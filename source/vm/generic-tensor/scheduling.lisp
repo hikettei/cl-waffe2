@@ -41,9 +41,11 @@
   (declare (type AbstractTensor tensor))
   (let ((name (tensor-name tensor)))
     (typecase name
-      (string  :chain) ;; :chain = auto-generated
-      (keyword :input)
-      (T       :input))))
+      (string
+       (if (eql (tensor-facet tensor) :input)
+	   :chain
+	   :input)) ;; :chain = auto-generated
+      (T :input))))
 
 (defun trace-and-explore-nodes! (out-tensor)
   "Incf tensor-ref-n
@@ -74,7 +76,8 @@ tensor-ref-n indicates that how many times the tensor was used in the node."
     (when (and (movetensor-p current-node)
 	       ;; [MoveTensor] -> [AnyTensor save-for-backward=t]
 	       ;; ↑Ignored.
-	       
+
+	       (not (tensor-protect-me (car past-variables)))
 	       (not (cl-waffe2/base-impl:movetensor-save-for-backward current-node))
 	       
 	       ;; (!copy place past-out) i.e. (!copy Chain Past-Out)

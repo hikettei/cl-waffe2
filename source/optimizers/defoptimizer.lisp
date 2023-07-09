@@ -1,33 +1,68 @@
 
 (in-package :cl-waffe2/optimizers)
 
-#|
-(defmacro defoptimizer (name))
+(defclass AbstractOptimizer ()
+  ((param :initarg :param :type AbstractTensor :reader read-parameter))
+  (:documentation "
+## [class] AbstractOptimizer
 
-(defoptimier SGD ()
-  :slots
-  :step ((parameter)
-	 |#
+`AbstractOptimizer` is a CLOS class which
 
-(defun composed-node (x y)
-  (!mul
-   (!sin (!add x y))
-   (!cos (!add x y))))
+(TODO DOCS)
 
-(defmodel (ComposedFunction (self)
-	   :where (A[~] B[~] -> [~])
-	   :on-call-> ((self x y)
-		       (declare (ignore self))
-		       (composed-node x y))))
+See also: `read-parameter` `step-optimize`"))
 
-(define-composite-function (ComposedFunction) !composed)
+(defgeneric step-optimize (optimizer))
 
-(defmodel (Sin-Inlined (self)
-	   :where (X[~] -> [~])
-	   :on-call-> ((self x)
-		       (declare (ignore self))
-		       (!sin x))))
+;; One Parameter, -> One Optimizer class
+(defmacro defoptimizer ((name
+			 (self param &rest constructor-args)
+			 &key
+			   (documentation "")
+			   (slots))
+			&body constructor-body)
+  "
+## [macro] defoptimizer
 
-(define-composite-function (Sin-Inlined) !sin-inline)
+(TODO DOCS)
+"
+  ;; :initarg :A 
+  (let ((initargs (collect-initarg-slots slots `(,param ,@constructor-args))))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (defclass ,name (AbstractOptimizer)
+	 ,slots
+	 (:documentation ,(format nil "
+## [optimizer] ~a
 
+### Initializer
+
+```
+(~a param &rest arguments)
+```
+
+### Description
+
+~a"
+				  name
+				  name
+				  documentation)))
+       
+       (defun ,name (,param ,@constructor-args)
+	 ""
+	 (assert (slot-value ,param 'requires-grad)
+		 nil
+		 "(~a) Failed with: the given parameter ~a isn't parameter."
+		 ',name
+		 ,param)
+	 
+	 (let ((,self (make-instance ',name
+				     :param ,param
+				     ;; Expand :slots
+				     ,@(loop for slot in initargs
+					     if slot
+					       collect (intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
+					     if slot
+					       collect (car slot)))))
+	   ,@constructor-body
+	   ,self)))))
 

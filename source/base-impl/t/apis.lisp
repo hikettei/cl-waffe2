@@ -138,7 +138,56 @@
 ;; Testing !flexible, broadcasting
 ;; =============================================================
 
+;; TODO: It isn't enough
 (test flexible-test
   (is (!add (make-tensor `(10 10)) (!flexible (make-tensor `(10))))))
 
 
+;; =============================================================
+;; Testing Differentiable Proceed
+;; =============================================================
+
+;; out = C + A * B
+(defun proceed-continue-test (n)
+  (let ((a (parameter (ax+b `(10 10) 0 3)))
+	(b (parameter (ax+b `(10 10) 0 2)))
+	(c (parameter (ax+b `(10 10) 0 4)))
+
+	(a1 (parameter (ax+b `(10 10) 0 3)))
+	(b1 (parameter (ax+b `(10 10) 0 2)))
+	(c1 (parameter (ax+b `(10 10) 0 4))))
+
+    (multiple-value-bind (ag bg cg)
+	(normal-proceed a b c)
+      (multiple-value-bind (ag1 bg1 cg1)
+	  (composed-proceed a1 b1 c1)
+	(let ((cp (list `(,ag ,ag1)
+			`(,bg ,bg1)
+			`(,cg ,cg1)))
+	      (ans `(2 3 1)))
+	  (and
+	   (= (vref (car (nth n cp)) 0)
+	      (nth n ans))
+	   (= (vref (car (nth n cp)) 11)
+	      (nth n ans))
+	   (M= (car (nth n cp))
+	       (second (nth n cp)))))))))
+
+(defun normal-proceed (a b c)
+  ;;(proceed-backward (lazy-print (!mul a b)))
+  ;; SumBackward bug
+  ;; Side effect bug...
+  (proceed-backward (!sum (!add c (!mul a b))))
+  (values (grad a) (grad b) (grad c)))
+
+(defun composed-proceed (a b c)
+  (let* ((k (proceed (!mul a b)))
+ 	 (out (!add k c)))
+    (proceed-backward (!sum out))
+    (values (grad a) (grad b) (grad c))))
+
+(test proceed-differentiable-p
+  (is (proceed-continue-test 0))
+  (is (proceed-continue-test 1))
+  (is (proceed-continue-test 2)))
+  

@@ -495,6 +495,8 @@ This function will be useful especially when debugging on REPL.
 
 If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED** forward and backward propagation. Compiling time isn't included to the displayed time while (time (proceed tensor)) includes.
 
+`compile-mode` is a keyword, type of `compile-mode-t`.
+
 ## [function] proceed-time
 
 ```

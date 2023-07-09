@@ -78,9 +78,7 @@
 
 
 (defun make-clone (tensor &optional name)
-  (let* ((shape (if (cl-waffe2/base-impl:transposed-p tensor)
-		    (shape tensor)
-		    (actual-shape tensor)))
+  (let* ((shape (actual-shape tensor))
 	 (out (make-input shape (or name nil)
 			  :dtype (dtype tensor)
 			  :order (order tensor)

@@ -43,9 +43,13 @@ It should work like:
 The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
 "))
 
-(defgeneric call (model &rest inputs) (:documentation "All models in cl-waffe2, should implement this generic function. This generic function returns the computation node of the forward propagation of the model.
+(defgeneric call (model &rest inputs) (:documentation "
 
-The generic function call is also used to step forward of AbstractNode, that is, works as if forward."))
+```lisp
+(call model &rest inputs)
+```
+
+`call` is a generic function which is used to `:forward`/`:on-call->` forms for an `AbstractNode`/`Composite` class respectively."))
 
 (defmethod call :before ((model Composite) &rest inputs)
   (declare (ignore inputs))
@@ -227,38 +231,40 @@ Predicts next output given inputs.
 		      &key
 		       (slots nil)
 		       (initargs)
+                       (where nil)
 		       (on-call-> nil)
 		       (documentation \"\"))
 		    &body constructor-body)
 ```
 
-defmodel is a macro used to describe the model of neural network with `Composite` class.
+`defmodel` defines a new `Composite` class which describes network structures with using lazy-evaluated tensor. Viewing the set of `AbstractNode` as a single cohesive entity, you can formulate the forward propagation in `on-call->` keyword.
+
+`Composite` is used as a `neural network model` if used as a merely data structure, but combined with `define-composite-function`, `Composite` can also define a single statically-operation function from a set of nodes.
+
+A new `Composite` class is initialized with `(name &rest inputs)` function, being called with a `call` method.
 
 ### Effects
 
-   1. defines a class named **name**
+1. defines a class named **name**
 
-   2. defines a function named **name** with the constructor-arguments and constructor-body.
-
+2. defines a function named **name** with the constructor-arguments and constructor-body.
 
 ### Inputs
 
-  1. name[Symbol]  All models, and constructors for the model, are named after it.
-  2. (self-name &rest constructor-arguments)
-    The constructor function is defined as:
-    (defun ,name (self-name ,@constructor-arguments)
-       ...)
+  1. `name[Symbol]` the macro defines an class and constructor function named after it.
 
-  3. slots ((slot-option1) (slot-option2) ...)
-    Parameters of the inherited Composite class. It has the same syntax as defclass slots
+  2. `(self-name &rest constructor-arguments)` An initializer form of `constructor function`.
 
-  4. initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...
-    Unlike CL's structure, classes are tend to rebundant when writing the process of initializing slots. To make this simple, this argument was introduced. It works like a structure's constructor!
+  3. `slots ((slot-option1) (slot-option2) ...)` Parameters of the inherited Composite class. It has the same syntax as defclass slots
 
-  5. documentation[String]
+  4. `initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...` Unlike structures, CLOS classes are somewhat more cumbersome to initialise. To make this simple, this argument was introduced. Describe here initializer form in advance.
 
-  6. `on-call->` [One of: nil symbol-name function list]
-     on-call-> is used to control the behaviour of *call* function.
+  5. `documentation[String]`
+
+  6. `on-call-> [One of: nil symbol-name function list]`
+     on-call-> is used to control the behaviour of **call** function.
+
+  7. `where[Subscript DSL] (Optional)` Describe the state of the Tensor before and after `on-call->`
 
 ### Example
 
@@ -281,48 +287,82 @@ defmodel is a macro used to describe the model of neural network with `Composite
     (call layer ...))
 ```
 
-### Describe Forward Propagation
-
-The option `on-call->` can control the behaviour of *call* function.
-
-`on-call->` could be one of these case:
-
-First case,  `on-call->` is nil:
-
-  cl-waffe2 calls the **call** function when doing forward propagation of the model.
-
-Second case, `on-call->` is symbol-name:
-
-   cl-waffe2 calls the specified function at on-call-> parameter, when doing forward propagation of the model.
-
-   symbol-name could be also one of: method's name function's name.
-
-   For example, set `:on-call-> = call-example-layer` which defined as:
-
 ```lisp
-   (defmethod call-example-layer ((model ExampleLayer) x y)
-       (print \"call-example-layer is used!\")
-       ...)
+(defmodel (Softmax-Model (self)
+	   :where (X[~] -> [~])
+	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+	                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                           (!div (!exp x1) z)))))
+
+;; Using Lazily...
+(proceed (call (Softmax-Model) (randn `(10 10)))
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP33497 
+  :vec-state [computed]
+  ((0.04800622   0.118814774  0.050377533  ~ 0.053051848  0.050124187  0.25575548)                    
+   (0.15909052   0.11368358   0.12642372   ~ 0.114795394  0.033397682  0.07605342)   
+                 ...
+   (0.035624444  0.24828684   0.109363265  ~ 0.020787988  0.027314318  0.04515641)
+   (0.030307569  0.24117047   0.03900468   ~ 0.014522874  0.036584295  0.0971196))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+
+;; Defines a statically working function.
+(define-composite-function (Softmax-Model) !softmax-static)
+
+(!softmax-static (randn `(10 10)))
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP33788 
+  ((0.16722792   0.018530384  0.014159603  ~ 0.035353966  0.06128503   0.13559735)                    
+   (0.14498742   0.11881006   0.0692616    ~ 0.03911829   0.10358454   0.02131605)   
+                 ...
+   (0.055657785  0.44042623   0.030706322  ~ 0.11048273   0.0097645    0.11959953)
+   (0.059088983  0.11067564   0.120767005  ~ 0.15042976   0.06570089   0.20548664))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
 ```
 
+### How to use on-call-> form?
+
+In the keyword `on-call->`, describe the behaviour when called with a `call` function following this forms:
+
+### `on-call->` = nil
+
+In that case, cl-waffe2 calls the `call` method when doing forward propagation of the model.
+
+### `on-call->` is a symbol-name
+
+cl-waffe2 calls the function named `symbol-name`.
+
+For example, setting `:on-call-> = call-example-layer` and defining a `call-example-layer` method.
 
 ```lisp
-   (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
+(defmethod call-example-layer ((model ExampleLayer) x y)
+    (print \"call-example-layer is used!\"))
 ```
 
-   (Complicated model assignments like ConvND, for example, can be achieved by assigning generic function names to symbols.)
+```lisp
+(call (ExampleLayer 10) tensor) ;; call-example-layer is used!
+```
 
-[Third case] `on-call->` is function (i.e.: lambda):
+### on-call-> is a function name or a lambda.
 
-   cl-waffe2 calls the given lambda function as a forward propagation.
+cl-waffe2 calls the given lambda function as a forward propagation.
 
-[Fourth case] `on-call->` is a list:
+### `on-call->` is a list
 
-   The List, should be this format.
 
-   `((arguments) body)`
+```lisp
+(Example)
+:on-call-> ((self x) (!sin x))
+```
 
-   This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3."
+This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3.
+"
   (declare (type (or symbol function list null) on-call->))
   (let ((use-linter-p (not (null where))))
     `(eval-when (:compile-toplevel :load-toplevel :execute)
@@ -481,6 +521,7 @@ An constructor function for ~a."
 				   :scalar-p (read-state scalar-p-list i)
 				   :dtype (read-state dtype i)
 				   :order order)))
+	      (setf (tensor-protect-me res) t)
 	      res)))))
 
 (defun where-arg->shape (~ shape)
@@ -505,3 +546,4 @@ Return: (values output-shape input-shape-determined)
   (let ((linter-function (composite-linter-f composite))
 	(inputs (map 'list #'shape inputs)))
     (funcall linter-function composite inputs inputs inputs)))
+

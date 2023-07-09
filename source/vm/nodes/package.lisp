@@ -19,10 +19,12 @@
 		#:tensor-view
 		#:make-tensor
 		#:make-input
+		#:actual-shape
 		#:set-input
 		#:compile-option-t
 		#:movetensor-p
 		#:shaping-error
+		#:tensor-protect-me
 		#:shape-equal
 		#:order
 		#:dtype
@@ -69,7 +71,8 @@
    #:*facet-monopoly-mode*)
   (:export
    #:defnode
-   #:define-impl)
+   #:define-impl
+   #:define-and-impl-node)
   ;; Reject-p-utils
   (:export
    #:supported-dtypes-are)

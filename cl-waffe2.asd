@@ -36,7 +36,8 @@
 	       (:file "vm/generic-tensor/acceptor")
 	       
 	       (:file "vm/generic-tensor/scheduling")
-	       
+
+	       (:file "vm/nodes/shape-error")
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
@@ -84,6 +85,8 @@
 	       
 	       (:file "optimizers/package")
 	       (:file "optimizers/defoptimizer")
+
+	       (:file "optimizers/impls/sgd")
 
 	       (:file "package")
 	       (:file "utils")
@@ -157,6 +160,8 @@
 	       (:file "apis/distributions")
 	       (:file "apis/nodes")
 	       (:file "apis/generic-tensor")
+	       (:file "apis/nn")
+	       (:file "apis/optimizers")
 	       ))
 
 

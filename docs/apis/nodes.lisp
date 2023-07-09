@@ -2,22 +2,14 @@
 (in-package :cl-waffe2.docs)
 
 (with-page *nodes* "Formulate Neural Networks"
-  (insert "The package `:cl-waffe2/vm.nodes` provides a fundamental system for building neural networks.
+  (insert "The package `:cl-waffe2/vm.nodes` provides a fundamental system for building neural networks using `AbstractTensor`.
 
 This package can be divided into three main parts.
 
-1. Shaping APIs
-2. defnode  (Differentiable Operations)
-3. defmodel (Operations consisted of defnode)
+1. Shaping APIs (`:where`)
+2. defnode  (The smallest unit of differentiable operations)
+3. defmodel (Operations consisted of defnode, and static functions)
 
-Note that there's a clear distinction between node and model.
-
-```lisp
-defnode  => called with `forward` 
-defmodel => called with `call`
-```
-
-Also, defnode is a fundamental unit of operation, while defmodel is a set of nodes.
 ")
 
   (macrolet ((with-doc (name type &body body)
@@ -329,42 +321,43 @@ Example: (TODO)
 
 "))
 
-    (with-section "defnode"
+    (with-section "[macro] defnode"
       (insert "
+
 ```lisp
 (defnode ((abstract-name
 		   (self &rest constructor-arguments)
 		    &key
 		      (where t)
 		      (out-scalar-p nil)
+                      (save-for-backward nil)
 		      (slots nil)
 		      (backward nil)
 		      (documentation \"\"))
 		   &body constructor-body))
 ```
 
-defnode is a macro which is used to define a subclass of `AbstractNode`.
+`defnode` is a macro to define computation nodes in cl-waffe2, which is a subclass of `AbstractNode`.
 
-The defined class is named after `abstract-name`, which has:
+The class defined is named after `abstract-name`, and they possess the following datum:
 
-1. Subscript DSL
+1. Generic definition of forward, including `Subscript DSL`, (whch is transimission state of the operation), and `slots` which is shared at forward and backward time.
 
-2. Slots that are shared at forward/backward time.
-
-3. Generic definition of backward
+2. (Optional) Generic definition of backward.
 
 ### Inputs
 
-1. `abstract-name` the class is named after it
+1. `abstract-name` the macro defines a new class named after it.
 
 2. `where`  the place to put Subscript DSL
 
-3. `backward` the general definition of backward (Optional). Place S-expression here If you wanna ignore define-impl's backward, otherwise define-impl's one is used.
+3. `save-for-backward` corresponding position of input arguments will produce a copy, which is used at backward time.
+ 
+4. `backward` (Optional) Any back-propagation described in define-impl is disabled; instead, the definitions given here are used.
 
-4. `documentation` docstring
+5. `documentation` docstring
 
-5. `out-scalar-p` Set t If the returned tensor is ScalarTensor. This can be dynamically modified via the accessor `(out-scalar-p self)`.
-
+6. `out-scalar-p` Set t If the returned tensor is ScalarTensor. This can be dynamically modified via the accessor `(out-scalar-p self)`.
 
 ### Effects
  
@@ -383,7 +376,7 @@ In order to simplify parameter initialisation, if the keyword name of the :inita
 (slot-value (ExampleNode 10) 'arg) ;; => 10
 ```
 
-### How and When to define backward?
+### When to define backward?
 
 The backward follows this format:
 
@@ -419,14 +412,86 @@ AddNode (defnode) <- Backward=nil
 =================================================================
 ```
 
-Depending on `*using-backend*`, the implementation to use is determined at node-building time. See also: with-devices."))
+Depending on `*using-backend*`, the implementation to use is determined at node-building time. See also: with-devices.
 
-    (with-section "define-impl"
+### How to define backward?
+
+```math
+g(dout, dx_{in}, dy_{in}, ..., dn_{in}) \\triangleq \\\\
+ Move(dx_{out}, {dout} \\times {dx_{grad}}),\\\\
+ Move(dx_{out}, {dout} \\times {dy_{grad}}),\\\\
+ ...,\\\\
+ Move(dx_{out}, {dout} \\times {dn_{grad}})
+```
+
+```lisp
+:save-for-backward (t t)
+:backward ((self dout dx dy)
+           (values
+               (!mul dout dy)
+               (!mul dout dx)))
+```
+
+`self` is a place to pass the node class. `dout` is a `AbstractTensor` of previous node's gradient. `dx, dy, ..., dn` are variables used in forward. In the case of the tensor is computed as `In-place`, there's no guarantee that variables aren't destructed. So, to ensure that variables remains as it was, set `:save-for-backward` at corresponding positions if the variable is needed to compute gradient.
+
+According to `the derivative of the composite function`, `:backward` definition should return next node's `dout` following this form:
+
+`(values dx.grad dy.grad ... dn.grad)`
+
+After the computing, cl-waffe2 automatically selects where to store the result, and moves it.
+
+```math
+\\begin{equation}
+  x_{in}=
+  \\begin{cases}
+    x_{saveforbackward} & \\text{SaveForBackward is t} \\\\
+    \\text{x} & \\text{otherwise}
+  \\end{cases}
+\\end{equation}
+```
+
+```math
+\\begin{equation}
+  x_{out}=
+  \\begin{cases}
+    x_{copy} & \\text{If the tensor is a ExistTensor or cause conflicts} \\\\
+    \\text{x} & \\text{If the tensor make no conflicts.}
+  \\end{cases}
+\\end{equation}
+```
+
+(`x` is a variable called with `(forward node &rest inputs)` function.)
+
+
+### Example
+
+```lisp
+
+(defnode (MatMulNode (myself dtype &key transpose-a transpose-b)
+	  :where (A[~~ i j] B[~~ j k] C[~~ i k] -> C[~~ i k])
+	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
+		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+          :documentation \"gemm\"
+	  :backward ((self dout da db do)
+		     (declare (ignore do))
+		     (values
+		      (!matmul dout (!t db))
+		      (!matmul (!t da) dout)
+		      nil))))
+
+(MatmulNode :float)
+;; <Node: MATMULNODE-CPUTENSOR (A[~~ I J] B[~~ J K] C[~~ I K] -> C[~~ I K])>
+```
+
+"))
+
+    (with-section "[macro] define-impl"
       (insert "
 ```lisp
 (define-impl ((abstract-name
 			&key
 			  (device t)
+                          (cache-when-compiled t)
 			  (reject-p nil))
 		       &key
 			 save-for-backward
@@ -434,7 +499,7 @@ Depending on `*using-backend*`, the implementation to use is determined at node-
 			 backward)
 ```
 
-Defines a implementation of AbstractNode of `device`.
+Gives an implementation to `AbstractNode`.
 
 ### Inputs
 
@@ -444,9 +509,11 @@ Defines a implementation of AbstractNode of `device`.
 
 3. `save-for-backward` The corresponding variable which is t will be made a copy when forward. (e.g.: `forward=(x y)` and `save-for-backward=(t nil)`, x is copied, y isn't copied.)
 
-4. `forward` Place the expanded lisp-code for forward propagation.
+4. `cache-when-compiled[boolean]` If t, `call-with-view` function used in `:forward` will be cached when compiling. Set nil to disable this behaviour.
 
-5. `backward` Place the definition of backward as the same forward of `defnode` does.
+5. `forward` Place the expanded lisp-code for forward propagation.
+
+6. `backward` Place the definition of backward as the same forward of `defnode` does.
 
 ### Tips: reject-p
 
@@ -476,27 +543,50 @@ forward/backward is given as:
 ```
 "))
     
-    (with-section "forward"
+    (with-section "[generic] forward"
       (insert "```(forward node &rest inputs)```
-Step forward of the given `node`, node is a subclass of `AbstractNode`.
+Reading an state of `*using-devies*` and the given nodes, the method `forward` returns a new tensor with applied the forward definition of a given `node` with inputs lazily.
 
-Note that `forward` can't handle with `Composite`."))
+The moment `forward` is called, the computation node is constructed for building forward/backward kernel. Since then, `forward` is `AbstractNode` dedicated operation, not applied into calling `Composite`.
 
-    (with-doc 'defmodel 'macro)
+### Example
 
-    (with-doc 'call 'function
-      (insert "~%~%`[generic-function]` (call model &rest inputs)"))
+```lisp
+(forward (AddNode :float) (randn `(3 3)) (randn `(3 3)))
 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP31939 
+  :vec-state [maybe-not-computed]
+  ((0.109944925 0.42675912  1.9701254)
+   (1.5735719   0.7928889   1.1698933)
+   (0.08926714  0.0937486   -1.1063566))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~~] B[~~] -> A[~~])>}
+```
+"))
+
+    (with-section "[class] defmodel"
+      (insert "~a" (documentation (macro-function 'defmodel) 'function)))
+    
+    ;;(with-doc 'defmodel 'macro)
+
+    (with-doc 'call 'function)
+    
     (with-doc 'with-devices 'macro
       (insert "
-### Example
 
 ```lisp
 (with-devices (LispTensor CPUTensor)
    (!add a b))
 ```"))
 
-    (with-section "Composite"
+    (with-section "[macro] define-and-impl-node"
+      (insert "~a" (documentation (macro-function 'define-and-impl-node) 'function)))
+
+    (with-section "[macro] define-composite-function"
+      (insert "~a" (documentation (macro-function 'define-composite-function) 'function)))
+
+    (with-section "[class] Composite"
       (insert
        "
 [class] Composite
@@ -504,7 +594,7 @@ Note that `forward` can't handle with `Composite`."))
 ~a"
        (documentation (find-class 'Composite) 't)))
 
-    (with-section "AbstractNode"
+    (with-section "[class] AbstractNode"
       (insert
        "
 [class] AbstractNode
@@ -512,7 +602,4 @@ Note that `forward` can't handle with `Composite`."))
 ~a"
        (documentation (find-class 'AbstractNode) 't)))
 
-    (with-doc 'with-instant-kernel 'macro
-      )
-
-    ))
+    (with-doc 'with-instant-kernel 'macro)))

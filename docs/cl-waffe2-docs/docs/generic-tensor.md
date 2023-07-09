@@ -360,7 +360,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP37143 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP39821 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -376,10 +376,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimetgnSEO.fasl") {53A1450B}>
+                           "/private/var/tmp/slimeDvMNag.fasl") {53B83D2B}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimetgnSEO.fasl") {53A1510B}>
+                           "/private/var/tmp/slimeDvMNag.fasl") {53B84C8B}>
 
 += [Tensors in the computation node] =======+
 
@@ -396,7 +396,8 @@ Variables:
  - The number of tmp variables : 4
  - The number of parameters    : 0
 +========================================+
->)
+>
+ NIL)
 ```
 
 ## [method] set-input
@@ -433,6 +434,7 @@ If t, no gradients are made for backwards.
 Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built nodes are regarded as: no gradients are made for backwards.
 
 
+
 ## [function] parameter
 
 ```
@@ -454,7 +456,7 @@ The function parameter computes all the previous nodes of the given tensor if an
 (call-with-view function tensors &key (at-least-dim 1))
 ```
 
-The function `call-with-view` is a utility to expand view-considered `loop` iteration in the `:forward` expansion of `define-impl`.
+`call-with-view` is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.
 
 (TODO: Example/Documents)
 

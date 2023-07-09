@@ -1,5 +1,7 @@
 
-# Tips
+# Tips -> Example?
+
+## MNIST
 
 ## Kernel Abstraction
 

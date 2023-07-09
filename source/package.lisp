@@ -1,4 +1,5 @@
 
+
 (in-package :cl-user)
 
 (defpackage :cl-waffe2
@@ -18,7 +19,7 @@
    #:with-row-major
    #:with-cpu
    ;;#:with-cuda
-   #:with-build)
+   )
 
   ;; network utils
   (:export
@@ -56,5 +57,8 @@
 ;; :cl-waffe2/backends.lisp::CPUTensor, ScalarTensor etc..
 
 ;; TO ADD: cl-waffe2-repl-toplevel
+
+
+;; TO ADD: Deftrainer in cl-waffe2 package
 
 

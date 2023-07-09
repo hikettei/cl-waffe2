@@ -4,11 +4,6 @@
 ;; Here's a utility macro which configurates vm/node's setting.
 
 ;; TODO: Place here, with-devices
-
-(defmacro with-build ((forward backward variables parameters) out &body body)
-  `(multiple-value-bind (,forward ,backward ,variables, parameters) (build ,out)
-     ,@body))
-
 (defmacro with-cpu (&body body)
   "TODO: Docstring"
   #+sbcl
