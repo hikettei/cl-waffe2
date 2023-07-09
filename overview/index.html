@@ -342,7 +342,9 @@ out = 3 + 2 * 4
 </code></pre>
 <p>This is because there is not yet a single implementation for <code>AddNode-Revisit</code>.</p>
 <p>One operation can be defined for a backend that can be declared by extending the <code>cl-waffe2/vm.generic-tensor:AbstractTensor</code> class. Here's <code>LispTensor</code>, and <code>CPUTensor</code>, and of course, if necessary, you can create a new backend <code>MyTensor</code> by just copying them:</p>
-<pre><code class="language-lisp">(defclass MyTensor (AbstractTensor) nil)
+<pre><code class="language-lisp">
+;; Full Code
+(defclass MyTensor (AbstractTensor) nil)
 
 ;; Initializer/Allocator
 (defmethod initialize-instance :before ((tensor MyTensor)
@@ -364,6 +366,11 @@ out = 3 + 2 * 4
          :initial-element initial-element))))))
 
 ;; If data storage is differ from CL Array, override vref and (setf vref) method.
+
+
+;; If you want to use a backend that is already implemented, the following line of code is sufficient.
+
+(defclass MyTensor (CPUTensor) nil) ;; Adding a new backend is all done!
 </code></pre>
 <p>(See also: <a href="https://github.com/hikettei/cl-waffe2/blob/master/source/backends/lisp/tensor.lisp">tensor.lisp</a>)</p>
 <p>The devices to use can be switched <code>with-devices</code> macro.</p>
