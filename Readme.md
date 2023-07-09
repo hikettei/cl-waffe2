@@ -5,14 +5,14 @@
     <br>
     <h3 align="center">Programmable Deep Learning Framework</h3>
     <p align="center">
-    <a href="https://github.com/hikettei/cl-waffe2"><strong>Visit the docs »</strong></a>
+    <a href="https://hikettei.github.io/cl-waffe2/"><strong>Visit the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/hikettei/cl-waffe2/issues">Issues</a>
     ·
-    <a href="./install">Installing</a>
+    <a href="https://hikettei.github.io/cl-waffe2/install/">Installing</a>
     ·
-    <a href="./overview">Tutorials</a>
+    <a href="https://hikettei.github.io/cl-waffe2/overview/">Tutorials</a>
   </p>
 </p>
 
