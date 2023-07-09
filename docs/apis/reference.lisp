@@ -189,3 +189,8 @@
     (caller-doc A>=B)
     (caller-doc A<=B)
     ))
+
+
+(with-page *cl-waffe2-package* "[package] cl-waffe2"
+  (insert "`:cl-waffe2` provides utils.")
+  )

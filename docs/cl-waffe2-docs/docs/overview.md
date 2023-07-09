@@ -845,6 +845,8 @@ See also: [Introducing Subscript DSL](../nodes/#introducing-subscript-dsl)
 
 ## View APIs
 
+(TODO)
+
 ### Optional Broadcasting
 
 In cl-waffe2, operations with several arguments must be called with the same shape of tensors as `:where` says. In the code below, since `!add` is declared as `A[~] B[~] -> A[~]`, the first and second argument, must have the same shape, same ranks. However, opeartions isn't always performed within the same ranks. In practice, `!add` isn't always used as just an element-wise operation because the total elements of tensor can be found via `!add`, adding biases to the given tensor is also realised by using `!add`. Indeed, `broadcasting` is a convenient operation when expressing matrix iterations without using `(loop for ...)`.
@@ -897,19 +899,6 @@ There are two corresponding operations in cl-waffe2:
 
 ```
 
-(MEMO, TODO)
-
-(ここら辺は推敲の余地あり)
-
-話す要点：
-
-This avoid unexcepted broadcasting
-1. In-placeにBroadcastingするのを明示したい (上記のIn-place optimizingと合わさって, cl-waffe2ならnumpyだとoutパラメーター用意しないといけないところを自動でコピーとか用意できる)
-
-2. numpy 本来は、batch-size=2前提でコード書いている。waffe2のShapeはシンボルか`<1 x N>`でいいのでデータ構造に情報をあるだけ詰めている. バグを防ぐ
-
-3. Rank up rule umm...
-
 The function `(!flexible)` adds the `broadcastable dimensions` of the given tensor. In `<1 x N>` parts, 1 is repeated, 1 is added if any. In `1` parts, never broadcasted.
 
 
@@ -935,13 +924,11 @@ TODO: `(with-broadcasting (a1 b1 (a b)) ...)` macro.
 
 ### Multidimensional Offsets.
 
-also !view
+(TODO)
 
 ## Optimizing Model Parameter
 
-### Backward semantics
-
-x_in <- x_out
+(TODO)
 
 defoptimizer
 

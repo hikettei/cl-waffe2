@@ -95,12 +95,22 @@
 (defparameter *base-impl* "")
 (defparameter *base-impl-nodes* "")
 
+(defparameter *nn* "")
+(defparameter *optimizer* "")
+
+(defparameter *cl-waffe2-package* "")
+
 (defun generate ()
   (write-scr "generic-tensor" *generic-tensor*)
   (write-scr "base-impl" *base-impl*)
   (write-scr "base-impl-nodes" *base-impl-nodes*)
   (write-scr "nodes" *nodes*)
   (write-scr "distributions" *distributions*)
+
+  (write-scr "nn" *nn*)
+  (write-scr "optimizer" *optimizer*)
+
+  (write-scr "utils" *cl-waffe2-package*)
 
   (format t "Completed~%")
   )
