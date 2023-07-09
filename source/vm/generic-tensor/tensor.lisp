@@ -69,6 +69,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
+   (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
   (:documentation "
 AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.

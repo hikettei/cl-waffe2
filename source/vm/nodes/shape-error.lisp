@@ -1,6 +1,9 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+;; (TODO): Better Error Printing of Shape-Error
+
+
 (defstruct Rank-Error
   "Rank Error"
   (position 0 :type fixnum)
@@ -59,7 +62,7 @@ It is too ~a: ~a"
   (declare (type list errorlist))
   (with-output-to-string (result)
     (format result "== ~:R, rank error is detected. ==~%" nth)
-    
+
     ))
 
 (defun build-shape-error (shape-error-list)
@@ -78,5 +81,6 @@ ShapeError Template:
   ;;
   ;; (A B C)
   ;;    ^ Set B = 1
+  (declare (ignore shape-error-list))
   )
 

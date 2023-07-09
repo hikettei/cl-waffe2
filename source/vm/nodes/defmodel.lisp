@@ -481,6 +481,7 @@ An constructor function for ~a."
 				   :scalar-p (read-state scalar-p-list i)
 				   :dtype (read-state dtype i)
 				   :order order)))
+	      (setf (tensor-protect-me res) t)
 	      res)))))
 
 (defun where-arg->shape (~ shape)

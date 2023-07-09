@@ -24,6 +24,7 @@
 		#:compile-option-t
 		#:movetensor-p
 		#:shaping-error
+		#:tensor-protect-me
 		#:shape-equal
 		#:order
 		#:dtype

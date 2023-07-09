@@ -28,6 +28,7 @@
    #:tensor-name
    #:dtype
    #:tensor-attribute
+   #:tensor-protect-me
    #:requires-grad
    #:ancestor-param-p
    #:actual-shape
