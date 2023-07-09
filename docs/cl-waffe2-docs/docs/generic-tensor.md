@@ -360,7 +360,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP36445 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP39821 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -376,10 +376,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimepSP6vu.fasl") {53A8C66B}>
+                           "/private/var/tmp/slimeDvMNag.fasl") {53B83D2B}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimepSP6vu.fasl") {53AC682B}>
+                           "/private/var/tmp/slimeDvMNag.fasl") {53B84C8B}>
 
 += [Tensors in the computation node] =======+
 
@@ -424,42 +424,7 @@ Reading all variables in the computation node, the method get-input returns an c
 ## [parameter] `*no-grad*`
 [parameter] `*no-grad*`
 
-If t, no gradients are made for backwards.The macro with-devices declares the node's priority for the function *forward* to be used.
-
-Input:
-   - backend-priority
-     An list of device's name (e.g.: CPUTensor, LispTensor...)
-     Devices on the left have higher priority.
-
-Example:
-
-Let ATensor and BTensor be compatible (i.e.: pointers are the same type), and subclass of AbstractNode, and all the operations they have are as follows:
-
-1. ATensor has !add.
-2. BTensor has !mul.
-
-This code works:
-
-(setq a (make-tensor `(10 10))) ;; The tensor a is ATensor.
-
-;; (Priority1=ATensor Priority2=BTensor)
-(with-devices (ATensor BTensor)
-   (!add a (!mul a a)))
-
-ATensor doesn't have any implementation of !mul, but it does work. This is because cl-waffe2's compatible backend system.
-
-cl-waffe2's backend dispatching rule is following:
-
-If the priority 1 backend does not have an implementation of the specified operation, check if the priority 2 backend does, if it still does not have it, 3, 4... and so on.
-
-The order of priority would be `(,@backend-priority ScalarTensor t). (t is a special name, and it implys the implement works for all the backends.)
-
-### Example
-
-```lisp
-(with-devices (LispTensor CPUTensor)
-   (!add a b))
-```
+If t, no gradients are made for backwards.
 ## [macro] with-no-grad
 
 ```lisp

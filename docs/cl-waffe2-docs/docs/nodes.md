@@ -730,6 +730,7 @@ If the priority 1 backend does not have an implementation of the specified opera
 
 The order of priority would be `(,@backend-priority ScalarTensor t). (t is a special name, and it implys the implement works for all the backends.)
 
+
 ```lisp
 (with-devices (LispTensor CPUTensor)
    (!add a b))

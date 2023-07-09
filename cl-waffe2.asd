@@ -160,6 +160,8 @@
 	       (:file "apis/distributions")
 	       (:file "apis/nodes")
 	       (:file "apis/generic-tensor")
+	       (:file "apis/nn")
+	       (:file "apis/optimizers")
 	       ))
 
 
