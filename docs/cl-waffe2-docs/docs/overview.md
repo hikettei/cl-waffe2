@@ -237,8 +237,7 @@ This is because there is not yet a single implementation for `AddNode-Revisit`.
 One operation can be defined for a backend that can be declared by extending the `cl-waffe2/vm.generic-tensor:AbstractTensor` class. Here's `LispTensor`, and `CPUTensor`, and of course, if necessary, you can create a new backend `MyTensor` by just copying them:
 
 ```lisp
-
-;; Full Code
+;; 1. Creating from AbstratTensor.
 (defclass MyTensor (AbstractTensor) nil)
 
 ;; Initializer/Allocator
@@ -262,10 +261,12 @@ One operation can be defined for a backend that can be declared by extending the
 
 ;; If data storage is differ from CL Array, override vref and (setf vref) method.
 
+;; 2. Using an existing backend.
+
 
 ;; If you want to use a backend that is already implemented, the following line of code is sufficient.
 
-(defclass MyTensor (CPUTensor) nil) ;; Adding a new backend is all done!
+(defclass MyTensor (CPUTensor) nil) ;; Adding a new backend is all done in this code!
 ```
 
 (See also: [tensor.lisp](https://github.com/hikettei/cl-waffe2/blob/master/source/backends/lisp/tensor.lisp))
