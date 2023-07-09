@@ -1,41 +1,28 @@
+<p align="center">
+    <a href="https://github.com/hikettei/cl-waffe2">
+        <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
+    </a>
+    <br>
+    <h3 align="center">Programmable Deep Learning Framework</h3>
+    <p align="center">
+    <a href="https://github.com/hikettei/cl-waffe2"><strong>Visit the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/hikettei/cl-waffe2/issues">Issues</a>
+    ·
+    <a href="./install">Installing</a>
+    ·
+    <a href="./overview">Tutorials</a>
+  </p>
+</p>
 
-# cl-waffe2, Deep Learning Framework With Powerful Language, Common Lisp.
+# cl-waffe2
 
-**The project is still in the concept stage.**
+> ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-Things are subject to change.
-
-cl-waffe2 is a open-source project that provides a differentible matrix operation which is fairly extensible and strongly optimized by JIT Compiler.
+cl-waffe2 provides a set of differentiable matrix operations which is aimed to apply to building a neural network model. Operations in cl-waffe2 are accelerated by `Lazy Evaluation` and `JIT Compiling with optimizing nodes.`.
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
-
-# Goals
-
-1. One cl-waffe2 code, consisted of multiple backends, which consisted of small pieces of backends.
-2. Everything is lazy-evaluated, being compiled.
-3. defined-and-run, closer to defined-by-run APIs.
-
-# Structure
-
-Dependencies:
-```lisp
-cl-waffe2.asd (:serial = t)
-
-[The Most Basic APIs (AbstractNode/AbstractTensor/JIT Compiler/Subscript Parser)]
-1. ./source/vm/generic-tensor/
-   ./source/vm/nodes/ (They're partially co-dependence)
-
-[The Most Basic Nodes (AddNode/SubNode/Mathematical nodes etc...)]
-2. ./source/base-impl/
-
-[Implementations based on package (1.) (2.)]
-3. ./source/backends/cpu
-   ./source/backends/lisp
-   ./source/nn
-   ./source/optimizers
-   ./source/viz
-   etc...
-```
 
 # Workloads
 
@@ -143,13 +130,6 @@ Second Goal -> FastMathKernel (with AVX512, AVX2)
 ```lisp
 ;; proceed is a little slow way (because it includes compile-time) but useful for debugging (define-by-run style)
 (proceed (!add 1.0 1.0))
-
-;; Fastest Way (define-and-run style)
-(with-build (forward backward variables parameters) (!add 1.0 1.0)
-    (funcall forward)
-    (funcall backward)
-    ...
-    )
 
 (with-cpu ;; Enable OpenBLAS (SBCL Only)
     (proceed-time (!matmul (randn `(100 100)) (randn `(100 100)))))
