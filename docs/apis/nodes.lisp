@@ -321,9 +321,8 @@ Example: (TODO)
 
 "))
 
-    (with-section "Working with AbstractNode"
+    (with-section "[macro] defnode"
       (insert "
-### [macro] defnode
 
 ```lisp
 (defnode ((abstract-name
@@ -464,16 +463,35 @@ After the computing, cl-waffe2 automatically selects where to store the result, 
 (`x` is a variable called with `(forward node &rest inputs)` function.)
 
 
+### Example
 
+```lisp
+
+(defnode (MatMulNode (myself dtype &key transpose-a transpose-b)
+	  :where (A[~~ i j] B[~~ j k] C[~~ i k] -> C[~~ i k])
+	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
+		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+          :documentation \"gemm\"
+	  :backward ((self dout da db do)
+		     (declare (ignore do))
+		     (values
+		      (!matmul dout (!t db))
+		      (!matmul (!t da) dout)
+		      nil))))
+
+(MatmulNode :float)
+;; <Node: MATMULNODE-CPUTENSOR (A[~~ I J] B[~~ J K] C[~~ I K] -> C[~~ I K])>
+```
 
 "))
 
-    (with-section "define-impl"
+    (with-section "[macro] define-impl"
       (insert "
 ```lisp
 (define-impl ((abstract-name
 			&key
 			  (device t)
+                          (cache-when-compiled t)
 			  (reject-p nil))
 		       &key
 			 save-for-backward
@@ -481,7 +499,7 @@ After the computing, cl-waffe2 automatically selects where to store the result, 
 			 backward)
 ```
 
-Defines a implementation of AbstractNode of `device`.
+Gives an implementation to `AbstractNode`.
 
 ### Inputs
 
@@ -491,9 +509,11 @@ Defines a implementation of AbstractNode of `device`.
 
 3. `save-for-backward` The corresponding variable which is t will be made a copy when forward. (e.g.: `forward=(x y)` and `save-for-backward=(t nil)`, x is copied, y isn't copied.)
 
-4. `forward` Place the expanded lisp-code for forward propagation.
+4. `cache-when-compiled[boolean]` If t, `call-with-view` function used in `:forward` will be cached when compiling. Set nil to disable this behaviour.
 
-5. `backward` Place the definition of backward as the same forward of `defnode` does.
+5. `forward` Place the expanded lisp-code for forward propagation.
+
+6. `backward` Place the definition of backward as the same forward of `defnode` does.
 
 ### Tips: reject-p
 
@@ -523,27 +543,50 @@ forward/backward is given as:
 ```
 "))
     
-    (with-section "forward"
+    (with-section "[generic] forward"
       (insert "```(forward node &rest inputs)```
-Step forward of the given `node`, node is a subclass of `AbstractNode`.
+Reading an state of `*using-devies*` and the given nodes, the method `forward` returns a new tensor with applied the forward definition of a given `node` with inputs lazily.
 
-Note that `forward` can't handle with `Composite`."))
+The moment `forward` is called, the computation node is constructed for building forward/backward kernel. Since then, `forward` is `AbstractNode` dedicated operation, not applied into calling `Composite`.
 
-    (with-doc 'defmodel 'macro)
+### Example
 
-    (with-doc 'call 'function
-      (insert "~%~%`[generic-function]` (call model &rest inputs)"))
+```lisp
+(forward (AddNode :float) (randn `(3 3)) (randn `(3 3)))
 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP31939 
+  :vec-state [maybe-not-computed]
+  ((0.109944925 0.42675912  1.9701254)
+   (1.5735719   0.7928889   1.1698933)
+   (0.08926714  0.0937486   -1.1063566))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~~] B[~~] -> A[~~])>}
+```
+"))
+
+    (with-section "[class] defmodel"
+      (insert "~a" (documentation (macro-function 'defmodel) 'function)))
+    
+    ;;(with-doc 'defmodel 'macro)
+
+    (with-doc 'call 'function)
+    
     (with-doc 'with-devices 'macro
       (insert "
-### Example
 
 ```lisp
 (with-devices (LispTensor CPUTensor)
    (!add a b))
 ```"))
 
-    (with-section "Composite"
+    (with-section "[macro] define-and-impl-node"
+      (insert "~a" (documentation (macro-function 'define-and-impl-node) 'function)))
+
+    (with-section "[macro] define-composite-function"
+      (insert "~a" (documentation (macro-function 'define-composite-function) 'function)))
+
+    (with-section "[class] Composite"
       (insert
        "
 [class] Composite
@@ -551,7 +594,7 @@ Note that `forward` can't handle with `Composite`."))
 ~a"
        (documentation (find-class 'Composite) 't)))
 
-    (with-section "AbstractNode"
+    (with-section "[class] AbstractNode"
       (insert
        "
 [class] AbstractNode
@@ -559,7 +602,4 @@ Note that `forward` can't handle with `Composite`."))
 ~a"
        (documentation (find-class 'AbstractNode) 't)))
 
-    (with-doc 'with-instant-kernel 'macro
-      )
-
-    ))
+    (with-doc 'with-instant-kernel 'macro)))

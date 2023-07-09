@@ -63,29 +63,26 @@ reject-when=nil, or (apply reject-when inputs)=t"
 
 
 (defmacro with-devices ((&rest backend-priority) &body body)
-  "The macro with-devices declares the node's priority for the function *forward* to be used.
+  "The macro `with-devices` declares the priority of dispatching nodes.
 
-Input:
-   - backend-priority
-     An list of device's name (e.g.: CPUTensor, LispTensor...)
-     Devices on the left have higher priority.
+### Input
 
-Example:
+1. `backend-priority` An list of device's name (e.g.: CPUTensor, LispTensor...) Devices on the left have higher priority.
 
-Let ATensor and BTensor be compatible (i.e.: pointers are the same type), and subclass of AbstractNode, and all the operations they have are as follows:
+### Example
+
+Let `ATensor` and `BTensor` be a pointer compatible, and subclass of `AbstractTensor`, and operations defined is following:
 
 1. ATensor has !add.
 2. BTensor has !mul.
 
-This code works:
-
+```lisp
 (setq a (make-tensor `(10 10))) ;; The tensor a is ATensor.
 
 ;; (Priority1=ATensor Priority2=BTensor)
 (with-devices (ATensor BTensor)
    (!add a (!mul a a)))
-
-ATensor doesn't have any implementation of !mul, but it does work. This is because cl-waffe2's compatible backend system.
+```
 
 cl-waffe2's backend dispatching rule is following:
 
@@ -431,9 +428,24 @@ Return nil -> ok
 				   (documentation ""))
 				&body constructor-body)
   "
-## [macro] define-and-impl-node
+```lisp
+(define-and-impl-node (abstract-name
+				 (self &rest constructor-arguments)
+				 &key
+				   (device t)
+				   (cache-when-compiled t)
+				   (reject-p nil)
+				   (where t)
+				   (out-scalar-p nil)
+				   (slots nil)
+				   (save-for-backward nil)
+				   (forward nil)
+				   (backward nil)
+				   (documentation \"\")))
+```
 
-Defines device=t node and impl"
+Expands `defnode` and `define-impl` at the same time.
+"
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defnode (,abstract-name (,self ,@constructor-arguments)
 	       :where ,where
