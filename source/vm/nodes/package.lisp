@@ -34,8 +34,8 @@
 		#:tensor-flexible-p
 		#:with-no-grad
 		#:make-compiled-kernel
-		#:set-save-for-backward
-		#:read-save-for-backward
+		#:system-lazy-set-save-for-backward
+		#:system-lazy-read-save-for-backward
 		#:scalar-p)
   (:export
    #:create-subscript-p

@@ -775,7 +775,7 @@ The function parameter computes all the previous nodes of the given tensor if an
 ;; The Problem is that: after calling forward :around, set-save-for-backward is called.
 
 
-(defun set-save-for-backward (tensor &aux (transposed? (cl-waffe2/base-impl:transposed-p tensor)))
+(defun system-lazy-set-save-for-backward (tensor &aux (transposed? (cl-waffe2/base-impl:transposed-p tensor)))
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
   (let ((space-tmp (make-clone (cl-waffe2/base-impl:read-untransposed tensor))))
     ;; for save-for-backward
@@ -788,30 +788,7 @@ The function parameter computes all the previous nodes of the given tensor if an
       ;; result = space-tmp
       result)))
 
-
-#|
-(defun set-save-for-backward (tensor)
-  (let* ((space-tmp (make-clone tensor))
-	 (transposed? (cl-waffe2/base-impl:transposed-p tensor)))
-    
-    (let ((res (cl-waffe2/vm.nodes:forward
-		(cl-waffe2/base-impl:Save-For-Backward-Node)
-		(cl-waffe2/base-impl:read-untransposed tensor)
-		space-tmp)))
-      
-      ;; res = tensor
-      (let* ((out (cl-waffe2/base-impl::extend-states res tensor)) ;; update !flexible
-	     (out (if transposed?
-		      (cl-waffe2/base-impl:!t out)
-		      out)))
 	
-	(setf (save-for-backward-space out)
-	      (if transposed?
-		  (cl-waffe2/base-impl:!t space-tmp)
-		  space-tmp))
-out))))
-|#
-	
-(defun read-save-for-backward (tensor)
+(defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 

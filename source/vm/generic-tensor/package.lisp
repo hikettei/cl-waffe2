@@ -46,12 +46,11 @@
    #:detach!
    #:*default-dtype*
    #:*default-order*
-   #:set-save-for-backward
-   #:read-save-for-backward
    #:parameter
    #:*with-printing-tensor-omitted*
    #:tensor-id
-
+   #:system-lazy-set-save-for-backward
+   #:system-lazy-read-save-for-backward
    #:compile-option-t
    )
 

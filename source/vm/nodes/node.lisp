@@ -131,7 +131,7 @@ Here's a list of reports.
 		       if (and
 			   (not *no-grad*)
 			   (nth k save-for-backward)) ;; If T?
-			 collect (set-save-for-backward i)
+			 collect (system-lazy-set-save-for-backward i)
 		       else
 			 collect i))
 	 (transition-function     (abstractnode-node node))  ;; original subscript
@@ -403,7 +403,7 @@ inputs      ... inputs called with
   ;; Collecting x_in
   (detach dout t)
   (let* ((inputs-in (loop for input in inputs-out
-			  collect (detach (or (read-save-for-backward input) input) t)))
+			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
 	 ;; Tracing User-Defined-Backward, still not yet compiled.
 	 (out-kernels (apply #'backward node dout inputs-in))
 	 (dout-place  (gensym "dout"))

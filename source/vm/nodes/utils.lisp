@@ -218,6 +218,7 @@ Defines a differentiable composite, instantly defines as composite-function
 					 (forward (,backward-node-name ,(car backward-args)) ,@(cdr backward-args))))
 	 ,@constructor-body))))
 
+#|
 ;; Test on REPL
 (define-composite-node (TestModel (self)
 			:where (A[~] -> OUT[~])
@@ -229,3 +230,6 @@ Defines a differentiable composite, instantly defines as composite-function
 				   (values
 				    (cl-waffe2/base-impl:proceed
 				     (cl-waffe2/base-impl:!cos dout))))))
+|#
+
+
