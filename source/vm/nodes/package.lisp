@@ -54,6 +54,11 @@
    #:declare-local-variables)
 
   (:export
+   #:define-static-node
+   #:set-save-for-backward
+   #:read-save-for-backward)
+
+  (:export
    #:defmodel
    #:Composite
    #:composite-traced-p
