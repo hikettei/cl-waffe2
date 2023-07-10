@@ -157,4 +157,75 @@ Return:
   (loop for i in (composite-input-size composite)
 	collect (- (length i) (count '~ i :test #'symbol-eq))))
 
+(defmacro define-composite-node ((name
+				  (self-name &rest constructor-args)
+				  &key
+				    (where nil)
+				    (slots nil)
+				    (out-scalar-p nil)
+				    (forward nil)
+				    (backward nil)
+				    (documentation ""))
+				 &body constructor-body)
+  "
+## [macro] define-comopsite-node
 
+Defines a differentiable composite, instantly defines as composite-function
+↑EncapsulatedNodeと同じ要領で実装できる"
+
+  ;; TODO: Checking the number of arguments
+  ;; TODO: set-save-for-backward
+  ;; TODO: gradtmp space
+  
+  (let ((forward-args  (car forward))
+	(backward-args (car backward))
+	(forward-body  (cdr forward))
+	(backward-body (cdr backward))
+	(backward-node-name (symb name '-backward))
+
+	(forward-flet-name (symb name '-forward-body))
+	(backward-flet-name (symb name '-backward-body)))
+    `(progn
+       ;; Called only when backward-mode
+       (define-and-impl-node (,backward-node-name (self forward-self)
+			      :device t
+			      ;; Temporary Restores Nodes used in forward.
+			      :slots ((forward-self :initarg :forward-self :reader read-forward-self))
+			       ;; forward -> backward => backward -> forward
+			      :where ,(where->backward where)
+			      :forward ((,@backward-args)
+					;; Swapping (self args...) -> (forward-self args...)
+					(flet ((,backward-flet-name (,@backward-args)
+						 (declare (ignorable ,(car backward-args)))
+						 ,@backward-body))
+					  (multiple-value-bind (,@backward-args)
+					      (apply #'values (list (read-forward-self ,(car backward-args)) ,@(cdr backward-args)))
+					    `(funcall ,#',backward-flet-name ,,@backward-args))))))
+
+       ;; This is a main part of composite-node.
+       (define-and-impl-node (,name (,self-name ,@constructor-args)
+			      :device t
+			      :where ,where
+			      :slots ,slots
+			      :out-scalar-p ,out-scalar-p
+			      :documentation ,documentation
+			      :forward ((,@forward-args)
+					(flet ((,forward-flet-name (,@forward-args)
+						 (declare (ignorable ,(car forward-args)))
+						 ,@forward-body))
+					  `(funcall ,#',forward-flet-name ,,@forward-args)))
+			      :backward ((,@backward-args)					 
+					 (forward (,backward-node-name ,(car backward-args)) ,@(cdr backward-args))))
+	 ,@constructor-body))))
+
+;; Test on REPL
+(define-composite-node (TestModel (self)
+			:where (A[~] -> OUT[~])
+			:forward ((self x)
+				  (print "HI :)")
+				  (cl-waffe2/base-impl:proceed
+				   (cl-waffe2/base-impl:!sin x)))
+			:backward ((self dout)
+				   (values
+				    (cl-waffe2/base-impl:proceed
+				     (cl-waffe2/base-impl:!cos dout))))))
