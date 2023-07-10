@@ -5,7 +5,7 @@
 ;; define-tensor (Tensors and Backend are strongly combined.)
 ;; CFFI-Style
 ;; Column-Major And Row-Major
-;; TODO: Detect it: (make-tensor `(10 a)) <- use (make-input)
+;; TODO: Detect it: (make-tensor `(10 a)) <- say: use (make-input)
 
 (defparameter *using-backend*
   `()
@@ -693,6 +693,7 @@ The function parameter computes all the previous nodes of the given tensor if an
 		     :requires-grad t
 		     :dtype (dtype tensor)
 		     :order (order tensor))
+	;; detach from computation node.
 	(view out))))
 
 

@@ -7,6 +7,7 @@
 ;; Add Backward tests to define-static-node
 ;; Add Documents
 ;; Update documents
+;; SoftmaxCrossEntropy微分する
 
 ;; ===========================================================
 ;; Static Composite ==========================================
@@ -85,8 +86,11 @@ It should be AbstractTensor."
 	      (apply-set-save-for-backward self name tensor))
 	    (read-save-for-backward (self name)
 	      (apply-read-save-for-backward self name)))
+       
+       ;; Instead of ignore:
        #'set-save-for-backward
        #'read-save-for-backward
+       
        ,@body)))
 
 
@@ -99,6 +103,7 @@ It should be AbstractTensor."
   "
 ## [function] set-save-for-backward
 (TODO DOCS)"
+  
   (error "set-save-for-backward: Attempted to call (set-save-for-backward ~a ~a ~a), but failed. This is because the function isn't placed under `(with-composite-node-mode)` macro.
 
 That is: `set-save-for-backward` is available only when called under the forward/backward definition of `(define-static-node)`. (as long as you're not doing anything weird.)
@@ -230,22 +235,4 @@ Defines a differentiable composite, instantly defines as composite-function
 			      :backward ((,@backward-args)					 
 					 (forward (,backward-node-name ,(car backward-args)) ,@(cdr backward-args))))
 	 ,@constructor-body))))
-
-
-#|
-(define-static-node (TestModel (self)
-		     :where (A[~] -> OUT[~])
-		     :save-for-backward-names (x-input)
-		     :forward ((self x)
-			       (with-setting-save4bw ((x-input x))
-				 (cl-waffe2/base-impl:proceed
-				  (cl-waffe2/base-impl:!sin x))))
-		     :backward ((self dout)
-				(with-reading-save4bw ((x x-input))
-				  (values
-				   (cl-waffe2/base-impl:proceed
-				    (cl-waffe2/base-impl:!mul
-				     dout
-				     (cl-waffe2/base-impl:!cos x))))))))
-|#
 

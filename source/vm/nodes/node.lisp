@@ -368,7 +368,8 @@ Use the define-impl macro to give definitions for the node and forward them.
 	    ;; x.state = :chain / :input?
 
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
-		out ;; ni modosu bw-node demo ugoku beki.
+		out
+		;; when bw-node... -> chain not connected well...?
 		bw-node)))))) ;; Make-copy
 
 (defun expand-backward (node dout &rest inputs-out)

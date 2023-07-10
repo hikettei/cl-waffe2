@@ -17,6 +17,7 @@
 		#:tensor-out-n
 		#:tensor-vec
 		#:tensor-view
+		#:requires-grad
 		#:make-tensor
 		#:make-input
 		#:actual-shape
