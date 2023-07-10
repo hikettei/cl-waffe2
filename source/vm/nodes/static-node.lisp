@@ -4,6 +4,9 @@
 ;; TODO: =================================
 ;; In accordance with refactoring of defnode, :where, add this feature: checking the number of arguments, number of outputs reading :where. (At: forward :around)
 ;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・
+;; Add Backward tests to define-static-node
+;; Add Documents
+;; Update documents
 
 ;; ===========================================================
 ;; Static Composite ==========================================
@@ -21,7 +24,7 @@
 
 
 ;; Parameters
-(defparameter *under-composite-node-mode* nil "Set t under :forward in composite-node. While this parameter is t, set-save-for-backward is never used.")
+(defparameter *under-composite-node-mode* 0 "Incf 1 when go deeper with compis-temode, If count>=2, save-for-backwards are ignored.")
 
 (defparameter *composite-node-self-global* nil "Used by with-setting-save4bw, with-reading-save4bw")
 
@@ -33,9 +36,9 @@
   (declare (type AbstractNode self)
 	   (type symbol name)
 	   (type AbstractTensor tensor))
-
+  
   ;; Is this calling of save-for-backward is reachable? by backward => If so, make a copy.
-  (when (and (not *under-composite-node-mode*)
+  (when (and (not (>= *under-composite-node-mode* 2))
 	     (null *no-grad*))
     (let ((past-sv4bw (slot-value self name)))
 
@@ -76,7 +79,7 @@ It should be AbstractTensor."
 
 1. save-for-backward/read-save-for-backward function become available.
 2. *under-composite-node-mode* becomes t."
-  `(let ((*under-composite-node-mode* t)
+  `(let ((*under-composite-node-mode* (1+ *under-composite-node-mode*))
 	 (*composite-node-self-global* ,self))
      (flet ((set-save-for-backward (self name tensor)
 	      (apply-set-save-for-backward self name tensor))
@@ -235,7 +238,6 @@ Defines a differentiable composite, instantly defines as composite-function
 		     :save-for-backward-names (x-input)
 		     :forward ((self x)
 			       (with-setting-save4bw ((x-input x))
-				 (print "HI :)")
 				 (cl-waffe2/base-impl:proceed
 				  (cl-waffe2/base-impl:!sin x))))
 		     :backward ((self dout)
@@ -245,7 +247,5 @@ Defines a differentiable composite, instantly defines as composite-function
 				    (cl-waffe2/base-impl:!mul
 				     dout
 				     (cl-waffe2/base-impl:!cos x))))))))
-
 |#
-
 
