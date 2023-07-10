@@ -56,7 +56,9 @@
   (:export
    #:define-static-node
    #:set-save-for-backward
-   #:read-save-for-backward)
+   #:read-save-for-backward
+   #:with-reading-save4bw
+   #:with-setting-save4bw)
 
   (:export
    #:defmodel
