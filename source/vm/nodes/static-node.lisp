@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-;; TODO: =================================
+;; TODO: ====================================================
 ;; In accordance with refactoring of defnode, :where, add this feature: checking the number of arguments, number of outputs reading :where. (At: forward :around)
 ;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・
 ;; Add Backward tests to define-static-node
@@ -102,7 +102,19 @@ It should be AbstractTensor."
 (defun set-save-for-backward (self name tensor)
   "
 ## [function] set-save-for-backward
-(TODO DOCS)"
+
+```lisp
+(set-save-for-backward self name tensor)
+```
+
+The function `set-save-for-backward` saves the given `tensor` to the `name` slot of self for a future call of backward.
+
+This function is dedicated to the macro `define-static-node`, so it should be placed at the forward/backward definition of the macro, otherwise, the wrong function is binded which returns simple-error. In addition, The place to save the tensor, should be also declared in `:save-for-backward-names` in the `define-static-node` macro.
+
+Note that this function is ignored in specific conditions: `*no-grad*` is t or `set-save-for-backward` in the forward definition in the forward definition. (i.e.: the place which is never called.)
+
+See also: `read-save-for-backward` `with-setting-sv4bw` `with-reading-sv4bw` `define-static-node`
+"
   
   (error "set-save-for-backward: Attempted to call (set-save-for-backward ~a ~a ~a), but failed. This is because the function isn't placed under `(with-composite-node-mode)` macro.
 
@@ -118,7 +130,13 @@ If you're working with `defnode` or `defmodel` and needs save-for-backward featu
   "
 ## [function] read-save-for-backward
 
-(TODO DOCS)
+```lisp
+(read-save-for-backward self name)
+```
+
+Reading the slot of `name` in `self`, the function `read-save-for-backward` returns a saved tensor by `set-save-for-backward`.
+
+For the same reason of `set-save-for-backward`, this function should be placed at right place.
 "
   (error "read-save-for-backward: Attempted to call (read-save-for-backward ~a ~a), but failed. This is because the function isn't placed under `(with-composite-node-mode)` macro.
 
@@ -135,12 +153,12 @@ If you're working with `defnode` or `defmodel` and needs save-for-backward featu
 
 ```lisp
 (with-reading-save4bw ((&rest input-forms) &body body))
+
+input-form = (variable-place save-for-backward-name)
 ```
 
-
-(with-reading-save4bw ((a b) (b c))
- ...)
-(TODO)"
+Reading the save-for-backward of currently working node, the macro binds each `variable-place` the stored tensor.
+"
   (labels ((expand-forms (rest-forms)
 	     (if (car rest-forms)
 		 `(let ((,(caar rest-forms) (read-save-for-backward *composite-node-self-global* ',@(cdar rest-forms))))
@@ -154,9 +172,10 @@ If you're working with `defnode` or `defmodel` and needs save-for-backward featu
 
 ```lisp
 (with-setting-save4bw ((&rest input-forms) &body body))
+input-form = (save-place tensor)
 ```
 
-(TODO)
+Saves the given tensors to save-place, in the currently working node.
 "
   `(progn
      ,@(map 'list #'(lambda (input-form)
@@ -181,8 +200,75 @@ If you're working with `defnode` or `defmodel` and needs save-for-backward featu
   "
 ## [macro] define-static-node
 
-Defines a differentiable composite, instantly defines as composite-function
-↑EncapsulatedNodeと同じ要領で実装できる"
+```lisp
+(define-static-node ((name
+                              (self-name &rest constructor-args)
+			       &key
+				 (where nil)
+				 (slots nil)
+				 (out-scalar-p nil)
+				 (save-for-backward-names nil)
+				 (forward nil)
+				 (backward nil)
+				 (documentation \"\"))
+			      &body constructor-body))
+```
+
+Defines a differentiable AbstractNode, but its forward/backward is defined by statcically notation.
+
+### Inputs
+
+1. `save-for-backward-names` ... an list of save-for-backwards (e.g.: `:save-for-backward-names (x y)`)
+
+2. `backward` ... should be this form: `((self dout) ... (values x.grad y.grad ...))`
+
+### Example
+
+This macro differs from other `defnode` series macros, because the definition can be used in the same way for defun.
+
+```lisp
+(define-static-node (Static-Sin (self)
+             :where (A[~] -> OUT[~])
+             :save-for-backward-names (x-input)
+             :forward ((self x)
+                       (print \"Hi :) the operation sin is executed.\")
+                       (with-setting-save4bw ((x-input x))
+                            (proceed (!sin x))))
+             :backward ((self dout)
+                (with-reading-save4bw ((x x-input))
+                       (values (proceed (!mul (!cos x) dout)))))))
+```
+
+Calling `Static-Sin` but the `print` function is still not yet called.
+
+```lisp
+(call (Static-Sin) (randn `(3 3)))
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP22057 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: STATIC-SIN-T (A[~] -> OUT[~])>}
+```
+
+The moment someone accept the computation node and invoked it, `print` is called.
+
+```lisp
+(proceed *)
+
+Hi :) the operation sin is executed.
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP22130 
+  :vec-state [computed]
+  ((-0.44811794 -0.8374244  -0.9075781)
+   (-0.9591228  0.58454794  0.9774129)
+   (-0.8381093  -0.36447936 0.9476587))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+But what if one wants to save the given tensors for a future call of backward? Yes, to do this, the functions `set-save-for-backward` and `read-save-for-backward` is available. :)
+"
 
   ;; TODO: Checking the number of arguments
   ;; TODO: set-save-for-backward
@@ -235,4 +321,5 @@ Defines a differentiable composite, instantly defines as composite-function
 			      :backward ((,@backward-args)					 
 					 (forward (,backward-node-name ,(car backward-args)) ,@(cdr backward-args))))
 	 ,@constructor-body))))
+
 
