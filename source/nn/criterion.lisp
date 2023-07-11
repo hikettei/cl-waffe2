@@ -72,14 +72,16 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 (defmodel (Softmax-Cross-Entropy-Forward (self &key (delta 1e-7) (avoid-overflow t))
 	   :slots ((delta :initarg :delta :reader delta)
 		   (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
+	   
 	   :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
 	   :on-call-> ((self x labels)
 		       (with-slots ((delta delta) (avoid-overflow avoid-overflow)) self
 			 (let ((z (!softmax x :avoid-overflow avoid-overflow)))
-			   (cross-entropy-loss z labels :delta delta))))))
+			   (cross-entropy-loss z labels :delta delta :reduction nil))))))
 
 (defmodel (Softmax-Cross-Entropy-Backward (self &key (avoid-overflow t))
 	   :slots ((avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
+	   
 	   :where (Dy[~ length n-dimension] X[~ length n-dimension] Labels[~ length n-dimension] Batch-Size[scal] -> X.grad[~ length n-dimension] where scal = 1)
 	   :on-call-> ((self dy x labels coeff)
 		       (with-slots ((avoid-overflow avoid-overflow)) self
@@ -93,8 +95,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 (define-static-node (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow t))
 		     :slots ((delta :initarg :delta :reader delta)
 			     (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
-		     :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
 		     :save-for-backward-names (x labels)
+		     
+		     :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
 		     :forward ((self x labels)
 			       (with-setting-save4bw ((x x) (labels labels)) self
 				 (static-softmax-cross-entropy-forward x labels)))
@@ -104,10 +107,10 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 				   dout
 				   x
 				   labels 
-				   (make-tensor (car (last (shape x) 2) ) :dtype (dtype x)))))))
+				   (make-tensor (car (last (shape x) 2)) :dtype (dtype x)))))))
 
 
-(defun cross-entropy-loss (x labels &key (delta 1e-7))
+(defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction :mean))
   "
 ## [fucntion] cross-entropy-loss
 
@@ -120,7 +123,11 @@ Returns a tensor that measures the Cross-Entropy-Error between each element in t
 "
 
   ;; KLDiv: xlogp
-  (!mul -1 (!mean (!mul labels (!loge (!add x delta))))))
+  (let ((z (!mul -1 (!mul labels (!loge (!add x delta))))))
+    (case reduction
+      (:sum (!sum z))
+      (:mean (!mean z))
+      (T z))))
 
 (defun softmax-cross-entropy (x labels &key (delta 1e-7))
   "
@@ -128,3 +135,4 @@ Returns a tensor that measures the Cross-Entropy-Error between each element in t
 "
 
   (call (Softmax-Cross-Entropy-Node) x labels))
+
