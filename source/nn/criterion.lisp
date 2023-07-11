@@ -115,11 +115,31 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ## [fucntion] cross-entropy-loss
 
 ```lisp
-(cross-entropy-loss x labels &key (eps 1e-y))
+(cross-entropy-loss x labels &key (delta 1e-7) (reduction :mean))
 ```
 
-Returns a tensor that measures the Cross-Entropy-Error between each element in the x and labels
-(TODO): Label-Smoothing
+Returns a tensor that measures the Cross-Entropy-Error between each element in the x and labels.
+
+```math
+L_i = -p_ilog(x_i + delta)
+```
+
+```math
+\\begin{equation}
+  out_i=
+  \\begin{cases}
+    sum(L)  & \\text{reduction = sum} \\\\
+    mean(L) & \\text{reduction = mean} \\\\
+    L       & \\text{otherwise}
+  \\end{cases}
+\\end{equation}
+```
+
+### Inputs
+
+`x[AbstractTensor]`
+
+`labels[AbstractTensor]` one-hot encoding.
 "
 
   ;; KLDiv: xlogp
@@ -129,10 +149,35 @@ Returns a tensor that measures the Cross-Entropy-Error between each element in t
       (:mean (!mean z))
       (T z))))
 
-(defun softmax-cross-entropy (x labels &key (delta 1e-7))
+(defun softmax-cross-entropy (x labels)
   "
 ## [function] softmax-cross-entropy
+
+```lisp
+(softmax-cross-entropy x labels)
+```
+
+Returns a tensor that measures the Softmax-Cross-Entropy-Error between each element in the x and labels.
+
+```math
+out = CrossEntropyLoss(Softmax(x), labels)
+```
+
+### Inputs
+
+`x[AbstractTensor]`
+
+`labels[AbstractTensor]` one-hot encoding.
 "
 
   (call (Softmax-Cross-Entropy-Node) x labels))
 
+(defun ->one-hot (x)
+  "
+## [function] ->one-hot
+
+Creates an one-hot encoding tensor from the given x
+"
+  
+
+  )

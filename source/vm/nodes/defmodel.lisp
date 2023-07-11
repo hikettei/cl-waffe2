@@ -378,6 +378,7 @@ This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3.
 (~(~a~)~a)
 ```
 
+~a
 ### Description
 
 ~a
@@ -388,6 +389,9 @@ This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3.
 				    (dolist (arg constructor-arguments)
 				      (princ " " out)
 				      (format out "~a" arg)))
+				  (if where
+				      (format nil "~%which transformation of shapes are defined as:~%```~%~a~%```" where)
+				      "")
 				  documentation)))
 
        (defmethod read-where ((model ,name))

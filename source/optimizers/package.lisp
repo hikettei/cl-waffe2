@@ -7,7 +7,10 @@
    #:AbstractOptimizer
    #:defoptimizer
    #:read-parameter
-   #:step-optimize))
+   #:step-optimize)
+
+  (:export
+   #:SGD))
 
 (in-package :cl-waffe2/optimizers)
 
