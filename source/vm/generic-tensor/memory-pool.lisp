@@ -168,8 +168,8 @@ Usage:
 "
 
   `(let ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
-     (unless (typep ,symbol-value 'fixnum)
-       (error "with-adjustalbe-symbol: Attempted to register an symbol, ~a (TODO More clear error)" ,symbol-value))
+     ;;(unless (typep ,symbol-value 'fixnum)
+     ;;  (error "with-adjustalbe-symbol: Attempted to register an symbol, ~a (TODO More clear error)" ,symbol-value))
      
      (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
      ,@body))
@@ -201,9 +201,12 @@ Usage:
 
 (defun read-symbol (symbol)
   (if *adjustable-shape-table*
-      (typecase symbol
-	(symbol (gethash symbol *adjustable-shape-table*))
-	(T symbol))
+      (let ((out (typecase symbol
+		   (symbol (gethash symbol *adjustable-shape-table*))
+		   (T symbol))))
+	(typecase out
+	  (fixnum out)
+	  (symbol (read-symbol out))))
       symbol))
 
 (defun get-from-memory-pool (tensor)

@@ -52,14 +52,20 @@
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!relu))
-	     "3 Layers MLP"
+	     "三層のMLPモデル"
 	     (LinearLayer in-features hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features))
 
-;; TO FIX: forward with batch-size (save-for-backward)
+
+;; 1. TO FIX: forward with batch-size (save-for-backward)
+;; 2. TO DO: criterion.lisp
+;; 3. TO DO: cl-waffe2/nn
+;; 4. TO DO: defoptimizer
+;; 5. MLP学習,
+;; 6. ギリギリまでスライドとドキュメント整理
 
 (defun build-mlp-test (&key
 			 (x (make-input `(batch-size 784) :X))
@@ -69,4 +75,11 @@
 	 (out (!mean (cl-waffe2/nn::softmax-cross-entropy pred y)))
 	 (compiled-model (build out)))
     compiled-model))
+
+(defun test-model ()
+  (let ((compiled-model (build-mlp-test)))
+    (set-input compiled-model :X (randn `(10 784)))
+    (set-input compiled-model :Y (randn `(10 10)))
+    (forward compiled-model)
+    (time (forward compiled-model))))
 

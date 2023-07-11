@@ -127,7 +127,8 @@ See also: `set-input`"
 	     (let ((max-val (gethash key maxsize)))
 	       
 	       (when (and (not (null max-val))
-			  (> value max-val))
+			  ;;(> value max-val)
+			  )
 		 
 		 ;;(error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
 		;;	key
