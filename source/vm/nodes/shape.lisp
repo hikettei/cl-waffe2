@@ -225,10 +225,6 @@ variables := variable variables
 
 variable := [shape-subscripts]
 
-条件式としてEvalできる形にする。
-where [a[1] a[0]] [b[1] b[0]] -> [a[1] a[0]]
-内部でさらに変数定義
-
 where [a[0~t]] -> [a[x]] let x = shape (defnode引数を引用)
 
 BASIC Format:
@@ -241,9 +237,9 @@ BASIC Format:
 
 x -> [x y] let x = (list 1 2 3)
 
-batch-size <- スコープが上位の変数も参照できるようにしたい。
+[batch-size x[0] x[1]]
 
-[batch-size x[0] x[1]]"
+If fixed=t, ~ is ignored."
   (declare (type list subscripts))
 
   ;; replace [a b] into [ a b ] (couldn't intepreted as a separated token)
@@ -256,6 +252,29 @@ batch-size <- スコープが上位の変数も参照できるようにしたい
 		     collect s)
 	     out)))
     (values inputs outputs first-state out-state let-binding)))
+
+
+;; Bug: [~] A[~] -> B [~]
+(defun where->backward (subscripts)
+  "forward -> backward where ... => backward -> forward where ..."
+  (multiple-value-bind (first-names output-names first-states out-states let-binding) (parse-subscript subscripts)
+
+    `(,@(loop for i fixnum upfrom 0 below (length out-states)
+	      if (nth i output-names)
+		append `(,(nth i output-names) [ ,@(nth i out-states) ])
+	      else
+		append `([ ,@(nth i out-states) ]))
+      ->
+      ,@(loop for i fixnum upfrom 0 below (length first-states)
+	      if (nth i first-names)
+		append `(,(nth i first-names) [ ,@(nth i first-states) ])
+	      else
+		append `([ ,@(nth i first-states) ]))
+
+      ,@(when let-binding
+	  `(where
+	    ,@(loop for let in let-binding
+		    append `(,(car let) = ,(second let))))))))
 
 (defun get-common-symbols (symbols)
   (remove-duplicates (flatten symbols) :test #'symbol-eq))

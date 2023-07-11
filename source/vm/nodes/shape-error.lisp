@@ -2,7 +2,7 @@
 (in-package :cl-waffe2/vm.nodes)
 
 ;; (TODO): Better Error Printing of Shape-Error
-
+;; Memo: In Progress.
 
 (defstruct Rank-Error
   "Rank Error"

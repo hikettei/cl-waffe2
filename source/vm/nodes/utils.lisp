@@ -157,4 +157,3 @@ Return:
   (loop for i in (composite-input-size composite)
 	collect (- (length i) (count '~ i :test #'symbol-eq))))
 
-

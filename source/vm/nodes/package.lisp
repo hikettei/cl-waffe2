@@ -17,6 +17,7 @@
 		#:tensor-out-n
 		#:tensor-vec
 		#:tensor-view
+		#:requires-grad
 		#:make-tensor
 		#:make-input
 		#:actual-shape
@@ -34,8 +35,8 @@
 		#:tensor-flexible-p
 		#:with-no-grad
 		#:make-compiled-kernel
-		#:set-save-for-backward
-		#:read-save-for-backward
+		#:system-lazy-set-save-for-backward
+		#:system-lazy-read-save-for-backward
 		#:scalar-p)
   (:export
    #:create-subscript-p
@@ -52,6 +53,13 @@
    #:make-errorpoint
    #:node-local-variables
    #:declare-local-variables)
+
+  (:export
+   #:define-static-node
+   #:set-save-for-backward
+   #:read-save-for-backward
+   #:with-reading-save4bw
+   #:with-setting-save4bw)
 
   (:export
    #:defmodel

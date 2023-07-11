@@ -43,8 +43,9 @@
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
 	       (:file "vm/nodes/defmodel")
-	       (:file "vm/nodes/utils")
+	       (:file "vm/nodes/utils")	       
 	       (:file "vm/nodes/function")
+	       (:file "vm/nodes/static-node")
 
 	       
 	       (:file "base-impl/arithmetic")
