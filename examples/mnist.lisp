@@ -52,20 +52,19 @@
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!relu))
-	     "三層のMLPモデル"
+	     "Three Layers MLP Model"
 	     (LinearLayer in-features hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features))
 
-
-;; 1. TO FIX: forward with batch-size (save-for-backward)
-;; 2. TO DO: criterion.lisp
-;; 3. TO DO: cl-waffe2/nn
-;; 4. TO DO: defoptimizer
-;; 5. MLP学習,
-;; 6. ギリギリまでスライドとドキュメント整理
+;; TODO
+;; 1. TO FIX: forward with batch-size (save-for-backward) (OK)
+;; 2. TODO: criterion.lisp
+;; 3. TODO: cl-waffe2/nn
+;; 4. TODO: defoptimizer
+;; 5. TODO: Documentations, Slides.
 
 (defun build-mlp-test (&key
 			 (x (make-input `(batch-size 784) :X))
