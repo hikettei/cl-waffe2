@@ -360,7 +360,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP39821 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP502 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -376,10 +376,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimeDvMNag.fasl") {53B83D2B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {537E72EB}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/private/var/tmp/slimeDvMNag.fasl") {53B84C8B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {537E824B}>
 
 += [Tensors in the computation node] =======+
 

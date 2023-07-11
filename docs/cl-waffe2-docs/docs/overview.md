@@ -261,6 +261,7 @@ One operation can be defined for a backend that can be declared by extending the
 
 ;; If data storage is differ from CL Array, override vref and (setf vref) method.
 
+
 ;; 2. Using an existing backend.
 
 

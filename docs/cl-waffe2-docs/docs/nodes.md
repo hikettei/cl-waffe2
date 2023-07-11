@@ -411,9 +411,9 @@ Depending on `*using-backend*`, the implementation to use is determined at node-
 ```math
 g(dout, dx_{in}, dy_{in}, ..., dn_{in}) \triangleq \\
  Move(dx_{out}, {dout} \times {dx_{grad}}),\\
- Move(dy_{out}, {dout} \times {dy_{grad}}),\\
+ Move(dx_{out}, {dout} \times {dy_{grad}}),\\
  ...,\\
- Move(dn_{out}, {dout} \times {dn_{grad}})
+ Move(dx_{out}, {dout} \times {dn_{grad}})
 ```
 
 ```lisp
@@ -782,6 +782,101 @@ On the condition where composite should be defined as polymorphic, the function 
 
 5. `compile-mode[compile-mode-t]` compiling option.
 
+## [macro] define-static-node
+
+```lisp
+(define-static-node ((name
+                          (self-name &rest constructor-args)
+			       &key
+				 (where nil)
+				 (slots nil)
+				 (out-scalar-p nil)
+				 (save-for-backward-names nil)
+				 (forward nil)
+				 (backward nil)
+				 (documentation ""))
+			      &body constructor-body))
+```
+
+Defines a differentiable AbstractNode, but its forward/backward is defined by statcically notation.
+
+### Inputs
+
+1. `save-for-backward-names` ... an list of save-for-backwards (e.g.: `:save-for-backward-names (x y)`)
+
+2. `backward` ... should be this form: `((self dout) ... (values x.grad y.grad ...))`
+
+### Example
+
+This macro differs from other `defnode` series macros, because the definition can be used in the same way for defun.
+
+```lisp
+(define-static-node (Static-Sin (self)
+             :where (A[~] -> OUT[~])
+             :save-for-backward-names (x-input)
+             :forward ((self x)
+                       (print "Hi :) the operation sin is executed.")
+                       (with-setting-save4bw ((x-input x))
+                            (proceed (!sin x))))
+             :backward ((self dout)
+                (with-reading-save4bw ((x x-input))
+                       (values (proceed (!mul (!cos x) dout)))))))
+```
+
+Calling `Static-Sin` but the `print` function is still not yet called.
+
+```lisp
+(call (Static-Sin) (randn `(3 3)))
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP22057 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: STATIC-SIN-T (A[~] -> OUT[~])>}
+```
+
+The moment someone accept the computation node and invoked it, `print` is called.
+
+```lisp
+(proceed *)
+
+Hi :) the operation sin is executed.
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP22130 
+  :vec-state [computed]
+  ((-0.44811794 -0.8374244  -0.9075781)
+   (-0.9591228  0.58454794  0.9774129)
+   (-0.8381093  -0.36447936 0.9476587))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+But what if one wants to save the given tensors for a future call of backward? Yes, to do this, the functions `set-save-for-backward` and `read-save-for-backward` is available. :)
+
+## [function] set-save-for-backward
+
+```lisp
+(set-save-for-backward self name tensor)
+```
+
+The function `set-save-for-backward` saves the given `tensor` to the `name` slot of self for a future call of backward.
+
+This function is dedicated to the macro `define-static-node`, so it should be placed at the forward/backward definition of the macro, otherwise, the wrong function is binded which returns simple-error. In addition, The place to save the tensor, should be also declared in `:save-for-backward-names` in the `define-static-node` macro.
+
+Note that this function is ignored in specific conditions: `*no-grad*` is t or `set-save-for-backward` in the forward definition in the forward definition. (i.e.: the place which is never called.)
+
+See also: `read-save-for-backward` `with-setting-sv4bw` `with-reading-sv4bw` `define-static-node`
+
+## [function] read-save-for-backward
+
+```lisp
+(read-save-for-backward self name)
+```
+
+Reading the slot of `name` in `self`, the function `read-save-for-backward` returns a saved tensor by `set-save-for-backward`.
+
+For the same reason of `set-save-for-backward`, this function should be placed at right place.
+NILNIL
 ## [class] Composite
 
 [class] Composite

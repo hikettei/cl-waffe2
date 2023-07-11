@@ -586,6 +586,14 @@ The moment `forward` is called, the computation node is constructed for building
     (with-section "[macro] define-composite-function"
       (insert "~a" (documentation (macro-function 'define-composite-function) 'function)))
 
+    (insert "~a" (documentation (macro-function 'define-static-node) 'function))
+
+    (insert "~a" (documentation 'set-save-for-backward 'function))
+    (insert "~a" (documentation 'read-save-for-backward 'function))
+    
+    (insert "~a" (documentation (macro-function 'with-setting-sv4bw) 'function))
+    (insert "~a" (documentation (macro-function 'with-reading-sv4bw) 'function))
+
     (with-section "[class] Composite"
       (insert
        "
