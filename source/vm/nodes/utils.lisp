@@ -157,3 +157,18 @@ Return:
   (loop for i in (composite-input-size composite)
 	collect (- (length i) (count '~ i :test #'symbol-eq))))
 
+
+
+(defun collect-initarg-slots (slots constructor-arguments)
+  (map 'list #'(lambda (slots)
+		 ;; Auto-Generated Constructor is Enabled Only When:
+		 ;; slot has :initarg
+		 ;; slot-name corresponds with any of constructor-arguments
+		 (when
+		     (and
+		      (find (first slots) (flatten constructor-arguments))
+		      (find :initarg slots))
+		   slots))
+       slots))
+
+

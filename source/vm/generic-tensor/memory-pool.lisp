@@ -146,13 +146,14 @@ Reading the *adjustable-shape-table*, the function returns an list consisted of 
 If there's any undetermined one, returns an error (TODO: Add Conditions)"
   (declare (type list shape)
 	   (optimize (speed 3)))
-  (map 'list #'read-adjustable-symbol shape))
+  
+  (map 'list #'read-symbol shape))
 
 (defun read-adjustable-symbol (s)
   (typecase s
     (fixnum s)
     (symbol
-     (or (gethash s *adjustable-shape-table*)
+     (or (read-symbol s);;(gethash s *adjustable-shape-table*)
 	 (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
@@ -168,8 +169,8 @@ Usage:
 "
 
   `(let ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
-     (unless (typep ,symbol-value 'fixnum)
-       (error "with-adjustalbe-symbol: Attempted to register an symbol, ~a (TODO More clear error)" ,symbol-value))
+     ;;(unless (typep ,symbol-value 'fixnum)
+     ;;  (error "with-adjustalbe-symbol: Attempted to register an symbol, ~a (TODO More clear error)" ,symbol-value))
      
      (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
      ,@body))
@@ -202,7 +203,16 @@ Usage:
 (defun read-symbol (symbol)
   (if *adjustable-shape-table*
       (typecase symbol
-	(symbol (gethash symbol *adjustable-shape-table*))
+	(symbol
+	 ;; out <- table[symbol]
+	 (let ((out (gethash symbol *adjustable-shape-table*)))
+	   (if (null out)
+	       symbol ;; No result?
+	       (if (symbolp out)
+		   ;; A = BATCH_SIZE = 10
+		   (read-symbol out)
+		   out))))
+	;; Return fixnum
 	(T symbol))
       symbol))
 

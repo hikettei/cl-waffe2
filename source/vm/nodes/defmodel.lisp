@@ -364,7 +364,8 @@ cl-waffe2 calls the given lambda function as a forward propagation.
 This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3.
 "
   (declare (type (or symbol function list null) on-call->))
-  (let ((use-linter-p (not (null where))))
+  (let ((use-linter-p (not (null where)))
+	(initargs-first (collect-initarg-slots slots constructor-arguments)))
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        ;; E.g.: The case when we want to define LinearLayer Model...
        ;; defines LinearLayer class
@@ -431,6 +432,11 @@ An constructor function for ~a."
 				(fourth ,subscript-p1)
 				:linter-state2
 				(fourth ,subscript-p2)
+				,@(loop for slot in initargs-first
+					     if slot
+					       collect (intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
+					     if slot
+					       collect (car slot))
 				,@initargs)))
 	       (declare (ignorable ,self-name))
 	       ;; Update IO size
