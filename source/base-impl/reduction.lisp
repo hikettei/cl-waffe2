@@ -27,7 +27,10 @@ Return:
   (declare (type AbstractTensor tensor)
 	   (type boolean keepdims)
 	   (type (or t list fixnum) axis))
-  (let* ((shape (copy-list (shape tensor)))
+  (let* ((tensor (if (scalar-p tensor)
+		     (->mat tensor)
+		     tensor))
+	 (shape (copy-list (shape tensor)))
 	 (view-args (make-list (length shape) :initial-element t))
 	 (dims  (length shape)))
 

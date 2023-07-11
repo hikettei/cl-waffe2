@@ -876,7 +876,26 @@ See also: `read-save-for-backward` `with-setting-sv4bw` `with-reading-sv4bw` `de
 Reading the slot of `name` in `self`, the function `read-save-for-backward` returns a saved tensor by `set-save-for-backward`.
 
 For the same reason of `set-save-for-backward`, this function should be placed at right place.
-NILNIL
+
+## [macro] with-setting-save4bw
+
+```lisp
+(with-setting-save4bw ((&rest input-forms) &body body))
+input-form = (save-place tensor)
+```
+
+Saves the given tensors to save-place, in the currently working node.
+
+## [macro] with-reading-save4bw
+
+```lisp
+(with-reading-save4bw ((&rest input-forms) &body body))
+
+input-form = (variable-place save-for-backward-name)
+```
+
+Reading the save-for-backward of currently working node, the macro binds each `variable-place` the stored tensor.
+
 ## [class] Composite
 
 [class] Composite
