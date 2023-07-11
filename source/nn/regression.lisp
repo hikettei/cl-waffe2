@@ -6,20 +6,6 @@
 ;; LinearLayer DenseLayer L1/L2 Norm Etc...
 ;;
 
-(defmodel (LinearLayer (self in-features out-features &optional (use-bias? t))
-	   :slots ((weights :accessor linear-weight)
-		   (bias    :initform nil :accessor linear-bias))
-	   :where ([~ batch-size in-features] -> [~ batch-size out-features])
-	   :on-call-> call-linear
-	   :documentation "In-Features -> Out-Features")
-
-  ;; Initialize Weights
-  (setf (linear-weight self) (xavier-uniform `(,out-features ,in-features) :requires-grad t))
-  
-  ;; Init with Xavier
-  (when use-bias?
-    (setf (linear-bias self) (uniform-random `(,out-features) -0.01 0.01 :requires-grad t))))
-
 ;; TODO:
 ;; Broadcasting (with regard to axes)
 ;; Printing Model Objects like cl-waffe
@@ -31,12 +17,44 @@
       (!add (!matmul x (!t (!flexible weight))) (!flexible bias))
       (!matmul x (!t (!flexible weight)))))
 
-;; TODO: Print-Object
+(defmodel (LinearLayer (self in-features out-features &optional (use-bias? t))
+	   :slots ((weights :accessor linear-weight)
+		   (bias    :initform nil :accessor linear-bias))
+	   :where ([~ batch-size in-features] -> [~ batch-size out-features])
+	   :on-call-> ((self x)
+		       (step-linear
+			x
+			(linear-weight self)
+			(linear-bias self)))
+	   :documentation "Applies a linear transformation to the incoming data.
+
+```math
+y = xA^\\intercal + b
+```
+
+### Inputs
+
+`in-features[fixnum]` size of each input size.
+
+`out-features[fixnum]` size of each output size.
+
+`bias[boolean]` If set to nil, the layer won't learn an additive bias. default: `t`
+
+### Parameters
+
+`(linear-weight self)` the trainable value of the model of shape `out_features * in_features`. The values are sampled from  `xavier-uniform`.
+
+`(linear-bias self)` the tranable value of bias of shape `out_features`. If bias is t, the initial values are sampled from uniform distribution: `U(-k, k)` where k = `sqrt(1/out-features)`.
+")
+
+  ;; Initialize Weights
+  (setf (linear-weight self) (xavier-uniform `(,out-features ,in-features) :requires-grad t))
+  
+  ;; Init with Xavier
+  (when use-bias?
+    (let ((k (sqrt (/ 1 out-features))))
+      (setf (linear-bias self) (uniform-random `(,out-features) (- k) k :requires-grad t)))))
 
 
-(defmethod call-linear ((self LinearLayer) x)
-  (step-linear
-   x
-   (linear-weight self)
-   (linear-bias self)))
+
 
