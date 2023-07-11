@@ -6,6 +6,12 @@
   (:export
    #:LinearLayer)
 
+  ;; Criterions
+  (:export
+   #:L1Norm
+   #:MSE
+   )
+  
   (:export
    #:!relu
    #:!gelu
