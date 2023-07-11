@@ -81,5 +81,6 @@
     (set-input compiled-model :X (randn `(10 784)))
     (set-input compiled-model :Y (randn `(10 10)))
     (forward compiled-model)
-    (time (forward compiled-model))))
+    (time (forward compiled-model))
+    (time (backward compiled-model))))
 
