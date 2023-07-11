@@ -36,7 +36,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
   (let ((l (!sub x y)))
     (case reduction
       (:sum
-       (!sum (!abs l)))
+       (!sum  (!abs l)))
       (:mean
        (!mean (!abs l)))
       (T (!abs l)))))

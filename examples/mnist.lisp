@@ -50,8 +50,6 @@
 			       (asnode #'!softmax)))))
 |#
 
-;; compiling softmax is slow.
-;; softmax is maybe unstable?
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!relu))
 	     "3 Layers MLP"
@@ -59,23 +57,16 @@
 	     (asnode activation)
 	     (LinearLayer hidden-dim hidden-dim)
 	     (asnode activation)
-	     (LinearLayer hidden-dim out-features)
-	     (asnode #'!softmax))
+	     (LinearLayer hidden-dim out-features))
 
-(defsequence LinearModel (in-features out-features)
-	     "Linear"
-	     (LinearLayer in-features out-features)
-	     ;;(asnode #'!)
-	     )
+;; TO FIX: forward with batch-size (save-for-backward)
 
-(defun train ()
-  (let ((model (MLP-Sequence 784 256 10)))
-    (with-build (forward backward vars params)
-		(!sum (call model (make-input `(batch-size 784) :X)))
-      (embody-input vars :X (randn `(10 784)))
-
-      (time (print (funcall forward)))
-      (time (funcall backward))
-      
-      )))
+(defun build-mlp-test (&key
+			 (x (make-input `(batch-size 784) :X))
+			 (y (make-input `(batch-size 10)  :Y)))
+  (let* ((model (MLP-Sequence 784 256 10))
+	 (pred  (call model x))
+	 (out (!mean (cl-waffe2/nn::softmax-cross-entropy pred y)))
+	 (compiled-model (build out)))
+    compiled-model))
 
