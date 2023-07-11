@@ -161,6 +161,10 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-read-save-for-backward">[function] read-save-for-backward</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-with-setting-save4bw">[macro] with-setting-save4bw</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-with-reading-save4bw">[macro] with-reading-save4bw</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#class-composite">[class] Composite</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#extend-composite-class-slightly-complicated">Extend Composite Class (Slightly Complicated)</a>
@@ -981,8 +985,18 @@ Hi :) the operation sin is executed.
 <pre><code class="language-lisp">(read-save-for-backward self name)
 </code></pre>
 <p>Reading the slot of <code>name</code> in <code>self</code>, the function <code>read-save-for-backward</code> returns a saved tensor by <code>set-save-for-backward</code>.</p>
-<p>For the same reason of <code>set-save-for-backward</code>, this function should be placed at right place.
-NILNIL</p>
+<p>For the same reason of <code>set-save-for-backward</code>, this function should be placed at right place.</p>
+<h2 id="macro-with-setting-save4bw">[macro] with-setting-save4bw</h2>
+<pre><code class="language-lisp">(with-setting-save4bw ((&amp;rest input-forms) &amp;body body))
+input-form = (save-place tensor)
+</code></pre>
+<p>Saves the given tensors to save-place, in the currently working node.</p>
+<h2 id="macro-with-reading-save4bw">[macro] with-reading-save4bw</h2>
+<pre><code class="language-lisp">(with-reading-save4bw ((&amp;rest input-forms) &amp;body body))
+
+input-form = (variable-place save-for-backward-name)
+</code></pre>
+<p>Reading the save-for-backward of currently working node, the macro binds each <code>variable-place</code> the stored tensor.</p>
 <h2 id="class-composite">[class] Composite</h2>
 <p>[class] Composite</p>
 <p>Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.</p>
