@@ -87,6 +87,26 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/optimizers</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#class-abstractoptimizer">[class] AbstractOptimizer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-defoptimizer">[macro] defoptimizer</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#input">Input</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optimizer-sgd">[optimizer] SGD</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#initializer">Initializer</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#description">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                 </li>
               </ul>
@@ -113,7 +133,61 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="cl-waffe2optimizers">cl-waffe2/optimizers</h1>
+                <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css"
+  integrity="sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs"
+  crossorigin="anonymous" />
+
+<style type="text/css">
+    .katex img {
+      object-fit: fill;
+      padding: unset;
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: inherit;
+    }
+</style>
+<h1 id="cl-waffe2optimizers">cl-waffe2/optimizers</h1>
+<h2 id="class-abstractoptimizer">[class] AbstractOptimizer</h2>
+<p><code>AbstractOptimizer</code> is an Abstract class of all optimizing functions in cl-waffe2.</p>
+<p>The optimizing operation is performed by calling a <code>(step-optimize optimizer)</code> method. The parameter to be optimized can be accessed by a <code>read-parameter</code> method. The new optimizer function can be defined via <code>defoptimizer</code> macro.</p>
+<p>See also: <code>defoptimizer</code> <code>read-parameter</code> <code>step-optimize</code></p>
+<h2 id="macro-defoptimizer">[macro] defoptimizer</h2>
+<p>The macro <code>defoptimizer</code> defines a user-defined optimizer class which is a subclass of <code>AbstractOptimizer</code></p>
+<p>The class is dispatched one per parameter to be optimized and the method <code>step-optimize</code> is called each time an optimizing is performed.</p>
+<h3 id="input">Input</h3>
+<p><code>param</code> the tensor to be optimized is given as this argument. the tensor is stored in the <code>param</code> slot automatically, being accessed by a <code>read-parameter</code> method.</p>
+<h3 id="example">Example</h3>
+<pre><code class="language-lisp">(defoptimizer (SGD (self param &amp;key (lr 1e-3))
+           :slots ((lr :initarg :lr :reader sgd-lr))))
+
+(defmodel (SGD-Compute-Form (self)
+       :where (Param[~] Grad[~] Lr[scal] -&gt; Param[~] where scal = 1)
+       :documentation &quot;Param_New &lt;- Param - Param * Grad * Lr&quot;
+       :on-call-&gt; ((self param grad lr)
+               (declare (ignore self))
+               (A-=B param (!mul lr grad)))))
+
+(define-composite-function (SGD-Compute-Form) step-sgd)
+
+(defmethod step-optimize ((optimizer SGD))
+  (let* ((lr    (make-tensor (sgd-lr optimizer)))
+     (param (read-parameter optimizer))
+     (grad  (grad param)))    
+    (step-sgd param grad lr)))
+</code></pre>
+<h2 id="optimizer-sgd">[optimizer] SGD</h2>
+<h3 id="initializer">Initializer</h3>
+<pre><code>(SGD param &amp;KEY (LR 0.001))
+</code></pre>
+<h3 id="description">Description</h3>
+<h3 id="inputs">Inputs</h3>
+<p>Implements a simple SGD.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>P</mi><mi>a</mi><mi>r</mi><mi>a</mi><msub><mi>m</mi><mrow><mi>n</mi><mi>e</mi><mi>w</mi></mrow></msub><mo>←</mo><mrow><mi>P</mi><mi>a</mi><mi>r</mi><mi>a</mi><mi>m</mi><mo>−</mo><mi>P</mi><mi>a</mi><mi>r</mi><mi>a</mi><msub><mi>m</mi><mrow><mi>g</mi><mi>r</mi><mi>a</mi><mi>d</mi></mrow></msub><mo>×</mo><mrow><mi>l</mi><mi>r</mi></mrow></mrow></mrow><annotation encoding="application/x-tex">
+Param_{new}\gets{Param - Param_{grad}\times{lr}}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">a</span><span class="mord"><span class="mord mathnormal">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight" style="margin-right:0.02691em;">w</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.9805em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">am</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">a</span><span class="mord"><span class="mord mathnormal">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">g</span><span class="mord mathnormal mtight" style="margin-right:0.02778em;">r</span><span class="mord mathnormal mtight">a</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span></span></span></p>
+<p><code>lr[single-float]</code> learning rate.</p>
               
             </div>
           </div><footer>
