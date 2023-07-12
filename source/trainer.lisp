@@ -68,8 +68,7 @@ defines a new trainer."
     `(progn
        (defclass ,name (AbstractTrainer)
 	 (,@slots
-	  (model :initarg :model :reader model)
-	  (optimizers :initarg :optimizers :reader optimizers :type list))
+	  (model :initarg :model :reader model))
 	 (:documentation ,documentation))
 
        (defmethod minimize! ((self ,name) &rest ,inputs)	 
@@ -108,30 +107,8 @@ defines a new trainer."
 	     (initialize-optimizers! (model ,self) #'create-optimizer)
 	     ,@constructor-body
 	     ,self))))))
-
-
-(deftrainer (MLPTrainer (self in-class out-class)
-	     :model     (mnist-example::MLP-Sequence in-class 10 out-class)
-	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-3)
-	     :build ((self)
-		     (let ((out (!mean (cl-waffe2/nn:softmax-cross-entropy
-					(call
-					 (model self)
-					 (make-input `(batch-size ,in-class)  :X))
-					(make-input `(batch-size  ,out-class) :Y)))))
-		       out))
-	     :minimize! ((self out)
-			 (zero-grads! (model self))
-			 (forward out)
-			 (backward out)
-			 (optimize!   (model self)))
-	     :step-train ((self x y)
-			  (set-input (model self) :X x)
-			  (set-input (model self) :Y y))
-	     :predict ((self x)
-		       (call (model self) x))))
-
-
        
 
 ;; TODO Printer
+
+;;(defmethod print-object ((model AbstractTrainer) stream)

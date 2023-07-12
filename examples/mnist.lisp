@@ -66,6 +66,30 @@
 ;; 4. TODO: defoptimizer
 ;; 5. TODO: Documentations, Slides.
 
+
+(deftrainer (MLPTrainer (self in-class out-class
+			      &key (hidden-size 256))
+	     :model     (MLP-Sequence in-class hidden-size out-class)
+	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-3)
+	     :build ((self)
+		     (let ((out (!mean (softmax-cross-entropy
+					(call
+					 (model self)
+					 (make-input `(batch-size ,in-class)  :X))
+					(make-input `(batch-size  ,out-class) :Y)))))
+		       out))
+	     :minimize! ((self out)
+			 (zero-grads! (model self))
+			 (forward out)
+			 (backward out)
+			 (optimize!   (model self)))
+	     :step-train ((self x y)
+			  (set-input (model self) :X x)
+			  (set-input (model self) :Y y))
+	     :predict ((self x)
+		       (call (model self) x))))
+
+
 (defun build-mlp-test (&key
 			 (x (make-input `(batch-size 784) :X))
 			 (y (make-input `(batch-size 10)  :Y)))
@@ -77,8 +101,8 @@
 
 (defun test-model ()
   (let ((compiled-model (build-mlp-test)))
-    (set-input compiled-model :X (randn `(10 784)))
-    (set-input compiled-model :Y (randn `(10 10)))
+    (set-input compiled-model :X (randn `(100 784)))
+    (set-input compiled-model :Y (randn `(100 10)))
     (forward compiled-model)
     (time (forward compiled-model))
     (time (backward compiled-model))))
