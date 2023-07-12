@@ -53,8 +53,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (tensor-id :initform (gensym "TID") :accessor tensor-id)
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
+   (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
    (grad :initform nil :reader grad :writer set-grad)
-   (gradient-adder :accessor gradient-adder)
+   (gradient-adder    :accessor gradient-adder)
+   (gradient-resetter :accessor gradient-resetter)
 
    (save-for-backward-space :initform nil :accessor save-for-backward-space)
    (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
@@ -327,6 +329,22 @@ Note:
       (incf (tensor-vec (grad target)) (tensor-vec new-value))
       nil))
 
+(defun make-gradient-resetter (tensor)
+  (let ((*no-grad* t))
+    (let* ((out (cl-waffe2/vm.nodes:forward
+		 (cl-waffe2/base-impl:ScalarMul (dtype tensor))
+		 (grad tensor)
+		 (make-tensor (coerce 0 (dtype->lisp-type (dtype tensor))))))
+	   (code (compile-forward-kernel out :compile-mode :fastest)))
+      #'(lambda ()
+	  (funcall code)))))
+
+(defun make-gradient-resetter-scal (tensor)
+  (let ((resetwith (coerce 0 (dtype->lisp-type (dtype tensor)))))
+    #'(lambda ()
+	(setf (tensor-vec (grad tensor)) resetwith))))
+
+
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p   (getf initargs :scalar-p))
 	(view       (getf initargs :view))
@@ -371,9 +389,13 @@ Note:
 		    tensor))
       (if (scalar-p tensor)
 	  (setf (gradient-adder tensor)
-		(make-gradient-adder-scal tensor))
+		(make-gradient-adder-scal tensor)
+		(gradient-resetter tensor)
+		(make-gradient-resetter-scal tensor))
 	  (setf (gradient-adder tensor)
-		(make-gradient-adder tensor (tensor-visible-shape tensor)))))))
+		(make-gradient-adder tensor (tensor-visible-shape tensor))
+		(gradient-resetter tensor)
+		(make-gradient-resetter tensor))))))
 
 (defmethod add-grads ((tensor AbstractTensor) new-value)
   "tensor's gradient += new-value"
@@ -792,4 +814,31 @@ The function parameter computes all the previous nodes of the given tensor if an
 	
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
+
+;; Exports
+(defun hook-optimizer! (tensor optimizer)
+  "
+## [function] hook-optimizer!
+"
+  (declare (type AbstractTensor tensor)
+	   (type cl-waffe2/optimizers:AbstractOptimizer optimizer))
+  (when (slot-value tensor 'requires-grad)
+    (setf (tensor-optimizer tensor) optimizer)))
+
+(defun call-optimizer! (tensor)
+  "
+## [function] call-optimizer!
+"
+  (declare (type AbstractTensor))
+  (when (slot-value tensor 'requires-grad)
+    (cl-waffe2/optimizers:step-optimize (tensor-optimizer tensor))))
+
+(defun reset-grad! (tensor)
+  "
+## [function] reset-grad!
+"
+  (declare (type AbstractTensor tensor))
+  (when (slot-value tensor 'requires-grad)
+    (funcall (gradient-resetter tensor))))
+
 

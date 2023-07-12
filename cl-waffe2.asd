@@ -31,7 +31,7 @@
 	       (:file "vm/generic-tensor/call-with-view")
 	       (:file "vm/generic-tensor/memory-pool")
 
-	       
+	       (:file "optimizers/package")
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/acceptor")
 	       
@@ -84,7 +84,7 @@
 	       (:file "nn/regression")
 	       (:file "nn/criterion")
 	       
-	       (:file "optimizers/package")
+	       
 	       (:file "optimizers/defoptimizer")
 
 	       (:file "optimizers/impls/sgd")
@@ -92,7 +92,8 @@
 	       (:file "package")
 	       (:file "utils")
 	       (:file "network")
-
+	       (:file "trainer")
+	       
 	       (:file "viz/package")
 	       (:file "viz/ast")
 	       

@@ -55,6 +55,11 @@
    )
 
   (:export
+   #:hook-optimizer!
+   #:call-optimizer!
+   #:reset-grad!)
+
+  (:export
    #:shaping-error)
 
   ;; Dtype API
@@ -101,6 +106,8 @@
    #:embody-input
    #:embody-actual-tensor
    #:compiled-composite
+   #:compiled-variables
+   #:nodevariables-parameters
    #:build
    #:set-input
    #:get-input)
