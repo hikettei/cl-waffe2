@@ -32,6 +32,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; MultiDimensional APIs
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
+   (permute-order :initform nil :initarg :permute-order :accessor tensor-permute-order :type list)
    (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
 
@@ -240,6 +241,22 @@ Tensors has a two state:
 
 "))
 
+(defun sync-permute! (tensor)
+  (macrolet ((apply-permute (accessor tensor)
+	       `(loop with copy = (copy-list ,accessor)
+		      with rank = (1- (length (shape ,tensor)))
+		      for o in (tensor-permute-order ,tensor)
+		      for kth upfrom 0
+		      do (let ((pos (- rank o)))
+			   (setf (nth pos ,accessor)
+				 (nth kth copy))))))
+    (apply-permute (tensor-stride tensor) tensor)
+    (apply-permute (tensor-view tensor) tensor)
+    (apply-permute (slot-value tensor 'visible-shape) tensor)
+    (apply-permute (slot-value tensor 'orig-shape) tensor)
+    (when (slot-value tensor 'input-shape)
+      (apply-permute (slot-value tensor 'input-shape) tensor))))	
+
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
   (apply #'lazy-mulup (shape tensor)))
@@ -349,15 +366,21 @@ Note:
   (let ((scalar-p   (getf initargs :scalar-p))
 	(view       (getf initargs :view))
 	(order      (getf initargs :order))
-	(orig-shape (getf initargs :shape)))
+	(orig-shape (getf initargs :shape))
+	(permute-order (getf initargs :permute-order))
+	(create-from (getf initargs :create-from)))
 
     ;; orig-shape = used to compute strides.
     (setf (slot-value tensor 'orig-shape)  orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
-
     (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor))
     
     (cond
+      ((and create-from
+	    (not (scalar-p tensor)))
+       (setf (tensor-stride tensor) (tensor-stride create-from)
+	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
+	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
       ((eql (getf initargs :facet) :input)
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
@@ -373,6 +396,12 @@ Note:
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))
+
+    ;; Initial Permution: 5 4 3 2 ... 1 0
+    (unless permute-order
+      (setf (tensor-permute-order tensor)
+	    (loop for i downfrom (length (shape tensor)) to 1
+		  collect (1- i))))
 
     ;; Setup utils for collecting gradients.
     (when (slot-value tensor 'requires-grad)
@@ -617,8 +646,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	(tensor-stride input-tensor) (tensor-stride actual-tensor)
 	(tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
 
-	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)
-	)
+	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p))
   t)
 
 (defun embody-tensor-vec (input-tensor actual-tensor)
@@ -639,7 +667,6 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	(slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
 	(tensor-view input-tensor) (tensor-view actual-tensor)
 	(tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
-	;;(tensor-stride input-tensor) (eval `(list ,@(tensor-stride actual-tensor)))
 	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p))
   t)
 
@@ -670,8 +697,10 @@ Note that view is only created for Tensors, not a Scalar.
       (return-from view tensor))
 
     (make-instance (car *using-backend*)
+		   :create-from tensor
 		   :dtype (dtype tensor)
 		   :order (order tensor)
+		   :permute-order (tensor-permute-order tensor)
 		   :requires-grad (slot-value tensor 'requires-grad)
 		   :shape         (slot-value tensor 'orig-shape)
 		   :projected-p   t
@@ -681,6 +710,101 @@ Note that view is only created for Tensors, not a Scalar.
 		   :facet (tensor-facet tensor)
 		   :named (tensor-name tensor)
 		   :vec (vec tensor))))
+
+
+(defun permute-computable-p (old-order new-order)
+  (equal (sort (copy-list old-order) #'<)
+	 (sort (copy-list new-order) #'<)))
+
+(defun apply-flexible-subscript (old-orders new-orders position)
+  (let* ((goal-length (length old-orders))
+	 (diff (- goal-length (length new-orders))))
+    (if (and (>= diff 0) position)
+        `(,@(loop for i upfrom 0 below position
+		  collect (nth i new-orders))
+	  ,@(loop for i upfrom position below (+ position diff 1)
+		  collect (nth i old-orders))
+	  ,@(loop for i upfrom (+ 1 position diff) below goal-length
+		  collect (let ((i (- i diff)))
+			    (nth i new-orders))))
+	new-orders)))
+
+#|
+(defun test-permute-syntax ()
+  (print (apply-flexible-subscript
+	  `(1 2 3 4 5)
+	  `(1 2 :~ 4 5)
+	  (position :~ `(1 2 :~ 4 5))))
+  (print (apply-flexible-subscript
+	  `(1 2 3 4 5)
+	  `(5 :~ 1)
+	  (position :~ `(1 :~ 5))))
+
+  (print (apply-flexible-subscript
+	  `(1 2 3 4 5)
+	  `(5 1 :~)
+	  (position :~ `(5 1 :~))))
+
+  (print (apply-flexible-subscript
+	  `(4 3 2 1 0)
+	  `(:~ 0 1)
+	  (position :~ `(:~ 0 1))))
+
+  (print (apply-flexible-subscript
+	  `(4 3 2 1 0)
+	  `(3 4 :~)
+     (position :~ `(3 4 :~)))))
+|#
+
+;; Reference: https://stackoverflow.com/questions/32034237/how-does-numpys-transpose-method-permute-the-axes-of-an-array
+(defun permute* (tensor &rest orders)
+  "
+Shuffles the order of axes of the tensor.
+
+:~ to make it flexible.
+
+A B :~ C D
+
+(TODO Document)
+
+Initial permute order: n n-1 n-2 ... 3 2 1.
+
+The axis is computed at Order[N]th loop.
+
+Ex:
+
+transpose the tensor.
+
+(permute* tensor :~ 0 1)
+"
+
+  (when (> (count :~ orders) 1)
+    (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
+
+  (let* ((tensor-new (view tensor)) ;; Detaching from computation node.
+	 (old-orders (tensor-permute-order tensor))
+	 (new-orders
+	   (loop for rank fixnum upfrom 0 below (length (shape tensor))
+		 for order in orders
+		 collect (progn
+			   (when (and (numberp order)
+				      (null (nth order old-orders)))
+			     (error "permute*: the number of order is out of range: ~a" order))
+			   order)))
+	 (new-orders (if (position :~ orders)
+			 (apply-flexible-subscript
+			  old-orders
+			  new-orders
+			  (position :~ orders))
+			 new-orders)))
+    (if (not (permute-computable-p old-orders new-orders))
+	(error "permute*: before and after the operation, all axes must be used: ~a -> ~a." old-orders new-orders))
+
+    (setf (tensor-permute-order tensor-new) new-orders)
+    ;; shuffle strides.
+
+    (sync-permute! tensor-new)
+    tensor-new))
 
 (defun detach! (tensor)
   "detach tensor from computation node."

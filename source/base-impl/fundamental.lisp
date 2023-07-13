@@ -686,3 +686,12 @@ dout   ... dout values"
 
   (forward (PrintNode stream result dout mark) tensor))
 
+(defun !permute (tensor &rest orders)
+  "
+## [function] !permute
+Shuffles the axes order of the given tensor."
+  (let* ((new-orders (loop for order in orders
+			   collect (nth order (shape tensor)))))
+    (print new-orders)
+    ))
+

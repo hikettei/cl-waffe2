@@ -149,6 +149,7 @@ Reading *kernel-storeroom*, the function expands the form below.
       (setf (gethash (kernel-name fn) caches) (cache-kernel-form fn)))
     `(labels (,@(loop for body being the hash-values in caches
 		      collect body))
+       ;; TODO: Prune this:
        ,@(loop for name being the hash-keys in caches
 	       collect `#',name)
        ,@body)))

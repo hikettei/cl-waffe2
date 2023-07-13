@@ -87,7 +87,8 @@
    #:size-of
    #:offset-of
    #:compute-visible-shape
-   #:force-list)
+   #:force-list
+   #:permute*)
   ;; APIs for StateContainer
   (:export
    #:statecontainer
