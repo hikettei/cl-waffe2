@@ -42,24 +42,29 @@ The result sequence MUST not over max-length.
 	   *matrix-element-displaying-size*
 	   :dont-fill dont-fill)))
 
-(defun last-mref (tensor index &aux (k (length (shape1 tensor))))
-  (let ((sub (make-list k :initial-element 0)))
+(defun last-mref (tensor orig-tensor index &aux (k (length (shape1 tensor))))
+  ;; 0 0 0 ... 2?
+  (let ((sub  (make-list k :initial-element 0))
+	(view (make-list k :initial-element t)))
+    (setf (nth (1- k) view) (car (last (tensor-view orig-tensor))))
     (setf (nth (1- k) sub) index)
-    (apply #'mref tensor sub)))
+    (apply #'mref
+	   (apply #'view tensor view)
+	   sub)))
 
 ;; (1 2)
 (defun pprint-1d-vector (stream
 			 dim-indicator
+			 orig-tensor
 			 tensor
 			 &aux
-			   (size (nth dim-indicator (shape1 tensor))))
-  
-  (if (>= size
-	  *matrix-column-elements-displaying-length*)
+			   (size (nth dim-indicator (shape1 orig-tensor))))
+
+  (if (>= size *matrix-column-elements-displaying-length*)
       (let ((midpoint (round (/ *matrix-column-elements-displaying-length* 2))))
 	(write-string "(" stream)
 	(dotimes (k midpoint)
-	  (write-string (print-element (last-mref tensor k)) stream)
+	  (write-string (print-element (last-mref tensor orig-tensor k)) stream)
 	  (write-string " " stream))
 
 	(write-string "~ " stream)
@@ -68,7 +73,7 @@ The result sequence MUST not over max-length.
 	      do (progn
 		   (write-string
 		    (print-element
-		     (last-mref tensor (- size k))
+		     (last-mref tensor orig-tensor (- size k))
 		     :dont-fill (= k 1))
 		    stream)
 		   (unless (= k 1)
@@ -77,7 +82,7 @@ The result sequence MUST not over max-length.
       (progn
 	(write-string "(" stream)
 	(dotimes (i size)
-	  (write-string (format nil "~A" (print-element (last-mref tensor i) :dont-fill (= i (1- size)))) stream)
+	  (write-string (format nil "~A" (print-element (last-mref tensor orig-tensor i) :dont-fill (= i (1- size)))) stream)
 	  (unless (= i (1- size))
 	    (write-string " " stream)))
 	(write-string ")" stream))))
@@ -85,6 +90,7 @@ The result sequence MUST not over max-length.
 
 ;; More columns in one print
 (defun pprint-vector (stream
+		      orig-tensor
 		      tensor
 		      &optional
 			(newline T)
@@ -95,9 +101,9 @@ The result sequence MUST not over max-length.
 	   (translate-adjustable-shape (shape tensor))))
     (cond
       ((= 1 (length (shape tensor)))
-       (pprint-1d-vector stream dim-indicator tensor))
+       (pprint-1d-vector stream dim-indicator orig-tensor tensor))
       ((= (1+ dim-indicator) (length (shape tensor)))
-       (pprint-1d-vector stream dim-indicator tensor))
+       (pprint-1d-vector stream dim-indicator orig-tensor tensor))
       (T
        (write-string "(" stream)
        (if (< (nth dim-indicator (shape tensor))
@@ -108,7 +114,7 @@ The result sequence MUST not over max-length.
 	     (dotimes (i first-dim)
 	       ;; pprint(n-1) and indent
 	       (let ((tensor-view (apply #'view tensor `(,@args ,i))))
-		 (pprint-vector stream tensor-view newline (1+ indent-size) (1+ dim-indicator)))
+		 (pprint-vector stream orig-tensor tensor-view newline (1+ indent-size) (1+ dim-indicator)))
 	       
 	       (unless (= i (1- first-dim))
 		 (if newline
@@ -122,7 +128,7 @@ The result sequence MUST not over max-length.
 	   (let ((args (make-list dim-indicator :initial-element t))
 		 (midpoint (round (/ *matrix-columns-displaying-length* 2))))
 	     (labels ((render-column (line do-newline)
-			(pprint-vector stream line newline (1+ indent-size) (1+ dim-indicator))
+			(pprint-vector stream orig-tensor line newline (1+ indent-size) (1+ dim-indicator))
 			(if do-newline
 			    (if newline
 				(dotimes (k (1+ indent-size))
@@ -176,7 +182,7 @@ The result sequence MUST not over max-length.
     (let ((*matrix-element-displaying-size*
 	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))
 		       maximize (length (format nil "~a" (vref tensor i)))))))
-      (pprint-vector out tensor t indent)
+      (pprint-vector out tensor tensor t indent)
       out)))
 
 
