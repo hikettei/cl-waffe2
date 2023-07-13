@@ -107,7 +107,6 @@ defines a new trainer."
 	     (initialize-optimizers! (model ,self) #'create-optimizer)
 	     ,@constructor-body
 	     ,self))))))
-       
 
 ;; TODO Printer
 

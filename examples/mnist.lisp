@@ -78,10 +78,11 @@
 					 (make-input `(batch-size ,in-class)  :X))
 					(make-input `(batch-size  ,out-class) :Y)))))
 		       out))
-	     :minimize! ((self out)
+	     :minimize! ((self)
 			 (zero-grads! (model self))
-			 (forward out)
-			 (backward out)
+			 (let ((loss (forward     (model self))))
+			   (format t "Loss: ~a~%" (tensor-vec loss)))
+			 (backward    (model self))
 			 (optimize!   (model self)))
 	     :step-train ((self x y)
 			  (set-input (model self) :X x)
@@ -89,6 +90,19 @@
 	     :predict ((self x)
 		       (call (model self) x))))
 
+(defun perform-test ()
+  (let ((trainer (MLPTrainer 784 10)))
+   
+    (step-train trainer (randn `(10 784)) (randn `(10 10)))
+    (minimize!  trainer)
+
+    (time
+     (progn
+       (step-train trainer (randn `(10 784)) (randn `(10 10)))
+       (minimize!  trainer)))
+
+    
+    trainer))
 
 (defun build-mlp-test (&key
 			 (x (make-input `(batch-size 784) :X))

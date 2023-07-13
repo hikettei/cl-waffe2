@@ -26,7 +26,10 @@
    #:deftrainer
    #:optimize!
    #:zero-grads!
-   #:model)
+   #:model
+   #:step-train
+   #:minimize!
+   #:predict)
 
   ;; network utils
   (:export
