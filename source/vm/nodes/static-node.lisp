@@ -3,7 +3,7 @@
 
 ;; TODO: ====================================================
 ;; In accordance with refactoring of defnode, :where, add this feature: checking the number of arguments, number of outputs reading :where. (At: forward :around)
-;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・
+;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・⇦self書き忘れとか検知する、エラー内容が普通にうざい
 ;; Add Backward tests to define-static-node
 ;; Memo: (call (StaticNode) (parameter (randn `(10 10)))) is n't working for backward
 ;; But (call (StaticNode) (!copy (parameter (randn `(10 10))))) is working.

@@ -695,7 +695,7 @@ dout   ... dout values"
 (define-and-impl-node (Permute-Node (self before after permute-old)
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
-		       :forward ((a out)
+		       :forward ((self a out)
 				 (declare (ignore out))
 				 `(progn ,a))
 		       :backward ((self dout a out)
@@ -717,3 +717,6 @@ Swaps"
 	      (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
 	     tensor
 	     new-tensor)))
+
+(defun transpose-test (tensor)
+  (!permute tensor :~ 0 1))
