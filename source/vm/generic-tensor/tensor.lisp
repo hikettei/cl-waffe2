@@ -732,12 +732,12 @@ Note that view is only created for Tensors, not a Scalar.
 (defun apply-flexible-subscript (old-orders new-orders position)
   (let* ((goal-length (length old-orders))
 	 (diff (- goal-length (length new-orders))))
-    (if (and (>= diff 0) position)
+    (if (and (> diff 0) position)
         `(,@(loop for i upfrom 0 below position
 		  collect (nth i new-orders))
-	  ,@(loop for i upfrom position below (+ position diff 1)
+	  ,@(loop for i upfrom position below (+ position diff)
 		  collect (nth i old-orders))
-	  ,@(loop for i upfrom (+ 1 position diff) below goal-length
+	  ,@(loop for i upfrom (+ position diff) below goal-length
 		  collect (let ((i (- i diff)))
 			    (nth i new-orders))))
 	new-orders)))
@@ -746,27 +746,27 @@ Note that view is only created for Tensors, not a Scalar.
 (defun test-permute-syntax ()
   (print (apply-flexible-subscript
 	  `(1 2 3 4 5)
-	  `(1 2 :~ 4 5)
+	  `(1 2 4 5)
 	  (position :~ `(1 2 :~ 4 5))))
   (print (apply-flexible-subscript
 	  `(1 2 3 4 5)
-	  `(5 :~ 1)
+	  `(5 1)
 	  (position :~ `(1 :~ 5))))
 
   (print (apply-flexible-subscript
 	  `(1 2 3 4 5)
-	  `(5 1 :~)
+	  `(5 1)
 	  (position :~ `(5 1 :~))))
 
   (print (apply-flexible-subscript
 	  `(4 3 2 1 0)
-	  `(:~ 0 1)
+	  `(0 1)
 	  (position :~ `(:~ 0 1))))
 
   (print (apply-flexible-subscript
 	  `(4 3 2 1 0)
-	  `(3 4 :~)
-     (position :~ `(3 4 :~)))))
+	  `(3 4)
+	  (position :~ `(3 4 :~)))))
 |#
 
 ;; Reference: https://stackoverflow.com/questions/32034237/how-does-numpys-transpose-method-permute-the-axes-of-an-array
@@ -776,7 +776,7 @@ Shuffles the order of axes of the tensor.
 
 :~ to make it flexible.
 
-A B :~ C D
+(E.g.: 1 :~ 5)
 
 (TODO Document)
 
@@ -784,21 +784,26 @@ Initial permute order: n n-1 n-2 ... 3 2 1.
 
 The axis is computed at Order[N]th loop.
 
-Ex:
-
-transpose the tensor.
-
+Ex: transposing the tensor.
+```
 (permute* tensor :~ 0 1)
+```
+
+Initial value of permute: n n-1 ... 2 1 0.
 "
 
+  (when (scalar-p tensor)
+    (error "permute*: permutes of array can only created for tensors, not a scalar."))
+  
   (when (> (count :~ orders) 1)
     (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
 
   (let* ((tensor-new (view tensor)) ;; Detaching from computation node.
 	 (old-orders (tensor-permute-order tensor))
+	 (pure-orders (remove :~ orders)) ;; order consisted of fixnum
 	 (new-orders
 	   (loop for rank fixnum upfrom 0 below (length (shape tensor))
-		 for order in orders
+		 for order in pure-orders
 		 collect (progn
 			   (when (and (numberp order)
 				      (null (nth order old-orders)))
@@ -807,7 +812,7 @@ transpose the tensor.
 	 (new-orders (if (position :~ orders)
 			 (apply-flexible-subscript
 			  old-orders
-			  new-orders
+			  pure-orders
 			  (position :~ orders))
 			 new-orders)))
     (if (not (permute-computable-p old-orders new-orders))

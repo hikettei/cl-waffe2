@@ -687,12 +687,33 @@ dout   ... dout values"
 
   (forward (PrintNode stream result dout mark) tensor))
 
+;; ===============================================================
+;; Permute APIs
+;; ===============================================================
+
+
+(define-and-impl-node (Permute-Node (self before after permute-old)
+		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
+		       :where (Old[before] New[after] -> New[after])
+		       :forward ((a out)
+				 (declare (ignore out))
+				 `(progn ,a))
+		       :backward ((self dout a out)
+				  (declare (ignore a out))
+				  (values
+				   (apply #'!permute dout (permute-old self))
+				   nil)))
+  (setf (ignore-shape-error self) t))
+
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute
-Shuffles the axes order of the given tensor."
-  (let* ((new-orders (loop for order in orders
-			   collect (nth order (shape tensor)))))
-    (print new-orders)
-    ))
 
+Swaps"
+  (let* ((new-tensor (apply #'permute* tensor orders)))
+    (forward (Permute-Node
+	      (shape tensor)
+	      (shape new-tensor)
+	      (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
+	     tensor
+	     new-tensor)))
