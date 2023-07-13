@@ -13,13 +13,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP556 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP3446 
   :vec-state [computed]
-  ((2.0355937    0.87400746   -0.0         ~ 0.32484004   -0.0         1.1069025)                    
-   (-0.0         0.9794315    -0.0         ~ 0.6054693    -0.0         -0.0)   
+  ((-0.0         0.3958751    -0.0         ~ 1.3563212    -0.0         -0.0)                    
+   (2.0355937    0.87400746   -0.0         ~ 0.32484004   -0.0         1.1069025)   
                  ...
-   (0.14430979   1.6049826    0.69115645   ~ -0.0         -0.0         -0.0)
-   (-0.0         -0.0         0.17293061   ~ -0.0         -0.0         0.37313056))
+   (0.080851234  -0.0         2.0264342    ~ -0.0         -0.0         -0.0)
+   (0.14430979   1.6049826    0.69115645   ~ -0.0         -0.0         -0.0))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -42,13 +42,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP838 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP3746 
   :vec-state [computed]
-  ((0.49752915 0.45874146 0.3822164  ~ 0.3568413  0.26439044 0.519481)                  
-   (0.7583395  0.31405032 0.25222775 ~ 0.48576716 0.62167424 0.7281507)   
-               ...
-   (0.17289545 0.40895566 0.6800641  ~ 0.66711944 0.48927152 0.7403083)
-   (0.42706847 0.89801675 0.45782068 ~ 0.42497367 0.7186789  0.88597995))
+  ((0.38870513  0.31420857  0.5431252   ~ 0.44819808  0.48854244  0.59221524)                   
+   (0.49752915  0.45874146  0.3822164   ~ 0.3568413   0.26439044  0.519481)   
+                ...
+   (0.6008625   0.28127894  0.26618165  ~ 0.1272022   0.43307915  0.8074486)
+   (0.17289545  0.40895566  0.6800641   ~ 0.66711944  0.48927152  0.7403083))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -75,9 +75,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1230 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP4162 
   :vec-state [computed]
-  ((1.2281576))
+  ((1.2103889))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -102,9 +102,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1627 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP4560 
   :vec-state [computed]
-  ((1.462145))
+  ((1.4338808))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -196,7 +196,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W1630}(
+<Composite: LINEARLAYER{W4564}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)

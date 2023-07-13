@@ -129,6 +129,7 @@
     (caller-doc !copy)
     (caller-doc !copy-force)
 
+    (caller-doc !permute)
     (caller-doc !reshape)
     (caller-doc !view)
     ;; unsqueeze/squeeze
