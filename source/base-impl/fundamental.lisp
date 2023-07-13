@@ -709,7 +709,63 @@ dout   ... dout values"
   "
 ## [function] !permute
 
-Swaps"
+In cl-waffe2, each tensor has a slot `(tensor-permute-order tensor)`, which indicates the order of the dimensions to be invoked. The function `!permute` returns a view of the original tensor input with its dimensions permuted.
+
+```lisp
+(n) (n-1) ... (1) (0) ... The order
+
+ ++++   ^ (0)
+ ++++   |
+ ++++   |
+        |
+ ----> (1)
+
+(A beautiful figure would be displayed in the future :<)
+```
+
+In other view, `!permute` replaces the order of following operation:
+
+```lisp
+A = 2x2x2 Matrix.
+
+------------------------
+Shape      :   2  2  2
+Stride     :   4  2  1
+[Permution]:   2  1  0
+             A[1][1][1]
+------------------------
+```
+
+When `[Permution]` is shuffled, the order of other parameters (e.g.: `shape` `stride` `view`...) are shuffle in tandem. That is, if we give `2 0 1` as a permutation, the figure becomes:
+
+```lisp
+A = 2x2x2 Matrix.
+
+------------------------
+Shape      :   2  2  2
+Stride     :   4  1  2
+[Permution]:   2  0  1
+             A[1][1][1]
+------------------------
+```
+
+The operation could be applied to transpose matrices.
+
+### Example
+
+```lisp
+(defun transpose-revisit (tensor)
+    ;; A[i j] -> A[j i]
+    (!permute tensor :~ 0 1))
+```
+
+### Inputs
+
+`tensor[AbstractTensor]` tensor to be permuted.
+
+`order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
+
+"
   (let* ((new-tensor (apply #'permute* tensor orders)))
     (forward (Permute-Node
 	      (shape tensor)
@@ -718,5 +774,3 @@ Swaps"
 	     tensor
 	     new-tensor)))
 
-(defun transpose-test (tensor)
-  (!permute tensor :~ 0 1))
