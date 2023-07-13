@@ -27,7 +27,7 @@
    #:optimize!
    #:zero-grads!
    #:model
-   #:step-train
+   #:set-inputs
    #:minimize!
    #:predict)
 

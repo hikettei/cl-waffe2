@@ -113,7 +113,9 @@ Unevaluated Copied Tensor."
 	   (scalar-p place))
       (forward (MoveScalarTensorNode :save-for-backward force) place tensor)
       ;; The problem is that: it is unknown whether place or tensor is returned until optimize-computation-node! is called.
-      (forward (MoveTensorNode (dtype place) :save-for-backward force) place tensor)))
+      (forward (MoveTensorNode (dtype place) :save-for-backward force)
+	       place
+	       tensor)))
 
 
 (defun !copy (tensor &key (force nil))

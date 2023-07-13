@@ -640,7 +640,8 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	(tensor-view input-tensor) (tensor-view actual-tensor)
 	(tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
 	;;(tensor-stride input-tensor) (eval `(list ,@(tensor-stride actual-tensor)))
-	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
+	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p))
+  t)
 
 (defun view (tensor &rest subscripts)
   "The function view creates a view of given tensor.

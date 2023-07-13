@@ -119,7 +119,7 @@ Here's a list of reports.
 
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
-
+;; TODO: Fix it. save-for-backward??
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
@@ -366,7 +366,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 		      :force t)))
 	    ;; F(x, y, ...)
 	    ;; x.state = :chain / :input?
-
+	    
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
 		out
 		;; when bw-node... -> chain not connected well...?
@@ -426,7 +426,7 @@ inputs      ... inputs called with
 		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
 		   ,dout
 		   ,dout-place)
-
+		  
 		  ,(with-no-grad
 		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
 

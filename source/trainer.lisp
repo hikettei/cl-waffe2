@@ -54,7 +54,7 @@ For general use, trainer can be defined by the macro `deftrainer`."))
 			 (compile-mode :fastest)
 			 (build)
 			 (minimize!)
-			 (step-train)
+			 (set-inputs)
 			 (predict))
 		      &body constructor-body)
   "
@@ -76,10 +76,10 @@ defines a new trainer."
 	   (declare (ignorable ,(caar minimize!)))
 	   ,@(cdr minimize!)))
 
-       (defmethod step-train ((self ,name) &rest ,inputs)
-	 (multiple-value-bind (,@(car step-train)) (apply #'values `(,self ,@,inputs))
+       (defmethod set-inputs ((self ,name) &rest ,inputs)
+	 (multiple-value-bind (,@(car set-inputs)) (apply #'values `(,self ,@,inputs))
 	   (declare (ignorable ,(caar minimize!)))
-	   ,@(cdr step-train)))
+	   ,@(cdr set-inputs)))
 
        (defmethod predict ((self ,name) &rest ,inputs)
 	 (multiple-value-bind (,@(car predict)) (apply #'values `(,self ,@,inputs))

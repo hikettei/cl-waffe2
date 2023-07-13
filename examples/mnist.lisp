@@ -68,15 +68,19 @@
 
 
 (deftrainer (MLPTrainer (self in-class out-class
-			      &key (hidden-size 256))
-	     :model     (MLP-Sequence in-class hidden-size out-class)
-	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-3)
+			      &key
+			      (hidden-size 256)
+			      (activation #'!tanh))
+	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
+	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
 	     :build ((self)
-		     (let ((out (!mean (softmax-cross-entropy
-					(call
-					 (model self)
-					 (make-input `(batch-size ,in-class)  :X))
-					(make-input `(batch-size  ,out-class) :Y)))))
+		     (let ((out (!sum (softmax-cross-entropy
+				       (call
+					(model self)
+					(make-input `(batch-size ,in-class)  :X))
+				       (make-input `(batch-size  ,out-class) :Y)))))
+
+		       
 		       out))
 	     :minimize! ((self)
 			 (zero-grads! (model self))
@@ -84,40 +88,63 @@
 			   (format t "Loss: ~a~%" (tensor-vec loss)))
 			 (backward    (model self))
 			 (optimize!   (model self)))
-	     :step-train ((self x y)
+	     :set-inputs ((self x y)
 			  (set-input (model self) :X x)
 			  (set-input (model self) :Y y))
 	     :predict ((self x)
 		       (call (model self) x))))
 
+(deftrainer (MLPTrainer-Test (self in-class out-class
+			      &key
+			      (hidden-size 256)
+			      (activation #'!tanh))
+	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
+	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
+	     :build ((self)
+		     (let ((out (!sum (!mul
+				 (call
+				  (model self)
+				  (make-input `(batch-size ,in-class)  :X))
+				 (make-input `(batch-size  ,out-class) :Y)))))
+
+		       
+		       out))
+	     :minimize! ((self)
+			 (zero-grads! (model self))
+			 (let ((loss (forward     (model self))))
+			   (format t "Loss: ~a~%" (tensor-vec loss)))
+			 (backward    (model self))
+			 (optimize!   (model self)))
+	     :set-inputs ((self x y)
+			  (set-input (model self) :X x)
+			  (set-input (model self) :Y y))
+	     :predict ((self x)
+		       (call (model self) x))))
+
+;; TODO: Batch-Size 10 -> 1
+
 (defun perform-test ()
-  (let ((trainer (MLPTrainer 784 10)))
-   
-    (step-train trainer (randn `(10 784)) (randn `(10 10)))
-    (minimize!  trainer)
-
-    (time
-     (progn
-       (step-train trainer (randn `(10 784)) (randn `(10 10)))
-       (minimize!  trainer)))
-
+  (let ((trainer (MLPTrainer 50 10 :hidden-size 30 :activation #'!tanh)))
+    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
     
+    (minimize!  trainer)
+    ;;(minimize!  trainer)
+    ;;(minimize!  trainer)
+    
+
+   ;; (time
+   ;;  (progn
+       ;;(set-inputs trainer (randn `(10 784)) (randn `(10 10)))
+   ;;    (minimize!  trainer)
+   ;;    ))    
     trainer))
 
-(defun build-mlp-test (&key
-			 (x (make-input `(batch-size 784) :X))
-			 (y (make-input `(batch-size 10)  :Y)))
-  (let* ((model (MLP-Sequence 784 256 10))
-	 (pred  (call model x))
-	 (out (!mean (cl-waffe2/nn::softmax-cross-entropy pred y)))
-	 (compiled-model (build out)))
-    compiled-model))
 
-(defun test-model ()
-  (let ((compiled-model (build-mlp-test)))
-    (set-input compiled-model :X (randn `(100 784)))
-    (set-input compiled-model :Y (randn `(100 10)))
-    (forward compiled-model)
-    (time (forward compiled-model))
-    (time (backward compiled-model))))
+;; Add this code to test cases
+(defun test-softmax ()
+  (let ((a (parameter (bernoulli `(10 10) 0.3)))
+	(b (bernoulli `(10 10) 0.3)))
+    (proceed-backward (!sum (softmax-cross-entropy (!relu a) b)))
+    (print a)
+    (grad a)))
 

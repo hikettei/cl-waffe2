@@ -15,6 +15,7 @@
    #:SubNode
    #:MulNode
    #:DivNode
+   #:ScalarMul
    #:MatmulNode
    #:InverseTensorNode
    #:trans-a?

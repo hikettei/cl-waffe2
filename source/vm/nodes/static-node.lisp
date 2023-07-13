@@ -39,7 +39,7 @@
   (declare (type AbstractNode self)
 	   (type symbol name)
 	   (type AbstractTensor tensor))
-  
+
   ;; Is this calling of save-for-backward is reachable? by backward => If so, make a copy.
   (when (and (not (>= *under-composite-node-mode* 2))
 	     (null *no-grad*))

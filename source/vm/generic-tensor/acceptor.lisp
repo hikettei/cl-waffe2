@@ -291,7 +291,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 
   ;; with-shape-checkout: at where node, the backward error was occured?
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
-    ;; In order to restore tensors' backwards, keep them saving at backwards-tmp.
+    ;; In order to restore tensors' backwards for a future printing error place, keep them saving at backwards-tmp.
 
     ;; The backward function is: g(dout) -> x.grad, y.grad where/dx/dy is a constant parameter. dout is a variable.
     (let* ((outs (apply
@@ -305,11 +305,17 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   (next-dys   (map 'list #'car outs))
 	   (outs       (map 'list #'cdr outs)))
       
+      
       `(let (,@(loop for kernel in outs
 		     for out in next-dys
-		     if kernel
+		     for var in (tensor-variables toplevel)
+		     if (and kernel (ancestor-param-p var))
+		       ;; g_x(dout_past, x_next) -> dout_next, g_y ...
 		       collect `(,(tensor-id out) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
-	 (declare (ignorable ,@(loop for o in next-dys if o collect (tensor-id o))))
+	 (declare (ignorable ,@(loop for o in next-dys
+				     for v in (tensor-variables toplevel)
+				     if (and o (ancestor-param-p v))
+				       collect (tensor-id o))))
 	 ;; Explore deeper, or ,if any, add grads to the parameter
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs

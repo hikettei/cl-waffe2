@@ -12,6 +12,9 @@
 (defparameter *matrix-columns-displaying-length* 4
   "((1 2 3) (4 5 6) (7 8 9)) -> ((1 2 3) ... (7 8 9))")
 
+(defun shape1 (tensor)
+  (translate-adjustable-shape (shape tensor)))
+
 (defun trim-string (str max-length)
   "Trimming the given str within the length of max-length.
 The result sequence MUST not over max-length.
@@ -39,7 +42,7 @@ The result sequence MUST not over max-length.
 	   *matrix-element-displaying-size*
 	   :dont-fill dont-fill)))
 
-(defun last-mref (tensor index &aux (k (length (shape tensor))))
+(defun last-mref (tensor index &aux (k (length (shape1 tensor))))
   (let ((sub (make-list k :initial-element 0)))
     (setf (nth (1- k) sub) index)
     (apply #'mref tensor sub)))
@@ -49,7 +52,7 @@ The result sequence MUST not over max-length.
 			 dim-indicator
 			 tensor
 			 &aux
-			   (size (nth dim-indicator (shape tensor))))
+			   (size (nth dim-indicator (shape1 tensor))))
   
   (if (>= size
 	  *matrix-column-elements-displaying-length*)
@@ -88,77 +91,80 @@ The result sequence MUST not over max-length.
 			(indent-size 0)
 			(dim-indicator 0))
   (declare (type AbstractTensor tensor))
-  (cond
-    ((= 1 (length (shape tensor)))
-     (pprint-1d-vector stream dim-indicator tensor))
-    ((= (1+ dim-indicator) (length (shape tensor)))
-     (pprint-1d-vector stream dim-indicator tensor))
-    (T
-     (write-string "(" stream)
-     (if (< (nth dim-indicator (shape tensor))
-	    *matrix-columns-displaying-length*)
-	 ;; Can elements be printed at once?
-	 (let ((first-dim (nth dim-indicator (shape tensor)))
-	       (args      (make-list dim-indicator :initial-element t)))
-	   (dotimes (i first-dim)
-	     ;; pprint(n-1) and indent
-	     (let ((tensor-view (apply #'view tensor `(,@args ,i))))
-	       (pprint-vector stream tensor-view newline (1+ indent-size) (1+ dim-indicator)))
-	     
-	     (unless (= i (1- first-dim))
-	       (if newline
-		   (progn
-		     (write-char #\Newline stream)
-		     ;; Rendering Indents
-		     (dotimes (k (+ (1+ indent-size)))
-		       (write-string " " stream)))
-		   (write-string " " stream))))
-	   (write-string ")" stream))
-	 (let ((args (make-list dim-indicator :initial-element t))
-	       (midpoint (round (/ *matrix-columns-displaying-length* 2))))
-	   (labels ((render-column (line do-newline)
-		      (pprint-vector stream line newline (1+ indent-size) (1+ dim-indicator))
-		      (if do-newline
-			  (if newline
-			      (dotimes (k (1+ indent-size))
-				(write-string " " stream)))))
-		    (display-nth (n newline)
-		      (render-column
-		       (apply #'view tensor `(,@args ,n))
-		       newline)))
-	     ;; Displays first and last vector
-
-	     ;; First vector
-	     (dotimes (k midpoint)
-	       (display-nth k T)
-	       ;; Newline
-	       (if newline
-		   (progn
-		     (when (= k (1- midpoint))
-		       (write-char #\newline stream))
-		     ;; Fix: the position of ... is collapsed.
-		     (dotimes (_ (+ indent-size *matrix-element-displaying-size*))
-		       (write-string " " stream))
-		     (when (= k (1- midpoint))
-		       (write-string "..." stream))
-		     (write-char #\newline stream)
-		     (dotimes (k (1+ indent-size))
-		       (write-string " " stream)))))
-
-	     ;; Last Vector
-	     (loop with size = (nth dim-indicator (shape tensor))
-	           for k downfrom midpoint to 1 do
+  (flet ((shape (tensor)
+	   (translate-adjustable-shape (shape tensor))))
+    (cond
+      ((= 1 (length (shape tensor)))
+       (pprint-1d-vector stream dim-indicator tensor))
+      ((= (1+ dim-indicator) (length (shape tensor)))
+       (pprint-1d-vector stream dim-indicator tensor))
+      (T
+       (write-string "(" stream)
+       (if (< (nth dim-indicator (shape tensor))
+	      *matrix-columns-displaying-length*)
+	   ;; Can elements be printed at once?
+	   (let ((first-dim (nth dim-indicator (shape tensor)))
+		 (args      (make-list dim-indicator :initial-element t)))
+	     (dotimes (i first-dim)
+	       ;; pprint(n-1) and indent
+	       (let ((tensor-view (apply #'view tensor `(,@args ,i))))
+		 (pprint-vector stream tensor-view newline (1+ indent-size) (1+ dim-indicator)))
+	       
+	       (unless (= i (1- first-dim))
+		 (if newline
 		     (progn
-		       (display-nth (- size k) NIL)
-		       (when (not (= k 1))
-			 (write-char #\newline stream)
-			 (dotimes (i (1+ indent-size))
-			   (write-string " " stream)))))
-	     (write-string ")" stream)))))))
+		       (write-char #\Newline stream)
+		       ;; Rendering Indents
+		       (dotimes (k (+ (1+ indent-size)))
+			 (write-string " " stream)))
+		     (write-string " " stream))))
+	     (write-string ")" stream))
+	   (let ((args (make-list dim-indicator :initial-element t))
+		 (midpoint (round (/ *matrix-columns-displaying-length* 2))))
+	     (labels ((render-column (line do-newline)
+			(pprint-vector stream line newline (1+ indent-size) (1+ dim-indicator))
+			(if do-newline
+			    (if newline
+				(dotimes (k (1+ indent-size))
+				  (write-string " " stream)))))
+		      (display-nth (n newline)
+			(render-column
+			 (apply #'view tensor `(,@args ,n))
+			 newline)))
+	       ;; Displays first and last vector
+
+	       ;; First vector
+	       (dotimes (k midpoint)
+		 (display-nth k T)
+		 ;; Newline
+		 (if newline
+		     (progn
+		       (when (= k (1- midpoint))
+			 (write-char #\newline stream))
+		       ;; Fix: the position of ... is collapsed.
+		       (dotimes (_ (+ indent-size *matrix-element-displaying-size*))
+			 (write-string " " stream))
+		       (when (= k (1- midpoint))
+			 (write-string "..." stream))
+		       (write-char #\newline stream)
+		       (dotimes (k (1+ indent-size))
+			 (write-string " " stream)))))
+
+	       ;; Last Vector
+	       (loop with size = (nth dim-indicator (shape tensor))
+	             for k downfrom midpoint to 1 do
+		       (progn
+			 (display-nth (- size k) NIL)
+			 (when (not (= k 1))
+			   (write-char #\newline stream)
+			   (dotimes (i (1+ indent-size))
+			     (write-string " " stream)))))
+	       (write-string ")" stream))))))))
 
 
 (defun render-tensor (tensor &key (indent 0))
   "The function reader-tensor renders :vec parts"
+  
   (when (typep tensor 'Scalartensor)
     (return-from render-tensor
       (with-output-to-string (str)
