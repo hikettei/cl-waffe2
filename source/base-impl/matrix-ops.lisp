@@ -32,7 +32,7 @@ C\\gets{gemm(1.0, A, B, 0.0, C)}
 "))
 
 (defnode (LazyTransposeNode (self)
-	  :where (A[~ i j] -> A[~ j i])
+	  :where (A[~ i j] -> A[~ i j])
 	  :slots ((raw-tensor :accessor raw-tensor))
 	  :documentation "LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.
 
@@ -57,10 +57,6 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
   (subtypep (class-of (tensor-backward tensor)) 'LazyTransposeNode))
 
 
-;; :== The problem is that ==============:
-;;  !flexible(!t(x)).is_transposed? = NIL
-;;  !t(!flexible(x)).is_flexible?   = T
-;; :=====================================:
 (defun !t (tensor)
   "
 ## [function] !t
@@ -69,22 +65,14 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 (!t tensor)
 ```
 
-Applies Lazy-Transpose to the given tensor.
-
-The function is matmul-dedicated, so cooperationg with other operations (e.g.: !add) will cause the wrong result. (Internally, it is the equivalent to calling `!reshape`)
-
-### Current Problem
-
-Inconsistency of operations:
-
-```lisp
-!flexible(!t(x)).is_transposed? = NIL
-!t(!flexible(x)).is_flexible?   = T
-```
+Transposes the last two axes of the given tensor.
 "
-  ;; extend flexible?
-  (extend-states (forward (LazyTransposeNode) tensor) tensor))
+  ;; The state flexibe cause to exist...
+  (!permute tensor :~ 0 1))
 
+;; 明日：Matmul治す
+;; LazyTransposeを廃止
+;; 最後の二つがTransposeされている場合、Permute* 0 1をもう一度してからTransposed-matmul
 (defun !matmul (x y
 		&key
 		  (out nil)

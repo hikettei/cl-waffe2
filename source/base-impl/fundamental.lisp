@@ -705,6 +705,11 @@ dout   ... dout values"
 				   nil)))
   (setf (ignore-shape-error self) t))
 
+(defun list-diff (lista listb)
+  (loop for l1 in lista
+	for l2 in listb
+	collect (= l1 l2)))
+
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute
@@ -759,6 +764,7 @@ The operation could be applied to transpose matrices.
     (!permute tensor :~ 0 1))
 ```
 
+Note that the case when only the last two aces are subject to be swapped, we return `Lazy-Transpsose-Node` instead (for matmul).
 ### Inputs
 
 `tensor[AbstractTensor]` tensor to be permuted.
@@ -766,11 +772,23 @@ The operation could be applied to transpose matrices.
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
 "
-  (let* ((new-tensor (apply #'permute* tensor orders)))
-    (forward (Permute-Node
-	      (shape tensor)
-	      (shape new-tensor)
-	      (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
-	     tensor
-	     new-tensor)))
+  ;; If only the last two axes are subject to swapped.
+  ;; Return a special node LazyTranspose instead.
+  (let* ((new-tensor (apply #'permute* tensor orders))
+	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
+				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
+	 (lazy-p (and (every #'(lambda (x) x) (butlast diff 2))
+		      (every #'null           (last    diff 2))))
+	 (out  (forward (Permute-Node
+			 (shape tensor)
+			 (shape new-tensor)
+			 (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
+			tensor
+			new-tensor)))
+    ;; The case when (T NIL NIL) (T T NIL NIL) (NIL NIL) ... subject to lazy-transpose
+    
+    ;; judge: the diff is last two?
+    (if lazy-p
+	(call (LazyTransposeNode) out)
+	out)))
 
