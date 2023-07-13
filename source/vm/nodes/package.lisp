@@ -22,6 +22,7 @@
 		#:make-input
 		#:actual-shape
 		#:set-input
+		#:tensor-stride
 		#:compile-option-t
 		#:movetensor-p
 		#:shaping-error

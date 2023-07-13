@@ -80,6 +80,7 @@
 (defun make-clone (tensor &optional name)
   (let* ((shape (actual-shape tensor))
 	 (out (make-input shape (or name nil)
+			  :create-from tensor
 			  :dtype (dtype tensor)
 			  :order (order tensor)
 			  :scalar-p (scalar-p tensor)))

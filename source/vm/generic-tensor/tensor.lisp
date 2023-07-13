@@ -270,6 +270,11 @@ Tensors has a two state:
   nil
   )
 
+(defun permuted-p (tensor)
+  (let ((a (copy-list (tensor-permute-order tensor))))
+    (equal (sort a #'<) (tensor-permute-order tensor))))
+	   
+
 ;; Inline
 ;;(declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
@@ -322,6 +327,7 @@ Note:
 (defun make-gradient-adder (target shape)
   "Returns a instant-kernel to add the new-gradient to given target."
   (let ((out (make-input shape nil
+			 :create-from target
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
@@ -367,18 +373,22 @@ Note:
 	(view       (getf initargs :view))
 	(order      (getf initargs :order))
 	(orig-shape (getf initargs :shape))
-	(permute-order (getf initargs :permute-order))
 	(create-from (getf initargs :create-from)))
 
     ;; orig-shape = used to compute strides.
     (setf (slot-value tensor 'orig-shape)  orig-shape)
     (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
     (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor))
+
+    (when create-from
+      (setf (tensor-permute-order tensor) (tensor-permute-order create-from)))
     
     (cond
       ((and create-from
+	    (permuted-p create-from)
 	    (not (scalar-p tensor)))
        (setf (tensor-stride tensor) (tensor-stride create-from)
+	     (tensor-permute-order tensor) (tensor-permute-order create-from)
 	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
 	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
       ((eql (getf initargs :facet) :input)
@@ -398,7 +408,7 @@ Note:
 	 nil)))
 
     ;; Initial Permution: 5 4 3 2 ... 1 0
-    (unless permute-order
+    (unless (tensor-permute-order tensor)
       (setf (tensor-permute-order tensor)
 	    (loop for i downfrom (length (shape tensor)) to 1
 		  collect (1- i))))
@@ -513,6 +523,7 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 (defun make-input (shape
 		   named
 		   &key
+		     (create-from nil)
 		     (scalar-p nil)
 		     (dtype *default-dtype*)
 		     (order *default-order*))
@@ -536,11 +547,14 @@ For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or 
 `dtype` [keyword] as it is.
 
 `order` [keyword] an member of :column :row
+
+`create-from[nil or AbstractTensor]` If you want to extend permute state/stride information, fill it.
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
   (make-instance (if scalar-p 'ScalarTensor (car *using-backend*))
 		 :scalar-p scalar-p
+		 :create-from create-from
 		 :dtype dtype
 		 :order order
 		 :shape shape
@@ -700,7 +714,6 @@ Note that view is only created for Tensors, not a Scalar.
 		   :create-from tensor
 		   :dtype (dtype tensor)
 		   :order (order tensor)
-		   :permute-order (tensor-permute-order tensor)
 		   :requires-grad (slot-value tensor 'requires-grad)
 		   :shape         (slot-value tensor 'orig-shape)
 		   :projected-p   t

@@ -110,6 +110,7 @@ Return:
 	    (let ((place (if deterministic-p
 			     place ;; place=tensor.variables[n]
 			     (make-input (shape place) nil
+					 :create-from place
 					 :scalar-p (scalar-p place)
 					 :dtype (dtype place)
 					 :order (order place)))))

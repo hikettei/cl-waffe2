@@ -137,6 +137,7 @@ See also: `!copy-force` never being ignored by compiler, and broadcasted axes wi
 Input:  Tensor[AbstractTensor]
 Output: Tensor[AbstractTensor]"
   (let* ((out (make-input (actual-shape tensor) nil
+			  :create-from tensor
 			  :scalar-p (scalar-p tensor)
 			  :dtype (dtype tensor)
 			  :order (order tensor)))

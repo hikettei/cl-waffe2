@@ -141,7 +141,7 @@ Here's a list of reports.
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
-
+    
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
@@ -230,6 +230,8 @@ Here's a list of reports.
 		     ;; Make -> ScalarTensor if shape = (1)
 		     collect (let* ((next-tensor
 				      (make-input shape nil
+						  :create-from (when extend-from
+								 (nth extend-from inputs))
 						  :scalar-p (out-scalar-p node)
 						  :dtype (dtype (nth (or extend-from 0) inputs))
 						  :order (order (nth (or extend-from 0) inputs))))
@@ -348,6 +350,7 @@ Use the define-impl macro to give definitions for the node and forward them.
   (if (or ;;(tensor-projected-p place)
 	  (not (= argn nth-trying)))
       (make-input (shape place) nil
+		  :create-from place
 		  :dtype (dtype place)
 		  :order (order place)
 		  :scalar-p (scalar-p place))
