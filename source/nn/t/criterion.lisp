@@ -14,6 +14,7 @@
   (let ((a (parameter (randn `(10 10))))
 	(b (parameter (randn `(10 10)))))
     ;; Tests differentiable composite node
+    ;; And... Maybe it is now workig :(
     (proceed-backward (!sum (!add (!relu a) (!relu b))))
     (values (grad a) (grad b))))
     

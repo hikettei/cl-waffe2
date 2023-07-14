@@ -428,6 +428,7 @@ The operation could be applied to transpose matrices.
     (!permute tensor :~ 0 1))
 ```
 
+Note that the case when only the last two aces are subject to be swapped, we return `Lazy-Transpsose-Node` instead (for matmul).
 ### Inputs
 
 `tensor[AbstractTensor]` tensor to be permuted.
@@ -537,6 +538,45 @@ The function ->scal receives `matrix-tensor` with total-size = 1, returning a Sc
 ```
 
 The function ->mat receives `ScalarTensor`, returning a matrix with the number of axis=dims.
+## [function] ->contiguous
+
+Returns a copy of the given tensor if is is permuted. Otherwise returns the argumement as it is.
+
+A memory-layout of returned copies are arranged into the same array as the array seen on the REPL.
+
+### Example
+
+```lisp
+(!t (ax+b `(3 3) 1 0))
+
+{CPUTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3) :named ChainTMP110110 
+  :vec-state [maybe-not-computed]
+  ((0.0 3.0 6.0)
+   (1.0 4.0 7.0)
+   (2.0 5.0 8.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: LAZYTRANSPOSENODE-T (A[~ I J] -> A[~ I J])>}
+
+(tensor-vec *)
+
+#(0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0)
+
+
+;; calling ->contiguous...
+
+(->contiguous (!t (ax+b `(3 3) 1 0)))
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP110149 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: MOVETENSORNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+
+(tensor-vec (proceed *))
+#(0.0 3.0 6.0 1.0 4.0 7.0 2.0 5.0 8.0)
+```
+
 ## [function] proceed
 
 ```
@@ -1318,18 +1358,9 @@ AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
 (!t tensor)
 ```
 
-Applies Lazy-Transpose to the given tensor.
+Transposes the last two axes of the given tensor.
 
-The function is matmul-dedicated, so cooperationg with other operations (e.g.: !add) will cause the wrong result. (Internally, it is the equivalent to calling `!reshape`)
-
-### Current Problem
-
-Inconsistency of operations:
-
-```lisp
-!flexible(!t(x)).is_transposed? = NIL
-!t(!flexible(x)).is_flexible?   = T
-```
+When called with !matmul, the operation is ignored.
 
 ## [function] !matmul
 
@@ -1337,7 +1368,7 @@ Inconsistency of operations:
 (!matmul x y &key (out nil) (transpose-x nil) (transpose-y nil))
 ```
 
-Computing a matrix multiplication of X and Y, the function set the result into out.
+Computing a matrix multiplication of X and Y. The result is stored in out if specified, otherwise creates a new tensor.
 
 ```math
 out\gets{gemm(1.0, x, y, 0.0, out)}
@@ -1345,15 +1376,12 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 
 ### Inputs
 
-`transpose-x` `transpose-y` If t, the tensor is called with `(!t tensor)`
+`transpose-x, transpose-y[boolean]` If t, the inputs are wrapped with `(!t tensor)`.
 
-### Lazy-Transpose
+### Tips: Lazy-Transpose-Node
 
-Call the function `(!t tensor)` in advance to transpose the tensor without overheads.
+If the last backward of given arguments are `LazyTransposeNode` (created with the function `!t`), the function `!matmul` will transpose them without making a copy (i.e.: zero-cost transpose). In any other case (the last two dimensions' permution, or view are too complicated), `!matmul` will produce an additional copy for fast computing.
 
-```
-(!matmul (!t (randn `(5 3))) (randn `(5 3)))
-```
 
 ## [function] !dot
 
