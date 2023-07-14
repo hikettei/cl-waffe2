@@ -436,6 +436,7 @@
 <p><code>scalar-p</code> [boolean] set t is the input is scalar.</p>
 <p><code>dtype</code> [keyword] as it is.</p>
 <p><code>order</code> [keyword] an member of :column :row</p>
+<p><code>create-from[nil or AbstractTensor]</code> If you want to extend permute state/stride information, fill it.</p>
 <h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(make-input `(a 10) :train-x)
 
@@ -481,7 +482,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP446 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1176 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -494,10 +495,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53511B2B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53985A7B}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5369ABDB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {536332EB}&gt;
 
 += [Tensors in the computation node] =======+
 

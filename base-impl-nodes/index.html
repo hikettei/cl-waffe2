@@ -1409,15 +1409,14 @@ save-for-backward: (T NIL)</p>
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-lazytransposenode">[node] LAZYTRANSPOSENODE</h2>
-<pre><code>(A[~ I J] -&gt; A[~ J I])
+<pre><code>(A[~ I J] -&gt; A[~ I J])
 </code></pre>
 <h3 id="description_50">Description</h3>
-<p>LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.</p>
-<p>Internally, This Node Returns The Given A itself but taking transpose of A's shape.</p>
-<p>If the computation node is like: [LazyTransposeNode] -&gt; [MatmulNode], then transpose will be done with NO overhead.</p>
+<p>LazyTransposeNode is a matmul-dedicated node to implement zero-cost transpose.</p>
+<p>The node stores untransposed tensor at <code>raw-tensor</code>, when expanding matmul form, you can read it if needed.</p>
 <h3 id="backward_50">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx) (declare (ignore dx)) (values (!t dout)))
+<pre><code class="language-lisp">((self dout dx) (declare (ignore dx)) (values dout))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-argmax-node">[node] ARGMAX-NODE</h2>
@@ -1462,7 +1461,7 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 <pre><code>(MatMulNode dtype &amp;key transpose-a transpose-b)
 </code></pre>
 <p><code>dtype</code> dtype to use.</p>
-<p><code>transpose-a</code> <code>transpose-b</code> set t to call with transposing (reversing the last two axes the matrix).</p>
+<p><code>transpose-a transpose-b[boolean]</code> becomes t if the given <code>a</code> or <code>b</code> needs to be transposed respectively. call <code>(read-untransposed tensor)</code> to read untransposed tensor.</p>
 <h3 id="backward_53">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout da db do) (declare (ignore do))
