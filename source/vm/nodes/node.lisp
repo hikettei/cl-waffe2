@@ -119,7 +119,6 @@ Here's a list of reports.
 
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
-;; TODO: Fix it. save-for-backward??
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
@@ -141,7 +140,6 @@ Here's a list of reports.
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
-
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
@@ -151,7 +149,7 @@ Here's a list of reports.
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
 	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
-	  
+
 	  ;; Enhancement
 	  ;; CALL-VIEW-AND-CONTINUE
 	  ;; If error is not originated from ~.

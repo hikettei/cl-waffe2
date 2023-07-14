@@ -6,7 +6,7 @@
 (declaim (ftype (function (boolean) (signed-byte 8)) trans->c))
 (defun trans->c (transpose-specifier)
   (if transpose-specifier
-      #.(char-code #\T)
+      #.(char-code #\C)
       #.(char-code #\N)))
 
 ;; Fix: Batched matmul
@@ -18,88 +18,96 @@
 ;; TODO: Transpose Tensor.
 ;; FixME: view isn't working at 1d/2d
 ;; FixME: support row-major with gemm
-(defun expand-gemm-form (a b out
+
+(defun expand-gemm-form (a1 b1 c
 			 &key
-			   trans-a? trans-b?
-			 &aux
-			   (a (read-untransposed a))
-			   (b (read-untransposed b)))
+			   trans-a?
+			   trans-b?)
   "[M N] @ [N K] -> [M K]"
-  (let ((dtype (dtype out)))
+  (let ((dtype (dtype c))
+	(a (if trans-a?
+	       (read-untransposed a1)
+	       a1))
+	(b (if trans-b?
+	       (read-untransposed b1)
+	       b1)))
+
+    ;; a, b ... untranspsoed tensor
+    ;; they're just used to compute strides
+
+    ;; a1, b1 ... tensor with vec, declared in arguments
+    
     (assert (eql (order a) :column)
 	    nil
 	    "Assertion Failed with (order a) = :column (TODO: Support)")
-    (case dtype
-      (:float
-       ;; TODO: Check If The Tensor is continuous on memory.
-       (call-with-view
-	#'(lambda (a-view b-view c-view)
-	    ;; Lazy-Eval when size=symbol.
-	    (let* ((a-view1 (if trans-a?
-				(reverse a-view)
-				a-view))
-		   (m   (size-of c-view 0))
-		   (n   (size-of c-view 1))
-		   (k   (size-of a-view1 1))
-		   (lda (size-of a-view 1))
-		   (ldb (size-of b-view 1))
-		   (ldc (size-of c-view 1)))
-	      ;; [10 12] @ [12 13]
-	      ;; [M K] @ [K N]
-	      ;; a-view = [A.views[n-1], A.views[n]]
+
+    (call-with-view
+     #'(lambda (a-view b-view c-view)
+	 (let* ((m (size-of c-view 0))
+		(n (size-of c-view 1))
+		(k (if trans-a?
+		       (size-of a-view 0)
+		       (size-of a-view 1)))
+		(lda (size-of a-view 1))
+		(ldb (size-of b-view 1))
+		(ldc (size-of c-view 1)))
+	   (case dtype
+	     (:float
 	      `(blas-sgemm
 		,(trans->c trans-b?)
 		,(trans->c trans-a?)
 		,n
 		,m
 		,k
-		1.0 ;; alpha
-		(tensor-ptr ,b :offset ,(offset-of b-view 0)) ;; a
+		1.0
+		;; If compile-when-cache = T,
+		;; variables that didn't appear in arguments
+		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
+		
+		(tensor-ptr ,b1
+			    :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
-		(tensor-ptr ,a :offset ,(offset-of a-view 0)) ;; b
+		(tensor-ptr ,a1
+			    :offset ,(offset-of a-view 0))
 		,lda
-		0.0 ;; beta
-		(tensor-ptr ,out :offset ,(offset-of c-view 0))
-		,ldc)))
-	`(,a ,b ,out)
-	:at-least-dim 2))
-      (:double
-       (call-with-view
-	#'(lambda (a-view b-view c-view)
-	    ;; Lazy-Eval when size=symbol.
-	    (let* ((a-view1 (if trans-a?
-				(reverse a-view)
-				a-view))
-		   (m   (size-of c-view 0))
-		   (n   (size-of c-view 1))
-		   (k   (size-of a-view1 1))
-		   (lda (size-of a-view 1))
-		   (ldb (size-of b-view 1))
-		   (ldc (size-of c-view 1)))
-	      ;; [10 12] @ [12 13]
-	      ;; [M K] @ [K N]
-	      ;; a-view = [A.views[n-1], A.views[n]]
+		0.0
+		(tensor-ptr
+		 ,c
+		 :offset ,(offset-of c-view 0))
+		,ldc))
+	     (:double
 	      `(blas-dgemm
 		,(trans->c trans-b?)
 		,(trans->c trans-a?)
 		,n
 		,m
 		,k
-		1.0d0 ;; alpha
-		(tensor-ptr ,b :offset ,(offset-of b-view 0)) ;; a
+		1.0d0
+		;; If compile-when-cache = T,
+		;; variables that didn't appear in arguments
+		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
+		
+		(tensor-ptr
+		 ,b1
+		 :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
-		(tensor-ptr ,a :offset ,(offset-of a-view 0)) ;; b
+		(tensor-ptr
+		 ,a1
+		 :offset ,(offset-of a-view 0))
 		,lda
-		0.0d0 ;; beta
-		(tensor-ptr ,out :offset ,(offset-of c-view 0))
-		,ldc)))
-	`(,a ,b ,out)
-	:at-least-dim 2))
-      (T
-       (error "The dtype ~a isn't supported yet (TODO)." dtype)))))
+		0.0d0
+		(tensor-ptr
+		 ,c
+		 :offset ,(offset-of c-view 0))
+		,ldc))
+	     (T
+	      (error "cl-waffe2/backends.cpu: Matmul with OpenBLAS is dedicated to :float or :double, ~a isn't available.
+Please consider using another backends." dtype)))))
+     `(,a ,b ,c)
+     :at-least-dim 2)))
 
 (define-impl (MatMulNode :device CPUTensor
-	                 :cache-when-compiled nil
+	                 :cache-when-compiled nil ;; TODO: Make it T.
 			 :reject-p (supported-dtypes-are 0 :float :double))
 	     :save-for-backward (t t nil)
 	     :forward
@@ -108,4 +116,5 @@
 		    (trans-b (trans-b? self)))
 		`(,@(expand-gemm-form a b out :trans-a? trans-a :trans-b? trans-b)
 		  ,out))))
+
 

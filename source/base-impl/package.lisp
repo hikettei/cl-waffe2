@@ -26,6 +26,7 @@
    #:!t
    #:A+=B)
   (:export
+   #:->contiguous
    #:!sum
    #:!mean
    #:!move

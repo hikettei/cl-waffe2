@@ -719,6 +719,7 @@ dout   ... dout values"
 	for l2 in listb
 	collect (= l1 l2)))
 
+;; TODO: Test
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute
@@ -801,18 +802,53 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 	(call (LazyTransposeNode) out)
 	out)))
 
-(with-export ->contiguous
-  (defun ->contiguous (tensor)
-    "
+
+(defun ->contiguous (tensor)
+  "
 ## [function] ->contiguous
 
-"
-    (if (or (tensor-projected-p tensor)
-	    (tensor-permuted-p tensor))
-	;; ScalarTensor never becomes projected array
-	(let* ((contiguous-place (make-input (shape tensor) nil
-					     :dtype (dtype tensor)
-					     :order (order tensor))))
-	  (!move contiguous-place tensor :force t))
-	tensor)))
+Returns a copy of the given tensor if is is permuted. Otherwise returns the argumement as it is.
 
+A memory-layout of returned copies are arranged into the same array as the array seen on the REPL.
+
+### Example
+
+```lisp
+(!t (ax+b `(3 3) 1 0))
+
+{CPUTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3) :named ChainTMP110110 
+  :vec-state [maybe-not-computed]
+  ((0.0 3.0 6.0)
+   (1.0 4.0 7.0)
+   (2.0 5.0 8.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: LAZYTRANSPOSENODE-T (A[~ I J] -> A[~ I J])>}
+
+(tensor-vec *)
+
+#(0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0)
+
+
+;; calling ->contiguous...
+
+(->contiguous (!t (ax+b `(3 3) 1 0)))
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP110149 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: MOVETENSORNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+
+(tensor-vec (proceed *))
+#(0.0 3.0 6.0 1.0 4.0 7.0 2.0 5.0 8.0)
+```
+"
+  (if (or (tensor-projected-p tensor)
+	  (tensor-permuted-p tensor))
+      ;; ScalarTensor never becomes projected array
+      (let* ((contiguous-place (make-input (shape tensor) nil
+					   :dtype (dtype tensor)
+					   :order (order tensor))))
+	(!move contiguous-place tensor :force t))
+      tensor))
