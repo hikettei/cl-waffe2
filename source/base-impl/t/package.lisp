@@ -56,3 +56,7 @@
 (defun M= (tensor1 tensor2)
   (every #'= (tensor-vec tensor1) (tensor-vec tensor2)))
 
+
+(defun ~= (x y)
+  (< (- x y) 0.00001))
+

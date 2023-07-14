@@ -31,18 +31,18 @@
 	(b (if trans-b?
 	       (read-untransposed b1)
 	       b1)))
-    
+
     (when trans-a?
       (assert (equal (reverse (last (shape a) 2))
 		     (last (shape a1) 2))
 	      nil
-	      "Assertion Failed"))
+	      "expand-gemm-form: Assertion Failed."))
 
     (when trans-b?
       (assert (equal (reverse (last (shape b) 2))
 		     (last (shape b1) 2))
 	      nil
-	      "Assertion Failed"))
+	      "expand-gemm-form: Assertion Failed."))
 
     ;; a, b ... untranspsoed tensor
     ;; they're just used to compute strides

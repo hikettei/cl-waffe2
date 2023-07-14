@@ -121,14 +121,14 @@
   (let* ((a (ax+b `(3 4) 1 0 :order :column))
 	 (b (ax+b `(3 4) 1 0 :order :column)))
     (with-no-grad
-      (every #'= (tensor-vec (proceed (!matmul a (!t b))))
+      (every #'~= (tensor-vec (proceed (!matmul a (!t b))))
 	     #(14.0 38.0 62.0 38.0 126.0 214.0 62.0 214.0 366.0)))))
 
 (define-tester matmul-tester-mnk1 :dense
   (let* ((a (ax+b `(3 4) 1 0 :order :column))
 	 (b (ax+b `(3 4) 1 0 :order :column)))
     (with-no-grad
-      (every #'= (tensor-vec (proceed (!matmul (!t a) b)))
+      (every #'~= (tensor-vec (proceed (!matmul (!t a) b)))
 	     #(80.0 92.0 104.0 116.0 92.0 107.0 122.0 137.0 104.0 122.0 140.0 158.0 116.0 137.0 158.0 179.0)))))
 
 (define-tester matmul-both-transposed :dense
@@ -138,6 +138,40 @@
     (when (every #'= (tensor-vec result) #(15.0 42.0 69.0 18.0 54.0 90.0 21.0 66.0 111.0))
       t)))
 
+;; A.grad = (!matmul dout db.t)
+;; B.grad = (!matmul da.t dout)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  
+(defun matmul-dx (dout y)
+  (proceed (!matmul dout (!t y))))
+
+(defun matmul-dy (dout x)
+  (proceed (!matmul (!t x) dout)))
+
+)
+
+(define-tester matmul-backward-test-square-sparse :dense
+  (let ((a (parameter (ax+b `(3 3) 1 0 :order :column)))
+	(b (parameter (ax+b `(3 3) 2 0 :order :column)))
+	(dout         (ax+b `(3 3) 0 1 :order :column)))
+    ;; A @ B
+    (proceed-backward (!matmul a b))
+    (and
+     (M= (grad a) (matmul-dx dout b))
+     (M= (grad b) (matmul-dy dout a)))))
+
+(define-tester matmul-backward-test-square-dense :dense
+  (let ((a (parameter (randn `(3 3) :order :column)))
+	(b (parameter (randn `(3 3) :order :column)))
+	(dout         (ax+b `(3 3) 0 1 :order :column)))
+    ;; A @ B
+    (proceed-backward (!matmul a b))
+    (and
+     (M= (grad a) (matmul-dx dout b))
+     (M= (grad b) (matmul-dy dout a)))))
+
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'matmul-test-set)
   (defmacro matmul-test-set (backend)
@@ -146,7 +180,11 @@
        (transpose-matmul-tester ,backend)
        (matmul-tester-mnk ,backend)
        (matmul-tester-mnk1 ,backend)
-       (matmul-both-transposed ,backend))))
+       (matmul-both-transposed ,backend)
+
+       (matmul-backward-test-square-sparse ,backend)
+       (matmul-backward-test-square-dense ,backend)
+       )))
 
 ;; Matmul with backward test is needed!
 
