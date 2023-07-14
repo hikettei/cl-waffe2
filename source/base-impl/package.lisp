@@ -15,6 +15,7 @@
    #:SubNode
    #:MulNode
    #:DivNode
+   #:ScalarMul
    #:MatmulNode
    #:InverseTensorNode
    #:trans-a?
@@ -25,11 +26,13 @@
    #:!t
    #:A+=B)
   (:export
+   #:->contiguous
    #:!sum
    #:!mean
    #:!move
    #:!copy
    #:!copy-force
+   #:!permute
    #:!view
    #:!reshape
    #:!rankup
@@ -55,3 +58,9 @@
    transposed-p"
   (setf (tensor-flexible-p result) (tensor-flexible-p extend-from))
   result)
+
+(defun tensor-permuted-p (tensor)
+  (not (equal (reverse (loop for i upfrom 0 below (dims tensor)
+			     collect i))
+	      (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))))
+

@@ -3,7 +3,7 @@
 
 ;; TODO: ====================================================
 ;; In accordance with refactoring of defnode, :where, add this feature: checking the number of arguments, number of outputs reading :where. (At: forward :around)
-;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・
+;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・⇦self書き忘れとか検知する、エラー内容が普通にうざい
 ;; Add Backward tests to define-static-node
 ;; Memo: (call (StaticNode) (parameter (randn `(10 10)))) is n't working for backward
 ;; But (call (StaticNode) (!copy (parameter (randn `(10 10))))) is working.
@@ -39,7 +39,7 @@
   (declare (type AbstractNode self)
 	   (type symbol name)
 	   (type AbstractTensor tensor))
-  
+
   ;; Is this calling of save-for-backward is reachable? by backward => If so, make a copy.
   (when (and (not (>= *under-composite-node-mode* 2))
 	     (null *no-grad*))
@@ -187,7 +187,6 @@ Saves the given tensors to save-place, in the currently working node.
 
 ;; ==================================================================
 
-
 (defmacro define-static-node ((name
 			       (self-name &rest constructor-args)
 			       &key
@@ -297,13 +296,15 @@ But what if one wants to save the given tensors for a future call of backward? Y
 			      ;; forward -> backward => backward -> forward
 			      :where ,(where->backward where)
 			      :forward ((,@backward-args)
-					;; Swapping (self args...) -> (forward-self args...)
+					;; Swapping (self args...) -> (forward-self args...)					
+					
 					(flet ((,backward-flet-name (,@backward-args)
 						 (declare (ignorable ,(car backward-args)))
 						 (with-composite-node-mode ,(car backward-args)
 						   (locally ,@backward-body))))
 					  (multiple-value-bind (,@backward-args)
 					      (apply #'values (list (read-forward-self ,(car backward-args)) ,@(cdr backward-args)))
+					    ;; FixME: Static Backward with multiple arguments?
 					    `(funcall ,#',backward-flet-name ,,@backward-args))))))
 
        ;; This is a main part of composite-node.
@@ -320,7 +321,8 @@ But what if one wants to save the given tensors for a future call of backward? Y
 						 (with-composite-node-mode ,(car forward-args)
 						   (locally ,@forward-body))))
 					  `(funcall ,#',forward-flet-name ,,@forward-args)))
-			      :backward ((,@backward-args)					 
+			      :backward ((,@backward-args)
+					 ;; Initializes backward node with (Backward self)
 					 (forward (,backward-node-name ,(car backward-args)) ,@(cdr backward-args))))
 	 ,@constructor-body))))
 

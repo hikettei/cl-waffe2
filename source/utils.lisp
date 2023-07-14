@@ -61,3 +61,18 @@
 
 
 ;; TODO: Add set-config for REPL.
+
+
+
+(defun collect-initarg-slots (slots constructor-arguments)
+  (map 'list #'(lambda (slots)
+		 ;; Auto-Generated Constructor is Enabled Only When:
+		 ;; slot has :initarg
+		 ;; slot-name corresponds with any of constructor-arguments
+		 (when
+		     (and
+		      (find (first slots) (alexandria:flatten constructor-arguments))
+		      (find :initarg slots))
+		   slots))
+       slots))
+

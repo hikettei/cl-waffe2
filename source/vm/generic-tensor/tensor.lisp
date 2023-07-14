@@ -32,6 +32,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; MultiDimensional APIs
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
+   (permute-order :initform nil :initarg :permute-order :accessor tensor-permute-order :type list)
    (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
 
@@ -53,8 +54,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (tensor-id :initform (gensym "TID") :accessor tensor-id)
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
+   (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
    (grad :initform nil :reader grad :writer set-grad)
-   (gradient-adder :accessor gradient-adder)
+   (gradient-adder    :accessor gradient-adder)
+   (gradient-resetter :accessor gradient-resetter)
 
    (save-for-backward-space :initform nil :accessor save-for-backward-space)
    (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
@@ -238,6 +241,22 @@ Tensors has a two state:
 
 "))
 
+(defun sync-permute! (tensor)
+  (macrolet ((apply-permute (accessor tensor)
+	       `(loop with copy = (copy-list ,accessor)
+		      with rank = (1- (length (shape ,tensor)))
+		      for o in (tensor-permute-order ,tensor)
+		      for kth upfrom 0
+		      do (let ((pos (- rank o)))
+			   (setf (nth pos ,accessor)
+				 (nth kth copy))))))
+    (apply-permute (tensor-stride tensor) tensor)
+    (apply-permute (tensor-view tensor) tensor)
+    (apply-permute (slot-value tensor 'visible-shape) tensor)
+    (apply-permute (slot-value tensor 'orig-shape) tensor)
+    (when (slot-value tensor 'input-shape)
+      (apply-permute (slot-value tensor 'input-shape) tensor))))	
+
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
   (apply #'lazy-mulup (shape tensor)))
@@ -250,6 +269,13 @@ Tensors has a two state:
   ""
   nil
   )
+
+(defun permuted-p (tensor)
+  (declare (type AbstractTensor)
+	   (optimize (speed 3)))
+  (let ((a (copy-list (tensor-permute-order tensor))))
+    (equal (sort a #'<) (tensor-permute-order tensor))))
+	   
 
 ;; Inline
 ;;(declaim (inline tensor-vec))
@@ -300,9 +326,10 @@ Note:
   (declare (type AbstractTensor tensor))
   (write-vec new-value tensor))
 
-(defun make-gradient-adder (target shape)
+(defun make-gradient-adder (target shape &key (use-input nil))
   "Returns a instant-kernel to add the new-gradient to given target."
   (let ((out (make-input shape nil
+			 :create-from use-input
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))
@@ -327,19 +354,52 @@ Note:
       (incf (tensor-vec (grad target)) (tensor-vec new-value))
       nil))
 
+(defun make-gradient-resetter (tensor)
+  (let ((*no-grad* t))
+    (let* ((out (cl-waffe2/vm.nodes:forward
+		 (cl-waffe2/base-impl:ScalarMul (dtype tensor))
+		 (grad tensor)
+		 (make-tensor (coerce 0 (dtype->lisp-type (dtype tensor))))))
+	   (code (compile-forward-kernel out :compile-mode :fastest)))
+      #'(lambda ()
+	  (funcall code)))))
+
+(defun make-gradient-resetter-scal (tensor)
+  (let ((resetwith (coerce 0 (dtype->lisp-type (dtype tensor)))))
+    #'(lambda ()
+	(setf (tensor-vec (grad tensor)) resetwith))))
+
+;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
-  (let ((scalar-p   (getf initargs :scalar-p))
-	(view       (getf initargs :view))
-	(order      (getf initargs :order))
-	(orig-shape (getf initargs :shape)))
+  (let ((scalar-p    (getf initargs :scalar-p))
+	(view        (getf initargs :view))
+	(order       (getf initargs :order))
+	(orig-shape  (getf initargs :shape))
+	(create-from (getf initargs :create-from)))
 
-    ;; orig-shape = used to compute strides.
-    (setf (slot-value tensor 'orig-shape)  orig-shape)
-    (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
-
-    (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor))
+    ;; create-from   = extend permute information from the tensor create-from.
+    ;; orig-shape    = used to compute strides, always synchronized with vec.
+    ;; visible-shape = visible size for users, always modified by making a view.
     
+    (setf (slot-value tensor 'orig-shape)      orig-shape)
+    (setf (slot-value tensor 'projected-p)     (getf initargs :projected-p))
+    (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor)) ;; Is it worth to call backward?
+    
+    ;; Updates/Initializes: Strides/Shapes/View/Permution Informations
     (cond
+      ((and create-from
+	    (permuted-p create-from)
+	    (equal orig-shape (original-shape create-from))
+	    (not (scalar-p tensor)))
+       ;; Subject to shuffle: orig-shape visible-shape view permute-order stride
+       ;; Never Do this: Recomputing strides, USE create-from
+       
+       (setf (tensor-stride tensor) (tensor-stride create-from)
+	     (slot-value tensor 'orig-shape) (original-shape create-from)
+	     (tensor-permute-order tensor) (tensor-permute-order create-from)
+	     
+	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
+	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
       ((eql (getf initargs :facet) :input)
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
@@ -355,8 +415,14 @@ Note:
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))
+    
+    ;; Initial Permution: 5 4 3 2 ... 1 0
+    (unless (tensor-permute-order tensor)
+      (setf (tensor-permute-order tensor)
+	    (loop for i downfrom (length (shape tensor)) to 1
+		  collect (1- i))))
 
-    ;; Setup utils for collecting gradients.
+    ;; If needed, update information about gradients
     (when (slot-value tensor 'requires-grad)
       (if (scalar-p tensor)
 	  (set-grad (make-tensor 0
@@ -371,9 +437,25 @@ Note:
 		    tensor))
       (if (scalar-p tensor)
 	  (setf (gradient-adder tensor)
-		(make-gradient-adder-scal tensor))
+		(make-gradient-adder-scal tensor)
+		(gradient-resetter tensor)
+		(make-gradient-resetter-scal tensor))
 	  (setf (gradient-adder tensor)
-		(make-gradient-adder tensor (tensor-visible-shape tensor)))))))
+		(make-gradient-adder tensor (tensor-visible-shape tensor))
+		(gradient-resetter tensor)
+		(make-gradient-resetter tensor))))))
+
+(defun transfer-vec-information (from to)
+  "Transfer information that makes a vec vec"
+  (declare (type AbstractTensor from to))
+  (setf (slot-value to 'orig-shape) (slot-value from 'orig-shape)
+	(slot-value to 'visible-shape) (slot-value from 'visible-shape)
+	(tensor-stride to) (tensor-stride from)
+	(tensor-view to) (tensor-view from)
+	(tensor-permute-order to) (tensor-permute-order from)
+	(slot-value to 'input-shape) (slot-value from 'input-shape))
+  nil)
+  
 
 (defmethod add-grads ((tensor AbstractTensor) new-value)
   "tensor's gradient += new-value"
@@ -462,6 +544,7 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 (defun make-input (shape
 		   named
 		   &key
+		     (create-from nil)
 		     (scalar-p nil)
 		     (dtype *default-dtype*)
 		     (order *default-order*))
@@ -485,11 +568,14 @@ For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or 
 `dtype` [keyword] as it is.
 
 `order` [keyword] an member of :column :row
+
+`create-from[nil or AbstractTensor]` If you want to extend permute state/stride information, fill it.
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
   (make-instance (if scalar-p 'ScalarTensor (car *using-backend*))
 		 :scalar-p scalar-p
+		 :create-from create-from
 		 :dtype dtype
 		 :order order
 		 :shape shape
@@ -573,7 +659,8 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 ;; input <- actual
 (defun embody-actual-tensor (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor). (Pointers are shared.)"
-  (declare (type AbstractTensor input-tensor actual-tensor))
+  (declare (type AbstractTensor input-tensor actual-tensor)
+	   (optimize (speed 3)))
 
   ;;(assert (eql (tensor-facet input-tensor) :input)
   ;;	  nil
@@ -583,20 +670,27 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
-  (when (and (numberp (vec input-tensor))
+  (when (or (numberp (vec input-tensor))
 	     (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
 
   ;; Offsets?
-  (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
-	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
-	(tensor-view input-tensor) (tensor-view actual-tensor)
-	(tensor-stride input-tensor) (tensor-stride actual-tensor)
-	(tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
 
-	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)
-	)
+  (let ((actual-tensor
+	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
+		   (permuted-p input-tensor))
+		      
+	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
+	      actual-tensor)))
+    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	  (slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
+	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
+	  (tensor-view input-tensor) (tensor-view actual-tensor)
+	  (tensor-stride input-tensor) (tensor-stride actual-tensor)
+	  (tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
+
+	  (slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
   t)
 
 (defun embody-tensor-vec (input-tensor actual-tensor)
@@ -607,18 +701,24 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
-  (when (and (numberp (vec input-tensor))
-	     (numberp (vec actual-tensor)))
+  (when (or (numberp (vec input-tensor))
+	    (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-tensor-vec t))
 
   ;; Offsets?
-  (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
-	(slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
-	(tensor-view input-tensor) (tensor-view actual-tensor)
-	(tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
-	;;(tensor-stride input-tensor) (eval `(list ,@(tensor-stride actual-tensor)))
-	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
+  (let ((actual-tensor
+	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
+		   (permuted-p input-tensor))
+	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
+	      actual-tensor)))
+    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	  (slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
+	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
+	  (tensor-view input-tensor) (tensor-view actual-tensor)
+	  (tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
+	  (slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
+  t)
 
 (defun view (tensor &rest subscripts)
   "The function view creates a view of given tensor.
@@ -647,6 +747,7 @@ Note that view is only created for Tensors, not a Scalar.
       (return-from view tensor))
 
     (make-instance (car *using-backend*)
+		   :create-from tensor
 		   :dtype (dtype tensor)
 		   :order (order tensor)
 		   :requires-grad (slot-value tensor 'requires-grad)
@@ -658,6 +759,106 @@ Note that view is only created for Tensors, not a Scalar.
 		   :facet (tensor-facet tensor)
 		   :named (tensor-name tensor)
 		   :vec (vec tensor))))
+
+
+(defun permute-computable-p (old-order new-order)
+  (equal (sort (copy-list old-order) #'<)
+	 (sort (copy-list new-order) #'<)))
+
+(defun apply-flexible-subscript (old-orders new-orders position)
+  (let* ((goal-length (length old-orders))
+	 (diff (- goal-length (length new-orders))))
+    (if (and (> diff 0) position)
+        `(,@(loop for i upfrom 0 below position
+		  collect (nth i new-orders))
+	  ,@(loop for i upfrom position below (+ position diff)
+		  collect (nth i old-orders))
+	  ,@(loop for i upfrom (+ position diff) below goal-length
+		  collect (let ((i (- i diff)))
+			    (nth i new-orders))))
+	new-orders)))
+
+#|
+(defun test-permute-syntax ()
+  (print (apply-flexible-subscript
+	  `(1 2 3 4 5)
+	  `(1 2 4 5)
+	  (position :~ `(1 2 :~ 4 5))))
+  (print (apply-flexible-subscript
+	  `(1 2 3 4 5)
+	  `(5 1)
+	  (position :~ `(1 :~ 5))))
+
+  (print (apply-flexible-subscript
+	  `(1 2 3 4 5)
+	  `(5 1)
+	  (position :~ `(5 1 :~))))
+
+  (print (apply-flexible-subscript
+	  `(4 3 2 1 0)
+	  `(0 1)
+	  (position :~ `(:~ 0 1))))
+
+  (print (apply-flexible-subscript
+	  `(4 3 2 1 0)
+	  `(3 4)
+	  (position :~ `(3 4 :~)))))
+|#
+
+;; Reference: https://stackoverflow.com/questions/32034237/how-does-numpys-transpose-method-permute-the-axes-of-an-array
+(defun permute* (tensor &rest orders)
+  "
+Shuffles the order of axes of the tensor.
+
+:~ to make it flexible.
+
+(E.g.: 1 :~ 5)
+
+(TODO Document)
+
+Initial permute order: n n-1 n-2 ... 3 2 1.
+
+The axis is computed at Order[N]th loop.
+
+Ex: transposing the tensor.
+```
+(permute* tensor :~ 0 1)
+```
+
+Initial value of permute: n n-1 ... 2 1 0.
+"
+
+  (when (scalar-p tensor)
+    (error "permute*: permutes of array can only created for tensors, not a scalar."))
+  
+  (when (> (count :~ orders) 1)
+    (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
+
+  (let* ((tensor-new (view tensor)) ;; Detaching from computation node.
+	 (old-orders  (tensor-permute-order tensor))
+	 (pure-orders (remove :~ orders)) ;; order consisted of fixnum
+	 (new-orders
+	   (loop for rank fixnum upfrom 0 below (length (shape tensor))
+		 for order in pure-orders
+		 collect (progn
+			   (when (and (numberp order)
+				      (null (nth order old-orders)))
+			     (error "permute*: the number of order is out of range: ~a" order))
+			   order)))
+	 (new-orders (if (position :~ orders)
+			 (apply-flexible-subscript
+			  old-orders
+			  pure-orders
+			  (position :~ orders))
+			 new-orders)))
+    (if (not (permute-computable-p old-orders new-orders))
+	(error "permute*: before and after the operation, all axes must be used: ~a -> ~a." old-orders new-orders))
+
+    (setf (tensor-permute-order tensor-new) new-orders)
+    ;; shuffle strides.
+
+    (sync-permute! tensor-new)
+    tensor-new))
 
 (defun detach! (tensor)
   "detach tensor from computation node."
@@ -776,20 +977,42 @@ The function parameter computes all the previous nodes of the given tensor if an
 ;; The Problem is that: after calling forward :around, set-save-for-backward is called.
 
 
-(defun system-lazy-set-save-for-backward (tensor &aux (transposed? (cl-waffe2/base-impl:transposed-p tensor)))
+(defun system-lazy-set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
-  (let ((space-tmp (make-clone (cl-waffe2/base-impl:read-untransposed tensor))))
-    ;; for save-for-backward
-    ;; (setf (save-for-backward-space tensor) space-tmp)
-    (let* ((result (cl-waffe2/base-impl:!move space-tmp (cl-waffe2/base-impl:read-untransposed tensor) :force t))
-	   (result (if transposed?
-		       (cl-waffe2/base-impl:!t result)
-		       result)))
+  
+  (let ((space-tmp (make-clone tensor)))
+    (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
       (setf (save-for-backward-space result) tensor)
       ;; result = space-tmp
       result)))
-
 	
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
+
+;; Exports
+(defun hook-optimizer! (tensor optimizer)
+  "
+## [function] hook-optimizer!
+"
+  (declare (type AbstractTensor tensor)
+	   (type cl-waffe2/optimizers:AbstractOptimizer optimizer))
+  (when (slot-value tensor 'requires-grad)
+    (setf (tensor-optimizer tensor) optimizer)))
+
+(defun call-optimizer! (tensor)
+  "
+## [function] call-optimizer!
+"
+  (declare (type AbstractTensor))
+  (when (slot-value tensor 'requires-grad)
+    (cl-waffe2/optimizers:step-optimize (tensor-optimizer tensor))))
+
+(defun reset-grad! (tensor)
+  "
+## [function] reset-grad!
+"
+  (declare (type AbstractTensor tensor))
+  (when (slot-value tensor 'requires-grad)
+    (funcall (gradient-resetter tensor))))
+
 

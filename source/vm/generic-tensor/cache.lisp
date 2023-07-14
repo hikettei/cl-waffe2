@@ -112,7 +112,7 @@ TensorViewNameN depicts the path call-with-view traced.
       ;; call-with-view traces following
       ;; n-1 n-2 ... 2 1 0th dim.
       ;; Caching Based on Tensor Strides (Because it is inlined)
-      (apply #'symb (reverse name-list) (list (intern (format nil "~a" (actual-shape tensor))))))))
+      (apply #'symb (reverse name-list) (list (intern (format nil "~a~a" (actual-shape tensor) (tensor-permute-order tensor))))))))
 
 (defun kernel-name (compiled-kernel)
   (symb
@@ -149,6 +149,9 @@ Reading *kernel-storeroom*, the function expands the form below.
       (setf (gethash (kernel-name fn) caches) (cache-kernel-form fn)))
     `(labels (,@(loop for body being the hash-values in caches
 		      collect body))
+       ;; TODO: Prune this:
+       ,@(loop for name being the hash-keys in caches
+	       collect `#',name)
        ,@body)))
 
 (defun tensor->id (body args)

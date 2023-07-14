@@ -14,6 +14,7 @@
   (let ((place (make-input
 		(cl-waffe2/vm.generic-tensor::translate-adjustable-shape (shape tensor))
 		nil
+		:create-from tensor
 		:dtype (dtype tensor)
 		:order (order tensor)
 		:scalar-p (scalar-p tensor))))

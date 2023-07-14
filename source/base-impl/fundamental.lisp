@@ -113,7 +113,9 @@ Unevaluated Copied Tensor."
 	   (scalar-p place))
       (forward (MoveScalarTensorNode :save-for-backward force) place tensor)
       ;; The problem is that: it is unknown whether place or tensor is returned until optimize-computation-node! is called.
-      (forward (MoveTensorNode (dtype place) :save-for-backward force) place tensor)))
+      (forward (MoveTensorNode (dtype place) :save-for-backward force)
+	       place
+	       tensor)))
 
 
 (defun !copy (tensor &key (force nil))
@@ -134,7 +136,13 @@ See also: `!copy-force` never being ignored by compiler, and broadcasted axes wi
 
 Input:  Tensor[AbstractTensor]
 Output: Tensor[AbstractTensor]"
+
+  ;; FIXME: Operation with tensor permuted...
+  ;;(when (tensor-permuted-p tensor)
+  ;;  (return-from !copy (->contiguous tensor)))
+  
   (let* ((out (make-input (actual-shape tensor) nil
+			  :create-from tensor
 			  :scalar-p (scalar-p tensor)
 			  :dtype (dtype tensor)
 			  :order (order tensor)))
@@ -154,6 +162,7 @@ Output: Tensor[AbstractTensor]"
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 
+;; Depcrecated ...
 (defun !copy-force (tensor)
   "
 ## [function] !copy-force
@@ -165,6 +174,9 @@ Output: Tensor[AbstractTensor]"
 The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
 
 This function is also used to adjust memory alignment of tensor."
+
+  (warn "!copy-force is subject to be deleted in the future release. use instead: (!copy tensor :force t)")
+  
   (let* ((out (make-tensor (if (scalar-p tensor)
 			       0
 			       (shape tensor))
@@ -282,9 +294,8 @@ Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-rev
 (define-impl (ReshapeTensorNode :device t)
 	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
 	     :forward ((self x y)
-		       (declare (ignore y))
 		       `(progn
-			  ;;(setf (tensor-vec ,y) (tensor-vec ,x))
+			  (cl-waffe2/vm.generic-tensor::transfer-vec-information ,y ,x)
 			  ,x)))
 
 ;; ===============================================================
@@ -512,7 +523,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 			 ;; The result is returned.
 			 `(progn
-			    ;; Tell top compiling funtion the compiled-function
+			    ;; Tell top compiling funtion what composite to use for the compiled-function
 			    (cl-waffe2/vm.generic-tensor::declare-compiled-composite ,compiled-model)
 			    
 			    ,x)))
@@ -683,4 +694,161 @@ result ... result
 dout   ... dout values"
 
   (forward (PrintNode stream result dout mark) tensor))
+
+;; ===============================================================
+;; Permute APIs
+;; ===============================================================
+
+
+(define-and-impl-node (Permute-Node (self before after permute-old)
+		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
+		       :where (Old[before] New[after] -> New[after])
+		       :forward ((self a out)
+				 `(progn
+				    (embody-actual-tensor ,out ,a)
+				    ,out))
+		       :backward ((self dout a out)
+				  (declare (ignore a out))
+				  (let ((out (apply #'!permute dout (permute-old self))))
+				    (values out nil))))
+  (setf (ignore-shape-error self) t))
+
+(defun list-diff (lista listb)
+  (loop for l1 in lista
+	for l2 in listb
+	collect (= l1 l2)))
+
+;; TODO: Test
+(defun !permute (tensor &rest orders)
+  "
+## [function] !permute
+
+In cl-waffe2, each tensor has a slot `(tensor-permute-order tensor)`, which indicates the order of the dimensions to be invoked. The function `!permute` returns a view of the original tensor input with its dimensions permuted.
+
+```lisp
+(n) (n-1) ... (1) (0) ... The order
+
+ ++++   ^ (0)
+ ++++   |
+ ++++   |
+        |
+ ----> (1)
+
+(A beautiful figure would be displayed in the future :<)
+```
+
+In other view, `!permute` replaces the order of following operation:
+
+```lisp
+A = 2x2x2 Matrix.
+
+------------------------
+Shape      :   2  2  2
+Stride     :   4  2  1
+[Permution]:   2  1  0
+             A[1][1][1]
+------------------------
+```
+
+When `[Permution]` is shuffled, the order of other parameters (e.g.: `shape` `stride` `view`...) are shuffle in tandem. That is, if we give `2 0 1` as a permutation, the figure becomes:
+
+```lisp
+A = 2x2x2 Matrix.
+
+------------------------
+Shape      :   2  2  2
+Stride     :   4  1  2
+[Permution]:   2  0  1
+             A[1][1][1]
+------------------------
+```
+
+The operation could be applied to transpose matrices.
+
+### Example
+
+```lisp
+(defun transpose-revisit (tensor)
+    ;; A[i j] -> A[j i]
+    (!permute tensor :~ 0 1))
+```
+
+Note that the case when only the last two aces are subject to be swapped, we return `Lazy-Transpsose-Node` instead (for matmul).
+### Inputs
+
+`tensor[AbstractTensor]` tensor to be permuted.
+
+`order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
+
+"
+  ;; If only the last two axes are subject to swapped.
+  ;; Return a special node LazyTranspose instead.
+  (let* ((new-tensor (apply #'permute* tensor orders))
+	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
+				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
+	 (lazy-p (and (every #'(lambda (x) x) (butlast diff 2))
+		      (every #'null           (last    diff 2))))
+	 (out  (forward (Permute-Node
+			 (shape tensor)
+			 (shape new-tensor)
+			 (cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor))
+			tensor
+			new-tensor)))
+    ;; The case when (T NIL NIL) (T T NIL NIL) (NIL NIL) ... subject to lazy-transpose
+    
+    ;; judge: the diff is last two?
+    (if lazy-p
+	(call (LazyTransposeNode) out)
+	out)))
+
+
+(defun ->contiguous (tensor &aux (permuted-p (tensor-permuted-p tensor)))
+  "
+## [function] ->contiguous
+
+Returns a copy of the given tensor if is is permuted. Otherwise returns the argumement as it is.
+
+A memory-layout of returned copies are arranged into the same array as the array seen on the REPL.
+
+### Example
+
+```lisp
+(!t (ax+b `(3 3) 1 0))
+
+{CPUTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3) :named ChainTMP110110 
+  :vec-state [maybe-not-computed]
+  ((0.0 3.0 6.0)
+   (1.0 4.0 7.0)
+   (2.0 5.0 8.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: LAZYTRANSPOSENODE-T (A[~ I J] -> A[~ I J])>}
+
+(tensor-vec *)
+
+#(0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0)
+
+
+;; calling ->contiguous...
+
+(->contiguous (!t (ax+b `(3 3) 1 0)))
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP110149 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: MOVETENSORNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+
+(tensor-vec (proceed *))
+#(0.0 3.0 6.0 1.0 4.0 7.0 2.0 5.0 8.0)
+```
+"
+  (if (or (tensor-projected-p tensor)
+	  permuted-p)
+      ;; ScalarTensor never becomes projected array
+      (let* ((contiguous-place (make-input (shape tensor) nil
+					   :dtype (dtype tensor)
+					   :order (order tensor))))
+	(!move contiguous-place tensor :force t))
+      tensor))
 

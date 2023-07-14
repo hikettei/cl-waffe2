@@ -27,40 +27,38 @@ C\\gets{gemm(1.0, A, B, 0.0, C)}
 
 `dtype` dtype to use.
 
-`transpose-a` `transpose-b` set t to call with transposing (reversing the last two axes the matrix).
+`transpose-a transpose-b[boolean]` becomes t if the given `a` or `b` needs to be transposed respectively. call `(read-untransposed tensor)` to read untransposed tensor.
 
 "))
 
 (defnode (LazyTransposeNode (self)
-	  :where (A[~ i j] -> A[~ j i])
+	  :where (A[~ i j] -> A[~ i j])
 	  :slots ((raw-tensor :accessor raw-tensor))
-	  :documentation "LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.
+	  :documentation "LazyTransposeNode is a matmul-dedicated node to implement zero-cost transpose.
 
-Internally, This Node Returns The Given A itself but taking transpose of A's shape.
-
-If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then transpose will be done with NO overhead."
+The node stores untransposed tensor at `raw-tensor`, when expanding matmul form, you can read it if needed."
 	  :backward ((self dout dx)
 		     (declare (ignore dx))
-		     (values (!t dout)))))
+		     (values dout))))
 
 (define-impl (LazyTransposeNode :device t)
-	     :forward ((self x) (setf (raw-tensor self) x) `(progn ,x)))
+	     :forward ((self x)
+		       (setf (raw-tensor self) x)
+		       `(progn
+			  ,x)))
 
 (defun read-untransposed (tensor)
   ""
   (if (transposed-p tensor)
-      (raw-tensor (tensor-backward tensor))
+      (car (tensor-variables (raw-tensor (tensor-backward tensor))))
       tensor))
+
 
 (defun transposed-p (tensor)
   "Return T if previous-node is LazyTransposeNode"
   (subtypep (class-of (tensor-backward tensor)) 'LazyTransposeNode))
 
 
-;; :== The problem is that ==============:
-;;  !flexible(!t(x)).is_transposed? = NIL
-;;  !t(!flexible(x)).is_flexible?   = T
-;; :=====================================:
 (defun !t (tensor)
   "
 ## [function] !t
@@ -69,21 +67,12 @@ If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then trans
 (!t tensor)
 ```
 
-Applies Lazy-Transpose to the given tensor.
+Transposes the last two axes of the given tensor.
 
-The function is matmul-dedicated, so cooperationg with other operations (e.g.: !add) will cause the wrong result. (Internally, it is the equivalent to calling `!reshape`)
-
-### Current Problem
-
-Inconsistency of operations:
-
-```lisp
-!flexible(!t(x)).is_transposed? = NIL
-!t(!flexible(x)).is_flexible?   = T
-```
+When called with !matmul, the operation is ignored.
 "
-  ;; extend flexible?
-  (extend-states (forward (LazyTransposeNode) tensor) tensor))
+  
+  (extend-states (!permute tensor :~ 0 1) tensor))
 
 (defun !matmul (x y
 		&key
@@ -102,7 +91,7 @@ Inconsistency of operations:
 (!matmul x y &key (out nil) (transpose-x nil) (transpose-y nil))
 ```
 
-Computing a matrix multiplication of X and Y, the function set the result into out.
+Computing a matrix multiplication of X and Y. The result is stored in out if specified, otherwise creates a new tensor.
 
 ```math
 out\\gets{gemm(1.0, x, y, 0.0, out)}
@@ -110,25 +99,22 @@ out\\gets{gemm(1.0, x, y, 0.0, out)}
 
 ### Inputs
 
-`transpose-x` `transpose-y` If t, the tensor is called with `(!t tensor)`
+`transpose-x, transpose-y[boolean]` If t, the inputs are wrapped with `(!t tensor)`.
 
-### Lazy-Transpose
+### Tips: Lazy-Transpose-Node
 
-Call the function `(!t tensor)` in advance to transpose the tensor without overheads.
+If the last backward of given arguments are `LazyTransposeNode` (created with the function `!t`), the function `!matmul` will transpose them without making a copy (i.e.: zero-cost transpose). In any other case (the last two dimensions' permution, or view are too complicated), `!matmul` will produce an additional copy for fast computing.
 
-```
-(!matmul (!t (randn `(5 3))) (randn `(5 3)))
-```
 "
   (let* ((i  (nth 0 (last (shape x) 2)))
 	 (jx (nth 1 (last (shape x) 2)))
 	 (jy (nth 0 (last (shape y) 2)))
 	 (k  (nth 1 (last (shape y) 2)))
 	 ;; the way to make out's shape
+	 ;; The rank is straighten up with larger one.
 	 (larger-shape (if (> (length (shape x)) (length (shape y)))
 			   (shape x)
 			   (shape y)))
-	 ;; the longer dim's shape is adapted.
 	 (out (or out (make-input `(,@(butlast larger-shape 2) ,i ,k) nil
 				  :dtype (dtype x)
 				  :order (order x)))))
@@ -144,13 +130,40 @@ Shapes: A = ~a, B = ~a"
        jy
        (shape x)
        (shape y)))
-    
-    (forward (MatmulNode (dtype x)
-	      :transpose-a transpose-x
-	      :transpose-b transpose-y)
-	      x
-	      y
-	      out))) ;; !flexible
+
+    (flet ((adjust-layout (tensor transposed?)
+	     "Return (values Adjusted-Tensor KeepTranspose?)"
+	     (let ((last-two-view (last (tensor-view tensor) 2))
+		   (last-two-permute (last (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor) 2))
+
+		   (excepted-permute (last (reverse (loop for i upfrom 0 below (dims tensor) collect i)) 2)))
+
+	       (cond
+		 (transposed?
+		  (values tensor transposed?))
+		 ((and (every
+			#'(lambda (x) (eql (force-list x) t))
+			last-two-view)
+		       (every
+			#'=
+			last-two-permute
+			excepted-permute))
+		  ;; Memory-layout is OK. (last two axes are not polluted)
+		  ;; (values tensor nil) <=>
+		  (values tensor transposed?))
+		 (T
+		  ;; Apply Transpose/Permute/View
+		  ;; TODO: Delete this copy...
+		  (values (->contiguous tensor) nil))))))
+
+      (multiple-value-bind (x x-transpose?) (adjust-layout x transpose-x)
+	(multiple-value-bind (y y-transpose?) (adjust-layout y transpose-y)
+	  (forward (MatMulNode (dtype x)
+			       :transpose-a x-transpose?
+			       :transpose-b y-transpose?)
+		   x
+		   y
+		   (adjust-layout out nil)))))))
 
 (with-export !dot
   (defun !dot (x y)

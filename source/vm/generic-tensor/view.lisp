@@ -444,7 +444,7 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
 			   before
 			   after
 			   size)
-  "Tensor[:broadcast 10][t]"
+  "Tensor[:broadcast 10][t] -> :broadcast 10"
   (step-subscript :t :broadcast before after size))
 
 (defmethod step-subscript ((x (eql :broadcast))

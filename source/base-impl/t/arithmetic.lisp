@@ -50,7 +50,7 @@
   (define-arith-tester sub-tester  !sub  9  1 -1)
   (define-arith-tester mul-tester  !mul  10 1 10)
   (define-arith-tester div-tester  !div  10 1 -10)
-  (define-arith-tester move-tester !move 1 1 1))
+  (define-arith-tester move-tester !move 1 0 1))
 
 (macrolet ((define-scalar-mat-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
@@ -102,7 +102,7 @@
   (define-ss-tester ss-sub-tester !sub - 1 -1)
   (define-ss-tester ss-mul-tester !mul * 1 1)
   (define-ss-tester ss-div-tester !div / 1 -1))
-
+  
 (define-tester matmul-tester :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
  	 (b (ax+b `(3 3) 1 0 :order :column))
@@ -120,14 +120,16 @@
 (define-tester matmul-tester-mnk :dense
   (let* ((a (ax+b `(3 4) 1 0 :order :column))
 	 (b (ax+b `(3 4) 1 0 :order :column)))
-    (every #'= (tensor-vec (proceed (!matmul a (!t b))))
-	   #(14.0 38.0 62.0 38.0 126.0 214.0 62.0 214.0 366.0))))
+    (with-no-grad
+      (every #'~= (tensor-vec (proceed (!matmul a (!t b))))
+	     #(14.0 38.0 62.0 38.0 126.0 214.0 62.0 214.0 366.0)))))
 
 (define-tester matmul-tester-mnk1 :dense
   (let* ((a (ax+b `(3 4) 1 0 :order :column))
 	 (b (ax+b `(3 4) 1 0 :order :column)))
-    (every #'= (tensor-vec (proceed (!matmul (!t a) b)))
-	   #(80.0 92.0 104.0 116.0 92.0 107.0 122.0 137.0 104.0 122.0 140.0 158.0 116.0 137.0 158.0 179.0))))
+    (with-no-grad
+      (every #'~= (tensor-vec (proceed (!matmul (!t a) b)))
+	     #(80.0 92.0 104.0 116.0 92.0 107.0 122.0 137.0 104.0 122.0 140.0 158.0 116.0 137.0 158.0 179.0)))))
 
 (define-tester matmul-both-transposed :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
@@ -136,17 +138,104 @@
     (when (every #'= (tensor-vec result) #(15.0 42.0 69.0 18.0 54.0 90.0 21.0 66.0 111.0))
       t)))
 
+;; A.grad = (!matmul dout db.t)
+;; B.grad = (!matmul da.t dout)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  
+  (defun matmul-dx (dout y)
+    (proceed (!matmul dout (!t y))))
+  
+  (defun matmul-dy (dout x)
+    (proceed (!matmul (!t x) dout)))
+
+)
+
+(define-tester matmul-backward-test-square-sparse :dense
+  (let ((a (parameter (ax+b `(3 3) 1 0 :order :column)))
+	(b (parameter (ax+b `(3 3) 2 0 :order :column)))
+	(dout         (ax+b `(3 3) 0 1 :order :column)))
+    ;; A @ B
+    (proceed-backward (!matmul a b))
+    (and
+     (M= (grad a) (matmul-dx dout b))
+     (M= (grad b) (matmul-dy dout a)))))
+
+(define-tester matmul-backward-test-square-dense :dense
+  (let ((a (parameter (randn `(3 3) :order :column)))
+	(b (parameter (randn `(3 3) :order :column)))
+	(dout         (ax+b `(3 3) 0 1 :order :column)))
+    (proceed-backward (!matmul a b))
+    (and
+     (M= (grad a) (matmul-dx dout b))
+     (M= (grad b) (matmul-dy dout a)))))
+
+(defun matmul-3x4-4x3-test ()
+  (with-devices (cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor)
+    (let ((a (parameter (randn `(3 4) :order :column)))
+	  (b (parameter (randn `(4 3) :order :column)))
+	  (dout         (ax+b `(3 3) 0 1 :order :column)))
+      (proceed-backward (!matmul a b))
+      (and
+       (M= (grad a) (matmul-dx dout b))
+       (M= (grad b) (matmul-dy dout a))))))
+
+(test matmul-3x4-4x3-test
+  (is (matmul-3x4-4x3-test)))
+
+;; Continue...
+(macrolet ((define-matmul-test-form (name matmul-form size1 size2)
+	     `(define-tester ,name :dense
+		(let* ((a (parameter (randn ,size1 :order :column)))
+		       (b (parameter (randn ,size2 :order :column)))
+		       (node-out ,matmul-form)
+		       (dout (ax+b (shape node-out) 0 1 :order :column)))
+		  (proceed-backward node-out)
+		  (and
+		   (M= (grad a) (matmul-dx dout b))
+		   (M= (grad b) (matmul-dy dout a)))))))
+  (define-matmul-test-form
+      matmul-test-form-test
+      (!matmul a b)
+    `(3 3)
+    `(3 3))
+
+  )
+		
+
+;; should be:
+;; 9 12 15
+;; 9 12 15
+;; 9 12 15 
+;; 9 12 15
+
+(test adding-gradients-with-permution-shuffled-test
+  (is (let ((a (parameter (randn `(4 3)))))
+	(proceed-backward (!matmul (ax+b `(3 3) 1 0) (!t a)))
+        (every #'= (tensor-vec (grad a))
+	       #(9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0)))))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'matmul-test-set)
   (defmacro matmul-test-set (backend)
-    `(progn
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
        (matmul-tester ,backend)
        (transpose-matmul-tester ,backend)
        (matmul-tester-mnk ,backend)
        (matmul-tester-mnk1 ,backend)
-       (matmul-both-transposed ,backend))))
+       (matmul-both-transposed ,backend)
+
+       (matmul-test-form-test ,backend)
+       (matmul-backward-test-square-sparse ,backend)
+       (matmul-backward-test-square-dense ,backend)
+
+       
+       )))
+
+;; Matmul with backward test is needed!
 
 (ss-add-tester nil)
 (ss-sub-tester nil)
 (ss-mul-tester nil)
 (ss-div-tester nil)
+

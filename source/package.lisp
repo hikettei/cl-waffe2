@@ -21,6 +21,16 @@
    ;;#:with-cuda
    )
 
+  (:export
+   #:AbstractTrainer
+   #:deftrainer
+   #:optimize!
+   #:zero-grads!
+   #:model
+   #:set-inputs
+   #:minimize!
+   #:predict)
+
   ;; network utils
   (:export
    #:defsequence

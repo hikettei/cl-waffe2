@@ -1409,23 +1409,21 @@ No need to implement backwards at `define-impl`. (they'd be ignored.)
 ## [node] LAZYTRANSPOSENODE
 
 ```
-(A[~ I J] -> A[~ J I])
+(A[~ I J] -> A[~ I J])
 ```
 
 ### Description
 
-LazyTransposeNode is the matmul-dedicated node which supplies the lazy-transpose feature.
+LazyTransposeNode is a matmul-dedicated node to implement zero-cost transpose.
 
-Internally, This Node Returns The Given A itself but taking transpose of A's shape.
-
-If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then transpose will be done with NO overhead.
+The node stores untransposed tensor at `raw-tensor`, when expanding matmul form, you can read it if needed.
 
 ### Backward
 
 ✅ Already defined. 
 
 ```lisp
-((self dout dx) (declare (ignore dx)) (values (!t dout)))
+((self dout dx) (declare (ignore dx)) (values dout))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -1510,7 +1508,7 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 
 `dtype` dtype to use.
 
-`transpose-a` `transpose-b` set t to call with transposing (reversing the last two axes the matrix).
+`transpose-a transpose-b[boolean]` becomes t if the given `a` or `b` needs to be transposed respectively. call `(read-untransposed tensor)` to read untransposed tensor.
 
 
 

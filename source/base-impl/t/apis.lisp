@@ -6,6 +6,7 @@
 
 ;; !add !sub !mul !div
 ;; reshape proceed proceeed-backward !view ->scal ->mat
+;; permute with proceeded result.
 
 (defmacro lproceed (tensor)
   `(with-devices (cl-waffe2/backends.lisp:LispTensor)

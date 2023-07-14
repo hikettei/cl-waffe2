@@ -119,7 +119,6 @@ Here's a list of reports.
 
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
-
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; Update Computation Nodes
 
@@ -141,7 +140,7 @@ Here's a list of reports.
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
-
+    ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
@@ -150,7 +149,7 @@ Here's a list of reports.
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
 	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
-	  
+
 	  ;; Enhancement
 	  ;; CALL-VIEW-AND-CONTINUE
 	  ;; If error is not originated from ~.
@@ -230,6 +229,8 @@ Here's a list of reports.
 		     ;; Make -> ScalarTensor if shape = (1)
 		     collect (let* ((next-tensor
 				      (make-input shape nil
+						  :create-from (when extend-from
+								 (nth extend-from inputs))
 						  :scalar-p (out-scalar-p node)
 						  :dtype (dtype (nth (or extend-from 0) inputs))
 						  :order (order (nth (or extend-from 0) inputs))))
@@ -239,13 +240,13 @@ Here's a list of reports.
 					    :backward-n-out (length input-states))))
 
 			       ;; Extend Views, Strides, Orig-Shapes, etc..
+			       ;; Exntend Permuted Stride Orders
 
 			       (when extend-from
 				 ;; FixME: A[i j] -> A[j i] is invaild beucase before and after the operation, indicates the same pointer but shapes arenot the same.
 				 ;; Detect Errors
 				 (let ((input (nth extend-from inputs)))
 				   ;; Extend View Forms
-				   ;; (!add a b) -> <<It is Unknown the returned tensor is broadcasted>>
 				   (setf (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 					 (slot-value input       'cl-waffe2/vm.generic-tensor::orig-shape)
 					 
@@ -258,7 +259,6 @@ Here's a list of reports.
 					 (cl-waffe2/vm.generic-tensor:tensor-stride next-tensor)
 					 (cl-waffe2/vm.generic-tensor:tensor-stride input))
 
-
 				   (when (cl-waffe2/vm.generic-tensor::vec input)
 				     (setf (tensor-vec next-tensor) (tensor-vec input)
 					   (cl-waffe2/vm.generic-tensor::tensor-facet input) :exist))))
@@ -269,6 +269,7 @@ Here's a list of reports.
 			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
 			       next-tensor))))
+;;	(print (cl-waffe2/vm.generic-tensor::tensor-permute-order (car next-tensor)))
 	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)
@@ -348,6 +349,7 @@ Use the define-impl macro to give definitions for the node and forward them.
   (if (or ;;(tensor-projected-p place)
 	  (not (= argn nth-trying)))
       (make-input (shape place) nil
+		  :create-from place
 		  :dtype (dtype place)
 		  :order (order place)
 		  :scalar-p (scalar-p place))
@@ -366,7 +368,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 		      :force t)))
 	    ;; F(x, y, ...)
 	    ;; x.state = :chain / :input?
-
+	    
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
 		out
 		;; when bw-node... -> chain not connected well...?
@@ -426,7 +428,7 @@ inputs      ... inputs called with
 		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
 		   ,dout
 		   ,dout-place)
-
+		  
 		  ,(with-no-grad
 		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
 
