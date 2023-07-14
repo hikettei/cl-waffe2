@@ -102,7 +102,7 @@
   (define-ss-tester ss-sub-tester !sub - 1 -1)
   (define-ss-tester ss-mul-tester !mul * 1 1)
   (define-ss-tester ss-div-tester !div / 1 -1))
-
+  
 (define-tester matmul-tester :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
  	 (b (ax+b `(3 3) 1 0 :order :column))
@@ -120,14 +120,16 @@
 (define-tester matmul-tester-mnk :dense
   (let* ((a (ax+b `(3 4) 1 0 :order :column))
 	 (b (ax+b `(3 4) 1 0 :order :column)))
-    (every #'= (tensor-vec (proceed (!matmul a (!t b))))
-	   #(14.0 38.0 62.0 38.0 126.0 214.0 62.0 214.0 366.0))))
+    (with-no-grad
+      (every #'= (tensor-vec (proceed (!matmul a (!t b))))
+	     #(14.0 38.0 62.0 38.0 126.0 214.0 62.0 214.0 366.0)))))
 
 (define-tester matmul-tester-mnk1 :dense
   (let* ((a (ax+b `(3 4) 1 0 :order :column))
 	 (b (ax+b `(3 4) 1 0 :order :column)))
-    (every #'= (tensor-vec (proceed (!matmul (!t a) b)))
-	   #(80.0 92.0 104.0 116.0 92.0 107.0 122.0 137.0 104.0 122.0 140.0 158.0 116.0 137.0 158.0 179.0))))
+    (with-no-grad
+      (every #'= (tensor-vec (proceed (!matmul (!t a) b)))
+	     #(80.0 92.0 104.0 116.0 92.0 107.0 122.0 137.0 104.0 122.0 140.0 158.0 116.0 137.0 158.0 179.0)))))
 
 (define-tester matmul-both-transposed :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
@@ -139,14 +141,17 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'matmul-test-set)
   (defmacro matmul-test-set (backend)
-    `(progn
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
        (matmul-tester ,backend)
        (transpose-matmul-tester ,backend)
        (matmul-tester-mnk ,backend)
        (matmul-tester-mnk1 ,backend)
        (matmul-both-transposed ,backend))))
 
+;; Matmul with backward test is needed!
+
 (ss-add-tester nil)
 (ss-sub-tester nil)
 (ss-mul-tester nil)
 (ss-div-tester nil)
+
