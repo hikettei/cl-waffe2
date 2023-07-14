@@ -50,7 +50,7 @@
   (define-arith-tester sub-tester  !sub  9  1 -1)
   (define-arith-tester mul-tester  !mul  10 1 10)
   (define-arith-tester div-tester  !div  10 1 -10)
-  (define-arith-tester move-tester !move 1 1 1))
+  (define-arith-tester move-tester !move 1 0 1))
 
 (macrolet ((define-scalar-mat-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
@@ -205,10 +205,10 @@
 ;; 9 12 15 
 ;; 9 12 15
 ;;
-;;(test permute-grad-add-test
- ;; (is (let ((a (parameter (randn `(4 3)))))
-;;	(proceed-backward (!matmul (ax+b `(3 3) 0 1) (!t a)))
-;;	(grad a))))
+(test permute-grad-add-test
+  (is (let ((a (parameter (randn `(4 3)))))
+	(proceed-backward (!matmul (ax+b `(3 3) 0 1) (!t a)))
+        (grad a))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'matmul-test-set)
