@@ -808,7 +808,7 @@ Initial value of permute: n n-1 ... 2 1 0.
     (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
 
   (let* ((tensor-new (view tensor)) ;; Detaching from computation node.
-	 (old-orders (tensor-permute-order tensor))
+	 (old-orders  (tensor-permute-order tensor))
 	 (pure-orders (remove :~ orders)) ;; order consisted of fixnum
 	 (new-orders
 	   (loop for rank fixnum upfrom 0 below (length (shape tensor))
@@ -952,14 +952,12 @@ The function parameter computes all the previous nodes of the given tensor if an
 
 (defun system-lazy-set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
+  
   (let ((space-tmp (make-clone tensor)))
-    ;; for save-for-backward
-    ;; (setf (save-for-backward-space tensor) space-tmp)
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
       (setf (save-for-backward-space result) tensor)
       ;; result = space-tmp
       result)))
-
 	
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))

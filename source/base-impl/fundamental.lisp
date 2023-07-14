@@ -803,7 +803,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 	out)))
 
 
-(defun ->contiguous (tensor)
+(defun ->contiguous (tensor &aux (permuted-p (tensor-permuted-p tensor)))
   "
 ## [function] ->contiguous
 
@@ -845,10 +845,11 @@ A memory-layout of returned copies are arranged into the same array as the array
 ```
 "
   (if (or (tensor-projected-p tensor)
-	  (tensor-permuted-p tensor))
+	  permuted-p)
       ;; ScalarTensor never becomes projected array
       (let* ((contiguous-place (make-input (shape tensor) nil
 					   :dtype (dtype tensor)
 					   :order (order tensor))))
 	(!move contiguous-place tensor :force t))
       tensor))
+

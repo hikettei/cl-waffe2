@@ -45,7 +45,6 @@ The node stores untransposed tensor at `raw-tensor`, when expanding matmul form,
 	     :forward ((self x)
 		       (setf (raw-tensor self) x)
 		       `(progn
-			  (setf (raw-tensor ,self) ,x)
 			  ,x)))
 
 (defun read-untransposed (tensor)
@@ -53,6 +52,7 @@ The node stores untransposed tensor at `raw-tensor`, when expanding matmul form,
   (if (transposed-p tensor)
       (car (tensor-variables (raw-tensor (tensor-backward tensor))))
       tensor))
+
 
 (defun transposed-p (tensor)
   "Return T if previous-node is LazyTransposeNode"
@@ -153,6 +153,7 @@ Shapes: A = ~a, B = ~a"
 		  (values tensor transposed?))
 		 (T
 		  ;; Apply Transpose/Permute/View
+		  ;; TODO: Delete this copy...
 		  (values (->contiguous tensor) nil))))))
 
       (multiple-value-bind (x x-transpose?) (adjust-layout x transpose-x)

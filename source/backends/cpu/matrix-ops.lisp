@@ -31,6 +31,18 @@
 	(b (if trans-b?
 	       (read-untransposed b1)
 	       b1)))
+    
+    (when trans-a?
+      (assert (equal (reverse (last (shape a) 2))
+		     (last (shape a1) 2))
+	      nil
+	      "Assertion Failed"))
+
+    (when trans-b?
+      (assert (equal (reverse (last (shape b) 2))
+		     (last (shape b1) 2))
+	      nil
+	      "Assertion Failed"))
 
     ;; a, b ... untranspsoed tensor
     ;; they're just used to compute strides
@@ -45,9 +57,7 @@
      #'(lambda (a-view b-view c-view)
 	 (let* ((m (size-of c-view 0))
 		(n (size-of c-view 1))
-		(k (if trans-a?
-		       (size-of a-view 0)
-		       (size-of a-view 1)))
+		(k (second (last (shape a1) 2)))
 		(lda (size-of a-view 1))
 		(ldb (size-of b-view 1))
 		(ldc (size-of c-view 1)))
@@ -60,15 +70,14 @@
 		,m
 		,k
 		1.0
+		
 		;; If compile-when-cache = T,
 		;; variables that didn't appear in arguments
 		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
 		
-		(tensor-ptr ,b1
-			    :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
+		(tensor-ptr ,b :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
-		(tensor-ptr ,a1
-			    :offset ,(offset-of a-view 0))
+		(tensor-ptr ,a :offset ,(offset-of a-view 0))
 		,lda
 		0.0
 		(tensor-ptr
@@ -88,11 +97,11 @@
 		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
 		
 		(tensor-ptr
-		 ,b1
+		 ,b
 		 :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
 		(tensor-ptr
-		 ,a1
+		 ,a
 		 :offset ,(offset-of a-view 0))
 		,lda
 		0.0d0
