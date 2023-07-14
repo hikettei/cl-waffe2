@@ -655,7 +655,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
-  (when (and (numberp (vec input-tensor))
+  (when (or (numberp (vec input-tensor))
 	     (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
@@ -681,8 +681,8 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
-  (when (and (numberp (vec input-tensor))
-	     (numberp (vec actual-tensor)))
+  (when (or (numberp (vec input-tensor))
+	    (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-tensor-vec t))
 
