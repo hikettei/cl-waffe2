@@ -232,6 +232,7 @@ See also: `set-input`"
 ;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================
 
+;; TODO: Check the returned tensor has the same shape?
 (defun compile-forward-chain (toplevel &key (stop-me nil))
   "
 ## [function] compile-forward-chain

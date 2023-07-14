@@ -791,7 +791,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 	 (out  (forward (Permute-Node
 			 (shape tensor)
 			 (shape new-tensor)
-			 (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
+			 (cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor))
 			tensor
 			new-tensor)))
     ;; The case when (T NIL NIL) (T T NIL NIL) (NIL NIL) ... subject to lazy-transpose
