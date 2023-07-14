@@ -136,6 +136,11 @@ See also: `!copy-force` never being ignored by compiler, and broadcasted axes wi
 
 Input:  Tensor[AbstractTensor]
 Output: Tensor[AbstractTensor]"
+
+  ;; FIXME: Operation with tensor permuted...
+  ;;(when (tensor-permuted-p tensor)
+  ;;  (return-from !copy (->contiguous tensor)))
+  
   (let* ((out (make-input (actual-shape tensor) nil
 			  :create-from tensor
 			  :scalar-p (scalar-p tensor)
@@ -157,6 +162,7 @@ Output: Tensor[AbstractTensor]"
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 
+;; Depcrecated ...
 (defun !copy-force (tensor)
   "
 ## [function] !copy-force
@@ -168,6 +174,9 @@ Output: Tensor[AbstractTensor]"
 The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
 
 This function is also used to adjust memory alignment of tensor."
+
+  (warn "!copy-force is subject to be deleted in the future release. use instead: (!copy tensor :force t)")
+  
   (let* ((out (make-tensor (if (scalar-p tensor)
 			       0
 			       (shape tensor))
@@ -515,7 +524,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 			 ;; The result is returned.
 			 `(progn
-			    ;; Tell top compiling funtion the compiled-function
+			    ;; Tell top compiling funtion what composite to use for the compiled-function
 			    (cl-waffe2/vm.generic-tensor::declare-compiled-composite ,compiled-model)
 			    
 			    ,x)))
@@ -696,8 +705,8 @@ dout   ... dout values"
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
-				 (declare (ignore out))
-				 `(progn ,a))
+				 (declare (ignore a))
+				 `(progn ,out))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))
 				  (values
@@ -791,4 +800,19 @@ Note that the case when only the last two aces are subject to be swapped, we ret
     (if lazy-p
 	(call (LazyTransposeNode) out)
 	out)))
+
+(with-export ->contiguous
+  (defun ->contiguous (tensor)
+    "
+## [function] ->contiguous
+
+"
+    (if (or (tensor-projected-p tensor)
+	    (tensor-permuted-p tensor))
+	;; ScalarTensor never becomes projected array
+	(let* ((contiguous-place (make-input (shape tensor) nil
+					     :dtype (dtype tensor)
+					     :order (order tensor))))
+	  (!move contiguous-place tensor :force t))
+	tensor)))
 

@@ -211,6 +211,14 @@ Return: (values offsets-place form)"
 	    (translate-adjustable-shape (shape tensor))))
      ,@body))
 
+(defun no-permute-p (tensors)
+  (flet ((check (tensor)
+	   (let ((k (loop for i upfrom 0 below (length (shape tensor))
+			  collect i)))
+	     ;; Permute Order is 3 2 1...?
+	     (equal (reverse k) (tensor-permute-order tensor)))))
+    (every #'check tensors)))
+
 
 (defun call-with-view (function
 		       tensors
@@ -246,8 +254,6 @@ See also:
 	   (type function function)
 	   (type list tensors shape)
 	   (type fixnum at-least-dim dims))
-
-  
   
   (assert (every #'(lambda (tensor) (shape-equal-list (butlast (shape tensor) at-least-dim) (butlast shape at-least-dim))) tensors)
 	  nil
@@ -261,11 +267,12 @@ See also:
 
 	     ;; When The Rest Form Can be flatten
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
+			(no-permute-p tensors)
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
-
-	       (update-calling-route nil)
 	       
+	       ;; Register the route as FLATTEN
+	       (update-calling-route nil)
 	       (return-from explore
 		 (expand-call-with-view-flatten
 		  function
@@ -273,7 +280,8 @@ See also:
 		  offsets-place
 		  target-dim
 		  :dim-start-from target-dim)))
-	     
+
+	     ;; Register route as Nth-dim
 	     (update-calling-route rest-dim)
 	     ;; Otherwise...
 
@@ -289,7 +297,9 @@ See also:
 					(nth ,target-dim (original-shape ,tensor))))))
 	       (cond
 		 ((<= rest-dim at-least-dim)
-		  ;; funcall form
+
+		  ;; If elements are contiguous in memory, flatten as 1D vector.
+		  ;; Otherwise do element-wise?
 		  (with-update-offset-place offsets-place tensors
 		    (let ((stride-places (tensor-gensym-list tensors)))
 		      `(let (,@(loop for stride-place in stride-places
@@ -319,3 +329,4 @@ See also:
     (with-shape-det-form tensors used-symbols
       (with-expand-init-tmp-form offset-place tensors
 	(explore dims offset-place used-symbols)))))
+

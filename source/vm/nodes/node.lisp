@@ -141,7 +141,8 @@ Here's a list of reports.
 	 (input-states (loop for i in inputs collect (shape i)))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
-    
+
+    ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
@@ -241,13 +242,13 @@ Here's a list of reports.
 					    :backward-n-out (length input-states))))
 
 			       ;; Extend Views, Strides, Orig-Shapes, etc..
+			       ;; Exntend Permuted Stride Orders
 
 			       (when extend-from
 				 ;; FixME: A[i j] -> A[j i] is invaild beucase before and after the operation, indicates the same pointer but shapes arenot the same.
 				 ;; Detect Errors
 				 (let ((input (nth extend-from inputs)))
 				   ;; Extend View Forms
-				   ;; (!add a b) -> <<It is Unknown the returned tensor is broadcasted>>
 				   (setf (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 					 (slot-value input       'cl-waffe2/vm.generic-tensor::orig-shape)
 					 
@@ -260,7 +261,6 @@ Here's a list of reports.
 					 (cl-waffe2/vm.generic-tensor:tensor-stride next-tensor)
 					 (cl-waffe2/vm.generic-tensor:tensor-stride input))
 
-
 				   (when (cl-waffe2/vm.generic-tensor::vec input)
 				     (setf (tensor-vec next-tensor) (tensor-vec input)
 					   (cl-waffe2/vm.generic-tensor::tensor-facet input) :exist))))
@@ -271,6 +271,7 @@ Here's a list of reports.
 			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
 			       next-tensor))))
+;;	(print (cl-waffe2/vm.generic-tensor::tensor-permute-order (car next-tensor)))
 	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)

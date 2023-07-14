@@ -41,7 +41,7 @@ Internally, This Node Returns The Given A itself but taking transpose of A's sha
 If the computation node is like: [LazyTransposeNode] -> [MatmulNode], then transpose will be done with NO overhead."
 	  :backward ((self dout dx)
 		     (declare (ignore dx))
-		     (values (!t dout)))))
+		     (values dout))))
 
 (define-impl (LazyTransposeNode :device t)
 	     :forward ((self x) (setf (raw-tensor self) x) `(progn ,x)))
@@ -73,6 +73,7 @@ Transposes the last two axes of the given tensor.
 ;; 明日：Matmul治す
 ;; LazyTransposeを廃止
 ;; 最後の二つがTransposeされている場合、Permute* 0 1をもう一度してからTransposed-matmul
+;; Otherwise copy
 (defun !matmul (x y
 		&key
 		  (out nil)

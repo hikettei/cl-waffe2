@@ -60,7 +60,10 @@ For general use, trainer can be defined by the macro `deftrainer`."))
   "
 ## [macro] deftrainer
 
-defines a new trainer."
+defines a new trainer.
+
+(TODO Docstring)
+"
 
   (let ((initargs (collect-initarg-slots slots constructor-arguments))
 	(model-gensym (gensym "model"))

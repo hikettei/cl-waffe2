@@ -367,28 +367,36 @@ Note:
     #'(lambda ()
 	(setf (tensor-vec (grad tensor)) resetwith))))
 
-
+;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
-  (let ((scalar-p   (getf initargs :scalar-p))
-	(view       (getf initargs :view))
-	(order      (getf initargs :order))
-	(orig-shape (getf initargs :shape))
+  (let ((scalar-p    (getf initargs :scalar-p))
+	(view        (getf initargs :view))
+	(order       (getf initargs :order))
+	(orig-shape  (getf initargs :shape))
 	(create-from (getf initargs :create-from)))
 
-    ;; orig-shape = used to compute strides.
-    (setf (slot-value tensor 'orig-shape)  orig-shape)
-    (setf (slot-value tensor 'projected-p) (getf initargs :projected-p))
-    (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor))
-
-    (when create-from
-      (setf (tensor-permute-order tensor) (tensor-permute-order create-from)))
+    ;; create-from   = extend permute information from the tensor create-from.
+    ;; orig-shape    = used to compute strides, always synchronized with vec.
+    ;; visible-shape = visible size for users, always modified by making a view.
     
+    (setf (slot-value tensor 'orig-shape)      orig-shape)
+    (setf (slot-value tensor 'projected-p)     (getf initargs :projected-p))
+    (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor)) ;; Is it worth to call backward?
+    
+    ;; Updates/Initializes: Strides/Shapes/View/Permution Informations
     (cond
       ((and create-from
 	    (permuted-p create-from)
 	    (not (scalar-p tensor)))
+       ;; Subject to shuffle: orig-shape visible-shape view permute-order stride
+       ;; Never Do this: Recomputing strides, USE create-from
+       (when (not (equal orig-shape (original-shape create-from)))
+	 (error "make-tensor/make-input: failed to create a new tensor because shapes do not match of create-from"))
+       
        (setf (tensor-stride tensor) (tensor-stride create-from)
+	     (slot-value tensor 'orig-shape) (original-shape create-from)
 	     (tensor-permute-order tensor) (tensor-permute-order create-from)
+	     
 	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
 	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
       ((eql (getf initargs :facet) :input)
@@ -406,14 +414,14 @@ Note:
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))
-
+    
     ;; Initial Permution: 5 4 3 2 ... 1 0
     (unless (tensor-permute-order tensor)
       (setf (tensor-permute-order tensor)
 	    (loop for i downfrom (length (shape tensor)) to 1
 		  collect (1- i))))
 
-    ;; Setup utils for collecting gradients.
+    ;; If needed, update information about gradients
     (when (slot-value tensor 'requires-grad)
       (if (scalar-p tensor)
 	  (set-grad (make-tensor 0
