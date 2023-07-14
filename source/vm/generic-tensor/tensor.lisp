@@ -661,14 +661,16 @@ If you added a new backend with having different ptr-type (can't be accessed by 
     (return-from embody-actual-tensor t))
 
   ;; Offsets?
-  (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
-	(slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
-	(tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
-	(tensor-view input-tensor) (tensor-view actual-tensor)
-	(tensor-stride input-tensor) (tensor-stride actual-tensor)
-	(tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
 
-	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p))
+  (let ((actual-tensor (apply #'permute* actual-tensor (tensor-permute-order input-tensor))))
+    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	  (slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
+	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
+	  (tensor-view input-tensor) (tensor-view actual-tensor)
+	  (tensor-stride input-tensor) (tensor-stride actual-tensor)
+	  (tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
+
+	  (slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
   t)
 
 (defun embody-tensor-vec (input-tensor actual-tensor)
@@ -685,12 +687,13 @@ If you added a new backend with having different ptr-type (can't be accessed by 
     (return-from embody-tensor-vec t))
 
   ;; Offsets?
-  (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
-	(slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
-	(tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
-	(tensor-view input-tensor) (tensor-view actual-tensor)
-	(tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
-	(slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p))
+  (let ((actual-tensor (apply #'permute* actual-tensor (tensor-permute-order input-tensor))))
+    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	  (slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
+	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
+	  (tensor-view input-tensor) (tensor-view actual-tensor)
+	  (tensor-visible-shape input-tensor) (translate-adjustable-shape (tensor-visible-shape actual-tensor))
+	  (slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
   t)
 
 (defun view (tensor &rest subscripts)

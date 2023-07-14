@@ -288,7 +288,15 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   (declare (type AbstractTensor toplevel past-dy))
   
   (when (null (tensor-backward toplevel))
-    (return-from compile-backward-chain))
+    ;; Gradient-add-form here?
+    (return-from compile-backward-chain
+      (when (slot-value toplevel 'requires-grad)
+	`(progn
+	   ;; Permuteが無視されてReshapeになってる（コンパイル時に知らないから）
+	   ;; 行列のPermuteを事前に特定して, 通常通りじゃなかったら、コンパイルし直すことにする。
+	   (print "GRAD")
+	   (print ,(tensor-id past-dy))
+	   (add-grads ,toplevel ,(tensor-id past-dy))))))
 
   ;; with-shape-checkout: at where node, the backward error was occured?
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
@@ -321,10 +329,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 ,@(loop for var in (tensor-variables toplevel)
 		 for kernel in outs
 		 for next-dy in next-dys
-		 
-		 if (slot-value var 'requires-grad)
-		   collect `(add-grads ,var ,(tensor-id past-dy))
-		 
 		 if (and kernel
 			 (ancestor-param-p var))
 		   collect (compile-backward-chain var next-dy))))))

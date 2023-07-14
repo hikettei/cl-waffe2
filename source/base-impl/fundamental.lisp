@@ -705,13 +705,13 @@ dout   ... dout values"
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
-				 (declare (ignore a))
-				 `(progn ,out))
+				 `(progn
+				    (embody-actual-tensor ,out ,a)
+				    ,out))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))
-				  (values
-				   (apply #'!permute dout (permute-old self))
-				   nil)))
+				  (let ((out (apply #'!permute dout (permute-old self))))
+				    (values out nil))))
   (setf (ignore-shape-error self) t))
 
 (defun list-diff (lista listb)

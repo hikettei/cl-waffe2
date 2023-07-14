@@ -143,11 +143,11 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   
-(defun matmul-dx (dout y)
-  (proceed (!matmul dout (!t y))))
-
-(defun matmul-dy (dout x)
-  (proceed (!matmul (!t x) dout)))
+  (defun matmul-dx (dout y)
+    (proceed (!matmul dout (!t y))))
+  
+  (defun matmul-dy (dout x)
+    (proceed (!matmul (!t x) dout)))
 
 )
 
@@ -165,12 +165,50 @@
   (let ((a (parameter (randn `(3 3) :order :column)))
 	(b (parameter (randn `(3 3) :order :column)))
 	(dout         (ax+b `(3 3) 0 1 :order :column)))
-    ;; A @ B
     (proceed-backward (!matmul a b))
     (and
      (M= (grad a) (matmul-dx dout b))
      (M= (grad b) (matmul-dy dout a)))))
 
+(define-tester matmul-bw-3x4-4x3 :dense
+  (let ((a (parameter (randn `(3 4) :order :column)))
+	(b (parameter (randn `(4 3) :order :column)))
+	(dout         (ax+b `(3 3) 0 1 :order :column)))
+    (proceed-backward (!matmul a b))
+    (and
+     (M= (grad a) (matmul-dx dout b))
+     (M= (grad b) (matmul-dy dout a)))))
+
+;; Continue...
+(macrolet ((define-matmul-test-form (name matmul-form size1 size2)
+	     `(define-tester ,name :dense
+		(let* ((a (parameter (randn ,size1 :order :column)))
+		       (b (parameter (randn ,size2 :order :column)))
+		       (node-out ,matmul-form)
+		       (dout (ax+b (shape node-out) 0 1 :order :column)))
+		  (proceed-backward node-out)
+		  (and
+		   (M= (grad a) (matmul-dx dout b))
+		   (M= (grad b) (matmul-dy dout a)))))))
+  (define-matmul-test-form
+      matmul-test-form-test
+      (!matmul a b)
+    `(3 3)
+    `(3 3))
+
+  )
+		
+
+;; should be:
+;; 9 12 15
+;; 9 12 15
+;; 9 12 15 
+;; 9 12 15
+;;
+;;(test permute-grad-add-test
+ ;; (is (let ((a (parameter (randn `(4 3)))))
+;;	(proceed-backward (!matmul (ax+b `(3 3) 0 1) (!t a)))
+;;	(grad a))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'matmul-test-set)
@@ -182,8 +220,12 @@
        (matmul-tester-mnk1 ,backend)
        (matmul-both-transposed ,backend)
 
+       (matmul-test-form-test ,backend)
        (matmul-backward-test-square-sparse ,backend)
        (matmul-backward-test-square-dense ,backend)
+   ;;    (matmul-bw-3x4-4x3 ,backend)
+
+       
        )))
 
 ;; Matmul with backward test is needed!
