@@ -324,10 +324,10 @@ Note:
   (declare (type AbstractTensor tensor))
   (write-vec new-value tensor))
 
-(defun make-gradient-adder (target shape)
+(defun make-gradient-adder (target shape &key (use-input nil))
   "Returns a instant-kernel to add the new-gradient to given target."
   (let ((out (make-input shape nil
-			 :create-from target
+			 :create-from use-input
 			 :dtype (dtype target)
 			 :order (order target))))
     (let ((*no-grad* t))

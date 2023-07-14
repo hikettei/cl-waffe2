@@ -291,12 +291,19 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     ;; Gradient-add-form here?
     (return-from compile-backward-chain
       (when (slot-value toplevel 'requires-grad)
-	`(progn
-	   ;; Permuteが無視されてReshapeになってる（コンパイル時に知らないから）
-	   ;; 行列のPermuteを事前に特定して, 通常通りじゃなかったら、コンパイルし直すことにする。
-	   (print "GRAD")
-	   (print ,(tensor-id past-dy))
-	   (add-grads ,toplevel ,(tensor-id past-dy))))))
+	(if (equal (shape toplevel) (shape past-dy))
+	    `(add-grads ,toplevel ,(tensor-id past-dy))
+	    (progn
+	      ;; Create Gradient-Adder again
+	      (setf (gradient-adder toplevel) nil)
+
+	      ;; X.grad += permute*(value, 0 1 ...)
+	      ;; ^ recompiling is needed!
+	      `(progn
+		 (when (null (gradient-adder ,toplevel))
+		   (setf (gradient-adder ,toplevel) (make-gradient-adder ,toplevel ',(shape toplevel) :use-input ,(tensor-id past-dy))))
+		 (add-grads ,toplevel ,(tensor-id past-dy))))))))
+ 
 
   ;; with-shape-checkout: at where node, the backward error was occured?
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
