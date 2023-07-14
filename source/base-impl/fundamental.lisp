@@ -294,9 +294,8 @@ Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-rev
 (define-impl (ReshapeTensorNode :device t)
 	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
 	     :forward ((self x y)
-		       (declare (ignore y))
 		       `(progn
-			  ;;(setf (tensor-vec ,y) (tensor-vec ,x))
+			  (cl-waffe2/vm.generic-tensor::transfer-vec-information ,y ,x)
 			  ,x)))
 
 ;; ===============================================================

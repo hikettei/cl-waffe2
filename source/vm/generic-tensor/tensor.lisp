@@ -443,6 +443,18 @@ Note:
 		(gradient-resetter tensor)
 		(make-gradient-resetter tensor))))))
 
+(defun transfer-vec-information (from to)
+  "Transfer information that makes a vec vec"
+  (declare (type AbstractTensor from to))
+  (setf (slot-value to 'orig-shape) (slot-value from 'orig-shape)
+	(slot-value to 'visible-shape) (slot-value from 'visible-shape)
+	(tensor-stride to) (tensor-stride from)
+	(tensor-view to) (tensor-view from)
+	(tensor-permute-order to) (tensor-permute-order from)
+	(slot-value to 'input-shape) (slot-value from 'input-shape))
+  nil)
+  
+
 (defmethod add-grads ((tensor AbstractTensor) new-value)
   "tensor's gradient += new-value"
   (assert (slot-value tensor 'requires-grad)
