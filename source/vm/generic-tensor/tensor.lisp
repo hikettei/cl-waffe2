@@ -271,6 +271,8 @@ Tensors has a two state:
   )
 
 (defun permuted-p (tensor)
+  (declare (type AbstractTensor)
+	   (optimize (speed 3)))
   (let ((a (copy-list (tensor-permute-order tensor))))
     (equal (sort a #'<) (tensor-permute-order tensor))))
 	   
@@ -657,7 +659,8 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 ;; input <- actual
 (defun embody-actual-tensor (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor). (Pointers are shared.)"
-  (declare (type AbstractTensor input-tensor actual-tensor))
+  (declare (type AbstractTensor input-tensor actual-tensor)
+	   (optimize (speed 3)))
 
   ;;(assert (eql (tensor-facet input-tensor) :input)
   ;;	  nil
@@ -674,7 +677,12 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 
   ;; Offsets?
 
-  (let ((actual-tensor (apply #'permute* actual-tensor (tensor-permute-order input-tensor))))
+  (let ((actual-tensor
+	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
+		   (permuted-p input-tensor))
+		      
+	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
+	      actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	  (slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
 	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
@@ -699,7 +707,11 @@ If you added a new backend with having different ptr-type (can't be accessed by 
     (return-from embody-tensor-vec t))
 
   ;; Offsets?
-  (let ((actual-tensor (apply #'permute* actual-tensor (tensor-permute-order input-tensor))))
+  (let ((actual-tensor
+	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
+		   (permuted-p input-tensor))
+	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
+	      actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	  (slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
 	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)

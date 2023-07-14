@@ -134,6 +134,11 @@
 	       (:file "backends/cpu/t/arithmetic")
 
 	       (:file "backends/lisp/t/package")
+
+	       (:file "nn/t/package")
+	       (:file "nn/t/activation")
+	       (:file "nn/t/criterion")
+	       (:file "nn/t/regression")
 	       
 	       )
   :perform (test-op (o s)
@@ -142,6 +147,7 @@
 		    (symbol-call :fiveam :run! :base-impl-test)
 		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
+		    (symbol-call :fiveam :run! :nn-test)
 		    ))
 
 
