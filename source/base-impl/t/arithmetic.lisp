@@ -170,14 +170,18 @@
      (M= (grad a) (matmul-dx dout b))
      (M= (grad b) (matmul-dy dout a)))))
 
-(define-tester matmul-bw-3x4-4x3 :dense
-  (let ((a (parameter (randn `(3 4) :order :column)))
-	(b (parameter (randn `(4 3) :order :column)))
-	(dout         (ax+b `(3 3) 0 1 :order :column)))
-    (proceed-backward (!matmul a b))
-    (and
-     (M= (grad a) (matmul-dx dout b))
-     (M= (grad b) (matmul-dy dout a)))))
+(defun matmul-3x4-4x3-test ()
+  (with-devices (cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor)
+    (let ((a (parameter (randn `(3 4) :order :column)))
+	  (b (parameter (randn `(4 3) :order :column)))
+	  (dout         (ax+b `(3 3) 0 1 :order :column)))
+      (proceed-backward (!matmul a b))
+      (and
+       (M= (grad a) (matmul-dx dout b))
+       (M= (grad b) (matmul-dy dout a))))))
+
+(test matmul-3x4-4x3-test
+  (is (matmul-3x4-4x3-test)))
 
 ;; Continue...
 (macrolet ((define-matmul-test-form (name matmul-form size1 size2)
@@ -204,11 +208,12 @@
 ;; 9 12 15
 ;; 9 12 15 
 ;; 9 12 15
-;;
-(test permute-grad-add-test
+
+(test adding-gradients-with-permution-shuffled-test
   (is (let ((a (parameter (randn `(4 3)))))
-	(proceed-backward (!matmul (ax+b `(3 3) 0 1) (!t a)))
-        (grad a))))
+	(proceed-backward (!matmul (ax+b `(3 3) 1 0) (!t a)))
+        (every #'= (tensor-vec (grad a))
+	       #(9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export 'matmul-test-set)
@@ -223,7 +228,6 @@
        (matmul-test-form-test ,backend)
        (matmul-backward-test-square-sparse ,backend)
        (matmul-backward-test-square-dense ,backend)
-   ;;    (matmul-bw-3x4-4x3 ,backend)
 
        
        )))
