@@ -84,9 +84,68 @@ There's more: `pre-computing of view offsets`  `generating optimal lisp code in 
 
 (TODO: Benchmarks on a different scales)
 
-## Subscript DSL
+## Tools for formulating networks
 
-`defnode`
+`defmodel` defines a set of nodes.
+
+```lisp
+(defmodel (Softmax-Model (self)
+       :where (X[~] -> OUT[~])
+       :on-call-> ((self x)
+               (declare (ignore self))
+               (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                  (!div (!exp x1) z)))))
+```
+
+It can be used to lazily evaluate and compile later, or to define functions for immediate execution.
+
+```lisp
+(call (Softmax-Model) (randn `(10 10)))
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP13029 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (10 10) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: DIVNODE-LISPTENSOR (A[~] B[~] -> A[~])>}
+
+(proceed *)
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP13158 
+  :vec-state [computed]
+  ((0.05213483   0.11118897   0.107058994  ~ 0.1897892    0.055277593  0.028915826)                    
+   (0.0025042535 0.3952663    0.0109358365 ~ 0.033085804  0.04627693   0.14064543)   
+                 ...
+   (0.067338936  0.06604112   0.065211095  ~ 0.051910892  0.10963429   0.060249455)
+   (0.029982507  0.31893584   0.18214627   ~ 0.015864253  0.2993634    0.02982553))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+```lisp
+(define-composite-function (Softmax-Model) !softmax-static)
+
+(time (!softmax-static (randn `(10 10))))
+Evaluation took:
+  0.000 seconds of real time
+  0.000460 seconds of total run time (0.000418 user, 0.000042 system)
+  100.00% CPU
+  1,073,976 processor cycles
+  32,512 bytes consed
+  
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP13578 
+  ((0.06095955   0.06010023   0.03573166   ~ 0.01910117   0.036269512  0.03422032)                    
+   (0.3116705    0.041012052  0.012784039  ~ 0.08029219   0.062023237  0.03468513)   
+                 ...
+   (0.057693116  0.19069833   0.061993677  ~ 0.20243406   0.02019287   0.07737376)
+   (0.35623857   0.038911298  0.028082697  ~ 0.050502267  0.024571734  0.10532298))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+```
+
+There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: .
 
 ## REPL-Friendly
 
