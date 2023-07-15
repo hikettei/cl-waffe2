@@ -67,7 +67,9 @@
   ;; TODO
   ;; *memory-pool*
   ;; (maphash ... tensor-delete)
+  ;; Perhaps ... CUDA Tensors aren't gc-able?
   (setf *memory-pool* (make-memory-pool))
+  #+sbcl(sb-ext:gc :full t)
   )
 
 (defmacro with-memory-pool (&body body)
@@ -104,8 +106,9 @@ After the body exists, all the temporary tensors in the pool is freed."
     ;; Checking required-size, is done at toplevel.
     ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
 
-    ;; TODO: Add a new attribute Room: :read-state
+    ;; TODO: Add a new attribute Room: :read-state to reuse memory-pool which is not used.
     ;; :read-state is one of: :used :free-now
+    
     ;; when assure-and-return-room is called:
     ;; find :free-now and required-size is enough caches, and return it.
 
@@ -113,9 +116,14 @@ After the body exists, all the temporary tensors in the pool is freed."
 
     (when (or (null vec)
 	      (> (the fixnum required-size) (temporary-room-size room)))
+      ;; Update memory-pool
       (setf (temporary-room-size room) required-size)
       (setf (tensor-vec (temporary-room-cache-tensor room))
-	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor)))))
+	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor))))
+
+      ;; When re-allocation was done...
+      (when (> (the fixnum required-size) (temporary-room-size room))
+	(setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room)))))
 
     (when (null (vec tensor))
       (setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room))))

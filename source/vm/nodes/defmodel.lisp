@@ -410,6 +410,7 @@ An constructor function for ~a."
 	       (,subscript-p2 ,(if use-linter-p
 				   `(multiple-value-list (subscript ,where :fixed :t :allow-symbol t :constructor-args ,constructor-arguments)))))
 	   (declare (ignorable ,subscript-p1 ,subscript-p2))
+	   ;; Todo: Refactoring -> test-subscript-p
 	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
 		      ;; inputs  = 
 		      ;; inputs1 = 

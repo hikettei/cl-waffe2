@@ -4,7 +4,7 @@
 ;; cache.lisp is used to reuse the result of **call-with-view** in compling time, which consists larger part of generated code, and most reusable part.
 
 ;; =======================================================================
-;; Goal: `3 Layers MLP's compiling time of forward and backward` << `5sec`.
+;; Goal: `3 Layers MLP's compiling time of forward and backward` << `0.5sec`.
 
 ;; Compiling time with cache.lisp is approximated as:
 ;; ```
@@ -47,6 +47,8 @@
 ;; ==================================================================
 
 ;; What I want to do?: the compiling time of (!sin (!sin (!sin x))) and (!sin x) should be approximately the same, because they're working on the same code ignoring indicating pointer.
+
+;; Problem: Compiling !softmax called with other nodes is slightly slow.
 
 (defvar *kernel-storeroom* nil "An storeroom to record all kernels used in compiling time.") ;; Corresponds to: (labels ((SinNode-... )) ... )
 

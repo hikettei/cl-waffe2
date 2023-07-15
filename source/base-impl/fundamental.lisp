@@ -705,7 +705,9 @@ dout   ... dout values"
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
 				 `(progn
-				    (embody-actual-tensor ,out ,a)
+				    (embody-actual-tensor
+				     ,out
+				     ,a)
 				    ,out))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))

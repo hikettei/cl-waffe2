@@ -26,6 +26,7 @@
 			x
 			(linear-weight self)
 			(linear-bias self)))
+			
 	   :documentation "Applies a linear transformation to the incoming data.
 
 ```math
@@ -47,10 +48,8 @@ y = xA^\\intercal + b
 `(linear-bias self)` the tranable value of bias of shape `out_features`. If bias is t, the initial values are sampled from uniform distribution: `U(-k, k)` where k = `sqrt(1/out-features)`.
 ")
 
-  ;; Initialize Weights
   (setf (linear-weight self) (xavier-uniform `(,out-features ,in-features) :requires-grad t))
   
-  ;; Init with Xavier
   (when use-bias?
     (let ((k (sqrt (/ 1 out-features))))
       (setf (linear-bias self) (uniform-random `(,out-features) (- k) k :requires-grad t)))))

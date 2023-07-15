@@ -2,7 +2,9 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/nn.test
-  (:use :cl :cl-waffe2/vm.generic-tensor
+  (:use :cl
+        :cl-waffe2
+	:cl-waffe2/vm.generic-tensor
 	:cl-waffe2/vm.nodes
 	:cl-waffe2/nn
         :cl-waffe2/backends.cpu

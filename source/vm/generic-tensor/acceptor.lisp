@@ -291,6 +291,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     ;; Gradient-add-form here?
     (return-from compile-backward-chain
       (when (slot-value toplevel 'requires-grad)
+	(init-optimizer-utils! toplevel)
 	(if (equal (shape toplevel) (shape past-dy))
 	    `(add-grads ,toplevel ,(tensor-id past-dy))
 	    (progn
@@ -477,6 +478,9 @@ because there's still unembodied tensors:
 
   (when inputs
     (warn "backward: Inputs for compiled-composite are ignored"))
+  (when (null (compiled-backward model))
+    (error "cl-waffe2/vm.nodes:backward. Because the model was compiled with (with-no-grad ) mode, a backward function wasn't compiled."))
+  
   (funcall (compiled-backward model)))
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)

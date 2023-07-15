@@ -28,7 +28,7 @@
 	   (type fixnum offset))
   #+sbcl
   (let ((ptr (sb-sys:vector-sap (sb-ext:array-storage-vector (the (simple-array * (*)) (tensor-vec tensor))))))
-    (locally (declare (optimize (speed 1) (safety 0)))
+    (locally (declare (optimize (speed 1) (safety 1)))
       (incf-pointer ptr (the fixnum (* (the fixnum (foreign-type-size (dtype tensor))) offset)))))
   #-(or sbcl)
   (error "CPUTensor requires SBCL!"))
