@@ -65,9 +65,24 @@ This indicates not only is cl-waffe2 extensible to a wide variety of backends, b
 
 See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
 
-## JIT Compiler / In-place optimizing
+## JIT Compiler
 
-`build`
+Since `cl-waffe2` is a lazy-evaluation first framework, all operations need to be compiled at a certain point in time. It could be unintuitive for some users, however, at the same time, the cl-waffe2 compiler can obtain more information for optimisation.
+
+For example, the function `!add`  initially makes a copy of given arguments to avoid side effects, because `AddNode` is defined as in-place operation.
+
+```lisp
+(defun !add (x y)
+    (forward (AddNode) (!copy a) b))
+```
+
+It is natural to think this !copy is just a waste of memory space in some conditions, but tracing nodes can detect unused copies and delete them.
+
+See also: https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
+
+There's more: `pre-computing of view offsets`  `generating optimal lisp code in real time for certain scalar operations` `memory-allocation in advance` `(TO BE) multi-threading`
+
+(TODO: Benchmarks on a different scales)
 
 ## Subscript DSL
 
