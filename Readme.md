@@ -28,14 +28,42 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ## Multiple Backends Support
 
+All classes that are subtypes of `AbstractTensor` are tensors that cl-waffe2 can handle.
+
 ```lisp
+;; MyTensor extends CPUTensor extends AbstractTensor
 (defclass MyTensor (CPUTensor) nil)
 ```
 
+Which devices the function is to operate on can be declared along with its priority using the `with-devices` macro.
+
 ```lisp
 (with-devices (MyTensor CPUTensor)
+    ;; Under this scope, Priority = (MyTensor -> CPUTensor)
     (!add (randn `(3 3)) (randn `(3 3))))
+
+{MYTENSOR[float] :shape (3 3) :named ChainTMP12737 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+
+(proceed *) ;; MyTensor has no any implementation for AddNode, so CPUTensor is returned.
+
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP12759 
+  :vec-state [computed]
+  ((-0.9171257  0.4143868   0.9511917)
+   (2.224929    1.4860398   0.8402364)
+   (0.051592022 0.5673465   -0.46694738))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
+
+This indicates not only is cl-waffe2 extensible to a wide variety of backends, but it also minimises the need to rewrite code to the greatest extent possible.
+
+See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
 
 ## JIT Compiler / In-place optimizing
 
