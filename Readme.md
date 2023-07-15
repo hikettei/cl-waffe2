@@ -26,13 +26,28 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 # Features
 
-## Multiple Backend Support
+## Multiple Backends Support
+
+```lisp
+(defclass MyTensor (CPUTensor) nil)
+```
+
+```lisp
+(with-devices (MyTensor CPUTensor)
+    (!add (randn `(3 3)) (randn `(3 3))))
+```
 
 ## JIT Compiler / In-place optimizing
 
+`build`
+
 ## Subscript DSL
 
+`defnode`
+
 ## REPL-Friendly
+
+`proceed`
 
 ## Numpy-like APIs
 
