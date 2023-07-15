@@ -8,11 +8,6 @@
 ;;
 
 
-;; Plus: Diff MLP
-
-;; Memo: build <- unsafe.
-
-
 ;; Known Issue: Computing the backwards of sequence of LinearLayer,
 ;; Some weights of layers (esp, 2th~3th), will become zero.
 ;; The assumption is that acceptor.lisp contributes to this problems.
@@ -172,17 +167,17 @@
 
 ;; But combined with composite, the second call of matmul will produce shape-error???
 (defun linear-composite-test-single-layer ()
-  (let ((model (LinearLayer 100 10)))
-    (let ((model (build (!mean (call model (randn `(10 100)))))))
+  (let ((model (LinearLayer 5 2)))
+    (let ((model (build (!mean (call model (randn `(2 5)))))))
       (forward model)
       ;; (forward model) <- is working
       )))
 
 ;; Even when composed, the problem remains
 (defun linear-composite-test-two-layer ()
-  (let ((model  (LinearLayer 100 10))
-	(model1 (LinearLayer 10 3)))
-    (let ((compiled-model (build (!mean (call model1 (call model (randn `(10 100))))))))
+  (let ((model  (LinearLayer 5 3))
+	(model1 (LinearLayer 3 2)))
+    (let ((compiled-model (build (!mean (call model1 (call model (randn `(1 5))))))))
       (forward compiled-model))))
 
 ;; 原因は二つあった?
