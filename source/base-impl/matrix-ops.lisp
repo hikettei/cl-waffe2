@@ -139,8 +139,10 @@ Shapes: A = ~a, B = ~a"
 		   (excepted-permute (last (reverse (loop for i upfrom 0 below (dims tensor) collect i)) 2)))
 
 	       (cond
-		 (transposed?
-		  (values tensor transposed?))
+		 ;; transposed? True when last backward is LazyTranspsoe
+		 ;; not when LazyTranspos-able <-> Last two axes are subject to swapped.
+;;		 (transposed?
+;;		  (values tensor transposed?))
 		 ((and (every
 			#'(lambda (x) (eql (force-list x) t))
 			last-two-view)
@@ -148,7 +150,7 @@ Shapes: A = ~a, B = ~a"
 			#'=
 			last-two-permute
 			excepted-permute))
-		  ;; Memory-layout is OK. (last two axes are not polluted)
+		  ;; Memory-layout is OK. (because last two axes are not polluted)
 		  ;; (values tensor nil) <=>
 		  (values tensor transposed?))
 		 (T
