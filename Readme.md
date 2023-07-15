@@ -24,13 +24,31 @@ cl-waffe2 provides a set of differentiable matrix operations which is aimed to a
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
+# Features
+
+## Multiple Backend Support
+
+## JIT Compiler / In-place optimizing
+
+## Subscript DSL
+
+## REPL-Friendly
+
+## Numpy-like APIs
+
 # References/Acknowledgments
+
+All comments on this reddit post https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/.
+
+Features of Common Lispy approach to (Better) Numpy. (https://gist.github.com/digikar99/ba2f0bb34021bfdc086b9c1c712ca228)
 
 https://www.jsoftware.com/papers/RationalizedAPL.htm
 
 https://arxiv.org/pdf/1201.6035.pdf
 
 https://www.european-lisp-symposium.org/static/2018/heisig.pdf
+
+https://github.com/marcoheisig/Petalisp/tree/master
 
 https://github.com/numpy/numpy/tree/main
 
