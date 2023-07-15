@@ -24,7 +24,7 @@ cl-waffe2 provides a set of differentiable matrix operations which is aimed to a
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
-# Features
+# Concepts/Features
 
 ## Multiple Backends Support
 
