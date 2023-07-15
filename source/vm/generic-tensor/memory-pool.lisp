@@ -68,6 +68,7 @@
   ;; *memory-pool*
   ;; (maphash ... tensor-delete)
   (setf *memory-pool* (make-memory-pool))
+  #+sbcl(sb-ext:gc :full t)
   )
 
 (defmacro with-memory-pool (&body body)

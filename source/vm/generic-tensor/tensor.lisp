@@ -826,6 +826,8 @@ Ex: transposing the tensor.
 ```
 
 Initial value of permute: n n-1 ... 2 1 0.
+
+See also: `!permute`
 "
 
   (when (scalar-p tensor)
@@ -834,7 +836,7 @@ Initial value of permute: n n-1 ... 2 1 0.
   (when (> (count :~ orders) 1)
     (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
 
-  (let* ((tensor-new (view tensor)) ;; Detaching from computation node.
+  (let* ((tensor-new  (view tensor)) ;; Detaching from computation nodes by making a view of T T T....
 	 (old-orders  (tensor-permute-order tensor))
 	 (pure-orders (remove :~ orders)) ;; order consisted of fixnum
 	 (new-orders
@@ -855,9 +857,10 @@ Initial value of permute: n n-1 ... 2 1 0.
 	(error "permute*: before and after the operation, all axes must be used: ~a -> ~a." old-orders new-orders))
 
     (setf (tensor-permute-order tensor-new) new-orders)
+    
     ;; shuffle strides.
-
     (sync-permute! tensor-new)
+    
     tensor-new))
 
 (defun detach! (tensor)
