@@ -49,6 +49,7 @@ Which devices the function is to operate on can be declared along with its prior
   :requires-grad NIL
   :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
 
+;; Proceed is a differentiable operation which compiles/evaluates previous computation nodes.
 (proceed *) ;; MyTensor has no any implementation for AddNode, so CPUTensor is returned.
 
 {CPUTENSOR[float] :shape (3 3) :named ChainTMP12759 
@@ -151,11 +152,15 @@ Evaluation took:
 
 There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
 
-## REPL-Friendly
-
-`proceed`
-
 ## Numpy-like APIs
+
+Except that you need to call `proceed` or `build` at the end of the operation, cl-waffe2 APIs was made to be similar to Numpy. In addition, cl-waffe2 is intended to work with REPL: `` ``.
+
+See also: https://hikettei.github.io/cl-waffe2/base-impl/
+
+
+## From the top level, it works simply.
+
 
 # References/Acknowledgments
 
