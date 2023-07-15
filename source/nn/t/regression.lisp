@@ -121,14 +121,15 @@
   (is (linear-chain-test-build)))
 
 ;; ===========================================================================================
-;; Bug: matmul(not(正方行列).T, any_matrix) -> Segfault
+;; Bug: matmul(not(正方行列).T, any_matrix) -> Segfault (Now it's FIXED)
 ;;
 ;;
 ;;
 ;; Same operation with linear-composite-test-single-layer
 ;; Controlled Experiment:
 
-;; これは何百回呼び出しても副作用なし
+;; The Problem is that:
+;; No matter how many times I invoke this function, there's no side effects.
 (defun linear-non-composite-test-single-layer ()
   (let ((model-weight (parameter (xavier-uniform `(100 100))))
 	(model-bias   (parameter (uniform-random `(100) -0.1 0.1))))
@@ -169,20 +170,22 @@
 ;; -> 多分Compositeを介してるから発生してる？
 ;; -> Compositeが何かの副作用を・・・
 
-;; これを治す
+;; But combined with composite, the second call of matmul will produce shape-error???
 (defun linear-composite-test-single-layer ()
   (let ((model (LinearLayer 100 10)))
     (let ((model (build (!mean (call model (randn `(10 100)))))))
-      (forward model))))
+      (forward model)
+      ;; (forward model) <- is working
+      )))
 
-;; Linear合成しても問題は同じ
+;; Even when composed, the problem remains
 (defun linear-composite-test-two-layer ()
   (let ((model  (LinearLayer 100 10))
 	(model1 (LinearLayer 10 3)))
     (let ((compiled-model (build (!mean (call model1 (call model (randn `(10 100))))))))
       (forward compiled-model))))
 
-;; 原因は二つあって
+;; 原因は二つあった?
 ;; 遅延評価!tがうまいタイミングでAllocされなかった（解決済み）
 ;; Composite使ったmatmulが二回目で失敗（原因なぞ）
 
@@ -198,13 +201,15 @@
 ;; -> Cacheされた関数？
 
 ;; Knwon Issue: 二回目のCallでmatmulに失敗する？
+
+;; ugokan
 (test linear-layer-test-forward
   (is (linear-composite-test-single-layer))
   (is (linear-composite-test-single-layer))
   (is (linear-composite-test-single-layer)))
 
 
-;; Test Forward
+;; ugokan
 (test linear-composed-layer-test-forward
   (is (linear-composite-test-two-layer))
   (is (linear-composite-test-two-layer))
@@ -267,15 +272,54 @@
 	     
 
 ;; これからデバッグすること：
-;; Linearを重ねたときにBackwardできてるか？（多分おK)
-;; Matmulを複数回呼び出してInvaild...
+;; Traceのネストが深い理由
+;; -> requires-grad=tのテンソルを作成した時毎回コンパイルしてたから（修正済み）
+
+;; Linearを重ねた時に中間層のMatmulのgradが0 -> !tでtensor-vecしてないから (修正済み）
+
+;; 層を重ねても動いてる
+
 ;; memory-poolをテストする
 ;; Cacheされた関数テスト <- ignoreのやつほんとに有効になってる？
 
 ;; どこのマクロの展開式がダメ？
+;; 関数コンパイルして一回目は動作、二回目以降は動かない
+;; forwardを何回呼び出しても変わらない 関数を何回呼び出すかである
+
+;; with-no-gradで呼び出す分には副作用が発生しない。
+;; やっぱりPermute*が原因だと思う。
+;;
+
+;; 二回目のXの入力が5 2 -> 2 5になってるけどどうして？
+;; (call model ExistTensor) するとX
+;; (call model Copy) nara Ok
+
+;; **randnのShapeをCopyしたら動いた WHY??**
+;; `(1 2 ...) <- 参照渡しだっけ？
 (defun matmul-bug-case ()
   (let ((model (LinearLayer 5 2)))
     (let ((model (build (!mean (call model (randn `(2 5))))
 			:compile-mode :safety)))
+      (forward model)
+      (forward model)
+      )))
+
+(defmodel (Softmax-Model (self)
+	   :where (X[~] -> [~])
+	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                              (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                         (!div (!exp x1) z)))))
+
+;; It is now working
+(defun softmax-same-case? ()
+  (let ((model (softmax-model)))
+    (let ((model (build (!mean (call model (randn `(2 5)))))))
       (forward model))))
+
+(test softmax-no-side-effect-call-of-composite
+  (is (softmax-same-case?))
+  (is (softmax-same-case?))
+  (is (softmax-same-case?)))
 

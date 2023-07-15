@@ -542,11 +542,11 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 		     :dtype dtype
 		     :order order
 		     :requires-grad requires-grad
-		     :shape shape-or-scalar
+		     :shape (copy-list shape-or-scalar)
 		     :projected-p nil
 		     :facet :exist
 		     :initial-element initial-element
-		     :view view)
+		     :view (copy-list view))
       (make-instance 'ScalarTensor
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
@@ -595,8 +595,8 @@ For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or 
 		 :create-from create-from
 		 :dtype dtype
 		 :order order
-		 :shape shape
-		 :input-shape shape
+		 :shape (copy-list shape)
+		 :input-shape (copy-list shape)
 		 :named (or named (symbol-name (gensym "ChainTMP")))
 		 :facet :input))
 
@@ -688,18 +688,17 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
   (when (or (numberp (vec input-tensor))
-	     (numberp (vec actual-tensor)))
+	    (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
-
-  ;; Offsets?
-
+  
   (let ((actual-tensor
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
 		   (permuted-p input-tensor))
-		      
+	      
 	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
 	      actual-tensor)))
+    
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	  (slot-value input-tensor 'orig-shape) (slot-value actual-tensor 'orig-shape)
 	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
@@ -713,7 +712,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 (defun embody-tensor-vec (input-tensor actual-tensor)
   "Moves actual-tensor(ExistTensor) -> input-tensor(InputTensor) but shape/strides"
   (declare (type AbstractTensor input-tensor actual-tensor))
-  
+
   (assert (vec actual-tensor)
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
@@ -729,6 +728,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 		   (permuted-p input-tensor))
 	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
 	      actual-tensor)))
+
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
 	  (slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
 	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)

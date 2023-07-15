@@ -105,6 +105,8 @@ out\\gets{gemm(1.0, x, y, 0.0, out)}
 If the last backward of given arguments are `LazyTransposeNode` (created with the function `!t`), the function `!matmul` will transpose them without making a copy (i.e.: zero-cost transpose). In any other case (the last two dimensions' permution, or view are too complicated), `!matmul` will produce an additional copy for fast computing.
 
 "
+  (declare (type AbstractTensor x y)
+	   (type (or null AbstractTensor) x y))
   (let* ((i  (nth 0 (last (shape x) 2)))
 	 (jx (nth 1 (last (shape x) 2)))
 	 (jy (nth 0 (last (shape y) 2)))
