@@ -311,16 +311,22 @@ Note:
   (let ((result (cond
 		  ((and
 		    (not (scalar-p tensor))
-		    (stringp (tensor-name tensor))) ;; ChainTMP Vector -> get-from-memory-pool is MUST
+		    (stringp (tensor-name tensor)))
+		   ;; ChainTMP Tensor, and not scalar.
 		   (get-from-memory-pool tensor))
 		  (T
-		   (if (or (null (tensor-name tensor))
-			   (vec tensor))
-		       (vec tensor) ;; tensor is created by make-tensor
+		   ;; This form could be one of:
+		   ;; ScalarTensor
+		   ;; (Make-input `(a b) :NAME)
+		   ;; ExistTensor
+		   (if (vec tensor) ;; vec is allocated?
+		       (vec tensor) ;; Tensor is created by make-tensor
 		       (get-from-memory-pool tensor))))))
+    ;; If returned is lazy-variable?
+    ;; Lazy-Variable... (make-tensor 'a)
     (if (lazy-variable-p result)
-	(read-lazy-var result)
-	result)))
+	(read-lazy-var result) ;; -> Fixnum/LazyVariable
+	result))) ;; Return as it is
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))

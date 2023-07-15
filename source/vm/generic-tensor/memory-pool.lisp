@@ -67,6 +67,7 @@
   ;; TODO
   ;; *memory-pool*
   ;; (maphash ... tensor-delete)
+  ;; Perhaps ... CUDA Tensors aren't gc-able?
   (setf *memory-pool* (make-memory-pool))
   #+sbcl(sb-ext:gc :full t)
   )
