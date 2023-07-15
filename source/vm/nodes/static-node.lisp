@@ -323,7 +323,13 @@ But what if one wants to save the given tensors for a future call of backward? Y
 							   (or (nth nth ,',result-tmp) arg)))
 					       (nth 0 (backward-result ,,(car backward-args)))))))))
 
+       ;; Note:
+       ;; 1. define-static-node内でbackwardを(values nil tensor1)とする
+       ;; 2. 遅延評価しながらBackwardを構築するとき、コンパイル時に上の関数の返り値がわからない
+       ;; 3. とりあえず入力と同じTensorを用いてBackwardを構築する
+       ;; 4. ↑ はPruneされると思うけど... 万一計算のーどが繋がっちゃった時にWarningを出す必要がある。
        ;; This is a main part of composite-node.
+       
        (define-and-impl-node (,name (,self-name ,@constructor-args)
 			      :device t
 			      :where ,where
