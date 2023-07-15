@@ -477,6 +477,9 @@ because there's still unembodied tensors:
 
   (when inputs
     (warn "backward: Inputs for compiled-composite are ignored"))
+  (when (null (compiled-backward model))
+    (error "cl-waffe2/vm.nodes:backward. Because the model was compiled with (with-no-grad ) mode, a backward function wasn't compiled."))
+  
   (funcall (compiled-backward model)))
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)

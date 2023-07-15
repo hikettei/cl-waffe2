@@ -127,6 +127,7 @@
 ;; Same operation with linear-composite-test-single-layer
 ;; Controlled Experiment:
 
+;; これは何百回呼び出しても副作用なし
 (defun linear-non-composite-test-single-layer ()
   (let ((model-weight (parameter (xavier-uniform `(100 100))))
 	(model-bias   (parameter (uniform-random `(100) -0.1 0.1))))
@@ -151,45 +152,50 @@
       (forward out))))
 
 
-;; No Side Effects???
+;; Multiple call <- No Side Effects???
 (test linear-simple-layer
   (is (linear-non-composite-test-single-layer))
   (is (linear-non-composite-test-single-layer))
   (is (linear-non-composite-test-single-layer))
   (is (linear-non-composite-test-single-layer-no-bw)))
 
-;; Known Issue: with save-for-backward and transposed matmul(not square), the result become NaN
-
 ;; Known Issue: Second call of this got invaild.
+;; 問題は、Compositeを用いてモデルを初期化した時に、二回目以降のコンパイルがおかしくなる
+
+;; Cache関数が悪いか、メモリプールが悪いか
+;; Occurs at ADDNODECPUTENSOR-VM-FUNCTION
+;; build関数とstep-linearを用いた同じノードは動く
+;; -> 多分Compositeを介してるから発生してる？
+;; -> Compositeが何かの副作用を・・・
 (defun linear-composite-test-single-layer ()
   (let ((model (LinearLayer 100 10)))
     (let ((model (build (!mean (call model (randn `(10 100)))))))
       (forward model))))
 
-;; It works when no-grad=t
-(defun linear-tests-with-no-grad ()
-  (with-no-grad
-    (linear-non-composite-test-single-layer)
-    (linear-composite-test-single-layer)
-    t))
-
+;; Linear合成しても問題は同じ
 (defun linear-composite-test-two-layer ()
   (let ((model  (LinearLayer 100 10))
 	(model1 (LinearLayer 10 3)))
     (let ((compiled-model (build (!mean (call model1 (call model (randn `(10 100))))))))
       (forward compiled-model))))
 
-;; no-grad = Tだと発生しない
-;; no-grad = NILだと発生する
-;; save-for-backwardのMoveTensorが原因であるはず。。。 (NO)
+;; 原因は二つあって
+;; 遅延評価!tがうまいタイミングでAllocされなかった（解決済み）
+;; Composite使ったmatmulが二回目で失敗（原因なぞ）
+
+;; no-grad = Tだと発生しない (?)
+;; no-grad = NILだと発生する (?)
+
+;; save-for-backwardのMoveTensorが原因であるはず。。。 (違った)
 ;; -> system-lazy-save-for-backwardはちゃんと動いている
+
 ;; 多分どっちか：
 ;; -> Memory-PoolにCacheされたInputTensorをPermuteするのが悪いのか
 ;; -> Backwardの関数をコンパイルしてる途中で何らかの副作用があるのか？
+;; -> Cacheされた関数？
 
 ;; Knwon Issue: 二回目のCallでmatmulに失敗する？
 (test linear-layer-test-forward
-  (is (linear-tests-with-no-grad))
   (is (linear-composite-test-single-layer))
   (is (linear-composite-test-single-layer))
   (is (linear-composite-test-single-layer)))
@@ -212,7 +218,8 @@
 ;; Adjustable-Symbol <- None
 ;; static-node       <- None
 ;;
-;; Only using pure features in cl-waffe2.
+;; Only using pure features in cl-waffe2
+;; OK
 (defun linearlayer-backward-test ()
   (with-memory-pool
     (let* ((model (LinearLayer-Sequence 100 50 10))
@@ -238,22 +245,26 @@
 ;; Using criterion
 ;; Here's not working...
 ;; Once the form below is called, memory-pool is destructed.
-
-;; 後で下のテストのコメント消す
 (defun linearlayer-backward-test-with-criterion ()
-  (with-no-grad
   (let* ((model (LinearLayer-Sequence1 100 50 10))
 	 (model (build (!mean
 			(softmax-cross-entropy
 			 (call model (randn `(10 100)))
 			 (randn `(10 10))))
 		       :compile-mode :default)))
-    (print (forward model))
-   ;; (backward model)
+    (forward model)
+    (backward model)
     (with-model-parameters (params model)
-      (every #'not-zero-p params)))))
+      ;;(loop for p in params
+      ;;	    do (print (grad p)))
+      (every #'not-zero-p params))))
 
 (test linearlayer-backward-with-criterlion
-  ;;(is (linearlayer-backward-test-with-criterion))
-  )
+  (is (linearlayer-backward-test-with-criterion)))
 	     
+
+;; これからデバッグすること：
+;; Linearを重ねたときにBackwardできてるか？（多分おK)
+;; Matmulを複数回呼び出してInvaild...
+;; memory-poolをテストする
+
