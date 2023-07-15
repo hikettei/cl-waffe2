@@ -283,6 +283,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 
 	(forward-flet-name (symb name '-forward-body))
 	(backward-flet-name (symb name '-backward-body))
+	(result-tmp (gensym))
 	(save-for-backward-slots
 	  (loop for s in save-for-backward-names
 		collect `(,s :initform nil :type (or null AbstractTensor)))))
@@ -296,8 +297,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 			      ;; forward -> backward => backward -> forward
 			      :where ,(where->backward where)
 			      :forward ((,@backward-args)
-					;; Swapping (self args...) -> (forward-self args...)					
-					
+					;; Swapping (self args...) -> (forward-self args...)
 					(flet ((,backward-flet-name (,@backward-args)
 						 (declare (ignorable ,(car backward-args)))
 						 (with-composite-node-mode ,(car backward-args)
@@ -305,14 +305,32 @@ But what if one wants to save the given tensors for a future call of backward? Y
 					  (multiple-value-bind (,@backward-args)
 					      (apply #'values (list (read-forward-self ,(car backward-args)) ,@(cdr backward-args)))
 					    ;; FixME: Static Backward with multiple arguments?
-					    `(funcall ,#',backward-flet-name ,,@backward-args))))))
+					    ;; (setf self.backward-result = result)
+					    `(let ((,',result-tmp (multiple-value-list (funcall ,#',backward-flet-name ,,@backward-args))))
+					       (setf (backward-result ,,(car backward-args))
+						     (list ,,@(loop for i upfrom 0 below (length (cdr forward-args)) collect nil)))
+					       
+					       ;; backward-result = (AbstractTensor AbstractTensor) x n_input_args
+					       ;; nil isn't allowed
+
+					       ;; (car backward-args) = self
+					       ;; nil = set forward args for a while,
+					       ;; the node pruned later.
+					       (loop for arg in (cdr (forward-args ,,(car backward-args)))
+						     for nth fixnum upfrom 0
+						     do
+						     (setf (nth nth (backward-result ,,(car backward-args)))
+							   (or (nth nth ,',result-tmp) arg)))
+					       (nth 0 (backward-result ,,(car backward-args)))))))))
 
        ;; This is a main part of composite-node.
        (define-and-impl-node (,name (,self-name ,@constructor-args)
 			      :device t
 			      :where ,where
 			      :slots (,@slots
-				      ,@save-for-backward-slots)
+				      ,@save-for-backward-slots
+				      (forward-arguments :initform nil :accessor forward-args)
+				      (backward-result :initform nil :accessor backward-result))
 			      :out-scalar-p ,out-scalar-p
 			      :documentation ,documentation
 			      :forward ((,@forward-args)
@@ -320,10 +338,24 @@ But what if one wants to save the given tensors for a future call of backward? Y
 						 (declare (ignorable ,(car forward-args)))
 						 (with-composite-node-mode ,(car forward-args)
 						   (locally ,@forward-body))))
-					  `(funcall ,#',forward-flet-name ,,@forward-args)))
-			      :backward ((,@backward-args)
+					  `(progn
+					     (setf (forward-args ,,(car forward-args)) (list ,,@forward-args))
+					     (funcall ,#',forward-flet-name ,,@forward-args))))
+			      :backward ((,@backward-args) ;; = self dout
 					 ;; Initializes backward node with (Backward self)
-					 (forward (,backward-node-name ,(car backward-args)) ,@(cdr backward-args))))
+					 (let ((bw-node (,backward-node-name ,(car backward-args))))
+					   ;; First-Argument = Forward of Backward-Node
+					   ;; Cdr-Th Argument = Instant-Kernel
+					   (values
+					    ,@(loop for nth fixnum upfrom 0
+						    for input-var in (cdr forward-args) ;; forward-args = (self x y z ...)
+						    if (= nth 0) ;; for first argument
+						      collect `(forward bw-node ,@(cdr backward-args))
+						    else
+						      ;; reads the result of first call.
+						      collect `(with-instant-kernel ,(second backward-args) ;; = dout
+								 `(nth ,,nth (backward-result ,,(car backward-args)))))))))
 	 ,@constructor-body))))
 
 
+;; To Add: define-impl-static
