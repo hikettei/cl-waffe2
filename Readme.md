@@ -154,13 +154,66 @@ There's more, `defnode` is a generic definiiton of `AbstractNode`, being impleme
 
 ## Numpy-like APIs
 
-Except that you need to call `proceed` or `build` at the end of the operation, cl-waffe2 APIs was made to be similar to Numpy. In addition, cl-waffe2 is intended to work with REPL: `` ``.
+Except that you need to call `proceed` or `build` at the end of the operation, cl-waffe2 APIs was made to be similar to Numpy. In addition, cl-waffe2 is intended to work with REPL. (ease of debugging needs to be improved though...)
 
 See also: https://hikettei.github.io/cl-waffe2/base-impl/
 
-
 ## From the top level, it works simply.
 
+The combination of delay evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
+
+```lisp
+(defsequence MLP-Sequence (in-features hidden-dim out-features
+               &key (activation #'!tanh))
+         "3 Layers MLP"
+         (LinearLayer in-features hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim out-features)
+         (asnode #'!softmax))
+```
+
+```lisp
+(MLP-Sequence 784 512 256)
+
+<Composite: MLP-SEQUENCE{W23852}(
+    <<6 Layers Sequence>>
+
+[1/6]          ↓ 
+<Composite: LINEARLAYER{W23682}(
+    <Input : ((~ BATCH-SIZE 784)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 784)
+    BIAS    -> (512)
+)>
+[2/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23680}(
+    #<FUNCTION !TANH>
+)>
+[3/6]          ↓ 
+<Composite: LINEARLAYER{W23510}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 512)
+    BIAS    -> (512)
+)>
+[4/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23508}(
+    #<FUNCTION !TANH>
+)>
+[5/6]          ↓ 
+<Composite: LINEARLAYER{W23338}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 256))>
+
+    WEIGHTS -> (256 512)
+    BIAS    -> (256)
+)>
+[6/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23336}(
+    #<FUNCTION CL-WAFFE2/NN:!SOFTMAX>
+)>)>
+```
 
 # References/Acknowledgments
 
