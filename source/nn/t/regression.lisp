@@ -90,6 +90,7 @@
      (not-zero-p a2)
      (every #'(lambda (x) (= x 1e-4)) (tensor-vec (grad c2))))))
 
+
 ;; Doing same things with build
 (defun linear-chain-test-build ()
   (let ((a1 (parameter (randn `(100 100))))
@@ -167,6 +168,8 @@
 ;; build関数とstep-linearを用いた同じノードは動く
 ;; -> 多分Compositeを介してるから発生してる？
 ;; -> Compositeが何かの副作用を・・・
+
+;; これを治す
 (defun linear-composite-test-single-layer ()
   (let ((model (LinearLayer 100 10)))
     (let ((model (build (!mean (call model (randn `(10 100)))))))
@@ -267,4 +270,12 @@
 ;; Linearを重ねたときにBackwardできてるか？（多分おK)
 ;; Matmulを複数回呼び出してInvaild...
 ;; memory-poolをテストする
+;; Cacheされた関数テスト <- ignoreのやつほんとに有効になってる？
+
+;; どこのマクロの展開式がダメ？
+(defun matmul-bug-case ()
+  (let ((model (LinearLayer 5 2)))
+    (let ((model (build (!mean (call model (randn `(2 5))))
+			:compile-mode :safety)))
+      (forward model))))
 

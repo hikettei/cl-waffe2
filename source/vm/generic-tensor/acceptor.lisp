@@ -291,6 +291,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     ;; Gradient-add-form here?
     (return-from compile-backward-chain
       (when (slot-value toplevel 'requires-grad)
+	(init-optimizer-utils! toplevel)
 	(if (equal (shape toplevel) (shape past-dy))
 	    `(add-grads ,toplevel ,(tensor-id past-dy))
 	    (progn

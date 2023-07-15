@@ -26,6 +26,7 @@
 			x
 			(linear-weight self)
 			(linear-bias self)))
+			
 	   :documentation "Applies a linear transformation to the incoming data.
 
 ```math
