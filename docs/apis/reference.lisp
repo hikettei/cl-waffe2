@@ -137,7 +137,8 @@
     (caller-doc !rankup)
     (caller-doc ->scal)
     (caller-doc ->mat)
-
+    (caller-doc ->contiguous)
+    
     (caller-doc proceed)
     (caller-doc proceed-time)
     (caller-doc proceed-backward)
