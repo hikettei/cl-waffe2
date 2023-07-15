@@ -24,13 +24,210 @@ cl-waffe2 provides a set of differentiable matrix operations which is aimed to a
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
+# Concepts/Features
+
+## Multiple Backends Support
+
+All classes that are subtypes of `AbstractTensor` are tensors that cl-waffe2 can handle.
+
+```lisp
+;; MyTensor extends CPUTensor extends AbstractTensor
+(defclass MyTensor (CPUTensor) nil)
+```
+
+Which devices the function is to operate on can be declared along with its priority using the `with-devices` macro.
+
+```lisp
+(with-devices (MyTensor CPUTensor)
+    ;; Under this scope, Priority = (MyTensor -> CPUTensor)
+    (!add (randn `(3 3)) (randn `(3 3))))
+
+{MYTENSOR[float] :shape (3 3) :named ChainTMP12737 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+
+;; Proceed is a differentiable operation which compiles/evaluates previous computation nodes.
+(proceed *) ;; MyTensor has no any implementation for AddNode, so CPUTensor is returned.
+
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP12759 
+  :vec-state [computed]
+  ((-0.9171257  0.4143868   0.9511917)
+   (2.224929    1.4860398   0.8402364)
+   (0.051592022 0.5673465   -0.46694738))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+This indicates not only is cl-waffe2 extensible to a wide variety of backends, but it also minimises the need to rewrite code to the greatest extent possible.
+
+See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
+
+## JIT Compiler
+
+Since `cl-waffe2` is a lazy-evaluation first framework, all operations need to be compiled at a certain point in time. It could be unintuitive for some users, however, at the same time, the cl-waffe2 compiler can obtain more information for optimisation.
+
+For example, the function `!add`  initially makes a copy of given arguments to avoid side effects, because `AddNode` is defined as in-place operation.
+
+```lisp
+(defun !add (x y)
+    (forward (AddNode) (!copy a) b))
+```
+
+It is natural to think this !copy is just a waste of memory space in some conditions, but tracing nodes can detect unused copies and delete them.
+
+See also: https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
+
+There's more: `pre-computing of view offsets`  `generating optimal lisp code in real time for certain scalar operations` `memory-allocation in advance` `(TO BE) multi-threading`
+
+(TODO: Benchmarks on a different scales)
+
+## Tools for formulating networks
+
+`defmodel` defines a set of nodes.
+
+```lisp
+(defmodel (Softmax-Model (self)
+       :where (X[~] -> OUT[~])
+       :on-call-> ((self x)
+               (declare (ignore self))
+               (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                  (!div (!exp x1) z)))))
+```
+
+It can be used to lazily evaluate and compile later, or to define functions for immediate execution.
+
+`call` to keep using lazy-evaluation.
+
+```lisp
+(call (Softmax-Model) (randn `(10 10)))
+
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP13029 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (10 10) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: DIVNODE-LISPTENSOR (A[~] B[~] -> A[~])>}
+
+(proceed *) ;; Being Compiler Later, by proceed or build
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP13158 
+  :vec-state [computed]
+  ((0.05213483   0.11118897   0.107058994  ~ 0.1897892    0.055277593  0.028915826)                    
+   (0.0025042535 0.3952663    0.0109358365 ~ 0.033085804  0.04627693   0.14064543)   
+                 ...
+   (0.067338936  0.06604112   0.065211095  ~ 0.051910892  0.10963429   0.060249455)
+   (0.029982507  0.31893584   0.18214627   ~ 0.015864253  0.2993634    0.02982553))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+`define-composite-function` to define a function.
+
+```lisp
+(define-composite-function (Softmax-Model) !softmax-static)
+
+(time (!softmax-static (randn `(10 10)))) ;; No compiling time for second and subsequent calls.
+Evaluation took:
+  0.000 seconds of real time
+  0.000460 seconds of total run time (0.000418 user, 0.000042 system)
+  100.00% CPU
+  1,073,976 processor cycles
+  32,512 bytes consed
+  
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP13578 
+  ((0.06095955   0.06010023   0.03573166   ~ 0.01910117   0.036269512  0.03422032)                    
+   (0.3116705    0.041012052  0.012784039  ~ 0.08029219   0.062023237  0.03468513)   
+                 ...
+   (0.057693116  0.19069833   0.061993677  ~ 0.20243406   0.02019287   0.07737376)
+   (0.35623857   0.038911298  0.028082697  ~ 0.050502267  0.024571734  0.10532298))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+```
+
+There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
+
+## Numpy-like APIs
+
+Except that you need to call `proceed` or `build` at the end of the operation, cl-waffe2 APIs was made to be similar to Numpy. In addition, cl-waffe2 is intended to work with REPL. (ease of debugging needs to be improved though...)
+
+See also: https://hikettei.github.io/cl-waffe2/base-impl/
+
+## From the top level, it works simply.
+
+The combination of delay evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
+
+```lisp
+(defsequence MLP-Sequence (in-features hidden-dim out-features
+               &key (activation #'!tanh))
+         "3 Layers MLP"
+         (LinearLayer in-features hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim out-features)
+         (asnode #'!softmax))
+```
+
+```lisp
+(MLP-Sequence 784 512 256)
+
+<Composite: MLP-SEQUENCE{W23852}(
+    <<6 Layers Sequence>>
+
+[1/6]          ↓ 
+<Composite: LINEARLAYER{W23682}(
+    <Input : ((~ BATCH-SIZE 784)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 784)
+    BIAS    -> (512)
+)>
+[2/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23680}(
+    #<FUNCTION !TANH>
+)>
+[3/6]          ↓ 
+<Composite: LINEARLAYER{W23510}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 512)
+    BIAS    -> (512)
+)>
+[4/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23508}(
+    #<FUNCTION !TANH>
+)>
+[5/6]          ↓ 
+<Composite: LINEARLAYER{W23338}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 256))>
+
+    WEIGHTS -> (256 512)
+    BIAS    -> (256)
+)>
+[6/6]          ↓ 
+<Composite: ENCAPSULATED-NODE{W23336}(
+    #<FUNCTION CL-WAFFE2/NN:!SOFTMAX>
+)>)>
+```
+
 # References/Acknowledgments
+
+All comments on this reddit post https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/.
+
+Features of Common Lispy approach to (Better) Numpy. (https://gist.github.com/digikar99/ba2f0bb34021bfdc086b9c1c712ca228)
 
 https://www.jsoftware.com/papers/RationalizedAPL.htm
 
 https://arxiv.org/pdf/1201.6035.pdf
 
 https://www.european-lisp-symposium.org/static/2018/heisig.pdf
+
+https://github.com/marcoheisig/Petalisp/tree/master
 
 https://github.com/numpy/numpy/tree/main
 
