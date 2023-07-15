@@ -3,6 +3,10 @@
 
 (in-suite :nn-test)
 
+;;
+;; Comments written in JP/EN is mixed, i'm sorry.
+;;
+
 
 ;; Plus: Diff MLP
 
@@ -35,10 +39,6 @@
 
 (defun not-zero-p (tensor)
   (some #'(lambda (x) (not (= x 0))) (tensor-vec (grad tensor))))
-
-;; これは多分permute*が原因
-;; Transpose ga umaku ikanai
-;; construct-backwardが原因ではないかも？
 
 ;; Chain Rule is Really Working?
 
@@ -111,6 +111,14 @@
        (not-zero-p a2)
        (every #'(lambda (x) (= x 1e-4)) (tensor-vec (grad c2)))))))
 
+
+(test chain-rule-test-matmul
+  (is (matmul-chain-test))
+  (is (matmul-chain-test1))
+  (is (matmul-bias-test))
+  (is (linear-chain-test))
+  (is (linear-chain-test-build)))
+
 ;; ===========================================================================================
 ;; Bug: matmul(not(正方行列).T, any_matrix) -> Segfault
 ;;
@@ -125,7 +133,11 @@
     (let ((out (build (!mean (cl-waffe2/nn::step-linear (randn `(10 100))
 							model-weight
 							model-bias)))))
-      (forward out))))
+      (forward out)
+      (backward out)
+      (and
+       (not-zero-p model-weight)
+       (every #'(lambda (x) (= x 0.001)) (tensor-vec (grad model-bias)))))))
 
 ;; Setting construct-backward? = nil -> it is working.
 ;; => Therefore, system-lazy-save-for-backward do not contribute to this problem.
@@ -138,7 +150,17 @@
 		      :construct-backward? nil)))
       (forward out))))
 
+
+;; No Side Effects???
+(test linear-simple-layer
+  (is (linear-non-composite-test-single-layer))
+  (is (linear-non-composite-test-single-layer))
+  (is (linear-non-composite-test-single-layer))
+  (is (linear-non-composite-test-single-layer-no-bw)))
+
 ;; Known Issue: with save-for-backward and transposed matmul(not square), the result become NaN
+
+;; Known Issue: Second call of this got invaild.
 (defun linear-composite-test-single-layer ()
   (let ((model (LinearLayer 100 10)))
     (let ((model (build (!mean (call model (randn `(10 100)))))))
@@ -151,33 +173,35 @@
     (linear-composite-test-single-layer)
     t))
 
-;; no-grad = Tだと発生しない
-;; no-grad = NILだと発生する
-;; save-for-backwardのMoveTensorが原因であるはず。。。 (X)
-;; -> system-lazy-save-for-backwardはちゃんと動いている
-;; 多分どっちか：
-;; -> Memory-PoolにCacheされたInputTensorをPermuteするのが悪いのか
-;; -> Backwardの関数をコンパイルしてる途中で何らかの副作用があるのか？
-
-(test linear-layer-test
-  (is (linear-non-composite-test-single-layer-no-bw))
-  ;;(is (linear-tests-with-no-grad))
-  ;;(is (linear-non-composite-test-single-layer))
-  (is (linear-composite-test-single-layer)))
-;; Regardless of composite use, it occurs
-
 (defun linear-composite-test-two-layer ()
   (let ((model  (LinearLayer 100 10))
 	(model1 (LinearLayer 10 3)))
     (let ((compiled-model (build (!mean (call model1 (call model (randn `(10 100))))))))
       (forward compiled-model))))
 
-(test chain-rule-test-matmul
-  (is (matmul-chain-test))
-  (is (matmul-chain-test1))
-  (is (matmul-bias-test))
-  (is (linear-chain-test))
-  (is (linear-chain-test-build)))
+;; no-grad = Tだと発生しない
+;; no-grad = NILだと発生する
+;; save-for-backwardのMoveTensorが原因であるはず。。。 (NO)
+;; -> system-lazy-save-for-backwardはちゃんと動いている
+;; 多分どっちか：
+;; -> Memory-PoolにCacheされたInputTensorをPermuteするのが悪いのか
+;; -> Backwardの関数をコンパイルしてる途中で何らかの副作用があるのか？
+
+;; Knwon Issue: 二回目のCallでmatmulに失敗する？
+(test linear-layer-test-forward
+  (is (linear-tests-with-no-grad))
+  (is (linear-composite-test-single-layer))
+  (is (linear-composite-test-single-layer))
+  (is (linear-composite-test-single-layer)))
+
+
+;; Test Forward
+(test linear-composed-layer-test-forward
+  (is (linear-composite-test-two-layer))
+  (is (linear-composite-test-two-layer))
+  (is (linear-composite-test-two-layer)))
+
+;; Regardless of composite use, it occurs
 
 (defmacro with-model-parameters ((bind model) &body body)
   `(let ((,bind (nodevariables-parameters
@@ -197,14 +221,14 @@
       (forward model)
       (backward model)
       (with-model-parameters (params model)
-	(loop for p in params
-	      do (print (grad p)))
+	;;(loop for p in params
+	;;      do (print (grad p)))
 	(every #'not-zero-p params)))))
 
 (test linear-backward-test-only-with-principle-features
-  ;;(is (linearlayer-backward-test))
-  ;;(is (linearlayer-backward-test))
-  ;;(is (linearlayer-backward-test))
+  (is (linearlayer-backward-test))
+  (is (linearlayer-backward-test))
+  (is (linearlayer-backward-test))
   )
 
 ;; Second Case:
@@ -214,6 +238,8 @@
 ;; Using criterion
 ;; Here's not working...
 ;; Once the form below is called, memory-pool is destructed.
+
+;; 後で下のテストのコメント消す
 (defun linearlayer-backward-test-with-criterion ()
   (with-no-grad
   (let* ((model (LinearLayer-Sequence1 100 50 10))
