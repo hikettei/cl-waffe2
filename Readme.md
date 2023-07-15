@@ -100,6 +100,8 @@ There's more: `pre-computing of view offsets`  `generating optimal lisp code in 
 
 It can be used to lazily evaluate and compile later, or to define functions for immediate execution.
 
+`call` to keep using lazy-evaluation.
+
 ```lisp
 (call (Softmax-Model) (randn `(10 10)))
 
@@ -110,7 +112,7 @@ It can be used to lazily evaluate and compile later, or to define functions for 
   :requires-grad NIL
   :backward <Node: DIVNODE-LISPTENSOR (A[~] B[~] -> A[~])>}
 
-(proceed *)
+(proceed *) ;; Being Compiler Later, by proceed or build
 {CPUTENSOR[float] :shape (10 10) :named ChainTMP13158 
   :vec-state [computed]
   ((0.05213483   0.11118897   0.107058994  ~ 0.1897892    0.055277593  0.028915826)                    
@@ -123,10 +125,12 @@ It can be used to lazily evaluate and compile later, or to define functions for 
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
+`define-composite-function` to define a function.
+
 ```lisp
 (define-composite-function (Softmax-Model) !softmax-static)
 
-(time (!softmax-static (randn `(10 10))))
+(time (!softmax-static (randn `(10 10)))) ;; No compiling time for second and subsequent calls.
 Evaluation took:
   0.000 seconds of real time
   0.000460 seconds of total run time (0.000418 user, 0.000042 system)
@@ -145,7 +149,7 @@ Evaluation took:
   :backward NIL}
 ```
 
-There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: .
+There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
 
 ## REPL-Friendly
 
