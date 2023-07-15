@@ -140,9 +140,10 @@ Shapes: A = ~a, B = ~a"
 
 	       (cond
 		 ;; transposed? True when last backward is LazyTranspsoe
-		 ;; not when LazyTranspos-able <-> Last two axes are subject to swapped.
+		 ;; when LazyTranspos-able <-> Last two axes are subject to swapped.
 		 (transposed?
 		  (values tensor transposed?))
+		 ;; Last two permute is also regarded as LazyTranspose
 		 ((and (every
 			#'(lambda (x) (eql (force-list x) t))
 			last-two-view)
