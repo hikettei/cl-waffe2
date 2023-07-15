@@ -546,7 +546,7 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 		     :projected-p nil
 		     :facet :exist
 		     :initial-element initial-element
-		     :view (copy-list view))
+		     :view view)
       (make-instance 'ScalarTensor
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
@@ -595,8 +595,8 @@ For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or 
 		 :create-from create-from
 		 :dtype dtype
 		 :order order
-		 :shape (copy-list shape)
-		 :input-shape (copy-list shape)
+		 :shape shape
+		 :input-shape shape
 		 :named (or named (symbol-name (gensym "ChainTMP")))
 		 :facet :input))
 
