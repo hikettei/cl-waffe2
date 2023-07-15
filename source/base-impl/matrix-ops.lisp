@@ -44,8 +44,7 @@ The node stores untransposed tensor at `raw-tensor`, when expanding matmul form,
 (define-impl (LazyTransposeNode :device t)
 	     :forward ((self x)
 		       (setf (raw-tensor self) x)
-		       `(progn
-			  ,x)))
+		       `(progn (tensor-vec ,x) ,x)))
 
 (defun read-untransposed (tensor)
   ""

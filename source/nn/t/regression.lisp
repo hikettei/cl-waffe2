@@ -36,12 +36,17 @@
 (defun not-zero-p (tensor)
   (some #'(lambda (x) (not (= x 0))) (tensor-vec (grad tensor))))
 
+;; これは多分permute*が原因
+;; Transpose ga umaku ikanai
+;; construct-backwardが原因ではないかも？
+
 ;; Chain Rule is Really Working?
+
 (defun matmul-chain-test ()
   (let ((a (parameter (randn `(100 100))))
 	(b (parameter (randn `(100 100))))
 	(c (parameter (randn `(100 100)))))
-    (proceed-backward (!matmul a (!matmul b c)))
+    (proceed-backward (!sum (!matmul a (!matmul b c))))
     (and (not-zero-p a)
 	 (not-zero-p b)
 	 (not-zero-p c))))
