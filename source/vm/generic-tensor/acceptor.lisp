@@ -322,7 +322,6 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   (next-dys   (map 'list #'car outs))
 	   (outs       (map 'list #'cdr outs)))
       
-      
       `(let (,@(loop for kernel in outs
 		     for out in next-dys
 		     for var in (tensor-variables toplevel)

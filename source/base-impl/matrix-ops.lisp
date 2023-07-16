@@ -44,7 +44,9 @@ The node stores untransposed tensor at `raw-tensor`, when expanding matmul form,
 (define-impl (LazyTransposeNode :device t)
 	     :forward ((self x)
 		       (setf (raw-tensor self) x)
-		       `(progn (tensor-vec ,x) ,x)))
+		       `(progn
+			  (tensor-vec ,x)
+			  ,x)))
 
 (defun read-untransposed (tensor)
   ""
@@ -142,9 +144,10 @@ Shapes: A = ~a, B = ~a"
 	       (cond
 		 ;; transposed? True when last backward is LazyTranspsoe
 		 ;; when LazyTranspos-able <-> Last two axes are subject to swapped.
+		 ;; Last two permute is also regarded as LazyTranspose
+
 		 (transposed?
 		  (values tensor transposed?))
-		 ;; Last two permute is also regarded as LazyTranspose
 		 ((and (every
 			#'(lambda (x) (eql (force-list x) t))
 			last-two-view)
@@ -156,8 +159,6 @@ Shapes: A = ~a, B = ~a"
 		  ;; (values tensor nil) <=>
 		  (values tensor transposed?))
 		 (T
-		  ;; Apply Transpose/Permute/View
-		  ;; TODO: Delete this copy...
 		  (values (->contiguous tensor) nil))))))
 
       (multiple-value-bind (x x-transpose?) (adjust-layout x transpose-x)

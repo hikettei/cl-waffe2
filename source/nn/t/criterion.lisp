@@ -25,5 +25,21 @@
   (is (softmax-cross-entropy-test))
   (is (softmax-cross-entropy-test1)))
 
+(defun criterion-with-build ()
+  (let ((a (parameter (randn `(10 10))))
+	(b (parameter (randn `(10 10)))))
+    (let ((model (build (!sum (softmax-cross-entropy (!relu a) (!relu b)))
+			:compile-mode :safety)))
+      (forward model)
+      (backward model)
 
+      (zero-grads! model)
+      (print (grad a))
+      (print (grad b))
 
+      (forward model)
+      (backward model)
+
+      (print (Grad a))
+      (print (grad b))
+      )))

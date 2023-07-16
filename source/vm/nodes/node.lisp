@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/vm.nodes)
-  
+
+;; TODO: Error Printings
+
 (defclass AbstractNode ()
   ((local-variables :accessor node-local-variables :type list :initform nil)
    (function-node
@@ -269,7 +271,6 @@ Here's a list of reports.
 			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
 			       next-tensor))))
-;;	(print (cl-waffe2/vm.generic-tensor::tensor-permute-order (car next-tensor)))
 	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)

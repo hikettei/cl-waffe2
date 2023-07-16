@@ -12,7 +12,15 @@
   :description "Deep Learning Framework"
   :pathname "source"
   :serial t
-  :depends-on (:cl-ppcre :fiveam :alexandria :cffi :cl-randist :lparallel :closer-mop :trivial-garbage)
+  :depends-on (:cl-ppcre
+	       :fiveam
+	       :alexandria
+	       :cffi
+	       :cl-randist
+	       :lparallel
+	       :bordeaux-threads
+	       :closer-mop
+	       :trivial-garbage)
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
@@ -123,6 +131,7 @@
 	       (:file "vm/nodes/t/shape")
 	       (:file "vm/nodes/t/nodes")
 	       (:file "vm/nodes/t/composite")
+	       (:file "vm/nodes/t/static-node")
 
 	       (:file "base-impl/t/package")
 	       (:file "base-impl/t/reduction")

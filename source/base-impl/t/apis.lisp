@@ -189,6 +189,6 @@
 
 (test proceed-differentiable-p
   (is (proceed-continue-test 0))
-  (is (proceed-continue-test 1))
+  (is (proceed-continue-test 1)) ;; 
   (is (proceed-continue-test 2)))
   

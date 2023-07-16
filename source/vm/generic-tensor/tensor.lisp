@@ -72,6 +72,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
+   (allocate-time-state :initform nil :type (or null Adjustable-Shape-State) :accessor tensor-alloc-state)
    (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
   (:documentation "
@@ -274,7 +275,8 @@ Tensors has a two state:
   (declare (type AbstractTensor)
 	   (optimize (speed 3)))
   (let ((a (copy-list (tensor-permute-order tensor))))
-    (equal (sort a #'<) (tensor-permute-order tensor))))
+    
+    (not (equal (sort a #'>) (tensor-permute-order tensor)))))
 	   
 
 ;; Inline
@@ -308,19 +310,18 @@ Note:
 "
   (declare (type AbstractTensor tensor))
 
+  ;; See also: comments on the top of memory-pool.lisp
   (let ((result (cond
 		  ((and
 		    (not (scalar-p tensor))
 		    (stringp (tensor-name tensor)))
-		   ;; ChainTMP Tensor, and not scalar.
+		   ;; ChainTMP, made by (make-input shape nil)
+		   ;; using get-form-memory-pool is MUST because shapes are dynamically changing.
 		   (get-from-memory-pool tensor))
 		  (T
-		   ;; This form could be one of:
-		   ;; ScalarTensor
-		   ;; (Make-input `(a b) :NAME)
 		   ;; ExistTensor
-		   (if (vec tensor) ;; vec is allocated?
-		       (vec tensor) ;; Tensor is created by make-tensor
+		   (if (vec tensor)
+		       (vec tensor)
 		       (get-from-memory-pool tensor))))))
     ;; If returned is lazy-variable?
     ;; Lazy-Variable... (make-tensor 'a)
@@ -369,7 +370,9 @@ Note:
 		 (make-tensor (coerce 0 (dtype->lisp-type (dtype tensor))))))
 	   (code (compile-forward-kernel out :compile-mode :fastest)))
       #'(lambda ()
-	  (funcall code)))))
+	  (state-reset! out)
+	  (funcall code)
+	  nil))))
 
 (defun make-gradient-resetter-scal (tensor)
   (let ((resetwith (coerce 0 (dtype->lisp-type (dtype tensor)))))
@@ -450,6 +453,20 @@ Note:
 (defun init-optimizer-utils! (tensor)
   "Initializes Gradient Adders/Resetters"
   (declare (type AbstractTensor))
+  
+;;  (when (slot-value tensor 'requires-grad)
+;;    (if (scalar-p tensor)
+;;	  (set-grad (make-tensor 0
+;;				 :dtype (dtype tensor)
+;;				 :requires-grad nil)
+;;		    tensor)
+;;	  (set-grad (make-tensor
+;;		     (tensor-visible-shape tensor)
+;;		     :dtype (dtype tensor)
+;;		     :requires-grad nil
+;;		     :order (order tensor))
+;;		    tensor)))
+  
   (when (and (slot-value tensor 'requires-grad)
 	     (null (gradient-adder tensor)))
     (if (scalar-p tensor)
@@ -1049,6 +1066,8 @@ The function parameter computes all the previous nodes of the given tensor if an
 "
   (declare (type AbstractTensor tensor))
   (when (slot-value tensor 'requires-grad)
-    (funcall (gradient-resetter tensor))))
+    (if (gradient-resetter tensor)
+	(funcall (gradient-resetter tensor))
+	(warn "Couldn't reset gradients of tenso, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
 
 

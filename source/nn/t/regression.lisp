@@ -46,6 +46,18 @@
 	 (not-zero-p b)
 	 (not-zero-p c))))
 
+(defun matmul-chain-test-smol ()
+  (let ((a (parameter (ax+b `(3 3) 0 2)))
+	(b (parameter (ax+b `(3 5) 0 3)))
+	(c (parameter (ax+b `(5 3) 0 4))))
+    (proceed-backward (!sum (!matmul a (!matmul b c))))
+    (print (grad a))
+    (print (grad b))
+    (print (grad c))
+    (and (not-zero-p a)
+	 (not-zero-p b)
+	 (not-zero-p c))))
+
 (defun matmul-chain-test1 ()
   (let ((a (parameter (randn `(100 100))))
 	(b (parameter (randn `(100 100))))
@@ -317,4 +329,81 @@
   (is (softmax-same-case?))
   (is (softmax-same-case?))
   (is (softmax-same-case?)))
+
+(defun fw-change-shape-test ()
+  (let ((model (build (call (LinearLayer-Sequence 10 5 2)
+			    (make-input `(batch-size 10) :X))
+		      :compile-mode :safety)))
+    (set-input model :X (randn `(10 10)))
+    (forward model)
+    (set-input model :X (randn `(20 10)))
+    (forward model)
+    (set-input model :X (randn `(5 10)))
+    (forward model)
+    model))
+
+(test forward-with-different-shape
+  (is (fw-change-shape-test)))
+
+(defun fw-and-bw-test ()
+  (let* ((linear (LinearLayer-Sequence 10 5 2))
+	 (model (build (call linear
+			     (make-input `(batch-size 10) :X)))))
+    (set-input model :X (ax+b `(10 10) 0.0 1.0))
+    (forward model)
+    (backward model)
+    
+    ;;(with-model-parameters (params model)
+    ;;  (loop for p in params
+;;	    do (print (grad p))
+;;	    do (print (tensor-vec (grad p)))))
+    (forward model)
+    (backward model)
+  ;;  (with-model-parameters (params model)
+    ;;  (loop for p in params
+;;	    do (print (grad p))
+;;	    do (print (tensor-vec (grad p)))))
+    (forward model)
+    (backward model)
+  ;;  (with-model-parameters (params model)
+    ;;  (loop for p in params
+;;	    do (print (grad p))
+;;	    do (print (tensor-vec (grad p)))))
+
+    (forward model)
+    (backward model)
+    ))
+
+(defun fw-and-bw-test-criterion ()
+  (let* ((model (LinearLayer-Sequence1 100 50 10))
+	 (model (build (!mean
+			(softmax-cross-entropy
+			 (call model (make-input `(batch-size 100) :X))
+			 (make-input `(batch-size 10) :Y)))
+		       :compile-mode :safety)))
+    (set-input model :X (randn `(10 100)))
+    (set-input model :Y (randn `(10 10)))
+
+    (forward model)
+    (backward model)
+
+    (with-model-parameters (param model)
+      (loop for p in param
+	    do (print (grad p))))
+
+    ;; Segfault here.
+    (forward model)
+    (backward model)
+
+    (with-model-parameters (param model)
+      (loop for p in param
+	    do (print (grad p))))
+    
+    ))
+
+(test multiple-time-call-of-compiled-model
+  (is (fw-and-bw-test))
+  ;(is (fw-and-bw-test-criterion))
+  )
+
 
