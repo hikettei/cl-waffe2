@@ -72,6 +72,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
+   (allocate-time-state :initform nil :type (or null Adjustable-Shape-State) :accessor tensor-alloc-state)
    (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
    (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
   (:documentation "
@@ -308,19 +309,18 @@ Note:
 "
   (declare (type AbstractTensor tensor))
 
+  ;; See also: comments on the top of memory-pool.lisp
   (let ((result (cond
-		  ((and
-		    (not (scalar-p tensor))
+		  ((or
+		    (scalar-p tensor)
 		    (stringp (tensor-name tensor)))
-		   ;; ChainTMP Tensor, and not scalar.
+		   ;; ChainTMP, made by (make-input shape nil)
+		   ;; using get-form-memory-pool is MUST because shapes are dynamically changing.
 		   (get-from-memory-pool tensor))
 		  (T
-		   ;; This form could be one of:
-		   ;; ScalarTensor
-		   ;; (Make-input `(a b) :NAME)
 		   ;; ExistTensor
-		   (if (vec tensor) ;; vec is allocated?
-		       (vec tensor) ;; Tensor is created by make-tensor
+		   (if (vec tensor)
+		       (vec tensor)
 		       (get-from-memory-pool tensor))))))
     ;; If returned is lazy-variable?
     ;; Lazy-Variable... (make-tensor 'a)
