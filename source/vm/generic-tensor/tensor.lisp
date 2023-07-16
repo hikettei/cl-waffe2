@@ -369,7 +369,9 @@ Note:
 		 (make-tensor (coerce 0 (dtype->lisp-type (dtype tensor))))))
 	   (code (compile-forward-kernel out :compile-mode :fastest)))
       #'(lambda ()
-	  (funcall code)))))
+	  (state-reset! out)
+	  (funcall code)
+	  nil))))
 
 (defun make-gradient-resetter-scal (tensor)
   (let ((resetwith (coerce 0 (dtype->lisp-type (dtype tensor)))))
@@ -1063,6 +1065,8 @@ The function parameter computes all the previous nodes of the given tensor if an
 "
   (declare (type AbstractTensor tensor))
   (when (slot-value tensor 'requires-grad)
-    (funcall (gradient-resetter tensor))))
+    (if (gradient-resetter tensor)
+	(funcall (gradient-resetter tensor))
+	(warn "Couldn't reset gradients of tenso, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
 
 

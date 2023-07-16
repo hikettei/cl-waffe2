@@ -5,6 +5,8 @@
 ;; memory-pool.lisp is an file to manage temporary tensors with adjustable-symbols.
 ;;
 
+;; TODO: Make memory-pool thread-safe.
+
 (defstruct Memory-Pool
   ;; Gc-able temporary-rooms?
   (temporary-rooms (make-hash-table) :type hash-table))
