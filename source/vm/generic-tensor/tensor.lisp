@@ -275,7 +275,8 @@ Tensors has a two state:
   (declare (type AbstractTensor)
 	   (optimize (speed 3)))
   (let ((a (copy-list (tensor-permute-order tensor))))
-    (equal (sort a #'<) (tensor-permute-order tensor))))
+    
+    (not (equal (sort a #'>) (tensor-permute-order tensor)))))
 	   
 
 ;; Inline
@@ -1034,7 +1035,7 @@ The function parameter computes all the previous nodes of the given tensor if an
   
   (let ((space-tmp (make-clone tensor)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
-      (setf (save-for-backward-space result) space-tmp)
+      (setf (save-for-backward-space result) tensor)
       ;; result = space-tmp
       result)))
 	

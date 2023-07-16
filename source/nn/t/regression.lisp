@@ -46,6 +46,18 @@
 	 (not-zero-p b)
 	 (not-zero-p c))))
 
+(defun matmul-chain-test-smol ()
+  (let ((a (parameter (ax+b `(3 3) 0 2)))
+	(b (parameter (ax+b `(3 5) 0 3)))
+	(c (parameter (ax+b `(5 3) 0 4))))
+    (proceed-backward (!sum (!matmul a (!matmul b c))))
+    (print (grad a))
+    (print (grad b))
+    (print (grad c))
+    (and (not-zero-p a)
+	 (not-zero-p b)
+	 (not-zero-p c))))
+
 (defun matmul-chain-test1 ()
   (let ((a (parameter (randn `(100 100))))
 	(b (parameter (randn `(100 100))))

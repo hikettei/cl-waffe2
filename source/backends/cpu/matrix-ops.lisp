@@ -78,9 +78,9 @@
 		;; variables that didn't appear in arguments
 		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
 		
-		(tensor-ptr ,b :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
+		(tensor-ptr ,b1 :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
-		(tensor-ptr ,a :offset ,(offset-of a-view 0))
+		(tensor-ptr ,a1 :offset ,(offset-of a-view 0))
 		,lda
 		0.0
 		(tensor-ptr
@@ -100,11 +100,11 @@
 		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
 		
 		(tensor-ptr
-		 ,b
+		 ,b1
 		 :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
 		(tensor-ptr
-		 ,a
+		 ,a1
 		 :offset ,(offset-of a-view 0))
 		,lda
 		0.0d0

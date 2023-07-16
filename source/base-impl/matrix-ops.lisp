@@ -145,6 +145,7 @@ Shapes: A = ~a, B = ~a"
 		 ;; transposed? True when last backward is LazyTranspsoe
 		 ;; when LazyTranspos-able <-> Last two axes are subject to swapped.
 		 ;; Last two permute is also regarded as LazyTranspose
+
 		 (transposed?
 		  (values tensor transposed?))
 		 ((and (every
