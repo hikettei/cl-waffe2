@@ -127,6 +127,8 @@ Please consider using another backends." dtype)))))
 	      (let ((trans-a (trans-a? self))
 		    (trans-b (trans-b? self)))
 		`(,@(expand-gemm-form a b out :trans-a? trans-a :trans-b? trans-b)
+		  ;; Sometime matmul fails due to wrong arguments
+		  ;; But proceeds with no errors...
 		  ,out))))
 
 

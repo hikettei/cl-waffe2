@@ -68,10 +68,12 @@
     ;; (not some
     (not (some #'(lambda (target-symbol current-val)
 		   (let ((val (gethash target-symbol old-table)))
-		     (when (and (typep val 'fixnum)
-				(typep current-val 'fixnum))
+		     (if (and (typep val 'fixnum)
+			      (typep current-val 'fixnum))
 		       ;; The tensor is created as BATCH-SIZE=100, Now the operation is going udner BATCH_SIZE=10			  
-		       (< val current-val))))
+
+			 (< val current-val)
+			 t)))
 	       current-keys current-vals))))
 
 (defun current-memory-pool ()
@@ -180,8 +182,7 @@ After the body exists, all the temporary tensors in the pool is freed.
 
     ;; Each time update room, the operation works correctly???
 
-    (when (or (null vec)
-	      (null (vec tensor))
+    (when (or (null vec) (null (vec tensor))
 	      (not (eql (the keyword (dtype tensor)) (the keyword (dtype (temporary-room-cache-tensor room)))))
 	      (> (the fixnum required-size) (temporary-room-size room)))
       ;; Update memory-pool
@@ -189,6 +190,7 @@ After the body exists, all the temporary tensors in the pool is freed.
       (setf (temporary-room-size room) required-size)
       (setf (tensor-vec (temporary-room-cache-tensor room))
 	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor))))
+
       (setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room))))
     (vec tensor)))
 

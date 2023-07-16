@@ -311,8 +311,8 @@ Note:
 
   ;; See also: comments on the top of memory-pool.lisp
   (let ((result (cond
-		  ((or
-		    (scalar-p tensor)
+		  ((and
+		    (not (scalar-p tensor))
 		    (stringp (tensor-name tensor)))
 		   ;; ChainTMP, made by (make-input shape nil)
 		   ;; using get-form-memory-pool is MUST because shapes are dynamically changing.
@@ -1034,7 +1034,7 @@ The function parameter computes all the previous nodes of the given tensor if an
   
   (let ((space-tmp (make-clone tensor)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
-      (setf (save-for-backward-space result) tensor)
+      (setf (save-for-backward-space result) space-tmp)
       ;; result = space-tmp
       result)))
 	
