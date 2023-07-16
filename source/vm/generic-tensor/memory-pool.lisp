@@ -283,7 +283,8 @@ Usage:
 	 (let ((out (gethash symbol *adjustable-shape-table*)))
 	   (if (null out)
 	       symbol ;; No result?
-	       (if (symbolp out)
+	       (if (and (symbolp out)
+			(not (eq symbol out))) ;; A -> A ...
 		   ;; A = BATCH_SIZE = 10
 		   (read-symbol out)
 		   out))))

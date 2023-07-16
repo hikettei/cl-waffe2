@@ -109,12 +109,19 @@ See also: `set-input`"
       (error "The InputTensor named ~a weren't appeared in the computation node" variable-name))
 
     (let ((symbols-changed (make-hash-table)))
+      ;;(print "====")
+      ;;(print (tensor-input-shape input-tensor))
+      ;;(print (shape actual-tensor))
       (loop for place in (tensor-input-shape input-tensor)
 	    for value in (shape actual-tensor)
 	    if (and (not (symbolp place))
 		    (not (= place value)))
-	      do (error "Can't embody ~a into fixed place, ~a.
-~a and ~a"
+	      do (error "embody-input: Can't embody ~a into fixed place, ~a.
+input-tensor:
+~a
+
+actual-tensor:
+~a"
 			value place input-tensor actual-tensor)
 	    if (symbolp place)
 	      do (setf (gethash place symbols-changed) value))

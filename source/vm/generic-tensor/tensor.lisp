@@ -74,7 +74,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    (allocate-time-state :initform nil :type (or null Adjustable-Shape-State) :accessor tensor-alloc-state)
    (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
-   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
+   (input-shape :initarg :input-shape :initform nil :reader tensor-input-shape))
   (:documentation "
 AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.
 
@@ -256,7 +256,8 @@ Tensors has a two state:
     (apply-permute (slot-value tensor 'visible-shape) tensor)
     (apply-permute (slot-value tensor 'orig-shape) tensor)
     (when (slot-value tensor 'input-shape)
-      (apply-permute (slot-value tensor 'input-shape) tensor))))	
+      (apply-permute (slot-value tensor 'input-shape) tensor)
+      )))	
 
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
@@ -275,7 +276,6 @@ Tensors has a two state:
   (declare (type AbstractTensor)
 	   (optimize (speed 3)))
   (let ((a (copy-list (tensor-permute-order tensor))))
-    
     (not (equal (sort a #'>) (tensor-permute-order tensor)))))
 	   
 
@@ -487,7 +487,8 @@ Note:
 	(tensor-stride to) (tensor-stride from)
 	(tensor-view to) (tensor-view from)
 	(tensor-permute-order to) (tensor-permute-order from)
-	(slot-value to 'input-shape) (slot-value from 'input-shape))
+	;;(slot-value to 'input-shape) (slot-value from 'input-shape)
+	)
   nil)
   
 
