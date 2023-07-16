@@ -47,7 +47,7 @@
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t))
 	  (b (* 15.0 15.0)))
-      (proceed-backward (!add (!sin a) b))
+      (proceed-backward (!sum (!add (!sin a) b)))
       (= (vref (grad a) 0) (cos 1)))))
 
 (defun chain-test7 ()

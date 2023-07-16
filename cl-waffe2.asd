@@ -123,6 +123,7 @@
 	       (:file "vm/nodes/t/shape")
 	       (:file "vm/nodes/t/nodes")
 	       (:file "vm/nodes/t/composite")
+	       (:file "vm/nodes/t/static-node")
 
 	       (:file "base-impl/t/package")
 	       (:file "base-impl/t/reduction")

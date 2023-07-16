@@ -450,6 +450,20 @@ Note:
 (defun init-optimizer-utils! (tensor)
   "Initializes Gradient Adders/Resetters"
   (declare (type AbstractTensor))
+  
+;;  (when (slot-value tensor 'requires-grad)
+;;    (if (scalar-p tensor)
+;;	  (set-grad (make-tensor 0
+;;				 :dtype (dtype tensor)
+;;				 :requires-grad nil)
+;;		    tensor)
+;;	  (set-grad (make-tensor
+;;		     (tensor-visible-shape tensor)
+;;		     :dtype (dtype tensor)
+;;		     :requires-grad nil
+;;		     :order (order tensor))
+;;		    tensor)))
+  
   (when (and (slot-value tensor 'requires-grad)
 	     (null (gradient-adder tensor)))
     (if (scalar-p tensor)
