@@ -704,11 +704,11 @@ dout   ... dout values"
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
-				 `(progn
+				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
 				    (embody-actual-tensor
-				     ,out
-				     ,a)
-				    ,out))
+				     out1
+				     ,a)				    
+				    out1))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))
 				  (let ((out (apply #'!permute dout (permute-old self))))

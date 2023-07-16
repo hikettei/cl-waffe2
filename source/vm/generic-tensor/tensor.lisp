@@ -809,6 +809,20 @@ Note that view is only created for Tensors, not a Scalar.
 		 :named (tensor-name tensor)
 		 :vec (vec tensor)))
 
+(defun detach-and-clone1 (tensor)
+  (make-instance (car *using-backend*)
+		 :create-from tensor
+		 :scalar-p (scalar-p tensor)
+		 :dtype (dtype tensor)
+		 :order (order tensor)
+		 :shape (copy-list (slot-value tensor 'orig-shape))
+		 :projected-p t
+		 :past-view (copy-list (tensor-view tensor))
+		 :input-shape (copy-list (tensor-input-shape tensor))
+		 :facet (tensor-facet tensor)
+		 :named (tensor-name tensor)
+		 :vec (vec tensor)))
+
 (defun permute-computable-p (old-order new-order)
   (equal (sort (copy-list old-order) #'<)
 	 (sort (copy-list new-order) #'<)))
