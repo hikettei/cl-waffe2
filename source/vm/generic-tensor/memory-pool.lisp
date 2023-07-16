@@ -45,7 +45,9 @@
 ;;
 
 
-(defparameter *thread-memory-pool* (tg:make-weak-hash-table :weakness :key) "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
+(defparameter *thread-memory-pool*
+  (make-hash-table);;(tg:make-weak-hash-table :weakness :key)
+  "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
 (defvar       *thread-pool-lock*   (make-lock "thread cache lock"))
 
 (defvar *adjustable-shape-table* nil "An hash-table: Symbol -> Size.") ;; (A -> 10, B -> 10)
@@ -137,7 +139,7 @@
   ;; TODO:
   ;; (maphash ... tensor-delete)
   ;; Maybe:: CUDA Foreign Pointers aren't gc-reachable??
-  (setf *thread-memory-pool* (tg:make-weak-hash-table :weakness :key))
+  (setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
   #+sbcl(sb-ext:gc :full t)
   )
 
@@ -149,7 +151,7 @@ Creates a new scope of memory-pool.
 
 After the body exists, all the temporary tensors in the pool is freed.
 "
-  `(let ((*thread-memory-pool* (tg:make-weak-hash-table :weakness :key)))
+  `(let ((*thread-memory-pool* (make-hash-table)));;(tg:make-weak-hash-table :weakness :key)))
      (unwind-protect (progn ,@body)
        (free-current-memory-pool))))
 
