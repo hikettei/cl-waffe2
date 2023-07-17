@@ -356,6 +356,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 		  :scalar-p (scalar-p place))
       place))
 
+
 (defun adjust-bw-place (bw-node place argn nth-trying)
   "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
   
@@ -405,6 +406,7 @@ inputs      ... inputs called with
   ;;FIX: REDUCE COMPILE TIME!
   
   ;; Collecting x_in
+
   (detach dout t)
   (let* ((inputs-in (loop for input in inputs-out
 			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
@@ -417,7 +419,7 @@ inputs      ... inputs called with
 			    for y in inputs-out
 			    for i upfrom 0
 			    collect (adjust-bw-place x y argn i))))
-
+    
     (loop for kernel in out-kernels
 	  collect
 	  (when kernel

@@ -29,7 +29,7 @@
 			      (hidden-size 256)
 			      (activation #'!tanh))
 	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
-	     :compile-mode :default
+	     :compile-mode :safety
 	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
 	     :build ((self)
 		     (let ((out (!mean (softmax-cross-entropy
@@ -65,9 +65,9 @@
     
     (minimize!  trainer)
 
-    ;;(set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
+    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
     
-    ;;(minimize!  trainer)
+    (minimize!  trainer)
     
 
    ;; (time
@@ -77,5 +77,6 @@
    ;;    ))    
     trainer))
 
-(perform-test)
+(dotimes (I 10)
+(perform-test))
 

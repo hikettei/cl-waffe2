@@ -707,7 +707,7 @@ dout   ... dout values"
 				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
 				    (embody-actual-tensor
 				     out1
-				     ,a)		    
+				     ,a)
 				    out1))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))

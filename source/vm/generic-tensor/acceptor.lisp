@@ -109,7 +109,7 @@ Variables:
 ;; One of my concern is that: when allocating a cache tensor for InputTensor, we must not use input-shape.
 ;; ==============================================================================================================================
 
-(defparameter *shape-input-table* (make-hash-table) "Things to be deleted in the future release.")
+;;(defparameter *shape-input-table* (make-hash-table) "Things to be deleted in the future release.")
 
 (defun embody-input (nodevars variable-name actual-tensor)
   "(embody-input variables :a tensor)
@@ -127,7 +127,7 @@ See also: `set-input`"
       (error "embody-input: ranks does not match: ~a and ~a" input-tensor actual-tensor))
     
     (let ((symbols-changed (make-hash-table)))
-      (loop for place in (or (gethash (tensor-id input-tensor) *shape-input-table*)
+      (loop for place in (or ;;(gethash (tensor-id input-tensor) *shape-input-table*)
 			     (tensor-input-shape input-tensor))
 	    for value in (shape actual-tensor)
 	    for rank upfrom 0
@@ -165,8 +165,8 @@ permute-order : ~a
 	    if (symbolp place)
 	      do (setf (gethash place symbols-changed) value))
       
-      (if (null (gethash (tensor-id input-tensor) *shape-input-table*))
-	  (setf (gethash (tensor-id input-tensor) *shape-input-table*) (copy-list (tensor-input-shape input-tensor))))
+      ;;(if (null (gethash (tensor-id input-tensor) *shape-input-table*))
+;;	  (setf (gethash (tensor-id input-tensor) *shape-input-table*) (copy-list (tensor-input-shape input-tensor))))
 
       ;; Checking if the new size never beyonds memory-pool.
 

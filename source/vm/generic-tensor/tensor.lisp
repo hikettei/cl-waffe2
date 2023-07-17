@@ -64,7 +64,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (gradient-adder    :accessor gradient-adder)
    (gradient-resetter :accessor gradient-resetter)
 
-   (save-for-backward-space :initform nil :accessor save-for-backward-space)
+   (save-for-backward-space       :initform nil :accessor save-for-backward-space)
+   (save-for-backward-space-cache :initform nil :accessor save-for-backward-space-cache)
    (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
    
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
@@ -412,9 +413,9 @@ Note:
        ;; Never Do this: Recomputing strides, USE create-from
 
        ;; MEMO: copy-list is needed??
-       (setf (tensor-stride tensor) (tensor-stride create-from)
-	     (slot-value tensor 'orig-shape) (original-shape create-from)
-	     (tensor-permute-order tensor) (tensor-permute-order create-from)
+       (setf (tensor-stride tensor) (copy-list (tensor-stride create-from))
+	     (slot-value tensor 'orig-shape) (copy-list (original-shape create-from))
+	     (tensor-permute-order tensor) (copy-list (tensor-permute-order create-from))
 	     
 	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
 	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
@@ -705,6 +706,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   (declare (type AbstractTensor input-tensor actual-tensor)
 	   (optimize (speed 3)))
 
+  
   ;;(assert (eql (tensor-facet input-tensor) :input)
   ;;	  nil
   ;;	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
@@ -722,7 +724,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   ;;(when (and (null (tensor-info-safe-p input-tensor)) ;; <<Model Parameter>>'s strides aren't copied!
 ;;	     (eql  (tensor-facet input-tensor) :Exist))
   ;;  (warn "embody-actual-tensor is gonna destruct ExistTensor: ~a" (shape input-tensor)))
-  
+
   (let ((actual-tensor
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
 		   (permuted-p input-tensor))
@@ -912,7 +914,7 @@ See also: `!permute`
   (when (> (count :~ orders) 1)
     (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
 
-  (let* ((tensor-new  (detach-and-clone tensor)) ;; Detaching from computation nodes by making a view of T T T....
+  (let* ((tensor-new  (detach-and-clone1 tensor)) ;; Detaching from computation nodes by making a view of T T T....
 	 (old-orders  (tensor-permute-order tensor))
 	 (pure-orders (remove :~ orders)) ;; order consisted of fixnum
 	 (new-orders
@@ -1060,15 +1062,18 @@ The function parameter computes all the previous nodes of the given tensor if an
 
 (defun system-lazy-set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
-  
+
   (let ((space-tmp (make-clone tensor)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
+      ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
-      ;; result = space-tmp
+      (setf (save-for-backward-space-cache result) space-tmp)
       result)))
 	
-(defun system-lazy-read-save-for-backward (tensor)
-  (save-for-backward-space tensor))
+(defun system-lazy-read-save-for-backward (tensor &key (cache-place nil))
+  (if cache-place
+      (save-for-backward-space-cache tensor)
+      (save-for-backward-space tensor)))
 
 ;; Exports
 (defun hook-optimizer! (tensor optimizer)
