@@ -791,8 +791,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
   ;;		  (proceed-backward (!matmul a (randn `(10 3))))
   ;;		  a)
   ;;
-  (let* (;(tensor (!copy tensor)) ;; Ignore if tenosr is inputtensor
-	 (new-tensor (apply #'permute* tensor orders))
+  (let* ((new-tensor (apply #'permute* tensor orders))
 	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
 	 (lazy-p (and (every #'(lambda (x) x) (butlast diff 2))

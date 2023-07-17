@@ -1063,7 +1063,7 @@ The function parameter computes all the previous nodes of the given tensor if an
 (defun system-lazy-set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
 
-  (let ((space-tmp (make-clone tensor)))
+  (let ((space-tmp (make-clone tensor nil t)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)

@@ -96,7 +96,7 @@ Variables:
      (length (nodevariables-tmp-variables node))
      (length (nodevariables-parameters node)))))
 
-
+;; ↓ All fixed, nevermind.
 ;; ==============================================================================================================================
 ;; [FixME] Someone destructs (tensor-input-shape tensor) in toplevel (destructs = permute* shuffles the order of it)
 ;; I tried harder, but I couldn't find which function shuffles it, but I've confirmed other slots (strides, visible-shape, views...) are NEVER affected.
@@ -127,8 +127,7 @@ See also: `set-input`"
       (error "embody-input: ranks does not match: ~a and ~a" input-tensor actual-tensor))
     
     (let ((symbols-changed (make-hash-table)))
-      (loop for place in (or ;;(gethash (tensor-id input-tensor) *shape-input-table*)
-			     (tensor-input-shape input-tensor))
+      (loop for place in (tensor-input-shape input-tensor)
 	    for value in (shape actual-tensor)
 	    for rank upfrom 0
 	    if (and (not (symbolp place))
@@ -165,9 +164,6 @@ permute-order : ~a
 	    if (symbolp place)
 	      do (setf (gethash place symbols-changed) value))
       
-      ;;(if (null (gethash (tensor-id input-tensor) *shape-input-table*))
-;;	  (setf (gethash (tensor-id input-tensor) *shape-input-table*) (copy-list (tensor-input-shape input-tensor))))
-
       ;; Checking if the new size never beyonds memory-pool.
 
       ;; No need to check.
@@ -347,20 +343,20 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (return-from compile-backward-chain
       (when (slot-value toplevel 'requires-grad)
 	(init-optimizer-utils! toplevel)
-	(if (equal (shape toplevel) (shape past-dy))
+	(if (not (permuted-p past-dy))
 	    `(add-grads ,toplevel ,(tensor-id past-dy))
 	    (progn
-	      ;; MEMO: Couldn't detect the gradient is permuted at compile-time
-	      ;; we need to re-compile gradient adder.
-	      ;; Create Gradient-Adder again
-	      (setf (gradient-adder toplevel) nil)
-
+	      ;; The function gradient-adder is compiler for default permutation tensors
+	      ;; So if the gradients are given as permuted, we need to recompile gradient-adder.
+	      (setf (gradient-adder toplevel)
+		    (make-gradient-adder
+		     toplevel
+		     (shape toplevel)
+		     :use-input
+		     past-dy))
 	      ;; X.grad += permute*(value, 0 1 ...)
 	      ;; ^ recompiling is needed!
-	      `(progn
-		 (when (null (gradient-adder ,toplevel))
-		   (setf (gradient-adder ,toplevel) (make-gradient-adder ,toplevel ',(shape toplevel) :use-input ,(tensor-id past-dy))))
-		 (add-grads ,toplevel ,(tensor-id past-dy))))))))
+	      `(add-grads ,toplevel ,(tensor-id past-dy)))))))
  
 
   ;; with-shape-checkout: at where node, the backward error was occured?

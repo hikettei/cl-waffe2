@@ -71,8 +71,8 @@
   (is (chain-test3))
   (is (chain-test4))
   (is (chain-test5))
-  (is (chain-test6))
-  (is (chain-test7)))
+  (is (chain-test7))
+  (is (chain-test6)))
 
 (test backward-side-effect-test
   (is (backward-being-not-destructed)))
