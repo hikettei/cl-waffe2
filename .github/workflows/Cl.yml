@@ -15,6 +15,10 @@ jobs:
       matrix:
         lisp: [sbcl-bin]
         os: [ubuntu-latest]
+        target:
+        - normal
+        archcpu:
+        - AVX2
 
     steps:
       - uses: actions/checkout@v1
@@ -23,10 +27,18 @@ jobs:
           LISP: ${{ matrix.lisp }}
         run: |
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      
+      - name: Update $PATH
+        run: |
+          echo $PATH
+          echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
+      - name: Check $PATH
+        run: echo $PATH
+
       - name: Downloading OpenBLAS
         run: |
           sudo apt install libblas-dev
       - name: Operating tests
         run: |
           ros config set dynamic-space-size 4gb
-          ros --eval '(defparameter cl-user::*cl-waffe-config* `((:libblas "libblas.dylib")))' ./roswell/cl-waffe2-test.ros
+          ros --eval '(defparameter cl-user::*cl-waffe-config* `((:libblas "libblas")))' ./roswell/cl-waffe2-test.ros
