@@ -72,7 +72,7 @@ Transposes the last two axes of the given tensor.
 
 When called with !matmul, the operation is ignored.
 "
-  
+
   (extend-states (!permute tensor :~ 0 1) tensor))
 
 (defun !matmul (x y

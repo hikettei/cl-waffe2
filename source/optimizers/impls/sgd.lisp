@@ -28,5 +28,6 @@ Param_{new}\\gets{Param - Param_{grad}\\times{lr}}
   (let* ((lr    (make-tensor (sgd-lr optimizer)))
 	 (param (read-parameter optimizer))
 	 (grad  (grad param)))
+
     (step-sgd param grad lr)))
 

@@ -29,14 +29,14 @@
 			      (hidden-size 256)
 			      (activation #'!tanh))
 	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
-	     :compile-mode :default
+	     :compile-mode :safety
 	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
 	     :build ((self)
 		     (let ((out (!mean (softmax-cross-entropy
 				       (call
 					(model self)
 					(make-input `(batch-size ,in-class)  :X))
-				       (make-input `(batch-size  ,out-class) :Y)))))
+				       (make-input  `(batch-size ,out-class) :Y)))))
 
 		       
 		       out))
@@ -45,48 +45,28 @@
 			 (let ((loss (forward     (model self))))
 			   (format t "Loss: ~a~%" (tensor-vec loss)))
 			 (backward    (model self))
-			 (optimize!   (model self)))
+			 (optimize!   (model self))
+			 )
 	     :set-inputs ((self x y)
 			  (set-input (model self) :X x)
 			  (set-input (model self) :Y y))
 	     :predict ((self x)
 		       (call (model self) x))))
-
-(deftrainer (MLPTrainer-Test (self in-class out-class
-			      &key
-			      (hidden-size 256)
-			      (activation #'!tanh))
-	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
-	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
-	     :build ((self)
-		     (let ((out (!sum (!mul
-				 (call
-				  (model self)
-				  (make-input `(batch-size ,in-class)  :X))
-				 (make-input `(batch-size  ,out-class) :Y)))))
-
-		       
-		       out))
-	     :minimize! ((self)
-			 (zero-grads! (model self))
-			 (let ((loss (forward     (model self))))
-			   (format t "Loss: ~a~%" (tensor-vec loss)))
-			 (backward    (model self))
-			 (optimize!   (model self)))
-	     :set-inputs ((self x y)
-			  (set-input (model self) :X x)
-			  (set-input (model self) :Y y))
-	     :predict ((self x)
-		       (call (model self) x))))
-
 ;; TODO: Batch-Size 10 -> 1
 
 (defun perform-test ()
   (let ((trainer (MLPTrainer 50 10 :hidden-size 30 :activation #'!relu)))
+    
     (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
     
     (minimize!  trainer)
+
+    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
+    
     (minimize!  trainer)
+
+    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
+    
     (minimize!  trainer)
     
 
@@ -97,18 +77,6 @@
    ;;    ))    
     trainer))
 
-(defun perform-test1 ()
-  (let ((trainer (MLPTrainer-Test 50 10 :hidden-size 30 :activation #'!tanh)))
-    (set-inputs trainer (randn `(30 50)) (bernoulli `(30 10) 0.1))
-    
-    (minimize!  trainer)
-    (minimize!  trainer)
-    (minimize!  trainer)
-    
+(dotimes (I 10)
+(perform-test))
 
-   ;; (time
-   ;;  (progn
-       ;;(set-inputs trainer (randn `(10 784)) (randn `(10 10)))
-   ;;    (minimize!  trainer)
-   ;;    ))    
-    trainer))

@@ -12,13 +12,22 @@
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
-		     (declare (ignore dx))
+		     ;;(declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (!copy dout :force t))))
+				 (if (tensor-permuted-p dout)
+				     (let ((out (make-input (shape dx) nil
+							    :create-from dout
+							    :dtype (dtype dx)
+							    :order (order dx))))
+				       (with-instant-kernel out
+					 `(progn
+					    (setf (tensor-vec ,out) (tensor-vec ,dout))
+					    ,out)))
+				     (!copy dout :force t))))) 
 		       (values nil dy-out)))
 	  :documentation "
 Moves all the visible elements of `B` into visible areas of `A`.
@@ -704,11 +713,11 @@ dout   ... dout values"
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
-				 `(progn
+				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
 				    (embody-actual-tensor
-				     ,out
+				     out1
 				     ,a)
-				    ,out))
+				    out1))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))
 				  (let ((out (apply #'!permute dout (permute-old self))))
@@ -785,6 +794,12 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 "
   ;; If only the last two axes are subject to swapped.
   ;; Return a special node LazyTranspose instead.
+
+  ;; BugCode:
+  ;; (let ((a (parameter (print (ax+b `(3 10) 1 0)))))
+  ;;		  (proceed-backward (!matmul a (randn `(10 3))))
+  ;;		  a)
+  ;;
   (let* ((new-tensor (apply #'permute* tensor orders))
 	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
