@@ -18,8 +18,8 @@
 		:dtype (dtype tensor)
 		:order (order tensor)
 		:scalar-p (scalar-p tensor))))
-
     (cl-waffe2/vm.generic-tensor::embody-tensor-vec place tensor)
+    ;; set facet = :exist?
     place))
 
 (defun composite->defun (~ composite function-name
@@ -60,16 +60,15 @@ Return: defun form
 	 (mname     (gensym)))
     (with-no-grad
       (multiple-value-bind (compiled-kernel set-input-forms) (cl-waffe2/vm.generic-tensor:build result :compile-mode compile-mode :use-setinput-form t)
-
 	`(progn
-	   
 	   ;; Main Body
 	   (defun ,tmp-fname (,self ,@namelist)
 	     (declare (ignore ,self))
+	     
 	     ,@(loop for tensor in inputs
 		     for name in namelist
 		     collect `(set-input ,compiled-kernel ,(tensor-name tensor) ,name))
-
+	     
 	     (let ((outputs (multiple-value-list (forward ,compiled-kernel))))
 	       (cl-waffe2/vm.generic-tensor::with-adjustable-symbols (,@set-input-forms)
 		 (apply #'values (map 'list #'eliminate-undetermined-size outputs)))))
@@ -235,6 +234,7 @@ On the condition where composite should be defined as polymorphic, the function 
 	   (type keyword order)
 	   (type compile-option-t compile-mode))
 
+  
   `(eval (composite-function ,composite-init-form
 			     ',function-name
 			     #'(lambda ()
@@ -245,4 +245,3 @@ On the condition where composite should be defined as polymorphic, the function 
 			     :compile-mode ,compile-mode
 			     :dtype ,dtype
 			     :order ,order)))
-

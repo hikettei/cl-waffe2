@@ -67,7 +67,6 @@
   (let ((current-keys (loop for symbol being the hash-keys   in *adjustable-shape-table* collect symbol))
 	(current-vals (loop for size   being the hash-values in *adjustable-shape-table* collect size))
 	(old-table    (adjustable-shape-state-state old-state)))
-    ;; (not some
     (not (some #'(lambda (target-symbol current-val)
 		   (let ((val (gethash target-symbol old-table)))
 		     (if (and (typep val 'fixnum)
@@ -236,18 +235,24 @@ Usage:
 
 (with-adjustable-symbols (('a 1) ('b 1))
     (with-let-adjustable-symbols (a b)
-        (print a)
-        (print b)))
+        (print a)   ;; = 1
+        (print b))) ;; = 1
 
 "
 
   `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table)))
 	  (*current-shape-state*    (make-adjustable-shape-state)))
      
+     ;;(print "========")
+     ;;(maphash #'(lambda (key val)
+     ;;		  (format t "KEY: ~a   VAL: ~a~%" key val))
+     ;;	      *adjustable-shape-table*)
+     
      ;;(unless (typep ,symbol-value 'fixnum)
      ;;  (error "with-adjustalbe-symbol: Attempted to register an symbol, ~a (TODO More clear error)" ,symbol-value))
-     
+
      (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
+	 
      ,@body))
 
 (defmacro with-adjustable-symbols ((&rest forms) &body body)
@@ -259,10 +264,11 @@ Usage:
     (expand-form forms)))
 
 (defmacro with-let-adjustable-symbol (symbol-name &body body)
+  ;; TO DELETE: Binding with symbol-name
   `(let ((,symbol-name (gethash ',symbol-name *adjustable-shape-table*)))
      (declare (type fixnum ,symbol-name)
-	      
 	      (ignorable ,symbol-name))
+     
      (declare (ignore symbol-name))
      ,@body))
 

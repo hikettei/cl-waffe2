@@ -785,7 +785,6 @@ Note that view is only created for Tensors, not a Scalar.
 		   :create-from tensor
 		   :dtype (dtype tensor)
 		   :order (order tensor)
-		   ;; A view of tensor requires NO GRADINET on some conditions!!! -> use detach-and-clone
 		   :requires-grad (slot-value tensor 'requires-grad)
 		   :shape         (slot-value tensor 'orig-shape)
 		   :projected-p   t

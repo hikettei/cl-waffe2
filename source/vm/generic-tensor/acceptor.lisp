@@ -97,40 +97,86 @@ Variables:
      (length (nodevariables-parameters node)))))
 
 
+;; ==============================================================================================================================
+;; [FixME] Someone destructs (tensor-input-shape tensor) in toplevel (destructs = permute* shuffles the order of it)
+;; I tried harder, but I couldn't find which function shuffles it, but I've confirmed other slots (strides, visible-shape, views...) are NEVER affected.
+;; I know this solution is literally UGLY, but decided to create a LUT (*shape-input-table*, id->first input-shape), and ignore
+;; destructed input-shape.
+;; This sometime may result an unexcepted behaviour, but:
+;; tensor-id is created by (gensym), so assured that never conflicts.
+;; (i.e.: Once the tensor(id=A) is initialized as `(A B), no one can create another tensor whose id=A)
+;; As long as we don't add any strange features, I think we'll be fine.
+;; One of my concern is that: when allocating a cache tensor for InputTensor, we must not use input-shape.
+;; ==============================================================================================================================
+
+(defparameter *shape-input-table* (make-hash-table) "Things to be deleted in the future release.")
+
 (defun embody-input (nodevars variable-name actual-tensor)
   "(embody-input variables :a tensor)
 
+InputTensor[A x B] <- ExistTensor[10 x 10] for example.
 See also: `set-input`"
   (declare (type NodeVariables nodevars))
   
   (let ((input-tensor (gethash variable-name (nodevariables-variables nodevars))))
-
+    
     (when (null input-tensor)
       (error "The InputTensor named ~a weren't appeared in the computation node" variable-name))
 
+    (when (not (= (dims input-tensor) (dims actual-tensor)))
+      (error "embody-input: ranks does not match: ~a and ~a" input-tensor actual-tensor))
+    
     (let ((symbols-changed (make-hash-table)))
-      ;;(print "====")
-      ;;(print (tensor-input-shape input-tensor))
-      ;;(print (shape actual-tensor))
-      (loop for place in (tensor-input-shape input-tensor)
+      (loop for place in (or (gethash (tensor-id input-tensor) *shape-input-table*)
+			     (tensor-input-shape input-tensor))
 	    for value in (shape actual-tensor)
+	    for rank upfrom 0
 	    if (and (not (symbolp place))
 		    (not (= place value)))
-	      do (error "embody-input: Can't embody ~a into fixed place, ~a.
+	      do (error "embody-input: The ~ath rank is a fixed dimension.
+So the corresponding shape must be ~a but got ~a.
+
+Shapes: Input_Place <- Actual_Tensor
+-----------------------------------------------
+Shapes:   ~a~a  <-  ~a
+
 input-tensor:
 ~a
 
+Strides       : ~a
+permute-order : ~a
+
 actual-tensor:
-~a"
-			value place input-tensor actual-tensor)
+~a
+
+Strides       : ~a
+permute-order : ~a
+"
+			rank value place
+			variable-name
+			(tensor-input-shape input-tensor)
+			(shape actual-tensor)
+			input-tensor
+			(tensor-stride input-tensor)
+			(tensor-permute-order input-tensor)
+			actual-tensor
+			(tensor-stride actual-tensor)
+			(tensor-permute-order actual-tensor))
 	    if (symbolp place)
 	      do (setf (gethash place symbols-changed) value))
+      
+      (if (null (gethash (tensor-id input-tensor) *shape-input-table*))
+	  (setf (gethash (tensor-id input-tensor) *shape-input-table*) (copy-list (tensor-input-shape input-tensor))))
 
       ;; Checking if the new size never beyonds memory-pool.
 
+      ;; No need to check.
+      
+      #|
       (let ((maxsize (nodevariables-adjustable-symbol nodevars)))
 	(maphash
 	 #'(lambda (key value)
+	     (declare (ignore value))
 	     (let ((max-val (gethash key maxsize)))
 	       
 	       (when (and (not (null max-val))
@@ -138,22 +184,24 @@ actual-tensor:
 			  )
 		 
 		 ;;(error "Error: Can't embody tensor because ~a = ~a is given but ~a must <= ~a"
-		;;	key
-		;;	value
-		;;	key
-		;;	max-val)
-		 (setf (gethash key maxsize) value))
+		 ;;	key
+		 ;;	value
+		 ;;	key
+		 ;;	max-val)
+		 ;;(setf (gethash key maxsize) value)
+		 )
 	       
 
 	       (when (null max-val)
-		 (setf (gethash key maxsize) value))))
-	 symbols-changed))
+		 ;; (setf (gethash key maxsize) value)
+		 )))
+      symbols-changed))
+      |#
       
       ;; InputTensor <- Actual-Tensor
       (embody-actual-tensor input-tensor actual-tensor)
 
       ;; Apply hash-table
-
       (maphash
        #'(lambda (key value)
 	   (setf (getf (nodevariables-symbols nodevars) key) value))
@@ -302,6 +350,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	(if (equal (shape toplevel) (shape past-dy))
 	    `(add-grads ,toplevel ,(tensor-id past-dy))
 	    (progn
+	      ;; MEMO: Couldn't detect the gradient is permuted at compile-time
+	      ;; we need to re-compile gradient adder.
 	      ;; Create Gradient-Adder again
 	      (setf (gradient-adder toplevel) nil)
 
