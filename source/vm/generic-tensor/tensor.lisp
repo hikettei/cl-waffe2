@@ -65,7 +65,6 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (gradient-resetter :accessor gradient-resetter)
 
    (save-for-backward-space       :initform nil :accessor save-for-backward-space)
-   (save-for-backward-space-cache :initform nil :accessor save-for-backward-space-cache)
    (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
    
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
@@ -1063,17 +1062,15 @@ The function parameter computes all the previous nodes of the given tensor if an
 (defun system-lazy-set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
 
-  (let ((space-tmp (make-clone tensor nil t)))
+  (let ((space-tmp (make-clone tensor nil nil)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
-      (setf (save-for-backward-space-cache result) space-tmp)
+      ;; !! Before and after save4bw, result == tensor.
       result)))
 	
-(defun system-lazy-read-save-for-backward (tensor &key (cache-place nil))
-  (if cache-place
-      (save-for-backward-space-cache tensor)
-      (save-for-backward-space tensor)))
+(defun system-lazy-read-save-for-backward (tensor)
+  (save-for-backward-space tensor))
 
 ;; Exports
 (defun hook-optimizer! (tensor optimizer)

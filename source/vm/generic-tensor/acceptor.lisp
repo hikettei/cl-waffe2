@@ -343,7 +343,12 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (return-from compile-backward-chain
       (when (slot-value toplevel 'requires-grad)
 	(init-optimizer-utils! toplevel)
-	(if (not (permuted-p past-dy))
+	;; We receive gradients as vec permuted (see MoveTensorNode)
+	`(add-grads ,toplevel ,(tensor-id past-dy)))))
+
+  ;; Not anymore used.
+  #|
+	(if t;(not (permuted-p past-dy))
 	    `(add-grads ,toplevel ,(tensor-id past-dy))
 	    (progn
 	      ;; The function gradient-adder is compiler for default permutation tensors
@@ -357,7 +362,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	      ;; X.grad += permute*(value, 0 1 ...)
 	      ;; ^ recompiling is needed!
 	      `(add-grads ,toplevel ,(tensor-id past-dy)))))))
- 
+ |#
 
   ;; with-shape-checkout: at where node, the backward error was occured?
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))

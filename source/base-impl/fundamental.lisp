@@ -12,13 +12,22 @@
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
-		     (declare (ignore dx))
+		     ;;(declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (!copy dout :force t))))
+				 (if (tensor-permuted-p dout)
+				     (let ((out (make-input (shape dx) nil
+							    :create-from dout
+							    :dtype (dtype dx)
+							    :order (order dx))))
+				       (with-instant-kernel out
+					 `(progn
+					    (setf (tensor-vec ,out) (tensor-vec ,dout))
+					    ,out)))
+				     (!copy dout :force t))))) 
 		       (values nil dy-out)))
 	  :documentation "
 Moves all the visible elements of `B` into visible areas of `A`.
