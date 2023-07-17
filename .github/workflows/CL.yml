@@ -1,0 +1,32 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+      branches:
+        - main
+        
+jobs:
+  test:
+    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin]
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setting up environments
+        env:
+          LISP: ${{ matrix.lisp }}
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Downloading OpenBLAS
+        run: |
+          sudo apt install libblas-dev
+      - name: Operating tests
+        run: |
+          ros config set dynamic-space-size 4gb
+          ros --eval '(defparameter cl-user::*cl-waffe-config* `((:libblas "libblas.dylib")))' ./roswell/cl-waffe2-test.ros
