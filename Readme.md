@@ -16,6 +16,8 @@
   </p>
 </p>
 
+[![CI](https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml/badge.svg?branch=master)](https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml)
+
 # cl-waffe2
 
 > ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
@@ -277,7 +279,7 @@ https://arxiv.org/abs/1912.01703
 - [x] Prepare documentations and examples (ongoing)
 - [x] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS, impelement it as NoBlasMatmulTensor because it is signifcantly slow)
 - [x] Formulate specifications of nodes.
-- [ ] Use Cl/CD
+- [x] Use Cl/CD
 - [x] ~~REPL-Friendly Node, (Implemented as proceed function)~~, ~~with-dynamically-mode (no need to do this)~~, set-config
 - [ ] ascognitious
 - [ ] node debugtools
