@@ -707,7 +707,7 @@ dout   ... dout values"
 				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
 				    (embody-actual-tensor
 				     out1
-				     ,a)				    
+				     ,a)		    
 				    out1))
 		       :backward ((self dout a out)
 				  (declare (ignore a out))
@@ -785,7 +785,14 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 "
   ;; If only the last two axes are subject to swapped.
   ;; Return a special node LazyTranspose instead.
-  (let* ((new-tensor (apply #'permute* tensor orders))
+
+  ;; BugCode:
+  ;; (let ((a (parameter (print (ax+b `(3 10) 1 0)))))
+  ;;		  (proceed-backward (!matmul a (randn `(10 3))))
+  ;;		  a)
+  ;;
+  (let* (;(tensor (!copy tensor)) ;; Ignore if tenosr is inputtensor
+	 (new-tensor (apply #'permute* tensor orders))
 	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
 	 (lazy-p (and (every #'(lambda (x) x) (butlast diff 2))

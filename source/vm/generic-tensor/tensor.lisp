@@ -30,6 +30,11 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
 
    ;; MultiDimensional APIs
+   ;; Set T If stride/shape/view informations are copied at a certain time.
+   ;; This is necessary because (embody-actual-tensor <<Model Parameter Tensor>> (!t (randn `(3 3))))
+   ;; will destruct <<Model Parameter Tensor>>'s stride/shape/view informations.
+   (slot-info-copied :initform nil :type boolean :initarg :slot-info-copied :reader tensor-info-safe-p)
+   
    (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
    (permute-order :initform nil :initarg :permute-order :accessor tensor-permute-order :type list)
@@ -385,7 +390,9 @@ Note:
 	(view        (getf initargs :view))
 	(order       (getf initargs :order))
 	(orig-shape  (getf initargs :shape))
-	(create-from (getf initargs :create-from)))
+	(create-from (getf initargs :create-from))
+	;(need-copy?  (getf initargs :slot-info-copied))
+	)
 
     ;; create-from   = extend permute information from the tensor create-from.
     ;; orig-shape    = used to compute strides, always synchronized with vec.
@@ -403,7 +410,8 @@ Note:
 	    (not (scalar-p tensor)))
        ;; Subject to shuffle: orig-shape visible-shape view permute-order stride
        ;; Never Do this: Recomputing strides, USE create-from
-       
+
+       ;; MEMO: copy-list is needed??
        (setf (tensor-stride tensor) (tensor-stride create-from)
 	     (slot-value tensor 'orig-shape) (original-shape create-from)
 	     (tensor-permute-order tensor) (tensor-permute-order create-from)
@@ -700,7 +708,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   ;;(assert (eql (tensor-facet input-tensor) :input)
   ;;	  nil
   ;;	  "Assertion Failed with (eql (tensor-facet input-facet) :input)")
-
+  
   (assert (vec actual-tensor)
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
@@ -709,11 +717,15 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	    (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
+
+  
+  ;;(when (and (null (tensor-info-safe-p input-tensor)) ;; <<Model Parameter>>'s strides aren't copied!
+;;	     (eql  (tensor-facet input-tensor) :Exist))
+  ;;  (warn "embody-actual-tensor is gonna destruct ExistTensor: ~a" (shape input-tensor)))
   
   (let ((actual-tensor
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
 		   (permuted-p input-tensor))
-	      
 	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
 	      actual-tensor)))
     
@@ -810,6 +822,7 @@ Note that view is only created for Tensors, not a Scalar.
 		 :vec (vec tensor)))
 
 (defun detach-and-clone1 (tensor)
+  "Set tensor-info-save-p = t"
   (make-instance (car *using-backend*)
 		 :create-from tensor
 		 :scalar-p (scalar-p tensor)
@@ -821,7 +834,8 @@ Note that view is only created for Tensors, not a Scalar.
 		 :input-shape (copy-list (tensor-input-shape tensor))
 		 :facet (tensor-facet tensor)
 		 :named (tensor-name tensor)
-		 :vec (vec tensor)))
+		 :vec (vec tensor)
+		 :slot-info-copied t))
 
 (defun permute-computable-p (old-order new-order)
   (equal (sort (copy-list old-order) #'<)

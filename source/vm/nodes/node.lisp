@@ -369,7 +369,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 		      :force t)))
 	    ;; F(x, y, ...)
 	    ;; x.state = :chain / :input?
-	    
+
 	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
 		out
 		;; when bw-node... -> chain not connected well...?
@@ -425,10 +425,12 @@ inputs      ... inputs called with
 	      (cons
 	       out
 	       `(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
-		  
+		  ;;(print "=======")
+		  ;;(print ,dout)
 		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
 		   ,dout
 		   ,dout-place)
+		  ;;(print ,dout)
 		  
 		  ,(with-no-grad
 		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
