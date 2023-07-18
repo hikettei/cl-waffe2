@@ -98,6 +98,7 @@
 	       (:file "optimizers/impls/sgd")
 
 	       (:file "package")
+	       (:file "array-converter")
 	       (:file "utils")
 	       (:file "network")
 	       (:file "trainer")

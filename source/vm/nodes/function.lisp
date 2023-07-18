@@ -24,6 +24,7 @@
 
 (defun composite->defun (~ composite function-name
 			 &key
+			   (inputs nil)
 			   (dtype :float)
 			   (order :column)
 			   (scalar-p-list nil)
@@ -42,6 +43,7 @@ Return: defun form
 
 
   (let* ((inputs (composite-input-tensor composite ~
+					 :inputs inputs
 					 :dtype dtype
 					 :order order
 					 :scalar-p-list scalar-p-list))
@@ -81,7 +83,7 @@ Return: defun form
 	     (let ((,mname (,model-name)))
 	       (shape-compatible? ,mname ,@namelist)
 	       (call ,mname ,@namelist)))
-		   
+	   
 	   #',function-name)))))
 
 (defun ->key (&rest inputs)
@@ -112,6 +114,7 @@ Return: defun form
 			    ~state
 			    composite
 			    (symb function-name key)
+			    :inputs inputs
 			    :dtype (map 'list #'dtype inputs)
 			    :order order
 			    :scalar-p-list (map 'list #'scalar-p inputs)
@@ -177,20 +180,22 @@ Input:
 
    scalar-p-list [list] the corresponding position of argument is interpreted as a scalartensor.
 "
+  (declare (ignore scalar-p-list dtype))
 
   (when (null (read-where composite))
     (error "Failed to define composite-function, because :where form of ~a isn't declared yet." composite))
 
   (let ((including~? (include~p composite)))
     (cond
-      ((and (keywordp dtype)
-	    (null including~?))
-       ;; A facet of function is determined as one.
-       (composite->defun nil composite function-name
-			 :dtype dtype
-			 :order order
-			 :compile-mode compile-mode
-			 :scalar-p-list scalar-p-list))
+      ;; We need to consider permuted tensor.
+      ;;((and (keywordp dtype)
+      ;;    (null including~?))
+      ;; A facet of function is determined as one.
+      ;;(composite->defun nil composite function-name
+      ;;		 :dtype dtype
+      ;;		 :order order
+      ;;		 :compile-mode compile-mode
+      ;;		 :scalar-p-list scalar-p-list))
       (T
        (composite->generic composite function-name composite-creator-function
 			   :adjustable-size including~?

@@ -508,17 +508,18 @@ An constructor function for ~a."
 
 (defun composite-input-tensor (composite ~
 			       &key
+				 (inputs nil)
 				 (dtype :float)
 				 (order :column)
 				 (scalar-p-list nil))
-  "Returns (make-input)"
+  "Returns an list of InputTensor which is used to trace the computation nodes."
   (declare (type Composite composite)
 	   (type list ~))
   (flet ((read-state (state nth)
 	   (if (keywordp state)
 	       state
 	       (nth nth state)))
-	 (read~      (~ nth)
+	 (read~ (~ nth)
 	   (if (listp (car ~))
 	       (nth nth ~)
 	       ~)))
@@ -529,6 +530,7 @@ An constructor function for ~a."
 	    collect
 	    (let ((res (make-input (where-arg->shape (read~ ~ i) x)
 				   (->keyword (nth-subscript i))
+				   :create-from (nth i inputs)
 				   :scalar-p (read-state scalar-p-list i)
 				   :dtype (read-state dtype i)
 				   :order order)))

@@ -12,6 +12,15 @@
    :cl-waffe2/backends.cpu
    :cl-waffe2/backends.lisp
    :cl-waffe2/threads)
+  
+  ;; Facet APIs
+  (:export
+   #:convert-tensor-facet
+   #:change-facet
+   #:with-facet
+   #:with-facets
+   )
+  
   (:export
    #:with-config
    #:with-dtype
