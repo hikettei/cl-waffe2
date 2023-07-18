@@ -65,14 +65,57 @@
        (= (vref a 0) 3.0)
        (= (vref b 0) 6.0)))))
 
+(defun chain-test8 ()
+  (let ((a (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 3)))
+	(b (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 2)))
+	(c (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 1))))
+    (Proceed-backward (!sum (!add (!mul a b) c)))
+    ;;(with-no-grad
+    ;;(let ((a (!sum (!add (!mul a b) c))))
+    ;;  (with-no-grad (build a))
+    ;;  (cl-waffe2/viz:viz-computation-node a "./assets/hoge.dot")))
+    ;;(print (grad a))
+    ;;(print (grad b))
+    ;;(print (grad c))
+    (and
+     (= (vref (grad a) 0) 2)
+     (= (vref (grad b) 0) 3)
+     (= (vref (grad c) 0) 1))))
+
+(defun chain-test9 ()
+  (let ((a (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 3)))
+	(b (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 2)))
+	(c (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 1)))
+	(a1 (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 2)))
+	(c1 (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 1))))
+
+    (let ((prev-layer (!add (!mul a b) c)))
+      (proceed-backward (!sum (!add (!mul a1 prev-layer) c1))))
+
+    (and
+     (= (vref (grad a)  0) 6)
+     (= (vref (grad b)  0) 9)
+     (= (vref (grad c)  0) 3)
+     (= (vref (grad a1) 0) 7)
+     (= (vref (grad c1) 0) 1))
+    
+    (list
+     (grad a)
+     (grad b)
+     (grad c))))
+    
+     
+     
+
 (test chain-rule-test
   (is (chain-test1))
   (is (chain-test2))
   (is (chain-test3))
   (is (chain-test4))
   (is (chain-test5))
+  (is (chain-test6))
   (is (chain-test7))
-  (is (chain-test6)))
+  (is (chain-test8)))
 
 (test backward-side-effect-test
   (is (backward-being-not-destructed)))

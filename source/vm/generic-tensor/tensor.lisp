@@ -1104,6 +1104,6 @@ The function parameter computes all the previous nodes of the given tensor if an
   (when (slot-value tensor 'requires-grad)
     (if (gradient-resetter tensor)
 	(funcall (gradient-resetter tensor))
-	(warn "Couldn't reset gradients of tenso, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
+	(warn "Couldn't reset gradients of tensor, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
 
 

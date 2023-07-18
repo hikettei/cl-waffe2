@@ -63,10 +63,10 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
   (let ((l (!sub x y)))
     (case reduction
       (:sum
-       (!sum (!mul l l)))
+       (!sum  (!square l)))
       (:mean
-       (!mean (!mul l l)))
-      (T (!mul l l)))))
+       (!mean (!square l)))
+      (T      (!square l)))))
 
 
 (defmodel (Softmax-Cross-Entropy-Forward (self &key (delta 1e-7) (avoid-overflow t))

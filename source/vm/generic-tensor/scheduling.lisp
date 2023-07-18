@@ -79,6 +79,9 @@ tensor-ref-n indicates that how many times the tensor was used in the node."
 
 	       (not (tensor-protect-me (car past-variables)))
 	       (not (cl-waffe2/base-impl:movetensor-save-for-backward current-node))
+	       (or *no-grad*
+		   ;; TODO: Simplify save-for-backward, (compile statically workign kernel?)
+		   (ancestor-param-p (car past-variables)))
 	       
 	       ;; (!copy place past-out) i.e. (!copy Chain Past-Out)
 
@@ -112,6 +115,7 @@ Computation Time: O(total_nodes * 2)"
 	   (type (and keyword (member :speed :memory)) major)
 	   (type fixnum n-cores)
 	   (optimize (speed 3)))
+  
   (when (tensor-traced-p out-tensor)
     (return-from optimize-computation-node!))
   
