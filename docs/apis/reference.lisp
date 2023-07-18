@@ -212,14 +212,25 @@
       (with-op-doc (macro-function 'with-facets) 't))
 
     (with-section "Brief network description of the configurations"
-
-      )
+      (insert "(TODO)"))
 
     (with-section "Sequential Model"
+      (insert "(TODO) Composing several layers...")
 
       )
 
     (with-section "Trainer"
+      (insert "(TODO)
 
-      )))
+```lisp
+minimize!:
+  ...
+
+
+set-input:
+  describe ...
+
+predict:
+  describe ..
+```"))))
 

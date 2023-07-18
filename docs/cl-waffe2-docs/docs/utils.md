@@ -144,7 +144,20 @@ with-facet but input-forms are several.
 ```
 
 ## Brief network description of the configurations
-
+(TODO)
 ## Sequential Model
-
+(TODO) Composing several layers...
 ## Trainer
+(TODO)
+
+```lisp
+minimize!:
+  ...
+
+
+set-input:
+  describe ...
+
+predict:
+  describe ..
+```
