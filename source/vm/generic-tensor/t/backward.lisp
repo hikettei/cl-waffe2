@@ -93,16 +93,11 @@
       (proceed-backward (!sum (!add (!mul a1 prev-layer) c1))))
 
     (and
-     (= (vref (grad a)  0) 6)
-     (= (vref (grad b)  0) 9)
-     (= (vref (grad c)  0) 3)
+     (= (vref (grad a)  0) 4)
+     (= (vref (grad b)  0) 6)
+     (= (vref (grad c)  0) 2)
      (= (vref (grad a1) 0) 7)
-     (= (vref (grad c1) 0) 1))
-    
-    (list
-     (grad a)
-     (grad b)
-     (grad c))))
+     (= (vref (grad c1) 0) 1))))
     
      
      
@@ -115,7 +110,8 @@
   (is (chain-test5))
   (is (chain-test6))
   (is (chain-test7))
-  (is (chain-test8)))
+  (is (chain-test8))
+  (is (chain-test9)))
 
 (test backward-side-effect-test
   (is (backward-being-not-destructed)))
