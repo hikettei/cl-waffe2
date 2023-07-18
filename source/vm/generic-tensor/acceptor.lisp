@@ -7,6 +7,8 @@
 
 (defparameter *no-grad* nil "If t, no gradients are made for backwards.")
 
+(defparameter *calling-backward-mode* nil)
+
 (defmacro with-no-grad (&body body)
   "
 ## [macro] with-no-grad
@@ -212,6 +214,12 @@ permute-order : ~a
       (setf (statecontainer-forward-result  (tensor-state tensor)) nil
 	    (statecontainer-backward-result (tensor-state tensor)) nil)))
 
+(defun state-reset-bw! (tensor)
+  "Resets tensor's result to get next round output."
+  (declare (type AbstractTensor tensor))
+  (if (tensor-state tensor)
+      (setf (statecontainer-backward-result (tensor-state tensor)) nil)))
+
 (defvar *node-parameters-tmp* nil "An temporary variable to store all the variables used in the computation node.")
 
 (defun construct-variables-table (variables-list)
@@ -279,11 +287,20 @@ permute-order : ~a
      (nodevariables-parameters variables-info))
     nil))
 
+(defparameter *runtime-shape-inspection* nil)
+
 ;; ==============================================================================
 ;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================
 
-;; TODO: Check the returned tensor has the same shape?
+(defun runtime-shape-inspection (declared-shape tensor)
+  (declare (type list declared-shape)
+	   (type AbstractTensor tensor)
+	   (optimize (speed 3)))
+
+  (shape-equal-list declared-shape (shape tensor)))
+
+;; Set *runtime-shape-inspection* = t to detect run-time shape-error
 (defun compile-forward-chain (toplevel &key (stop-me nil))
   "
 ## [function] compile-forward-chain
@@ -301,11 +318,12 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
+	 (node  (tensor-backward toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
 
     (when (compiled-kernel-cache-p fw-compiled)
       (push fw-compiled *kernel-storeroom*))
-	
+    
     (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
@@ -328,10 +346,42 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			(,(tensor-id toplevel) (progn ,toplevel)))
 
 	 ;; The Operation hasn't done yet...
-	 (when (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
+	 
+	 (when (or (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
+		   (when *calling-backward-mode*
+		     (let ((out (statecontainer-backward-result (tensor-state ,(tensor-id toplevel)))))
+		       (car out))))
+
+	   ;; Judge the tensor is created when forward time or backward time
+	   (when (and *calling-backward-mode*
+		      (not (car (statecontainer-backward-result (tensor-state ,(tensor-id toplevel))))))
+	     (setf (statecontainer-backward-result (tensor-state ,(tensor-id toplevel)))
+		   (list (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))
+
+	   
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
 		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
+	 ;; TODO UPDATE
+	 ,(when (and node
+		     *runtime-shape-inspection*)
+	    `(unless *calling-backward-mode*
+	       (assert
+		(runtime-shape-inspection
+		 (nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node)) ;; Declared output shape
+		 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))) ;; Output shape compiled
+		nil
+		"Assertion Failed.: Detected Shape-Error in runtime.
+At      : ~a
+Returned: ~a
+Declared: ~a
+
+The definition/implementation of nodes could be invaild."
+		,node
+		(nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
+		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))) ;; Output shape compiled
+
+	 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 
 (defun compile-backward-chain (toplevel past-dy)
@@ -441,11 +491,9 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 ;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed. <- Do it at toplevel
 (defun make-vm-function (toplevel)
   (optimize-computation-node! toplevel :speed 1)
-  
-  (let ((*node-parameters-tmp*))
-    `(progn
-       ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
-       ,(compile-forward-chain toplevel))))
+
+  `(progn
+     ,(compile-forward-chain toplevel)))
 
 (defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode))
@@ -457,6 +505,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 Try again with: (with-no-grad ...) " (shape toplevel)))
   
   (let* ((*kernel-storeroom*)
+	 (*node-parameters-tmp*)
 	 (out (if (scalar-p toplevel)
 		  (make-tensor 1
 			       :dtype (dtype toplevel)
@@ -468,13 +517,19 @@ Try again with: (with-no-grad ...) " (shape toplevel)))
 	 (body `(let ((,(tensor-id out) ,out))
 		  (declare (ignorable ,(tensor-id out))
 			   ,(compile-option-form compile-mode))
-		  (let ((*no-grad* t))
+		  
+		  (let ((*no-grad* t)
+			(*calling-backward-mode* t))
 		    ,(if set-input-forms
 			 `(with-adjustable-symbols (,@set-input-forms)
 			    ,(compile-backward-chain toplevel out))
 			 (compile-backward-chain toplevel out)))
 		  t)))
-    (compile nil `(lambda () ,(place-cached-kernels body)))))
+    (compile nil `(lambda ()
+		    ;(state-reset-bw! ,out)
+		    ;(state-reset-bw! ,toplevel)
+		    ;,@(map 'list #'(lambda (x) `(state-reset-bw! ,x)) *node-parameters-tmp*)
+		    ,(place-cached-kernels body)))))
 
 ;; ==========================================
 ;; General-Purpose APIs

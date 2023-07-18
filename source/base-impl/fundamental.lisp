@@ -27,7 +27,7 @@
 					 `(progn
 					    (setf (tensor-vec ,out) (tensor-vec ,dout))
 					    ,out)))
-				     (!copy dout :force t))))) 
+				     (!copy dout :force t)))))
 		       (values nil dy-out)))
 	  :documentation "
 Moves all the visible elements of `B` into visible areas of `A`.

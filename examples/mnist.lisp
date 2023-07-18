@@ -24,50 +24,60 @@
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features))
 
+
 (deftrainer (MLPTrainer (self in-class out-class
 			      &key
 			      (hidden-size 256)
 			      (activation #'!tanh))
 	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
 	     :compile-mode :fastest
-	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
+	     :optimizer (cl-waffe2/optimizers:Adam :lr 1e-5)
 	     :build ((self)
-		     (let ((out (!mean (softmax-cross-entropy
-					(call
-					 (model self)
-					 (make-input `(batch-size ,in-class)  :X))
-					(make-input  `(batch-size ,out-class) :Y)))))
-
-		       
-		       out))
+		     (!mean (softmax-cross-entropy
+			     (call
+			      (model self)
+			      (make-input `(batch-size ,in-class)  :X))
+			     (make-input  `(batch-size ,out-class) :Y))))
 	     :minimize! ((self)
 			 (zero-grads! (model self))
 			 (let ((loss (forward     (model self))))
-			   (format t "Loss: ~a~%" (tensor-vec loss)))
+			   ;(format t "Training loss: ~a~%" (aref (tensor-vec loss) 0))
+			   )
 			 (backward    (model self))
-			 (optimize!   (model self))
+			 ;(optimize!   (model self))
 			 )
 	     :set-inputs ((self x y)
 			  (set-input (model self) :X x)
 			  (set-input (model self) :Y y))
 	     :predict ((self x)
 		       (call (model self) x))))
-;; TODO: Batch-Size 10 -> 1
 
-(defun perform-test ()
+;; TODO
+;; Optimizers: Momentum Adagrad RMSProp Adam
+;; Documentations on defsequence, deftrainer
+;; 
+
+
+(defun train-and-valid-mnist ()
   (let ((trainer (MLPTrainer 784 10 :hidden-size 256 :activation #'!relu)))
 
     (set-inputs trainer (randn `(100 784)) (bernoulli `(100 10) 0.3))
+    (minimize! trainer)
+
+    (sb-profile:profile
+     "CL-WAFFE2/OPTIMIZERS"
+     "CL-WAFFE2/BACKENDS.CPU"
+     "CL-WAFFE2/BACKENDS.LISP"
+     "CL-WAFFE2/VM.GENERIC-TENSOR"
+     "CL-WAFFE2/VM.NODES")
+    
     (time
-     (dotimes (i 1000)
+     (dotimes (i 100)
+       
        (minimize!  trainer)))
 
-   ;; (time
-   ;;  (progn
-       ;;(set-inputs trainer (randn `(10 784)) (randn `(10 10)))
-   ;;    (minimize!  trainer)
-   ;;    ))    
+    (sb-profile:report)
     trainer))
 
-(perform-test)
+(train-and-valid-mnist)
 

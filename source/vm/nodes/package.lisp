@@ -40,6 +40,7 @@
 		#:system-lazy-read-save-for-backward
 		#:scalar-p)
   (:export
+   #:node-output-shape
    #:create-subscript-p
    #:composite-where
    #:define-composite-function
