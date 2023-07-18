@@ -18,6 +18,7 @@
    (uprank-state :initform nil :initarg :uprank-state :reader uprank-state :type list)
    (transmission-state :initarg :transmission-state :reader transmission-state :type list)
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
+   (excepted-output-shape :initform nil :type list :accessor node-output-shape)
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
 
@@ -222,6 +223,8 @@ Here's a list of reports.
       ;; Memo: Sharing Allocated memory between f and b
       ;; can be realised with self ...
       ;; recompute grad
+
+      (setf (node-output-shape node) out-state)
 
       (let* ((forward-form (call-next-method))
 	     (next-tensor

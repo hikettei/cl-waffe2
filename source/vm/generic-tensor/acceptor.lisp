@@ -279,11 +279,20 @@ permute-order : ~a
      (nodevariables-parameters variables-info))
     nil))
 
+(defparameter *runtime-shape-inspection* nil)
+
 ;; ==============================================================================
 ;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================
 
-;; TODO: Check the returned tensor has the same shape?
+(defun runtime-shape-inspection (declared-shape tensor)
+  (declare (type list declared-shape)
+	   (type AbstractTensor tensor)
+	   (optimize (speed 3)))
+
+  (shape-equal-list declared-shape (shape tensor)))
+
+;; Set *runtime-shape-inspection* = t to detect run-time shape-error
 (defun compile-forward-chain (toplevel &key (stop-me nil))
   "
 ## [function] compile-forward-chain
@@ -301,11 +310,12 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
   
   (let* ((state (tensor-state toplevel))
 	 (vars  (tensor-variables toplevel))
+	 (node  (tensor-backward toplevel))
 	 (fw-compiled (statecontainer-forward-out-form state)))
 
     (when (compiled-kernel-cache-p fw-compiled)
       (push fw-compiled *kernel-storeroom*))
-	
+    
     (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
@@ -332,6 +342,24 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
 		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
 
+	 ;; TODO UPDATE
+	 ,(when (and node
+		     *runtime-shape-inspection*)
+	    `(assert
+	      (runtime-shape-inspection
+	       (nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node)) ;; Declared output shape
+	       (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))) ;; Output shape compiled
+	      nil
+	      "Assertion Failed.: Detected Shape-Error in runtime.
+At      : ~a
+Returned: ~a
+Declared: ~a
+
+The definition/implementation of nodes could be invaild."
+	      ,node
+	      (nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
+	      (shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))) ;; Output shape compiled
+	 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 
 (defun compile-backward-chain (toplevel past-dy)
