@@ -194,5 +194,32 @@
 
 
 (with-page *cl-waffe2-package* "[package] cl-waffe2"
-  (insert "`:cl-waffe2` provides utils.")
-  )
+  (insert "The package `:cl-waffe2` provides a wide range of utilities.")
+
+  (macrolet ((with-op-doc (name type &body body)
+	       `(progn
+		  (placedoc ,name ,type)
+		  ,@body)))
+
+    (with-section "Accessing AbstractTensor as an array of other types."
+      (insert "we provides Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
+
+")
+      
+      (with-op-doc #'convert-tensor-facet 't)
+      (with-op-doc #'change-facet 't)
+      (with-op-doc (macro-function 'with-facet) 't)
+      (with-op-doc (macro-function 'with-facets) 't))
+
+    (with-section "Brief network description of the configurations"
+
+      )
+
+    (with-section "Sequential Model"
+
+      )
+
+    (with-section "Trainer"
+
+      )))
+

@@ -355,11 +355,17 @@ For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for ex
 ✅ Already defined. 
 
 ```lisp
-((self dout dx dy) (declare (ignore dx))
+((self dout dx dy)
  (let ((dy-out
         (if (and (eql (tensor-attribute dy) chain) (movetensor-ignore-me self))
             dout
-            (!copy dout force t))))
+            (if (tensor-permuted-p dout)
+                (let ((out
+                       (make-input (shape dx) nil create-from dout dtype
+                                   (dtype dx) order (order dx))))
+                  (with-instant-kernel out
+                    `(progn (setf (tensor-vec ,out) (tensor-vec ,dout)) ,out)))
+                (!copy dout force t)))))
    (values nil dy-out)))
 ```
 
