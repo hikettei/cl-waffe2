@@ -29,14 +29,14 @@
 			      (hidden-size 256)
 			      (activation #'!tanh))
 	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
-	     :compile-mode :safety
+	     :compile-mode :fastest
 	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-2)
 	     :build ((self)
 		     (let ((out (!mean (softmax-cross-entropy
-				       (call
-					(model self)
-					(make-input `(batch-size ,in-class)  :X))
-				       (make-input  `(batch-size ,out-class) :Y)))))
+					(call
+					 (model self)
+					 (make-input `(batch-size ,in-class)  :X))
+					(make-input  `(batch-size ,out-class) :Y)))))
 
 		       
 		       out))
@@ -55,20 +55,12 @@
 ;; TODO: Batch-Size 10 -> 1
 
 (defun perform-test ()
-  (let ((trainer (MLPTrainer 50 10 :hidden-size 30 :activation #'!relu)))
-    
-    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
-    
-    (minimize!  trainer)
+  (let ((trainer (MLPTrainer 784 10 :hidden-size 256 :activation #'!relu)))
 
-    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
-    
-    (minimize!  trainer)
-
-    (set-inputs trainer (randn `(3 50)) (bernoulli `(3 10) 0.1))
-    
-    (minimize!  trainer)
-    
+    (set-inputs trainer (randn `(100 784)) (bernoulli `(100 10) 0.3))
+    (time
+     (dotimes (i 1000)
+       (minimize!  trainer)))
 
    ;; (time
    ;;  (progn
@@ -77,6 +69,5 @@
    ;;    ))    
     trainer))
 
-(dotimes (I 10)
-(perform-test))
+(perform-test)
 

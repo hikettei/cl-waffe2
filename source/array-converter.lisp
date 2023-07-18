@@ -1,10 +1,16 @@
 
-# [package] cl-waffe2
-The package `:cl-waffe2` provides a wide range of utilities.
-## Accessing AbstractTensor as an array of other types.
-we provides Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
+(in-package :cl-waffe2)
 
+;;
+;; array-converter.lisp provides a converter between: WaffeTensor <-> Other Arrays
+;;
 
+;;
+;; TODO: List, Array, Simple-Array, Sync
+;;
+
+(defgeneric convert-tensor-facet (from to)
+  (:documentation "
 ## [generic] convert-tensor-facet
 
 ```lisp
@@ -15,7 +21,7 @@ The generic function `convert-tensor-facet` pays an important role when converti
 
 This method is intended to be extended by users.
 
-For example: `AbstractTensor` -> `simple-array`, can be used as:
+For example, converting `AbstractTensor` -> `simple-array`:
 
 ```lisp
 (convert-tensor-facet (randn `(3 3)) 'simple-array)
@@ -59,7 +65,10 @@ To avoid this, it is recommended to move the tensor into contigous place in adva
 
 See also: `convert-facet`
 
+"))
 
+(defun change-facet (array-from &key (direction 'array))
+  "
 ## [function] change-facet
 
 ```lisp
@@ -80,7 +89,80 @@ As of this writing(2023/7/18), we provide these directions in default.
 
 `AbstractTensor` returns `AbstractTensor` (devices to use depend on `*using-device*`). The dtype of returned tensor can be inferred from a first element of given array.
 
+"
+  (convert-tensor-facet array-from direction))
 
+
+#|
+[BugFix]: Stride Changes, Multidimensional Offsets are ignored.
+;; When called with argument, we need to call permute* or view
+;; Moves Place <- Target, and statically working.
+(defmodel (Move-Into-Contiguous (self)
+	   :where (Place[~] Target[~] -> Place[~])
+	   :on-call-> ((self place target)
+		       (declare (ignore self))
+		       (!move place target :force t))))
+
+(define-composite-function (Move-Into-contiguous) move-static)
+|#
+
+
+(defun AbstractCPUTensor->simple-array (from)
+  ;; AbstractTensor -> Simple-Array
+  (assert (cl-waffe2/vm.generic-tensor::vec from)
+	  nil
+	  "convert-tensor-facet: Assertion Failed because the given tensor doesn't have a existing vec.")
+
+  ;; TODO: Check from is [computed]
+
+  (cond
+    ((cl-waffe2/vm.generic-tensor::permuted-p from)
+     ;; Permuted?
+     ;; FixME: Convert-Tensor-Facet with permuted is slow
+     ;; because compiling is running.
+     (tensor-vec (proceed (->contiguous from) :compile-mode :fastest)))
+    ((tensor-projected-p from)
+     ;; FIXME
+     (tensor-vec (proceed (!copy from :force t) :compile-mode :fastest)))
+    (T
+     (tensor-vec from))))
+
+;; AbstractTensor[CPU, Lisp] -> Simple-Array, Array
+(defmethod convert-tensor-facet ((from CPUTensor)  (to (eql 'simple-array))) (AbstractCPUTensor->simple-array from))
+(defmethod convert-tensor-facet ((from LispTensor) (to (eql 'simple-array))) (AbstractCPUTensor->simple-array from))
+
+
+(defun simple-array->array (array dimensions dtype)
+  (declare (type simple-array array))
+  (make-array dimensions
+	      :element-type (dtype->lisp-type dtype)
+	      :displaced-to array
+	      :displaced-index-offset 0))
+
+(defmethod convert-tensor-facet ((from CPUTensor) (to (eql 'array)))
+  (simple-array->array (AbstractCPUTensor->simple-array from)
+		       (shape from)
+		       (dtype from)))
+
+(defmethod convert-tensor-facet ((from LispTensor) (to (eql 'array)))
+  (simple-array->array (AbstractCPUTensor->simple-array from)
+		       (shape from)
+		       (dtype from)))
+
+
+;; Simple-Array/Array/List -> AbstractTensor
+(defmethod convert-tensor-facet ((from simple-array) (to (eql 'AbstractTensor)))
+  (let ((storage-vec (progn
+		       #+sbcl(sb-ext:array-storage-vector from)
+		       #-sbcl(make-array (apply #'* (array-dimensions from))
+					 :element-type (array-element-type from)
+					 :displaced-to from))))
+    (cl-waffe2/vm.generic-tensor::make-tensor-from-vec
+     (array-dimensions from) (dtype-of (aref storage-vec 0)) ;; TODO: Fix it. If array-element-type=t, keep doing this, otherwise use it.
+     storage-vec)))
+
+(defmacro with-facet ((var (object-from &key (direction 'array) (sync nil))) &body body)
+  "
 ## [macro] with-facet
 
 ```lisp
@@ -124,7 +206,21 @@ The macro `with-facet` is working on the flowchart below. Note that on some cond
 ```
 
 See also: `with-facets`
+"
+  `(let ((,var (convert-tensor-facet ,object-from ,direction)))
+     (prog1
+	 (progn ,@body)
+       ,(when sync
+	  `(progn
+	     (when (not (typep ,object-from 'AbstractTensor))
+	       (warn "with-facet: sync=t is ignored because object-from is not AbstractTensor"))
 
+	     (when (typep ,object-from 'AbstractTensor)
+	       (let ((tensor (convert-tensor-facet ,var 'AbstractTensor)))
+		 (setf (tensor-vec ,object-from) (tensor-vec tensor)))))))))
+
+(defmacro with-facets ((&rest input-forms) &body body)
+  "
 ## [macro] with-facets
 
 with-facet but input-forms are several.
@@ -142,22 +238,12 @@ with-facet but input-forms are several.
     (0.17137305 -0.026806794 -0.8192844)
     (0.19916026 -0.5102597 1.1834184)) 
 ```
-
-## Brief network description of the configurations
-(TODO)
-## Sequential Model
-(TODO) Composing several layers...
-## Trainer
-(TODO)
-
-```lisp
-minimize!:
-  ...
+"
+  (labels ((expand-forms (rest-forms)
+	     (if rest-forms
+		 `(with-facet ,(car rest-forms)
+		    ,(expand-forms (cdr rest-forms)))
+		 `(progn ,@body))))
+    (expand-forms input-forms)))
 
 
-set-input:
-  describe ...
-
-predict:
-  describe ..
-```

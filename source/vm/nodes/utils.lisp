@@ -144,12 +144,15 @@ Return:
 
 
 (defun tensor-keyname (tensor)
-  (symb ;; {BackendName[Dtype]}
+  (symb ;; {BackendName[Dtype]<Permute-Order>}
    '{
    (class-name (class-of tensor))
    '[
    (intern (symbol-name (dtype tensor)))
    ']
+   '<
+   (intern (format nil "~a" (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)))
+   '>
    '}))
 
 

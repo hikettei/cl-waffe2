@@ -523,11 +523,21 @@ Note:
   "Computes row-major-strides"
   (row-major-calc-strides shape))
 
+(defun make-tensor-from-vec (shape dtype vec
+			     &key (order *default-order*))
+  (make-instance (car *using-backend*)
+		 :dtype dtype
+		 :order order
+		 :requires-grad nil
+		 :shape (copy-list shape)
+		 :projected-p nil
+		 :vec vec
+		 :facet :exist))
+
 (defun make-tensor (shape-or-scalar
 		    &key
 		      (requires-grad nil)
 		      (dtype *default-dtype*)
-		      (vec  nil)
 		      (view nil)
 		      (order *default-order*)
 		      (initial-element))
@@ -539,7 +549,6 @@ Note:
 		   &key
 		      (requires-grad nil)
 		      (dtype *default-dtype*)
-		      (vec  nil)
 		      (view nil)
 		      (order *default-order*)
 		      (initial-element))
@@ -555,14 +564,11 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 
 3. `dtype` (keyword) Set dtype you wanna use. See also: (Dtype API)
 
-4. `vec` (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
+4. `order` (member :column :row)
 
-5. `order` (member :column :row)
-
-6. `initial-element` (Optional)
+5. `initial-element` (Optional)
 "
-  (declare (type list view)
-	   (ignore vec))
+  (declare (type list view))
   (if (typep shape-or-scalar 'list)
       (make-instance (car *using-backend*)
 		     :dtype dtype

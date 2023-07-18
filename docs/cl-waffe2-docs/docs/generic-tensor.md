@@ -226,7 +226,6 @@ In the network, `InputTensor` plays a role in being caches in the operation, or 
 		   &key
 		      (requires-grad nil)
 		      (dtype *default-dtype*)
-		      (vec  nil)
 		      (view nil)
 		      (order *default-order*)
 		      (initial-element))
@@ -242,11 +241,9 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 
 3. `dtype` (keyword) Set dtype you wanna use. See also: (Dtype API)
 
-4. `vec` (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.
+4. `order` (member :column :row)
 
-5. `order` (member :column :row)
-
-6. `initial-element` (Optional)
+5. `initial-element` (Optional)
 
 ### Example
 
@@ -362,7 +359,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1176 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP12987 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -378,10 +375,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53985A7B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53B2A4CB}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {536332EB}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53B2B3BB}>
 
 += [Tensors in the computation node] =======+
 
