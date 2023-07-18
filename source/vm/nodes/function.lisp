@@ -70,7 +70,7 @@ Return: defun form
 	     ,@(loop for tensor in inputs
 		     for name in namelist
 		     collect `(set-input ,compiled-kernel ,(tensor-name tensor) ,name))
-	     
+
 	     (let ((outputs (multiple-value-list (forward ,compiled-kernel))))
 	       (cl-waffe2/vm.generic-tensor::with-adjustable-symbols (,@set-input-forms)
 		 (apply #'values (map 'list #'eliminate-undetermined-size outputs)))))

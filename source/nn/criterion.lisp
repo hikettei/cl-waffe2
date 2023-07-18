@@ -102,7 +102,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 			       (with-setting-save4bw ((x x) (labels labels)) self
 				 (static-softmax-cross-entropy-forward x labels)))
 		     :backward ((self dout)
-				(with-reading-save4bw ((x x) (labels labels)) self				  
+				(with-reading-save4bw ((x x) (labels labels)) self
 				  (static-softmax-cross-entropy-backward
 				   dout
 				   x
