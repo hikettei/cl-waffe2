@@ -800,11 +800,17 @@ A\gets{B}
 <p><code>dtype</code> dtype to use.</p>
 <h3 id="backward_9">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx dy) (declare (ignore dx))
+<pre><code class="language-lisp">((self dout dx dy)
  (let ((dy-out
         (if (and (eql (tensor-attribute dy) chain) (movetensor-ignore-me self))
             dout
-            (!copy dout force t))))
+            (if (tensor-permuted-p dout)
+                (let ((out
+                       (make-input (shape dx) nil create-from dout dtype
+                                   (dtype dx) order (order dx))))
+                  (with-instant-kernel out
+                    `(progn (setf (tensor-vec ,out) (tensor-vec ,dout)) ,out)))
+                (!copy dout force t)))))
    (values nil dy-out)))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>

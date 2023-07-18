@@ -386,7 +386,6 @@
            &amp;key
               (requires-grad nil)
               (dtype *default-dtype*)
-              (vec  nil)
               (view nil)
               (order *default-order*)
               (initial-element))
@@ -402,9 +401,6 @@
 </li>
 <li>
 <p><code>dtype</code> (keyword) Set dtype you wanna use. See also: (Dtype API)</p>
-</li>
-<li>
-<p><code>vec</code> (Anything) If you wanna pass the make-instance to already-allocated matrix, use this parameter.</p>
 </li>
 <li>
 <p><code>order</code> (member :column :row)</p>
@@ -482,7 +478,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1176 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP12987 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -495,10 +491,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53985A7B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53B2A4CB}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {536332EB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53B2B3BB}&gt;
 
 += [Tensors in the computation node] =======+
 
