@@ -96,6 +96,7 @@
 	       (:file "optimizers/defoptimizer")
 
 	       (:file "optimizers/impls/sgd")
+	       (:file "optimizers/impls/adam")
 
 	       (:file "package")
 	       (:file "array-converter")

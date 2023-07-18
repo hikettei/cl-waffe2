@@ -10,7 +10,8 @@
    #:step-optimize)
 
   (:export
-   #:SGD))
+   #:SGD
+   #:Adam))
 
 (in-package :cl-waffe2/optimizers)
 
