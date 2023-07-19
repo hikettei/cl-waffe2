@@ -152,6 +152,9 @@
 
 	       (:file "backends/lisp/t/package")
 
+	       (:file "backends/JITLispTensor/t/package")
+	       (:file "backends/JITLispTensor/t/compiler")
+
 	       (:file "nn/t/package")
 	       (:file "nn/t/activation")
 	       (:file "nn/t/criterion")
