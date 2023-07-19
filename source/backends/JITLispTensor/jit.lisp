@@ -62,7 +62,9 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 (defun tensor-lisp-jit-p (tensor)
   "Returns T if the backward of tensor is a subtype of JITLispTensor"
   (let ((backward (tensor-backward tensor)))
-    (subtypep (class-of backward) 'LispJIT-Blueprint)))
+    (or
+     (subtypep (class-of backward) 'LispJIT-Blueprint)
+     (subtypep (class-of backward) 'ScalarTensor))))
 
 (defun apply-compile-p (variable next-variable)
   "Following the defition of 3., return t if there's a need to run compiling."

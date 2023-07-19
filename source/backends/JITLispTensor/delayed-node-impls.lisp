@@ -56,22 +56,28 @@
 ;; Scalar-Mat Operation family are originally declared as:
 ;; (A[~] Scalar[scal] -> A[~] where scal = 1)
 ;;
-(macrolet ((define-scalar-mat-impl (name lisp-op)
-	     `(define-impl (,name
+(macrolet ((define-scalar-mat-impl (name lisp-op f)
+	     `(progn
+		(define-impl (,name
 			    :device JITLispTensor
 			    :extends (LispJIT-Blueprint))
 			   :forward ((self A scalar)
 				     (declare (ignore scalar))
-				     (setf (blueprint-opecode self) ',lisp-op)
-				     `(progn ,A)))))
+				     (progn
+				       (setf (blueprint-opecode self) ',lisp-op)
+				       nil)
+				     `(progn ,A)))
+		(defmethod implement-op ((op (eql ',lisp-op)) opast &rest args)
+		  `(setf ,(car args) (,',f ,(car args) ,(second args)))))))
   
-  (define-scalar-mat-impl ScalarAdd scalar-add)
-  (define-scalar-mat-impl ScalarSub scalar-sub)
-  (define-scalar-mat-impl ScalarMul scalar-mul)
-  (define-scalar-mat-impl ScalarDiv scalar-div))
+  (define-scalar-mat-impl ScalarAdd M+S +)
+  (define-scalar-mat-impl ScalarSub M-S -)
+  (define-scalar-mat-impl ScalarMul M*S *)
+  (define-scalar-mat-impl ScalarDiv M/S /))
 
 
 ;; Todo: Element-wise kernels... (OK)
+;; Todo: !sas-op (to reverse the order of ops)
 ;; Todo: Scalar And Scalar Kernel ... !sub uses
 ;; Todo: Eliminate move
 ;; Todo: Mathematical APIs

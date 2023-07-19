@@ -7,15 +7,17 @@
 ;; (defmethod (eql ...) or pattern match)
 
 ;; TODO: Eliminate unused MoveTensorNode and allocation with it.
+;; AVX2 Isn't wokirng? Supper slow -> No, compute-stepby is included to complied code.
 
 (defun ->op-type (obj)
   (typecase obj
     (opAST :opAST)
     (JITLispTensor :tensor)
+    (ScalarTensor  :scalar)
     (null :null)
     (T (error "Detected unknown type of variable: ~a" obj))))
 
-(deftype ast-variable-types () `(and keyword (member :opAST :tensor :null)))
+(deftype ast-variable-types () `(and keyword (member :opAST :scalar :tensor :null)))
     
 (defstruct (opAST
 	    (:constructor make-opAST (operation &rest args)))
@@ -23,19 +25,21 @@
 [car args]
       |
     an list of AST_Variable"
-  (car  operation :type JITLispTensor)
+  (car  operation :type (or ScalarTensor JITLispTensor))
   (args args :type list))
 
 (defstruct (AST-Variable
 	    (:constructor make-ast-variable
 		(content &aux (type (->op-type content)))))
   (type type :type ast-variable-types)
-  (content content :type (or null opAST JITLispTensor)))
+  (content content :type (or null opAST ScalarTensor JITLispTensor)))
 
 (defun add-variable (tensor)
   ;; TODO: Ignore MoveTensorNode
   (unless (find tensor *compiled-tensors*)
-    (push tensor *compiled-tensors*)))
+    ;; ScalarTensor isn't iteratible
+    (when (not (typep tensor 'ScalarTensor))
+      (push tensor *compiled-tensors*))))
 
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
@@ -86,6 +90,12 @@
   (declare (type AbstractTensor tensor))
   (symb (tensor-id tensor) '-vec))
 
+(defun tensor-stride-id (tensor)
+  (symb (tensor-id tensor) '-stride))
+
+(defun tensor-offset-id (tensor)
+  (symb (tensor-id tensor) '-offset))
+
 (defun with-allocating-vectors (tensors body)
   `(let (,@(loop for tensor in tensors
 		 collect `(,(tensor-vec-id tensor) (tensor-vec ,tensor))))
@@ -101,7 +111,13 @@
       #'(lambda (&rest ,views-area)
 	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
 	    `(loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		   do ,,@body)))
+		   do (let (,@(loop for view in ,views-area
+				    for tensor in ,tensors
+				    collect `(,(tensor-stride-id tensor) (the fixnum ,(stride-of view 0))))
+			    ,@(loop for view in ,views-area
+				    for tensor in ,tensors
+				    collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
+			,,@body))))
       ,tensors
       :at-least-dim 1)))
 
@@ -114,9 +130,9 @@
 		    (reader `(aref ,(tensor-vec-id tensor)
 				   ;; adding offsets
 				   ;; multiplying strides
-				   (+ ,(offset-of view 0)
+				   (+ ,(tensor-offset-id tensor)
 				      (the fixnum
-					   (* (the fixnum ,(stride-of view 0))
+					   (* ,(tensor-stride-id tensor)
 					      ,index-symbol))))))
 	       (setf (gethash key result) reader)))
     result))
@@ -157,7 +173,10 @@
 		       if (eql (ast-variable-type var) :opAST)
 			 collect (expand-aref (opast-car (ast-variable-content var)))
 		       if (eql (ast-variable-type var) :tensor)
-			 collect (expand-aref (ast-variable-content var)))))
+			 collect (expand-aref (ast-variable-content var))
+
+		       if (eql (ast-variable-type var) :scalar)
+			 collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) (tensor-vec ,(ast-variable-content var))))))
 	  *instructions*)
     nil))
 
