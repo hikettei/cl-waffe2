@@ -78,6 +78,9 @@
 	       (:file "backends/cpu/arithmetic")
 	       (:file "backends/cpu/matrix-ops")
 
+	       (:file "backends/JITLispTensor/package")
+	       (:file "backends/JITLispTensor/tensor")
+
 	       (:file "distributions/package")
 	       (:file "distributions/generic")
 	       (:file "distributions/randomness")
