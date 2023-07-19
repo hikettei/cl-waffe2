@@ -8,6 +8,9 @@
 
 ;; TODO: Eliminate unused MoveTensorNode and allocation with it.
 ;; AVX2 Isn't wokirng? Supper slow -> No, compute-stepby is included to complied code.
+;; Except the usage of no-grad
+;; setf使わない代わりに高速に動作とか？
+;; setfのアクセスをキャッシュするとかしないと速くならない
 
 (defun ->op-type (obj)
   (typecase obj
