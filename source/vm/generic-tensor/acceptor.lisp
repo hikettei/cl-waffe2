@@ -327,7 +327,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (when (compiled-kernel-cache-p fw-compiled)
       (push fw-compiled *kernel-storeroom*))
     
-    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me :called-with-vars (tensor-variables toplevel))) vars))
+    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me :called-with-vars toplevel)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
       ;;

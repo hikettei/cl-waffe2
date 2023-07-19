@@ -38,6 +38,13 @@
 ;;   - past-variables (list TopLevel)
 ;;   - next-variables (list MoveTensorNode2), needed to judge whether accept node or not.
 ;;
+;; 3. Constraints
+;; Detecting the changes of devices in the nodes(e.g.: [SinNode-JITLispTensor] -> [CosNode-LispTensor]), compiler will stop tracing and compiles a kernel.
+;; Detecting the changes of shapes in the nodes, compiler will stop tracing and compiles a kernel. (because complicated iteration can't be compiled in one go)
+;;
+;;
+;;
+;;
 
 (defparameter *operands* `(+ - * / move))
 
@@ -49,28 +56,52 @@
 AbstractNodes which extends this class, is recognised as `LispJITAble` Node by Lisp-JIT-Compiler. This class possess information which is necessary for jit-compiling to cl code.
 "))
 
-;; pattern match tukaou kana...
+(defun tensor-lisp-jit-p (tensor)
+  "Returns T if the backward of tensor is a subtype of JITLispTensor"
+  (let ((backward (tensor-backward tensor)))
+    (subtypep (class-of backward) 'LispJIT-Blueprint)))
+
+(defun apply-compile-p (variable next-variable)
+  "Following the defition of 3., return t if there's a need to run compiling."
+  
+  (or
+   ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
+   (null next-variable)
+   (funcall (compose #'not #'tensor-lisp-jit-p) next-variable)
+
+   ;; The change of shapes is detected:
+   (not (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable)))))
 
 (defmethod on-finalizing-compiling ((current-node LispJIT-Blueprint)
 				    variable
-				    next-variables)
+				    next-variable)
 
-  (print current-node)
-  (print variable)
-  (print next-variables)
-  ;;(defmethod on-compiling-finalizing .. Trace and JIT and Return S exp.
-  ;; (if (finalize-p?
-  ;; .. oyogaseteoku
-  ;; do-compile
-  nil
-  )
+  (if (apply-compile-p variable next-variable)
+      (progn
+	(format t "[INFO] Compiling nodes from ~a~%" current-node)
+	)
+      nil))
 
 
 (defun test-case-tmp ()
-  (with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
-    (let ((out (!sin (!add (randn `(10 10)) (randn `(10 10))))))
-      (let ((res (build out)))
-	res))))
+  (with-no-grad
+    (with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
+      (let ((a (!cos (!sin (forward (AddNode :float)
+				    (randn `(10 10))
+				    (randn `(10 10)))
+			   :-> (!copy (randn `(10 10))))
+		     :-> (randn `(10 10)))))
+	(build a)))))
+
+(defun test-case-tmp1 ()
+  (with-no-grad
+    (with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
+      (let ((a (forward (AddNode :float)
+			(randn `(10 10))
+			(randn `(10 10)))))
+	(build a)))))
+
+
 
 
 ;; defgeneric jitlisp-trace (operand (eq ...)) ...)

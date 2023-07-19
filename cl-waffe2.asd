@@ -78,11 +78,6 @@
 	       (:file "backends/cpu/arithmetic")
 	       (:file "backends/cpu/matrix-ops")
 
-	       (:file "backends/JITLispTensor/package")
-	       (:file "backends/JITLispTensor/tensor")
-	       (:file "backends/JITLispTensor/jit")
-	       (:file "backends/JITLispTensor/delayed-node-impls")
-
 	       (:file "distributions/package")
 	       (:file "distributions/generic")
 	       (:file "distributions/randomness")
@@ -91,6 +86,12 @@
 	       (:file "distributions/sparse")
 	       (:file "distributions/ziggurat")
 	       (:file "distributions/weights")
+
+	       (:file "backends/JITLispTensor/package")
+	       (:file "backends/JITLispTensor/tensor")
+	       (:file "backends/JITLispTensor/jit")
+	       (:file "backends/JITLispTensor/compiler")
+	       (:file "backends/JITLispTensor/delayed-node-impls")
 
 	       (:file "nn/package")
 	       (:file "nn/activation")

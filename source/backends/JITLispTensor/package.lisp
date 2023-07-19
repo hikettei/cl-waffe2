@@ -15,3 +15,14 @@
 (in-package :cl-waffe2/backends.jit.lisp)
 
 
+(defun compose (&rest fns)
+  "fn_1(fn_2(fn_n...))"
+  (if fns
+      (let ((fn1 (car (last fns)))
+            (fns (butlast fns)))
+        #'(lambda (&rest args)
+                   (reduce #'funcall fns
+                           :from-end t
+                           :initial-value (apply fn1 args))))
+      #'identity))
+
