@@ -72,9 +72,14 @@
     ;;       (setf (aref vec1 index) (sin (aref ...)))))
     ;;
 
-    (with-allocating-vectors *compiled-tensors*
-      (with-expand-call-with-view *compiled-tensors* *subscript-char*
-	(trace-and-compile! compiling-area)))))
+    `(progn
+       ,(with-allocating-vectors *compiled-tensors*
+	  (with-expand-call-with-view *compiled-tensors* *subscript-char*
+	    (trace-and-compile! compiling-area)))
+       
+       (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result
+	      (tensor-state ,(tensor-id variable)))
+	     (list ,(tensor-id variable))))))
 
 
 (defun tensor-vec-id (tensor)
@@ -96,7 +101,7 @@
       #'(lambda (&rest ,views-area)
 	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
 	    `(loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		   do ,@body)))
+		   do ,,@body)))
       ,tensors
       :at-least-dim 1)))
 
@@ -109,13 +114,10 @@
 		    (reader `(aref ,(tensor-vec-id tensor)
 				   ;; adding offsets
 				   ;; multiplying strides
-				  ; (+ ,(offset-of view 0)
-				 ;     (the fixnum
-				;	   (* (the fixnum ,(stride-of view 0))
-				;	      ,index-symbol)))
-
-				   ,index-symbol
-				   )))
+				   (+ ,(offset-of view 0)
+				      (the fixnum
+					   (* (the fixnum ,(stride-of view 0))
+					      ,index-symbol))))))
 	       (setf (gethash key result) reader)))
     result))
 
@@ -141,19 +143,21 @@
   (when (null (tensor-backward (opAST-car compile-toplevel)))
     (return-from explore-and-compile!
       (expand-aref (opAST-car compile-toplevel))))
-  
   (let* ((code (blueprint-opecode (tensor-backward (opAST-car compile-toplevel)))))
 
     (loop for var in (reverse (opAST-args compile-toplevel))
 	  if (eql (ast-variable-type var) :opAST)
 	    collect (explore-and-compile! (ast-variable-content var)))
     
-    (push (apply #'implement-op code compile-toplevel
+    (push
+     `(setf
+       ,(expand-aref (opAST-car compile-toplevel))
+       ,(apply #'implement-op code compile-toplevel
 		 (loop for var in (opAST-args compile-toplevel)
 		       if (eql (ast-variable-type var) :opAST)
 			 collect (expand-aref (opast-car (ast-variable-content var)))
 		       if (eql (ast-variable-type var) :tensor)
-			 collect (expand-aref (ast-variable-content var))))
+			 collect (expand-aref (ast-variable-content var)))))
 	  *instructions*)
     nil))
 

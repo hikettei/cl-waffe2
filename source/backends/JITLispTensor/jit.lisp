@@ -90,8 +90,6 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
 	;; Later, compiled lisp code will be returned.
-	(print (invoke-compiler! current-node variable next-variable))
-
-	)
+	(invoke-compiler! current-node variable next-variable))
       nil))
 
