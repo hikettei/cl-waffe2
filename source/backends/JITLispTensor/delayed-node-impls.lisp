@@ -34,7 +34,6 @@
 		       (progn
 			 (setf (blueprint-opecode self) 'move)
 			 nil)
-		       
 		       `(progn ,out)))
 
 (defmethod implement-op ((opcode (eql 'move)) opAST &rest args)

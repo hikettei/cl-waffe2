@@ -30,3 +30,7 @@
   (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
 
 
+(defmacro with-ez-to-view (&body body)
+  `(let ((*with-printing-tensor-omitted* t))
+     ,@body))
+
