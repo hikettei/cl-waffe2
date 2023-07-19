@@ -50,7 +50,8 @@
 		       `(progn ,x)))
 
 (defmethod implement-op ((op (eql 'inverse)) opAST &rest args)
-  `(/ 1 ,(car args)))
+  `(setf ,(car args) (/ 1 ,(car args))))
+
 ;;
 ;; Scalar-Mat Operation family are originally declared as:
 ;; (A[~] Scalar[scal] -> A[~] where scal = 1)
@@ -70,6 +71,10 @@
   (define-scalar-mat-impl ScalarDiv scalar-div))
 
 
-;; Todo: Element-wise kernels...
+;; Todo: Element-wise kernels... (OK)
+;; Todo: Scalar And Scalar Kernel ... !sub uses
+;; Todo: Eliminate move
+;; Todo: Mathematical APIs
+;; Todo: TEst
 
 
