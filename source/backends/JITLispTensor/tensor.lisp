@@ -1,6 +1,6 @@
 
 (in-package :cl-waffe2/backends.jit.lisp)
-
+#|
 (defclass JITLispTensor (AbstractTensor) nil)
 
 (defmethod initialize-instance :before ((tensor JITLispTensor)
@@ -21,3 +21,6 @@
 		 :element-type dtype
 		 :initial-element initial-element))))))
 
+|#
+
+(defclass JITLispTensor (cl-waffe2/backends.lisp:LispTensor) nil)

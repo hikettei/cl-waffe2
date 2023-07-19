@@ -7,3 +7,4 @@
 (in-package :cl-waffe2/backends.jit.lisp.test)
 
 (def-suite :jit-lisp-test)
+

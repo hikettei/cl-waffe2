@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe2/backends.jit.lisp.test)
 
-(in-suite :jit-lisp-test)
-
-
 (defun test-case-tmp ()
   (with-no-grad
     (with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
@@ -21,6 +18,8 @@
 			(randn `(10 10))
 			(randn `(10 10)))))
 	(build a)))))
+
+(in-suite :jit-lisp-test)
 
 ;; Check compiler can detect the change of shape, devices.
 (test delimiting-compilable-nodes

@@ -370,10 +370,11 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	 ;; Calls an event: on-finalizing-compiling
 	 ;; If JIT is implemented by user, expand user defined forms
 	 
-	 ,(cl-waffe2/vm.nodes:on-finalizing-compiling
-	   (tensor-backward toplevel)
-	   toplevel
-	   called-with-vars)
+	 ,(when (tensor-backward toplevel)
+	    (cl-waffe2/vm.nodes:on-finalizing-compiling
+	     (tensor-backward toplevel)
+	     toplevel
+	     called-with-vars))
 	   
 
 	 ;; TODO UPDATE
@@ -394,7 +395,7 @@ The definition/implementation of nodes could be invaild."
 		,node
 		(nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
 		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))) ;; Output shape compiled
-
+	 
 	 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 

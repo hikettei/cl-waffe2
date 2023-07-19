@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe2/backends.jit.lisp)
 
-(defvar *compiled-tensors* nil "Tensor1 Tensor2...")
-(defvar *compiled-tensors-aref* nil "(aref Tesnor1 i) (aref Tensor2 i) ...")
-(defvar *subscript-char* nil)
 ;; (defmethod (eql ...) or pattern match)
 
 ;; TODO: Eliminate unused MoveTensorNode and allocation with it.
@@ -11,6 +8,10 @@
 ;; Except the usage of no-grad
 ;; setf使わない代わりに高速に動作とか？
 ;; setfのアクセスをキャッシュするとかしないと速くならない
+
+(defvar *compiled-tensors* nil "Tensor1 Tensor2...")
+(defvar *compiled-tensors-aref* nil "(aref Tesnor1 i) (aref Tensor2 i) ...")
+(defvar *subscript-char* nil)
 
 (defun ->op-type (obj)
   (typecase obj
@@ -44,6 +45,31 @@
     (when (not (typep tensor 'ScalarTensor))
       (push tensor *compiled-tensors*))))
 
+(defun with-allocating-vectors (tensors body)
+  `(let (,@(loop for tensor in tensors
+		 collect `(,(tensor-vec-id tensor) (tensor-vec ,tensor))))
+     (declare ,@(loop for tensor in tensors
+		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
+	      (ignorable ,@(map 'list #'tensor-vec-id tensors)))
+     ,body))
+
+;; TODO: Do iteration with each strides/offsets
+(defmacro with-expand-call-with-view (tensors index-char &body body)
+  (let ((views-area (gensym)))
+    `(call-with-view
+      #'(lambda (&rest ,views-area)
+	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
+	    `(loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
+		   do (let (,@(loop for view in ,views-area
+				    for tensor in ,tensors
+				    collect `(,(tensor-stride-id tensor) (the fixnum ,(stride-of view 0))))
+			    ,@(loop for view in ,views-area
+				    for tensor in ,tensors
+				    collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
+			,,@body))))
+      ,tensors
+      :at-least-dim 1)))
+
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
 
@@ -66,6 +92,7 @@
   (declare (ignore current-node next-var))
 
   (let* ((*compiled-tensors* `(,variable))
+	 (*compiled-tensors-aref* (make-hash-table))
 	 (*subscript-char* (gensym "Index"))
 	 (compiling-area (confirm-compiling-area variable)))
 
@@ -98,31 +125,6 @@
 
 (defun tensor-offset-id (tensor)
   (symb (tensor-id tensor) '-offset))
-
-(defun with-allocating-vectors (tensors body)
-  `(let (,@(loop for tensor in tensors
-		 collect `(,(tensor-vec-id tensor) (tensor-vec ,tensor))))
-     (declare ,@(loop for tensor in tensors
-		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
-	      (ignorable ,@(map 'list #'tensor-vec-id tensors)))
-     ,body))
-
-;; TODO: Do iteration with each strides/offsets
-(defmacro with-expand-call-with-view (tensors index-char &body body)
-  (let ((views-area (gensym)))
-    `(call-with-view
-      #'(lambda (&rest ,views-area)
-	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
-	    `(loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		   do (let (,@(loop for view in ,views-area
-				    for tensor in ,tensors
-				    collect `(,(tensor-stride-id tensor) (the fixnum ,(stride-of view 0))))
-			    ,@(loop for view in ,views-area
-				    for tensor in ,tensors
-				    collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
-			,,@body))))
-      ,tensors
-      :at-least-dim 1)))
 
 (defun view->accessors (views index-symbol)
   "View -> '(aref tensor i)"

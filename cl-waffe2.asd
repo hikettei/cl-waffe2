@@ -40,8 +40,9 @@
 	       (:file "vm/generic-tensor/memory-pool")
 
 	       (:file "optimizers/package")
-	       (:file "vm/generic-tensor/tensor")
+	       
 	       (:file "vm/generic-tensor/acceptor")
+	       (:file "vm/generic-tensor/tensor")
 	       
 	       (:file "vm/generic-tensor/scheduling")
 
@@ -88,9 +89,9 @@
 	       (:file "distributions/weights")
 
 	       (:file "backends/JITLispTensor/package")
+	       (:file "backends/JITLispTensor/compiler")
 	       (:file "backends/JITLispTensor/tensor")
 	       (:file "backends/JITLispTensor/jit")
-	       (:file "backends/JITLispTensor/compiler")
 	       (:file "backends/JITLispTensor/delayed-node-impls")
 
 	       (:file "nn/package")
@@ -162,12 +163,13 @@
 	       
 	       )
   :perform (test-op (o s)
+		    (symbol-call :fiveam :run! :jit-lisp-test)
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
 		    (symbol-call :fiveam :run! :base-impl-test)
 		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
-		    (symbol-call :fiveam :run! :nn-test)
+		    (symbol-call :fiveam :run! :nn-test)		    
 		    ))
 
 
