@@ -26,3 +26,7 @@
                            :initial-value (apply fn1 args))))
       #'identity))
 
+(defun symb (&rest inputs)
+  (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
+
+
