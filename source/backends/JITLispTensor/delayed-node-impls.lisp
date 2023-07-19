@@ -19,11 +19,12 @@
 				       `(progn ,x)))
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
-		  `(,',lisp-op ,(car args) ,(second args))))))
+		  `(setf ,(car args) (,',lisp-op ,(car args) ,(second args)))))))
   (define-arith-impl AddNode +)
   (define-arith-impl SubNode -)
   (define-arith-impl MulNode *)
   (define-arith-impl DivNode /))
+
 
 ;; MoveTensor is declared as:
 ;; Move(A, B) -> A
@@ -38,7 +39,10 @@
 
 (defmethod implement-op ((opcode (eql 'move)) opAST &rest args)
   ;; A <- B
-  `(setf ,(car args) ,(second args)))
+  (let ((node (tensor-backward (opAST-car opAST))))
+    (if (movetensor-ignore-me node)
+	(second args)
+	`(setf ,(car args) ,(second args)))))
 
 (define-impl (InverseTensorNode :device JITLispTensor :extends (LispJIT-Blueprint))
 	     :forward ((self x)

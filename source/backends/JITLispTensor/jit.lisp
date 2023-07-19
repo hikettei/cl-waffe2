@@ -1,6 +1,13 @@
 
 (in-package :cl-waffe2/backends.jit.lisp)
 
+;;
+;; :cl-waffe2/backends.jit.lisp provides an example of implementing user-defined JIT Compiler
+;; in cl-waffe2. This program could be applied into CUDA/Metal/C++ compiler in the future...
+;;
+;; For simplicity, this package compiles from cl-waffe2 into Common Lisp program.
+;;
+
 ;; = [An blueprint of user-defined JIT Compiler in cl-waffe2] ===================
 ;;
 ;; 1. Goal
@@ -17,7 +24,7 @@
 ;; (setq out1 (loop-with-view (setf (aref out ...) (sin x)))) ...
 ;;
 
-;; 2. Implementation
+;; 2. Implementation: Embedding an additional program into compiled lisp code.
 ;;
 ;; On the end of calling of compile-forward-chain, a generic-function `on-finalizing-compiling` is invoked which users can append lisp-code as needed.
 ;; on-finalizing-compiling will give these informations:
@@ -41,8 +48,6 @@
 ;; 3. Constraints
 ;; Detecting the changes of devices in the nodes(e.g.: [SinNode-JITLispTensor] -> [CosNode-LispTensor]), compiler will stop tracing and compiles a kernel.
 ;; Detecting the changes of shapes in the nodes, compiler will stop tracing and compiles a kernel. (because complicated iteration can't be compiled in one go)
-;;
-;;
 ;;
 ;;
 
@@ -89,24 +94,4 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 
 	)
       nil))
-
-
-;; Later: Delete Test Codes:
-(defun test-case-tmp ()
-  (with-no-grad
-    (with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
-      (let ((a (!cos (!sin (forward (AddNode :float)
-				    (randn `(10 10))
-				    (randn `(10 10)))
-			   :-> (!copy (randn `(10 10))))
-		     :-> (randn `(10 10)))))
-	(build a)))))
-
-(defun test-case-tmp1 ()
-  (with-no-grad
-    (with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
-      (let ((a (forward (AddNode :float)
-			(randn `(10 10))
-			(randn `(10 10)))))
-	(build a)))))
 

@@ -5,7 +5,8 @@
 (defvar *compiled-tensors-aref* nil "(aref Tesnor1 i) (aref Tensor2 i) ...")
 (defvar *subscript-char* nil)
 ;; (defmethod (eql ...) or pattern match)
-;; TODO: Ignore unused MoveTensorNode and allocation with it.
+
+;; TODO: Eliminate unused MoveTensorNode and allocation with it.
 
 (defun ->op-type (obj)
   (typecase obj
@@ -88,13 +89,14 @@
 	      (ignorable ,@(map 'list #'tensor-vec-id tensors)))
      ,body))
 
+;; TODO: Do iteration with each strides/offsets
 (defmacro with-expand-call-with-view (tensors index-char &body body)
   (let ((views-area (gensym)))
     `(call-with-view
       #'(lambda (&rest ,views-area)
 	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
 	    `(loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		   do ,,@body)))
+		   do ,@body)))
       ,tensors
       :at-least-dim 1)))
 
@@ -102,9 +104,18 @@
   "View -> '(aref tensor i)"
   (let ((result (make-hash-table)))
     (loop for view   in views
-	  for tensor in *compiled-tensors* 
+	  for tensor in *compiled-tensors*
 	  do (let* ((key (tensor-id tensor))
-		    (reader `(aref ,(tensor-vec-id tensor) ,index-symbol)))
+		    (reader `(aref ,(tensor-vec-id tensor)
+				   ;; adding offsets
+				   ;; multiplying strides
+				  ; (+ ,(offset-of view 0)
+				 ;     (the fixnum
+				;	   (* (the fixnum ,(stride-of view 0))
+				;	      ,index-symbol)))
+
+				   ,index-symbol
+				   )))
 	       (setf (gethash key result) reader)))
     result))
 
@@ -114,10 +125,13 @@
 
 (defgeneric implement-op (opcode opAST &rest arguments))
 
+(defvar *instructions* nil)
+
 (defun trace-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
-  (let ((called-top-var (opAST-car compile-toplevel)))
-    `(setf ,(expand-aref called-top-var) ,(explore-and-compile! compile-toplevel))))
+  (let ((*instructions* nil))
+    (explore-and-compile! compile-toplevel)
+    `(progn ,@(reverse *instructions*))))
 
 (defun explore-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
@@ -126,16 +140,20 @@
 
   (when (null (tensor-backward (opAST-car compile-toplevel)))
     (return-from explore-and-compile!
-       (expand-aref (opAST-car compile-toplevel))))
- 
-  (let ((code (blueprint-opecode (tensor-backward (opAST-car compile-toplevel)))))
-    (apply #'implement-op code compile-toplevel
-	   (loop for var in (opAST-args compile-toplevel)
-		 do (print var)
-		 if (eql (ast-variable-type var) :null)
-		   collect nil
-		 if (eql (ast-variable-type var) :opAST)
-		   collect (explore-and-compile! (ast-variable-content var))
-		 if (eql (ast-variable-type var) :tensor)
-		   collect (expand-aref (ast-variable-content var))))))
+      (expand-aref (opAST-car compile-toplevel))))
+  
+  (let* ((code (blueprint-opecode (tensor-backward (opAST-car compile-toplevel)))))
+
+    (loop for var in (reverse (opAST-args compile-toplevel))
+	  if (eql (ast-variable-type var) :opAST)
+	    collect (explore-and-compile! (ast-variable-content var)))
+    
+    (push (apply #'implement-op code compile-toplevel
+		 (loop for var in (opAST-args compile-toplevel)
+		       if (eql (ast-variable-type var) :opAST)
+			 collect (expand-aref (opast-car (ast-variable-content var)))
+		       if (eql (ast-variable-type var) :tensor)
+			 collect (expand-aref (ast-variable-content var))))
+	  *instructions*)
+    nil))
 
