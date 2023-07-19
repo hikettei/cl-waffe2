@@ -29,13 +29,14 @@
 ;; ===============================================================
 ;; Defnode Parts
 ;; ===============================================================
-(macrolet ((define-arithmetic-node (name document1 document2 &optional backward)
+(macrolet ((define-arithmetic-node (name document1 document2 sv4bw &optional backward)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defnode (,name (myself dtype)
 			  ;; In backward:
 			  ;;       dx   dy     dout
 			  :where (A[~] B[~] -> A[~])
+			  :save-for-backward ',sv4bw
 			  :backward ,backward
 			  :documentation ,(format nil "`~a` is a node which computes following operation element-wise.
 
@@ -54,20 +55,20 @@ X\\gets{X ~a Y}
 `dtype` dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
 
 " document1 document2 document1))))))
-  (define-arithmetic-node AddNode "AddNode" "+"
+  (define-arithmetic-node AddNode "AddNode" "+" nil
     ((self dout dx dy)
      (declare (ignore dx dy))
      (values dout dout)))
-  (define-arithmetic-node SubNode "SubNode" "-"
+  (define-arithmetic-node SubNode "SubNode" "-" nil
     ((self dout dx dy)
      (declare (ignore dx dy))
      (values dout (!mul -1 dout))))
-  (define-arithmetic-node MulNode "MulNode" "*"
+  (define-arithmetic-node MulNode "MulNode" "*" (t t)
     ((self dout dx dy)
      (values
       (!mul dout dy)
       (!mul dout dx))))
-  (define-arithmetic-node DivNode "DivNode" "/"
+  (define-arithmetic-node DivNode "DivNode" "/" (t t)
     ((self dout dx dy)
      ;; ∂/∂x = 1/x
      ;; ∂/∂y = -x/y^2
@@ -78,6 +79,7 @@ X\\gets{X ~a Y}
 
 (defnode (InverseTensorNode (myself dtype)
 	  :where (A[~] -> A[~])
+	  :save-for-backward (t)
 	  :backward ((self dout dx)
 		     (values (!div (!mul -1 dout) (!square dx))))
 	  :documentation "InverseTensorNode is a node which computes following operation element-wise
@@ -96,11 +98,12 @@ A\\gets{1 / A}
 
 "))
 
-(macrolet ((define-scalar-mat-node (name document1 document2 &optional backward)
+(macrolet ((define-scalar-mat-node (name document1 document2 sv4bw &optional backward)
 	     `(progn
 		(export ',name)
 		(defnode (,name (myself dtype)
 			  :where (A[~] Scalar[scal] -> A[~] where scal = 1)
+			  :save-for-backward ',sv4bw
 			  :backward ,backward
 			  :documentation ,(format nil
 						  "~a is a node which computes following operation element-wise.
@@ -123,6 +126,7 @@ X\\gets{X ~a scalar}
       ScalarAdd
     "ScalarAdd"
     "+"
+    nil
     ((self dout dx dy)
      ;; dx <- matrix
      ;; dy <- scalar
@@ -136,6 +140,7 @@ X\\gets{X ~a scalar}
       ScalarSub
     "ScalarSub"
     "-"
+    nil
     ((self dout dx dy)
      (declare (ignore dx dy))
      (values
@@ -146,6 +151,7 @@ X\\gets{X ~a scalar}
       ScalarMul
     "ScalarMul"
     "*"
+    (t t)
     ((self dout dx dy)
      ;; dx ... matrix
      ;; dy ... scalar
@@ -158,6 +164,7 @@ X\\gets{X ~a scalar}
       ScalarDiv
     "ScalarDiv"
     "/"
+    (t t)
     ((self dout dx dy)
      ;; dx ... scalar
      ;; dy ... matrix

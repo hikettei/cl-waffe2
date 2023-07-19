@@ -46,6 +46,11 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 See also: `the implementation of JITLispTensor`.
 "))
 
+(defmethod on-finalizing-compiling ((current-node AbstractNode) variable next-variables)
+  (declare (ignore variable next-variables))
+  (when (next-method-p)
+    (call-next-method)))
+
 
 (defun node-compatible-p (node-name inputs)
   (declare (type list inputs))
@@ -164,6 +169,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
   ;; ScalarTensor is forced to use.
   (loop for device in `(,@devices ScalarTensor t)
 	do (let ((node-name (subnode-name abstract-name device)))
+	     ;; JITLispTensor << LispTensor?
 	     (when (and
 		    (node-compatible-p node-name inputs)
 		    (subtypep node-name abstract-name))
