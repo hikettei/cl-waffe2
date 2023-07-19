@@ -80,6 +80,8 @@
 
 	       (:file "backends/JITLispTensor/package")
 	       (:file "backends/JITLispTensor/tensor")
+	       (:file "backends/JITLispTensor/jit")
+	       (:file "backends/JITLispTensor/delayed-node-impls")
 
 	       (:file "distributions/package")
 	       (:file "distributions/generic")

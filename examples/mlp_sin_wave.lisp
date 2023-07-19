@@ -26,6 +26,7 @@
 (deftrainer (MLPTrainer (self in-features hidden-dim &key (lr 1e-1))
 	     :model (Simple-MLP in-features hidden-dim)
 	     :optimizer (SGD :lr lr)
+	     :compile-mode :fastest
 	     :build ((self)
 		     (MSE
 		      (make-input `(batch-size 1) :TrainY)
@@ -37,9 +38,11 @@
 	     :minimize! ((self)
 			 (zero-grads! (model self))
 			 (let ((loss (forward (model self))))
-			   (format t "Training Loss: ~a~%" (tensor-vec loss)))
+			   ;;(format t "Training Loss: ~a~%" (tensor-vec loss))
+			   )
 			 (backward  (model self))
-			 (optimize! (model self)))
+			 (optimize! (model self))
+			 )
 	     :predict ((self x)
 		       (call (model self) x))))
 			 
@@ -55,9 +58,10 @@
 		(iter-num 1))
   (let* ((X (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
  	 (Y (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
-	 (trainer (MLPTrainer 100 10 :lr 1e-1)))
+	 (trainer (MLPTrainer 100 10 :lr 1e-3)))
 
-    (loop for nth-epoch fixnum upfrom 0 below iter-num
-	  do (set-inputs trainer X Y)
-	     (minimize! trainer))))
+    (time
+     (loop for nth-epoch fixnum upfrom 0 below iter-num
+	   do (set-inputs trainer X Y)
+	      (minimize! trainer)))))
 

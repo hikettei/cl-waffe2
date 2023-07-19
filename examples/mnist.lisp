@@ -31,7 +31,7 @@
 			      (activation #'!tanh))
 	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
 	     :compile-mode :fastest
-	     :optimizer (cl-waffe2/optimizers:Adam :lr 1e-5)
+	     :optimizer (cl-waffe2/optimizers:SGD :lr 1e-3)
 	     :build ((self)
 		     (!mean (softmax-cross-entropy
 			     (call
@@ -41,10 +41,10 @@
 	     :minimize! ((self)
 			 (zero-grads! (model self))
 			 (let ((loss (forward     (model self))))
-			   ;(format t "Training loss: ~a~%" (aref (tensor-vec loss) 0))
+			   (format t "Training loss: ~a~%" (aref (tensor-vec loss) 0))
 			   )
 			 (backward    (model self))
-			 ;(optimize!   (model self))
+			 (optimize!   (model self))
 			 )
 	     :set-inputs ((self x y)
 			  (set-input (model self) :X x)
@@ -59,25 +59,26 @@
 
 
 (defun train-and-valid-mnist ()
-  (let ((trainer (MLPTrainer 784 10 :hidden-size 256 :activation #'!relu)))
+  (with-memory-pool 
+    (let ((trainer (MLPTrainer 784 10 :hidden-size 512 :activation #'!relu)))
 
-    (set-inputs trainer (randn `(100 784)) (bernoulli `(100 10) 0.3))
-    (minimize! trainer)
+      (set-inputs trainer (randn `(100 784)) (bernoulli `(100 10) 0.3))
+      (minimize! trainer)
 
-    (sb-profile:profile
-     "CL-WAFFE2/OPTIMIZERS"
-     "CL-WAFFE2/BACKENDS.CPU"
-     "CL-WAFFE2/BACKENDS.LISP"
-     "CL-WAFFE2/VM.GENERIC-TENSOR"
-     "CL-WAFFE2/VM.NODES")
-    
-    (time
-     (dotimes (i 100)
-       
-       (minimize!  trainer)))
+      ;;(sb-profile:profile
+      ;; "CL-WAFFE2/OPTIMIZERS"
+      ;; "CL-WAFFE2/BACKENDS.CPU"
+      ;; "CL-WAFFE2/BACKENDS.LISP"
+      ;; "CL-WAFFE2/VM.GENERIC-TENSOR"
+      ;; "CL-WAFFE2/VM.NODES")
+      
+      (time
+       (dotimes (i 1)
+	 (minimize!  trainer)))
 
-    (sb-profile:report)
-    trainer))
+      ;;(sb-profile:report)
+      trainer)))
 
 (train-and-valid-mnist)
 
+;; (sin (sin (sin ...)))を一回でコンパイルするようなのが必要

@@ -346,6 +346,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			(,(tensor-id toplevel) (progn ,toplevel)))
 
 	 ;; The Operation hasn't done yet...
+	 ;; The code below seems ugly...
 	 
 	 (when (or (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
 		   (when *calling-backward-mode*
@@ -361,6 +362,12 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
 		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+
+	 ;; Calls an event: on-finalizing-compiling
+	 ;; If JIT is implemented by user, expand user defined forms
+	 
+	 ;;,(cl-waffe2/vm.nodes:on-finalizing-compiling current-node vars)
+	   
 
 	 ;; TODO UPDATE
 	 ,(when (and node
