@@ -176,7 +176,7 @@
 
 ;; Common Lispは静的型のない言語ですが、遅延評価のおかげで小さい行列に対しても高速に動作します。（となると、cl-waffe2は行列演算特化のDSLに近いと思います）
 
-;; 図解されてる解説など、詳しくはドキュメントをご覧ください：
+;; 図を用いた解説など、詳しくはドキュメントをご覧ください：
 ;; https://hikettei.github.io/cl-waffe2/overview/#compiling-and-in-place-optimizing
 
 ;; ====================================
@@ -520,7 +520,8 @@ Variables:
 ;;  :backward <Node: MULNODE-LISPTENSOR (A[~] B[~] -> A[~])>} 
 
 ;; このcall->とasnodeを組み合わせたのがdefsequenceで定義されるデータ構造です
-;; defsequenceマクロは、defmodelをWrapしたようなマクロで、例えば今から実装するモデルが call->とasnodeを組み合わせるだけで実装できる場合、記述量が格段に減少します。
+;; defsequenceマクロは、defmodelを単にWrapしただけのマクロで、複数のノードやモデルを一列に並べるような構造を定義します。
+;; もし定義するモデルが call-> と asnode を組み合わせるだけで実装できる場合、ぜひdefsequenceを使ってください。記述量が格段に減少します。
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!relu))
@@ -586,6 +587,309 @@ Variables:
 ;; 閑話休題
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; Broadcasting/view
-;; with-facet
-;; 
+;; ===========================
+;;  ノード定義の豆知識など
+;; ===========================
+
+;; 1. define-static-node
+
+;; defnodeとdefine-implはforwardを記述するのにマクロを書かないといけないし、defmodelは逆伝播を記述することができません。
+;; :forwardと:backwardをdefunを書くのと同様の気持ちで記述したい場合はdefine-static-nodeを用います。
+
+;; この場合, save-for-backwardはset-save-for-backward/read-save-for-backward関数を用いて手動で書くか、
+;; with-setting-save4bw, with-reading-save4bwマクロを用いるかで、逆伝播の計算時に必要な計算ノードをコピーする必要があります。
+
+;; Example: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+(define-static-node (Static-Sin (self)
+		     :where (A[~] -> OUT[~])
+		     :save-for-backward-names (x-input)
+		     :forward ((self x)
+			       (print "Hi :) the operation sin is executed.")
+			       (with-setting-save4bw ((x-input x))
+				 (proceed (!sin x))))
+		     :backward ((self dout)
+				(with-reading-save4bw ((x x-input))
+				  (values (proceed (!mul (!cos x) dout)))))))
+
+;; 言い忘れたましたが、cl-waffe2のマクロで定義したデータ構造は
+;; 全て定義名と同じ名前の関数がコンストラクタとして定義されています。
+(print (Static-Sin)) ;; <Node: STATIC-SIN-T (A[~] -> OUT[~])>
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; 遅延評価やマクロといった癖の強い機能を使わずにノードを定義できます
+;;
+;; ~ Tips ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  define-static-nodeはdefine-implとdefnodeを:device tで同時に定義するような実装になっています。
+;; ここで、:device tでノードを実装すると他の全ての実装が無視され:device tのものしか採用されなくなります。
+;; これは、ノードがもうすでに汎用的である場合だとか、ユーティリティ（PrintNode等）を実装する時に便利です。
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; 2. reject-p
+
+;; define-implで実装を提供しても、例えば一部のデータ型にだけはまだ対応していない・・・みたいな状況があります。
+;; その場合 :reject-pに ノードを採用されたくない場合はTを返す関数を設定してください
+;; 渡す関数: (コンスラクタの引数1 引数2 ...) -> Boolean
+;; (P.S.: AddNode-Revisitノードのコンストラクタの第一引数がdtypeなのはこれのせいですね)
+
+;; See also: https://hikettei.github.io/cl-waffe2/nodes/#tips-reject-p
+
+;; 3. with-instant-kernel
+
+;; 全てのcl-waffe2コードは、一旦Lispのプログラムに再コンパイルされてから実行されますが、
+;; その際デバッグなどのために任意のCommon Lispを埋め込むことが可能です
+;; with-instant-kernelマクロは、第一引数のTensorに続けて、CommonLispコードを埋め込むためのノードを呼び出し計算ノードを接続します：
+
+(let* ((x (randn `(2 2)))
+       (out (with-instant-kernel x
+	      `(progn
+		 (print ,x)
+		 ,x))))
+  (print (proceed out)))
+
+#|
+{CPUTENSOR[float] :shape (2 2)  
+  ((1.6706548   1.0810136)
+   (-0.40689966 0.7384378))
+  :facet :exist
+  :requires-grad NIL
+  :backward NIL} 
+{CPUTENSOR[float] :shape (2 2) :named ChainTMP5891 
+  :vec-state [computed]
+  ((1.6706548   1.0810136)
+   (-0.40689966 0.7384378))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+|#
+
+;; lazy-print関数は上のPrintデバッグをもう少し合理的にするためのAPIで、
+
+(let* ((x (parameter (randn `(10 10)))))
+  (proceed-backward
+   (!sum (lazy-print x))))
+
+;; このような具合でForwardとBackwardの計算途中の状態を可視化します。
+#|
+===> [Forward] PrintNode: <Node: PRINTNODE-T (A[~] -> A[~])>  =========>
+{CPUTENSOR[float] :shape (10 10) -> :view (<T> <T>) -> :visible-shape (10 10)  
+  ((0.25651443   -0.40045857  -0.9287579   ~ 0.8480048    -0.40961027  2.3160353)                    
+   (-1.6331433   1.1089627    0.16270746   ~ 0.50973755   -1.6394889   -0.047892045)   
+                 ...
+   (-0.39202097  1.1730671    0.32979876   ~ 1.1525645    -0.1317046   -0.9641139)
+   (-0.5417676   0.1259635    -0.14945106  ~ -0.35147586  -0.029653043 -0.26303303))
+  :facet :exist
+  :requires-grad T
+  :backward NIL}
+<== [Backward] PrintNode: <Node: PRINTNODE-T (A[~] -> A[~])>  <========
+Previous dout:
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP6008 
+  ((1.0 1.0 1.0 ~ 1.0 1.0 1.0)           
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0)   
+        ...
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0)
+   (1.0 1.0 1.0 ~ 1.0 1.0 1.0))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+|#
+
+;; 4. on-finalizing-compiling
+
+;; このメソッドはcl-waffe2をさらに拡張してJITコンパイラを埋め込む時に使います: https://hikettei.github.io/cl-waffe2/nodes/#generic-on-finalizing-compiling
+;; See also: my implementations of ./source/backends/JITLispTensor
+
+;; ============================
+;;  Useful APIS
+;; ============================
+
+;; 1. !view
+;; 与えられた行列のViewを作成します。
+
+;; ~ Examples ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;                       
+;;  (0 1 2)              (0 1 2)
+;;  (3 4 5)  -> View ->  (+ + +)
+;;  (6 7 8)              (+ + +)
+;;
+
+(print (!view (ax+b `(3 3) 1 0) `(0 1)))
+
+;;{CPUTENSOR[float] :shape (3 3) -> :view (<(0 1)> <T>) -> :visible-shape (1 3) :named ChainTMP6130 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+
+(print (!view (ax+b `(3 3) 1 0) `(1 2)))
+;;{CPUTENSOR[float] :shape (3 3) -> :view (<(1 2)> <T>) -> :visible-shape (1 3) :named ChainTMP6138 
+;;  :vec-state [maybe-not-computed]
+;;  ((3.0 4.0 5.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+
+
+(print (!view (ax+b `(3 3) 1 0) 1 2))
+;;{CPUTENSOR[float] :shape (3 3) -> :view (<1> <2>) -> :visible-shape (1 1) :named ChainTMP6210 
+;;  :vec-state [maybe-not-computed]
+;;  ((2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;:backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+
+
+;; Broadcasting: 1 x 3行列を3 x 3行列かのようにRepeatする
+(print (!view (ax+b `(1 3) 1 0) `(:broadcast 3)))
+
+;;{CPUTENSOR[float] :shape (1 3) -> :view (<(BROADCAST 3)> <T>) -> :visible-shape (3 3) :named ChainTMP6216 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0)
+;;   (0.0 1.0 2.0)
+;;   (0.0 1.0 2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+
+;; etc... (TODO: slice-step tflist indices)
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; 2. !flexible
+;; 行列のShapeの頭にBroadcast可能な次元を追加します
+
+(print (!flexible (randn `(10))))
+;;{CPUTENSOR[float] :shape (<1 x N> 10) :named ChainTMP6231 
+;;  :vec-state [maybe-not-computed]
+;;  (-0.50261    0.40090793  -0.19895083 ~ 0.20296319  -0.5383652  -1.4031166)
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+
+;; <1 x N>に対応する次元では、Broadcastingは自動で行われます
+;; Broadcastingを用いた演算が行われると、この状態は解除されます
+
+;; 10 x 10 Matrixと10 Vectorの加算
+(print
+ (proceed
+  (!add
+   (randn `(10 10))
+   (!flexible (randn `(10))))))
+
+;;{CPUTENSOR[float] :shape (10 10) :named ChainTMP6356 
+;;  :vec-state [computed]
+;;  ((-1.1468288   1.2965723    1.8768042    ~ 0.8179604    0.15577999   -1.8257952)                    
+;;   (-1.9004688   -0.23534465  -0.3154031   ~ 0.32107505   1.0894032    2.2691782)   
+;;                 ...
+;;   (-0.5216994   -0.44841492  -0.5936316   ~ -0.5056487   0.6112499    -0.37115526)
+;;   (-0.41688314  -0.6408297   0.66321605   ~ 1.0859071    -0.4954967   0.64494854))
+;;  :facet :input
+;;  :requires-grad NIL
+;;:backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+;; 時間があったらもう少しいいSemanticがないか考えたいですね:(
+
+;; 3. !permute
+;; permuteは行列のSubscriptが呼ばれる順番を入れ替えます
+;; 例：行列の転置を求める
+(print
+ (proceed
+  (->contiguous
+   (!permute (ax+b `(3 3) 1 0) :~ 0 1))))
+
+;;{CPUTENSOR[float] :shape (3 3) :named ChainTMP6518 
+;;  :vec-state [computed]
+;;  ((0.0 3.0 6.0)
+;;   (1.0 4.0 7.0)
+;;   (2.0 5.0 8.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>} 
+
+;; 4. !reshape
+;; !reshapeは行列の形状を変化させます
+;; tは引数で一度だけ使うことができ、その値は自動で推論されます
+
+(print (proceed (!reshape (randn `(10 10)) t)))
+
+;; 5. ->scal ->mat
+;; ->scal ->mat関数は要素数が1の行列をスカラーに、スカラーを行列にするための関数です
+
+(print (->scal (randn `(1 1))))
+
+(print (->mat  (make-tensor 1.0)))
+
+;; ====================================================
+;; AbstractTensorをCommon Lisp標準配列として取り扱う
+;; ====================================================
+
+;; change-facet関数を介して、AbstractTensorをあたかもCommon Lisp配列として取り扱ったり、Common Lisp配列をAbstract Tensorとして取り扱うことができます。
+
+;; 2次元配列 -> AbstractTensorに変更する
+(print
+ (change-facet #2A((1 2 3)
+		   (4 5 6)
+		   (7 8 9))
+	       :direction 'AbstractTensor))
+
+;;{CPUTENSOR[int32] :shape (3 3)  
+;;  ((1 2 3)
+;;   (4 5 6)
+;;   (7 8 9))
+;;  :facet :exist
+;;  :requires-grad NIL
+;;  :backward NIL}
+
+;; 変更の前後でコピーは作成されません。CL標準配列やAbstractTensorに適用された変更はお互いに適用されます！
+
+;; AbstractTensor -> Common Lisp配列に変更する
+
+;; 'arrayをdirectionに指定することで、形状を保ったまま変更
+(print
+ (change-facet (randn `(3 3)) :direction 'array))
+
+;;#2A((0.87897 1.5162643 1.6645936)
+;;    (-0.7619477 0.4606205 -0.057311922)
+;;    (-0.052466746 0.4479398 0.37993735)) 
+
+;; 'simple-arrayをdirectionに指定することで、内部で扱われている順番のまま変更
+(print
+ (change-facet (randn `(3 3)) :direction 'simple-array))
+;; #(0.098267384 -0.68239963 1.9422209 -0.3872902 0.97872823 -0.96922004 0.8024853
+;;  -0.90643305 -1.4785866) 
+
+;; もしこのような変換の組み合わせを他の行列に対しても追加したい場合は、(convert-tensor-facet (from to))というジェネリック関数にメソッドを追加してください。
+
+;; 詳細：https://hikettei.github.io/cl-waffe2/utils/#generic-convert-tensor-facet
+
+;; change-facet関数を用いて、例えばcl-waffe2の機能だけでは足りないものを実装するとき、余分なコピーを用いずにnumclやmgl-mat等他のライブラリを使うことができます。
+
+;; with-facet及びwith-facetsマクロはchange-facet関数をベースに実装されたマクロです。
+
+(let ((a (randn `(3 3))))
+  ;; AbstractTensorをCommonLisp配列としてアクセスする
+  (with-facet (a* (a :direction 'array))
+    ;; 対角を0で埋める
+    (setf (aref a* 0 0) 0.0)
+    (setf (aref a* 1 1) 0.0)
+    (setf (aref a* 2 2) 0.0)
+    (print a*))
+
+  ;; この変更は元のAbstractTensorと同期されます。
+  (print a))
+
+;;#2A((0.0 -0.49273053 -1.081793)
+;;    (0.07072042 0.0 0.06495718)
+;;    (1.6785827 -0.85893154 0.0)) 
+;;{CPUTENSOR[float] :shape (3 3)  
+;;  ((0.0         -0.49273053 -1.081793)
+;;   (0.07072042  0.0         0.06495718)
+;;   (1.6785827   -0.85893154 0.0))
+;;  :facet :exist
+;;  :requires-grad NIL
+;;  :backward NIL}
+
+;; 遅延評価が邪魔になる場合、例えば学習データの読み込みなど、Common Lisp標準配列を介した場合もあります。そういった場合はfacetを変えて行列を直接編集してください :).
+
+;; Trainer/Minimize
