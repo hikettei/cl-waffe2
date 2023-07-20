@@ -35,8 +35,8 @@
 
 (defstruct (iSeq
 	    (:constructor make-iseq (code displace-out-to)))
-  (code code :type list)
-  (displace-out-to displace-out-to :type list))
+  (code code :type (or symbol list))
+  (displace-out-to displace-out-to :type (or symbol list)))
     
 (defstruct (opAST
 	    (:constructor make-opAST (operation &rest args)))
@@ -68,7 +68,9 @@
 							 (tensor-id tensor)
 							 tensor)))))
      (declare ,@(loop for tensor in tensors
-		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor))))
+		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
+	      (ignorable ,@(loop for tensor in tensors
+				 collect (tensor-vec-id tensor))))
      ,body))
 
 ;; TODO: Do iteration with each strides/offsets
@@ -78,13 +80,19 @@
       #'(lambda (&rest ,views-area)
 	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
 	    `(let (,@(loop for view in ,views-area
-				    for tensor in ,tensors
-				    collect `(,(tensor-stride-id tensor) (the fixnum ,(stride-of view 0))))
-			    ,@(loop for view in ,views-area
-				    for tensor in ,tensors
-				    collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
+			   for tensor in ,tensors
+			   collect `(,(tensor-stride-id tensor) (the fixnum ,(stride-of view 0))))
+		   ,@(loop for view in ,views-area
+			   for tensor in ,tensors
+			   collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
+	       (declare (ignorable ,@(loop for tensor in ,tensors collect (tensor-stride-id tensor))
+				   ,@(loop for tensor in ,tensors collect (tensor-offset-id tensor))))
 	       (loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		   do ,,@body))))
+		     do (let (,@(loop for tensor in ,tensors
+				      collect `(,(tensor-aref-id tensor) ,(expand-aref tensor))))
+			  (declare (ignorable ,@(loop for tensor in ,tensors collect (tensor-aref-id tensor))))
+			  ;; Call aref in advance:
+			  ,,@body)))))
       ,tensors
       :at-least-dim 1)))
 
@@ -146,6 +154,9 @@
 (defun tensor-offset-id (tensor)
   (symb (tensor-id tensor) '-offset))
 
+(defun tensor-aref-id (tensor)
+  (symb (tensor-id tensor) '-aref))
+
 (defun view->accessors (views index-symbol)
   "View -> '(aref tensor i)"
   (let ((result (make-hash-table)))
@@ -172,7 +183,7 @@
   (declare (type opAST compile-toplevel))
   (let* ((*tensors-use* nil)
 	 (tree (explore-and-compile! compile-toplevel)))
-    (print `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree))))
+    `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree)))
 
 (defun explore-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
@@ -180,7 +191,7 @@
 
   (when (null (tensor-backward (opAST-car compile-toplevel)))
     (return-from explore-and-compile!
-      (expand-aref (opAST-car compile-toplevel))))
+      (tensor-aref-id (opAST-car compile-toplevel))))
   
   (let* ((code (blueprint-opecode (tensor-backward (opAST-car compile-toplevel)))))
     
@@ -190,7 +201,7 @@
 			       collect (explore-and-compile! (ast-variable-content var))
 			     
 			     if (eql (ast-variable-type var) :tensor)
-			       collect (expand-aref (ast-variable-content var))
+			       collect (tensor-aref-id (ast-variable-content var))
 
 			     if (eql (ast-variable-type var) :scalar)
 			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) ,(tensor-vec (ast-variable-content var)))))))
