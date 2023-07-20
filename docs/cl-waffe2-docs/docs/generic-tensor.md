@@ -359,7 +359,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP12987 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1295 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -375,10 +375,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53B2A4CB}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53A4361B}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53B2B3BB}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53A4161B}>
 
 += [Tensors in the computation node] =======+
 
@@ -392,7 +392,7 @@ Variables:
    X   |  (A 10) | 
 
 
- - The number of tmp variables : 4
+ - The number of tmp variables : 6
  - The number of parameters    : 0
 +========================================+
 >

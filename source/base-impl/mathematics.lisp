@@ -20,6 +20,7 @@
 		(export ',defun-name)
 		(defnode (,node-name (myself)
 			  :where (X[~] OUT[~] -> OUT[~])
+			  :save-for-backward ,save-for-backward
 			  :backward ,backward
 			  :documentation
 			  ,(format nil "The node `~a` takes X as an argument, applying a ~(~a~) function into each element and writes the result into out.
@@ -39,6 +40,7 @@ See also: `~a` `~(~a~)`"
 				   defun-name)))
 		(defnode (,scal-node-name (myself)
 			  :where (X[~] OUT[~] -> OUT[~])
+			  :save-for-backward ,save-for-backward
 			  :backward ,backward
 			  :out-scalar-p t
 			  :documentation

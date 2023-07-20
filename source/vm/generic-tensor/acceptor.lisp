@@ -301,7 +301,10 @@ permute-order : ~a
   (shape-equal-list declared-shape (shape tensor)))
 
 ;; Set *runtime-shape-inspection* = t to detect run-time shape-error
-(defun compile-forward-chain (toplevel &key (stop-me nil))
+(defun compile-forward-chain (toplevel
+			      &key
+				(stop-me nil)
+				(called-with-vars nil))
   "
 ## [function] compile-forward-chain
 
@@ -324,7 +327,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (when (compiled-kernel-cache-p fw-compiled)
       (push fw-compiled *kernel-storeroom*))
     
-    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me)) vars))
+    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me :called-with-vars toplevel)) vars))
 	  (out-places  (map 'list #'tensor-id vars)))
       
       ;;
@@ -346,12 +349,14 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 			(,(tensor-id toplevel) (progn ,toplevel)))
 
 	 ;; The Operation hasn't done yet...
+	 ;; The code below seems ugly...
 	 
 	 (when (or (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
 		   (when *calling-backward-mode*
 		     (let ((out (statecontainer-backward-result (tensor-state ,(tensor-id toplevel)))))
 		       (car out))))
 
+	   ;; Seems ugly:
 	   ;; Judge the tensor is created when forward time or backward time
 	   (when (and *calling-backward-mode*
 		      (not (car (statecontainer-backward-result (tensor-state ,(tensor-id toplevel))))))
@@ -361,6 +366,16 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
 		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+	 
+	 ;; Calls an event: on-finalizing-compiling
+	 ;; If JIT is implemented by user, expand user defined forms
+	 
+	 ,(when (tensor-backward toplevel)
+	    (cl-waffe2/vm.nodes:on-finalizing-compiling
+	     (tensor-backward toplevel)
+	     toplevel
+	     called-with-vars))
+	   
 
 	 ;; TODO UPDATE
 	 ,(when (and node
@@ -380,7 +395,7 @@ The definition/implementation of nodes could be invaild."
 		,node
 		(nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
 		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))) ;; Output shape compiled
-
+	 
 	 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 

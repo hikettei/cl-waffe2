@@ -594,6 +594,9 @@ The moment `forward` is called, the computation node is constructed for building
     (insert "~a" (documentation (macro-function 'with-setting-save4bw) 'function))
     (insert "~a" (documentation (macro-function 'with-reading-save4bw) 'function))
 
+    (insert "~a" (documentation #'on-finalizing-compiling 't))
+
+
     (with-section "[class] Composite"
       (insert
        "

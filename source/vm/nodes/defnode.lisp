@@ -5,6 +5,53 @@
 
 (defparameter *node-reject-case-table* (make-hash-table))
 
+(defgeneric on-finalizing-compiling
+    (current-node variable next-variable)
+  (:documentation
+   "
+## [generic] on-finalizing-compiling
+
+```lisp
+(on-finalizing-compiling current-node variable next-variable)
+```
+
+The generic function `on-finalizing-compiling` is invoked after the body of `define-impl` is expanded when performing `compile-chain-forward`.
+
+Return S expression to be embodied in the compiled code if needed, especially, devices which support jit-compiling will need this, because you can get information before and after the node.
+
+### Inputs
+
+```lisp
+     [TopLevel]
+         |
+     [CosNode1]
+         |
+     [SinNode1]   <- If invoked at this point...
+         |
+   [MoveTensorNode2]
+         |
+     [SinNode3]
+         |
+   [MoveTensorNode4]
+         |
+        ...
+```
+
+`current-node (i.e.: SinNode1)` used to dispatch methods.
+
+`variable (i.e.: corresponding variable of SinNode1)` returns the corresponding var of current node.
+
+`next-variables (i.e.: corresponding variable of MoveTensorNode2)` returns corresponding variable of next node.
+
+See also: `the implementation of JITLispTensor`.
+"))
+
+(defmethod on-finalizing-compiling ((current-node AbstractNode) variable next-variables)
+  (declare (ignore variable next-variables))
+  (when (next-method-p)
+    (call-next-method)))
+
+
 (defun node-compatible-p (node-name inputs)
   (declare (type list inputs))
   "the node is adopted when:
@@ -122,6 +169,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
   ;; ScalarTensor is forced to use.
   (loop for device in `(,@devices ScalarTensor t)
 	do (let ((node-name (subnode-name abstract-name device)))
+	     ;; JITLispTensor << LispTensor?
 	     (when (and
 		    (node-compatible-p node-name inputs)
 		    (subtypep node-name abstract-name))
@@ -157,6 +205,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 		      (slots nil)
 		      (save-for-backward nil)
 		      (backward nil)
+		      (extends nil)
 		      (documentation ""))
 		   &body constructor-body
 		   &aux (subscript-p  (gensym))
@@ -178,6 +227,7 @@ Effects:
 Inputs:
 
    - abstract-name[symbol]
+   - extends[list] set a list of classes that defined node class extends.
    - (self &rest constructor-arguments)
      The constructor will be defined as:
      (defun ,abstract-name (self &rest constructor-arguments)
@@ -243,7 +293,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
     ;; where-static-p -> T,   the phase where isn't used
     ;; where-static-p -> NIL, the phase where is used
     `(eval-when (:compile-toplevel :load-toplevel :execute)
-       (defclass ,abstract-name (AbstractNode)
+       (defclass ,abstract-name (AbstractNode ,@extends)
 	 (,@slots
 	  (save-for-backward-space1 :initform ',save-for-backward :reader node-save-for-backward1)
 	  (out-scalar-p :initform ,out-scalar-p :accessor out-scalar-p))
@@ -311,6 +361,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 (defmacro define-impl ((abstract-name
 			&key
 			  (device t)
+			  (extends nil)
 			  (cache-when-compiled t)
 			  (reject-p nil))
 		       &key
@@ -331,6 +382,8 @@ Memo: forward must return: a list (to be jit-compiled)
    Backward -> (node dout dx dy)
 
    Other parameters should be given as constructor.
+
+extends[lisp] set a list of class names that defined class extends.
 
 Note:
 When device=t
@@ -368,7 +421,7 @@ Return nil -> ok
        
        (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
        
-       (defclass ,impl-name (,abstract-name)
+       (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform ',save-for-backward :reader node-save-for-backward2))
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
 				  impl-name

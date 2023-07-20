@@ -15,7 +15,7 @@ The generic function `convert-tensor-facet` pays an important role when converti
 
 This method is intended to be extended by users.
 
-For example: `AbstractTensor` -> `simple-array`, can be used as:
+For example, converting `AbstractTensor` -> `simple-array`:
 
 ```lisp
 (convert-tensor-facet (randn `(3 3)) 'simple-array)
