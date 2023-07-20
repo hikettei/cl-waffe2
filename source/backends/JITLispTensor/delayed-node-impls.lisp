@@ -5,9 +5,10 @@
 ;; delayed-node-impls.lisp provides define-impl forms of principle operations of JITLispTensor.
 ;;
 
-(defun only-when-no-grad (&rest inputs)
-  (declare (ignore inputs))
-  (not *no-grad*))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun only-when-no-grad (&rest inputs)
+    (declare (ignore inputs))
+    (not *no-grad*)))
 
 
 ;; Arithmetic operation family is originally declared as:
