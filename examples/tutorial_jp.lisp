@@ -373,8 +373,9 @@ Variables:
 ;; MyTensorは他の命令の実装がありませんが、その場合はwith-devicesの優先順位を調整してください
 
 ;; 扱うポインタに互換性のあるものから代理としてLispTensorの実装を使い計算します
-;; (i.e.: 新しいデバイスを実装しても、その一部だけ再実装を与えれば十分）
+;; (i.e.: ユーザーが新しいデバイスを定義しても、その一部だけ再実装を与えれば十分）
 
+;; 優先度:       高 <-  -> 低
 (with-devices (MyTensor LispTensor)
   (print (proceed (!mul (randn `(3 3)) (randn `(3 3))))))
 
@@ -502,3 +503,74 @@ Variables:
 ;;  :facet :input
 ;;  :requires-grad NIL
 ;;  :backward <Node: MULNODE-LISPTENSOR (A[~] B[~] -> A[~])>} 
+
+;; このcall->とasnodeを組み合わせたのがdefsequenceで定義されるデータ構造です
+;; defsequenceマクロは、defmodelをWrapしたようなマクロで、例えば今から実装するモデルが call->とasnodeを組み合わせるだけで実装できる場合、記述量が格段に減少します。
+
+(defsequence MLP-Sequence (in-features hidden-dim out-features
+			   &key (activation #'!relu))
+	     "三層のMLPモデル" ;; <- 最初の引数は文字列にするとドキュメントに、空でもOK
+	     (LinearLayer in-features hidden-dim)
+	     (asnode activation)
+	     (LinearLayer hidden-dim hidden-dim)
+	     (asnode activation)
+	     (LinearLayer hidden-dim out-features))
+
+;; Printとするとよりモデルの構造がはっきりします：
+(print (MLP-Sequence 784 512 256 :activation #'!relu))
+
+#|
+<Composite: MLP-SEQUENCE{W5800}(
+    <<5 Layers Sequence>>
+
+[1/5]          ↓ 
+<Composite: LINEARLAYER{W5794}(
+    <Input : ((~ BATCH-SIZE 784)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 784)
+    BIAS    -> (512)
+)>
+[2/5]          ↓ 
+<Composite: ENCAPSULATED-NODE{W5792}(
+    #<FUNCTION !RELU>
+)>
+[3/5]          ↓ 
+<Composite: LINEARLAYER{W5786}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 512))>
+
+    WEIGHTS -> (512 512)
+    BIAS    -> (512)
+)>
+[4/5]          ↓ 
+<Composite: ENCAPSULATED-NODE{W5784}(
+    #<FUNCTION !RELU>
+)>
+[5/5]          ↓ 
+<Composite: LINEARLAYER{W5778}(
+    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 256))>
+
+    WEIGHTS -> (256 512)
+    BIAS    -> (256)
+)>)>
+|#
+
+
+;; ~~ [AbstractTensorの様相] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; (内部実装の話なので興味なかったら読み飛ばしてください)
+;; cl-waffe2のTensorは遅延評価をたくさん取り扱うので、NumpyやPyTorchのそれと異なる性質のものが欲しくなります。
+;; cl-waffe2ではTensorの使用目的に合わせて、二種類の状態(:facet)を用意しました。(テンソルをPrintすると出てきますね）
+;; :facetには:existと:inputの2種類があります（それぞれExistTensorとInputTensorという異なる性質を持った行列を表す）
+;;
+;; (make-input shape nil)関数は、メモリの割り当てを伴わない空の行列(InputTensor)を生成します。（つまりいくらでも生成し放題）
+;; この行列に対して(tensor-vec tensor)関数でメモリにアクセスしようとすると初めて割り当てが行われます。
+
+;; それに対して(make-tensor ...)や(randn ...)などの関数は、通常のメモリ割り当てを伴う行列(ExistTensor)を生成します。
+
+;; InputTensorのその性質は、JITが計算ノードをトレスする実装や、計算の一時領域としてとりあえず作っておいて後から削除するみたいな動作と相性が良くて
+;; cl-waffe2の至る所で用いられています。 ↑のENCAPSULATED-NODEは:WHEREで演算前後の遷移が定義されていないですが、ここでInputTensorが活躍してくれてうまくTraceします
+;; 閑話休題
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; Broadcasting/view
+;; with-facet
+;; 
