@@ -5,6 +5,10 @@
 ;; delayed-node-impls.lisp provides define-impl forms of principle operations of JITLispTensor.
 ;;
 
+(defun only-when-no-grad (&rest inputs)
+  (declare (ignore inputs))
+  (not *no-grad*))
+
 
 ;; Arithmetic operation family is originally declared as:
 ;; X <- op(X, Y)
@@ -12,6 +16,7 @@
 	     `(progn
 		(define-impl (,name
 			      :device JITLispTensor
+			      :reject-p #'only-when-no-grad
 			      :extends (LispJIT-Blueprint))
 			     :forward ((self x y)
 				       (declare (ignore y))
@@ -19,7 +24,9 @@
 				       `(progn ,x)))
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
-		  `(setf ,(car args) (,',lisp-op ,(car args) ,(second args)))))))
+		  (make-iseq
+		   `(,',lisp-op ,(car args) ,(second args))
+		   (car args))))))
   (define-arith-impl AddNode +)
   (define-arith-impl SubNode -)
   (define-arith-impl MulNode *)
@@ -29,7 +36,7 @@
 ;; MoveTensor is declared as:
 ;; Move(A, B) -> A
 ;; A[~] B[~] -> A[~]
-(define-impl (MoveTensorNode :device JITLispTensor :extends (LispJIT-Blueprint))
+(define-impl (MoveTensorNode :device JITLispTensor :reject-p #'only-when-no-grad :extends (LispJIT-Blueprint))
 	     :forward ((self out target)
 		       (declare (ignore target))
 		       (progn
@@ -39,41 +46,36 @@
 
 (defmethod implement-op ((opcode (eql 'move)) opAST &rest args)
   ;; A <- B
-  (let ((node (tensor-backward (opAST-car opAST))))
-    (if (movetensor-ignore-me node)
-	(second args)
-	`(setf ,(car args) ,(second args)))))
+  (make-iseq (second args)
+	     (car args)))
 
-(define-impl (InverseTensorNode :device JITLispTensor :extends (LispJIT-Blueprint))
+(define-impl (InverseTensorNode :device JITLispTensor :reject-p #'only-when-no-grad :extends (LispJIT-Blueprint))
 	     :forward ((self x)
 		       (setf (blueprint-opecode self) 'inverse)
 		       `(progn ,x)))
 
 (defmethod implement-op ((op (eql 'inverse)) opAST &rest args)
-  `(setf ,(car args) (/ 1 ,(car args))))
+  (make-iseq `(/ 1 ,(car args)) (car args)))
 
 ;;
 ;; Scalar-Mat Operation family are originally declared as:
 ;; (A[~] Scalar[scal] -> A[~] where scal = 1)
 ;;
-(macrolet ((define-scalar-mat-impl (name lisp-op f)
-	     `(progn
-		(define-impl (,name
+(macrolet ((define-scalar-mat-impl (name lisp-op)
+	     `(define-impl (,name
 			    :device JITLispTensor
+			    :reject-p #'only-when-no-grad
 			    :extends (LispJIT-Blueprint))
 			   :forward ((self A scalar)
 				     (declare (ignore scalar))
 				     (progn
 				       (setf (blueprint-opecode self) ',lisp-op)
 				       nil)
-				     `(progn ,A)))
-		(defmethod implement-op ((op (eql ',lisp-op)) opast &rest args)
-		  `(setf ,(car args) (,',f ,(car args) ,(second args)))))))
-  
-  (define-scalar-mat-impl ScalarAdd M+S +)
-  (define-scalar-mat-impl ScalarSub M-S -)
-  (define-scalar-mat-impl ScalarMul M*S *)
-  (define-scalar-mat-impl ScalarDiv M/S /))
+				     `(progn ,A)))))
+  (define-scalar-mat-impl ScalarAdd +)
+  (define-scalar-mat-impl ScalarSub -)
+  (define-scalar-mat-impl ScalarMul *)
+  (define-scalar-mat-impl ScalarDiv /))
 
 
 ;; Todo: Element-wise kernels... (OK)

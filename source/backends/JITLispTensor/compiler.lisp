@@ -5,13 +5,15 @@
 
 ;; TODO: Eliminate unused MoveTensorNode and allocation with it.
 ;; AVX2 Isn't wokirng? Supper slow -> No, compute-stepby is included to complied code.
-;; Except the usage of no-grad
+;; with-no-grad is MUST, all copies are ignored
+
 ;; setf使わない代わりに高速に動作とか？
 ;; setfのアクセスをキャッシュするとかしないと速くならない
 
 (defvar *compiled-tensors* nil "Tensor1 Tensor2...")
 (defvar *compiled-tensors-aref* nil "(aref Tesnor1 i) (aref Tensor2 i) ...")
 (defvar *subscript-char* nil)
+
 
 (defun ->op-type (obj)
   (typecase obj
@@ -22,6 +24,11 @@
     (T (error "Detected unknown type of variable: ~a" obj))))
 
 (deftype ast-variable-types () `(and keyword (member :opAST :scalar :tensor :null)))
+
+(defstruct (iSeq
+	    (:constructor make-iseq (code displace-out-to)))
+  (code code :type list)
+  (displace-out-to displace-out-to :type list))
     
 (defstruct (opAST
 	    (:constructor make-opAST (operation &rest args)))
@@ -42,7 +49,9 @@
   ;; TODO: Ignore MoveTensorNode
   (unless (find tensor *compiled-tensors*)
     ;; ScalarTensor isn't iteratible
-    (when (not (typep tensor 'ScalarTensor))
+    (when (and
+	   (not (typep tensor 'ScalarTensor))
+	   (cl-waffe2/vm.generic-tensor::vec tensor))
       (push tensor *compiled-tensors*))))
 
 (defun with-allocating-vectors (tensors body)
@@ -148,40 +157,34 @@
 
 (defgeneric implement-op (opcode opAST &rest arguments))
 
-(defvar *instructions* nil)
-
 (defun trace-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
-  (let ((*instructions* nil))
-    (explore-and-compile! compile-toplevel)
-    `(progn ,@(reverse *instructions*))))
+  (let* ((*tensors-use* nil)
+	 (tree (explore-and-compile! compile-toplevel)))
+    `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree)))
 
 (defun explore-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
-
   ;; If the end of node?
 
   (when (null (tensor-backward (opAST-car compile-toplevel)))
     (return-from explore-and-compile!
       (expand-aref (opAST-car compile-toplevel))))
+  
   (let* ((code (blueprint-opecode (tensor-backward (opAST-car compile-toplevel)))))
-
-    (loop for var in (reverse (opAST-args compile-toplevel))
-	  if (eql (ast-variable-type var) :opAST)
-	    collect (explore-and-compile! (ast-variable-content var)))
     
-    (push
-     `(setf
-       ,(expand-aref (opAST-car compile-toplevel))
-       ,(apply #'implement-op code compile-toplevel
-		 (loop for var in (opAST-args compile-toplevel)
-		       if (eql (ast-variable-type var) :opAST)
-			 collect (expand-aref (opast-car (ast-variable-content var)))
-		       if (eql (ast-variable-type var) :tensor)
-			 collect (expand-aref (ast-variable-content var))
+    (let ((iseq (apply #'implement-op code compile-toplevel
+		       (loop for var in (opAST-args compile-toplevel)
+			     if (eql (ast-variable-type var) :opAST)
+			       collect (explore-and-compile! (ast-variable-content var))
+			     
+			     if (eql (ast-variable-type var) :tensor)
+			       collect (expand-aref (ast-variable-content var))
 
-		       if (eql (ast-variable-type var) :scalar)
-			 collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) (tensor-vec ,(ast-variable-content var))))))
-	  *instructions*)
-    nil))
+			     if (eql (ast-variable-type var) :scalar)
+			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) (tensor-vec ,(ast-variable-content var)))))))
+      (typecase iseq
+	(list iseq)
+	(iseq (iseq-code iseq))))))
+
 
