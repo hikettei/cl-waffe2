@@ -48,7 +48,7 @@ As of this writing (2023/07/05), we provide two standard implementation of `:cl-
 
 ```
 :cl-waffe2/backends.lisp
-:cl-waffe2/backends.cpu    
+:cl-waffe2/backends.cpu
 ```
 
 If only time and money would permit, I'm willing to implement CUDA/Metal Backends.
@@ -57,8 +57,7 @@ If only time and money would permit, I'm willing to implement CUDA/Metal Backend
 
 On the other hand :cl-waffe2/backends.cpu is accelerated by OpenBLAS (maybe MKL is ok) and other foreign backends, this is SBCL-Dependant and sometimes could be unsafe, but provides `full speed`.
 
-
-TODO:
+(P.S: `:cl-waffe2/backends.jit.lisp` is now partially available (not tested all), it is still unstable but demonstrates how to extend the JIT compiler on other backends in cl-waffe2.)
 
 ```
 :cl-waffe2/backends.fastmath (NOT IMPLEMENTED YET!)
