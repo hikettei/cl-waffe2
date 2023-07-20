@@ -334,6 +334,13 @@ Variables:
 ;; デバイスとは、AbstractTensorを継承した全てのクラスのことです。
 ;; MyTensorという新しいデバイスを作って、加算命令を実装してみましょう。今から実装するデバイスと同じタイプの行列に対して実装が既にある場合, そのクラスを継承するだけで十分です
 
+;; ~ 追記: whereについて ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; 計算ノードやモデルの定義など、ありとあらゆるところに:whereで宣言されてる謎の記法の言語は`Subscript DSL`と呼ばれるもので、静的型のないCommon Lispで演算前後の形状の状態や、またどのポインタをどう使うかといった情報を表しています。
+;; 仕様については前述したドキュメント(https://hikettei.github.io/cl-waffe2/nodes/#introducing-subscript-dsl)を読んでください。
+;;
+;; cl-waffe2は至る所に:whereが張り巡らされています。(AbstractNodeはこれが必須, Compositeは任意になっています) これはコンパイルする前にネットワークの形状を特定するために必要になっていて、事前ShapingErrorやJIT, offsetを事前に求めておくといった主要な機能はこれが元になっています。
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ;; MyTensor extends LispTensor extends AbstractTensor
 (defclass MyTensor (LispTensor) nil)
 
@@ -789,6 +796,7 @@ Previous dout:
 ;;:backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 
 ;; 時間があったらもう少しいいSemanticがないか考えたいですね:(
+;; cl-waffe2のBroadcastingのルールはNumpy Semanticと異なるものにしようと考えていて、手動で何らかの宣言がないとRepeatやRankupがされないようにしています。(Optional Broadcasting)
 
 ;; 3. !permute
 ;; permuteは行列のSubscriptが呼ばれる順番を入れ替えます
@@ -892,4 +900,88 @@ Previous dout:
 
 ;; 遅延評価が邪魔になる場合、例えば学習データの読み込みなど、Common Lisp標準配列を介した場合もあります。そういった場合はfacetを変えて行列を直接編集してください :).
 
-;; Trainer/Minimize
+;; ==========================
+;;  更なるJIT
+;; ==========================
+
+;; :cl-waffe2/backends.jit.lispパッケージが提供するJITLispTensorは
+;; 同一形状の四則演算及び数学関数で構築される計算ノードをまとめてLispのコードにJITし、不要なコピーを更に減らし、(TO BE: lparallelで並列化する)などの手法で、さらなる高速化のためのバックエンドを提供します。
+
+;; 例えばLispTensorバックエンドであれば：
+;;
+;; (!sin (!sin tensor))
+;;
+;; [イメージ]:
+;; OUT1 = (loop-with-view i ... do (move! place tensor i)
+;; OUT2 = (loop-with-view i ... do (!sin OUT1 i)
+;; OUT3 = (loop-with-view i ... do (!sin OUT2 i)
+;;
+;; のように内部で実行されます。(move!や!sinはOpenBLASやSLEEFの関数だと思ってください)
+
+;; これがJITLispTensorバックエンドでは:
+
+;;
+;; (!sin (!sin tensor))
+;; [イメージ]
+;; OUT = (loop-with-view i ... do (sin (sin tensor i)))
+
+;; のように動的にLispコードが生成されます
+;; 将来的にcl-waffe2からC++/CUDA/Metalへのコンパイラを作りたいと考えていて、JITLispTensorはそのモデルとして作成した簡素なものですが、十分高速に動作します。（時間がなくてまだ不安定です、特にViewが）
+
+
+;; 簡易的なベンチマーク: CPUTensor + LispTensorの場合
+(defun target-op ()
+  (let ((a (randn `(100 100)))
+	(b (randn `(100 100)))
+	(c (randn `(100 100))))
+    (!sin (!cos (!sin (!cos (!add a (!sub b c))))))))
+
+(with-devices (CPUTensor LispTensor)
+  (with-no-grad
+    (proceed-time (target-op) :compile-mode :fastest)))
+
+;;Evaluation took:
+;;  0.000 seconds of real time
+;;  0.000796 seconds of total run time (0.000780 user, 0.000016 system)
+;;  100.00% CPU
+;;  1,780,164 processor cycles
+;;  256,880 bytes consed
+  
+;;Proceed-Time: Without allocation time:
+;;Evaluation took:
+;;  0.000 seconds of real time
+;;  0.000691 seconds of total run time (0.000691 user, 0.000000 system)
+;;  100.00% CPU
+;;  1,586,838 processor cycles
+;;  0 bytes consed
+  
+
+;; JITLispTensor
+(with-devices (JITLispTensor)
+  (with-no-grad
+    (proceed-time (target-op) :compile-mode :fastest)))
+
+;;Evaluation took:
+;;  0.001 seconds of real time
+;;  0.001021 seconds of total run time (0.000983 user, 0.000038 system)
+;;  100.00% CPU
+;;  2,538,578 processor cycles
+;;  322,912 bytes consed
+  
+;;Proceed-Time: Without allocation time:
+;;Evaluation took:
+;;  0.000 seconds of real time
+;;  0.000775 seconds of total run time (0.000775 user, 0.000000 system)
+;;  100.00% CPU
+;;  1,783,772 processor cycles
+;; 0 bytes consed
+
+
+;; ちなみにJITLispTensorバックエンドは開発者が2~3時間ほど適当にLispのコードを書くだけで実装できました。実際300行程度のコードになってるはずです。
+;; いつかチュートリアルに任意のデバイスのJITコンパイラを書く方法みたいなのも追記します :)
+
+;; ===========================
+;;  Trainerとモデル最適化
+;; ===========================
+
+;; 最後に適当なニューラルネットワークを作って締めにしましょう
