@@ -7,8 +7,16 @@
 ;; AVX2 Isn't wokirng? Supper slow -> No, compute-stepby is included to complied code.
 ;; with-no-grad is MUST, all copies are ignored
 
-;; setf使わない代わりに高速に動作とか？
-;; setfのアクセスをキャッシュするとかしないと速くならない
+;; Things remained to be optimized:
+;; Scalar add
+;; 加算乗算を結合する? 意味ないか
+;; 同じViewのStride演算を結合する
+;; Strideの計算 実行時にViewとShapeが同じだと判明しているものはそのまま使う
+;; !sum動く？
+;; ArefをLetでCacheする
+;; コンパイルされたコードは大量に最適化の余地があるんだけど、単純にするためにそのままにしておく。
+;; The goal: Softmax関数を動かす Adamをこれで実装する
+;; Partial compile-test
 
 (defvar *compiled-tensors* nil "Tensor1 Tensor2...")
 (defvar *compiled-tensors-aref* nil "(aref Tesnor1 i) (aref Tensor2 i) ...")
@@ -45,21 +53,22 @@
   (type type :type ast-variable-types)
   (content content :type (or null opAST ScalarTensor JITLispTensor)))
 
-(defun add-variable (tensor)
-  ;; TODO: Ignore MoveTensorNode
+(defun add-variable (tensor toplevel)
   (unless (find tensor *compiled-tensors*)
     ;; ScalarTensor isn't iteratible
     (when (and
 	   (not (typep tensor 'ScalarTensor))
-	   (cl-waffe2/vm.generic-tensor::vec tensor))
+	   (find tensor (blueprint-use-var (tensor-backward toplevel))))
       (push tensor *compiled-tensors*))))
 
 (defun with-allocating-vectors (tensors body)
   `(let (,@(loop for tensor in tensors
-		 collect `(,(tensor-vec-id tensor) (tensor-vec ,tensor))))
+		 collect `(,(tensor-vec-id tensor) (tensor-vec
+						    ,(if (tensor-backward tensor)
+							 (tensor-id tensor)
+							 tensor)))))
      (declare ,@(loop for tensor in tensors
-		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
-	      (ignorable ,@(map 'list #'tensor-vec-id tensors)))
+		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor))))
      ,body))
 
 ;; TODO: Do iteration with each strides/offsets
@@ -82,12 +91,12 @@
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
 
-  (declare (type JITLispTensor toplevel))
+  (declare (type (or ScalarTensor JITLispTensor) toplevel))
 
   (let* ((variables (tensor-variables toplevel)))
     (apply #'make-opAST toplevel
 	   (loop for called-var in variables
-		 do (add-variable called-var)
+		 do (add-variable called-var toplevel)
 		 if (apply-compile-p toplevel called-var)
 		   collect (make-ast-variable called-var)
 		 else
@@ -96,11 +105,13 @@
 
 (defun invoke-compiler! (current-node variable next-var)
   (declare (type LispJIT-Blueprint current-node)
-	   (type JITLispTensor variable)
+	   (type (or ScalarTensor JITLispTensor) variable)
 	   (type (or null JITLispTensor) next-var))
   (declare (ignore current-node next-var))
 
-  (let* ((*compiled-tensors* `(,variable))
+  (let* ((*compiled-tensors* (if (typep variable 'JITLispTensor)
+				 `(,variable)
+				 nil))
 	 (*compiled-tensors-aref* (make-hash-table))
 	 (*subscript-char* (gensym "Index"))
 	 (compiling-area (confirm-compiling-area variable)))
@@ -182,7 +193,7 @@
 			       collect (expand-aref (ast-variable-content var))
 
 			     if (eql (ast-variable-type var) :scalar)
-			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) (tensor-vec ,(ast-variable-content var)))))))
+			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) ,(tensor-vec (ast-variable-content var)))))))
       (typecase iseq
 	(list iseq)
 	(iseq (iseq-code iseq))))))

@@ -19,8 +19,11 @@
 			      :reject-p #'only-when-no-grad
 			      :extends (LispJIT-Blueprint))
 			     :forward ((self x y)
-				       (declare (ignore y))
-				       (setf (blueprint-opecode self) ',lisp-op)
+				       (progn
+					 (setf (blueprint-use-var self) `(,x ,y))
+					 (setf (blueprint-opecode self) ',lisp-op)
+					 nil)
+				       
 				       `(progn ,x)))
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
@@ -38,9 +41,17 @@
 ;; A[~] B[~] -> A[~]
 (define-impl (MoveTensorNode :device JITLispTensor :reject-p #'only-when-no-grad :extends (LispJIT-Blueprint))
 	     :forward ((self out target)
-		       (declare (ignore target))
 		       (progn
+			 (setf (blueprint-use-var self) `(,target))
 			 (setf (blueprint-opecode self) 'move)
+			 nil)
+		       `(progn ,out)))
+
+(define-impl (MoveScalarTensorNode :device JITLispTensor :reject-p #'only-when-no-grad :extends (LispJIT-Blueprint))
+	     :forward ((self out target)
+		       (progn
+			 (setf (blueprint-use-var self) `(,target))
+			 (setf (blueprint-opecode self) 'move-scal)
 			 nil)
 		       `(progn ,out)))
 
@@ -49,8 +60,13 @@
   (make-iseq (second args)
 	     (car args)))
 
+(defmethod implement-op ((opcode (eql 'move-scal)) opAST &rest args)
+  (make-iseq (second args)
+	     (car args)))
+
 (define-impl (InverseTensorNode :device JITLispTensor :reject-p #'only-when-no-grad :extends (LispJIT-Blueprint))
 	     :forward ((self x)
+		       (setf (blueprint-use-var self) `(,x))
 		       (setf (blueprint-opecode self) 'inverse)
 		       `(progn ,x)))
 
@@ -67,8 +83,8 @@
 			    :reject-p #'only-when-no-grad
 			    :extends (LispJIT-Blueprint))
 			   :forward ((self A scalar)
-				     (declare (ignore scalar))
 				     (progn
+				       (setf (blueprint-use-var self) `(,A ,scalar))
 				       (setf (blueprint-opecode self) ',lisp-op)
 				       nil)
 				     `(progn ,A)))))

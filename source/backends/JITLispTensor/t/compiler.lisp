@@ -31,3 +31,9 @@
 	(= cl-waffe2/backends.jit.lisp::*compiling-ntime-count* 1))))
 
 
+
+;; Test Case
+;; A+=B
+;; !add
+;; (!copy (!sin (!copy A))) Sandwitch by Non-JITCompilable-Nodes
+

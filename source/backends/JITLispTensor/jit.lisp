@@ -52,7 +52,8 @@
 ;;
 
 (defclass LispJIT-Blueprint ()
-  ((opecode :initform nil :type symbol :accessor blueprint-opecode))
+  ((opecode :initform nil :type symbol :accessor blueprint-opecode)
+   (use-vars :initform nil :type list :accessor blueprint-use-var))
   (:documentation "
 ## [class] LispJIT-Blueprint
 
@@ -78,7 +79,10 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
    (funcall (compose #'not #'tensor-lisp-jit-p) next-variable)
 
    ;; The change of shapes is detected:
-   (not (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable)))))
+   (and (not (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable)))
+	;; A += 1.0 is legal though
+	(not (or (typep variable 'ScalarTensor)
+		 (typep variable 'ScalarTensor))))))
 
 (defparameter *compiling-ntime-count* 0)
 
@@ -92,6 +96,6 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
 	;; Later, compiled lisp code will be returned.
-	(invoke-compiler! current-node variable next-variable))
+	(print (invoke-compiler! current-node variable next-variable)))
       nil))
 
