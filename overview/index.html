@@ -219,12 +219,12 @@
 <h3 id="standard-backendsimplemenetations">Standard Backends/Implemenetations</h3>
 <p>As of this writing (2023/07/05), we provide two standard implementation of <code>:cl-waffe2/base-impl</code>, both of them are working on CPU.</p>
 <pre><code>:cl-waffe2/backends.lisp
-:cl-waffe2/backends.cpu    
+:cl-waffe2/backends.cpu
 </code></pre>
 <p>If only time and money would permit, I'm willing to implement CUDA/Metal Backends.</p>
 <p>:cl-waffe2/backends.lisp is <code>work enough</code> first, it is Portable (based on ANSI Common Lisp) and supports AVX2 but far from <code>full speed</code>.</p>
 <p>On the other hand :cl-waffe2/backends.cpu is accelerated by OpenBLAS (maybe MKL is ok) and other foreign backends, this is SBCL-Dependant and sometimes could be unsafe, but provides <code>full speed</code>.</p>
-<p>TODO:</p>
+<p>(P.S: <code>:cl-waffe2/backends.jit.lisp</code> is now partially available (not tested all), it is still unstable but demonstrates how to extend the JIT compiler on other backends in cl-waffe2.)</p>
 <pre><code>:cl-waffe2/backends.fastmath (NOT IMPLEMENTED YET!)
 </code></pre>
 <p>(TO BE) Supporting vectorized mathematical functions, AVX512 instructions.</p>

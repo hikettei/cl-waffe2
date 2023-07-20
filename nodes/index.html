@@ -165,6 +165,12 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-with-reading-save4bw">[macro] with-reading-save4bw</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#generic-on-finalizing-compiling">[generic] on-finalizing-compiling</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_5">Inputs</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#class-composite">[class] Composite</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#extend-composite-class-slightly-complicated">Extend Composite Class (Slightly Complicated)</a>
@@ -997,6 +1003,30 @@ input-form = (save-place tensor)
 input-form = (variable-place save-for-backward-name)
 </code></pre>
 <p>Reading the save-for-backward of currently working node, the macro binds each <code>variable-place</code> the stored tensor.</p>
+<h2 id="generic-on-finalizing-compiling">[generic] on-finalizing-compiling</h2>
+<pre><code class="language-lisp">(on-finalizing-compiling current-node variable next-variable)
+</code></pre>
+<p>The generic function <code>on-finalizing-compiling</code> is invoked after the body of <code>define-impl</code> is expanded when performing <code>compile-chain-forward</code>.</p>
+<p>Return S expression to be embodied in the compiled code if needed, especially, devices which support jit-compiling will need this, because you can get information before and after the node.</p>
+<h3 id="inputs_5">Inputs</h3>
+<pre><code class="language-lisp">     [TopLevel]
+         |
+     [CosNode1]
+         |
+     [SinNode1]   &lt;- If invoked at this point...
+         |
+   [MoveTensorNode2]
+         |
+     [SinNode3]
+         |
+   [MoveTensorNode4]
+         |
+        ...
+</code></pre>
+<p><code>current-node (i.e.: SinNode1)</code> used to dispatch methods.</p>
+<p><code>variable (i.e.: corresponding variable of SinNode1)</code> returns the corresponding var of current node.</p>
+<p><code>next-variables (i.e.: corresponding variable of MoveTensorNode2)</code> returns corresponding variable of next node.</p>
+<p>See also: <code>the implementation of JITLispTensor</code>.</p>
 <h2 id="class-composite">[class] Composite</h2>
 <p>[class] Composite</p>
 <p>Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.</p>

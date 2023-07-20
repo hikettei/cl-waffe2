@@ -150,7 +150,7 @@
 </code></pre>
 <p>The generic function <code>convert-tensor-facet</code> pays an important role when converting the data structure between <code>AbstractTensor</code> and other arrays (e.g.: <code>simple-array</code> etc...). Set <code>from</code> = <code>&lt;&lt;Array Before Converted&gt;&gt;</code>, and <code>to</code> = <code>(type-of &lt;&lt;Datatype you need&gt;&gt;)</code>, we dispatch the appropriate method and return converted arrays. Note that there's no assurance but before and after the converting, the pointers endeavour to indicate the same thing. If <code>AbstractTensor</code> to be converted has shuffled or viewed, we make a copy so that they become contiguous in memory.</p>
 <p>This method is intended to be extended by users.</p>
-<p>For example: <code>AbstractTensor</code> -&gt; <code>simple-array</code>, can be used as:</p>
+<p>For example, converting <code>AbstractTensor</code> -&gt; <code>simple-array</code>:</p>
 <pre><code class="language-lisp">(convert-tensor-facet (randn `(3 3)) 'simple-array)
 </code></pre>
 <h3 id="performance-issues">Performance Issues</h3>
