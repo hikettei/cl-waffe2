@@ -896,6 +896,42 @@ input-form = (variable-place save-for-backward-name)
 
 Reading the save-for-backward of currently working node, the macro binds each `variable-place` the stored tensor.
 
+## [generic] on-finalizing-compiling
+
+```lisp
+(on-finalizing-compiling current-node variable next-variable)
+```
+
+The generic function `on-finalizing-compiling` is invoked after the body of `define-impl` is expanded when performing `compile-chain-forward`.
+
+Return S expression to be embodied in the compiled code if needed, especially, devices which support jit-compiling will need this, because you can get information before and after the node.
+
+### Inputs
+
+```lisp
+     [TopLevel]
+         |
+     [CosNode1]
+         |
+     [SinNode1]   <- If invoked at this point...
+         |
+   [MoveTensorNode2]
+         |
+     [SinNode3]
+         |
+   [MoveTensorNode4]
+         |
+        ...
+```
+
+`current-node (i.e.: SinNode1)` used to dispatch methods.
+
+`variable (i.e.: corresponding variable of SinNode1)` returns the corresponding var of current node.
+
+`next-variables (i.e.: corresponding variable of MoveTensorNode2)` returns corresponding variable of next node.
+
+See also: `the implementation of JITLispTensor`.
+
 ## [class] Composite
 
 [class] Composite
