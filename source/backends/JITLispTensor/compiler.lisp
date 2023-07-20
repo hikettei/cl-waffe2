@@ -68,14 +68,14 @@
     `(call-with-view
       #'(lambda (&rest ,views-area)
 	  (let ((*compiled-tensors-aref* (view->accessors ,views-area ,index-char)))
-	    `(loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		   do (let (,@(loop for view in ,views-area
+	    `(let (,@(loop for view in ,views-area
 				    for tensor in ,tensors
 				    collect `(,(tensor-stride-id tensor) (the fixnum ,(stride-of view 0))))
 			    ,@(loop for view in ,views-area
 				    for tensor in ,tensors
 				    collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
-			,,@body))))
+	       (loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
+		   do ,,@body))))
       ,tensors
       :at-least-dim 1)))
 
@@ -161,7 +161,7 @@
   (declare (type opAST compile-toplevel))
   (let* ((*tensors-use* nil)
 	 (tree (explore-and-compile! compile-toplevel)))
-    `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree)))
+    (print `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree))))
 
 (defun explore-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
