@@ -63,9 +63,7 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 (defun tensor-lisp-jit-p (tensor)
   "Returns T if the backward of tensor is a subtype of JITLispTensor"
   (let ((backward (tensor-backward tensor)))
-    (or
-     (subtypep (class-of backward) 'LispJIT-Blueprint)
-     (subtypep (class-of backward) 'ScalarTensor))))
+    (subtypep (class-of backward) 'LispJIT-Blueprint)))
 
 (defun apply-compile-p (variable next-variable)
   "Following the defition of 3., return t if there's a need to run compiling."
@@ -79,10 +77,7 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
    (funcall (compose #'not #'tensor-lisp-jit-p) next-variable)
 
    ;; The change of shapes is detected:
-   (and (not (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable)))
-	;; A += 1.0 is legal though
-	(not (or (typep variable 'ScalarTensor)
-		 (typep variable 'ScalarTensor))))))
+   (and (not (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable))))))
 
 (defparameter *compiling-ntime-count* 0)
 
@@ -90,6 +85,7 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 				    variable
 				    next-variable)
   "If the node is needed to be compiled, compile."
+  (print current-node)
   (if (apply-compile-p variable next-variable)
       (progn
 	(incf *compiling-ntime-count* 1)

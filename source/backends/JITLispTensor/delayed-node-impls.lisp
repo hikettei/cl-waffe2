@@ -47,20 +47,8 @@
 			 nil)
 		       `(progn ,out)))
 
-(define-impl (MoveScalarTensorNode :device JITLispTensor :reject-p #'only-when-no-grad :extends (LispJIT-Blueprint))
-	     :forward ((self out target)
-		       (progn
-			 (setf (blueprint-use-var self) `(,target))
-			 (setf (blueprint-opecode self) 'move-scal)
-			 nil)
-		       `(progn ,out)))
-
 (defmethod implement-op ((opcode (eql 'move)) opAST &rest args)
   ;; A <- B
-  (make-iseq (second args)
-	     (car args)))
-
-(defmethod implement-op ((opcode (eql 'move-scal)) opAST &rest args)
   (make-iseq (second args)
 	     (car args)))
 

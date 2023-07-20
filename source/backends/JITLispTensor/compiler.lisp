@@ -121,8 +121,8 @@
 				 `(,variable)
 				 nil))
 	 (*compiled-tensors-aref* (make-hash-table))
-	 (*subscript-char* (gensym "Index"))
-	 (compiling-area (confirm-compiling-area variable)))
+	 (*subscript-char*        (gensym "Index"))
+	 (compiling-area          (confirm-compiling-area variable)))
 
     ;; The form below is expanded into:
     ;;
@@ -204,7 +204,8 @@
 			       collect (tensor-aref-id (ast-variable-content var))
 
 			     if (eql (ast-variable-type var) :scalar)
-			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) ,(tensor-vec (ast-variable-content var)))))))
+			       ;; Cache: accessing to scalar
+			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) (tensor-vec ,(tensor-id (ast-variable-content var))))))))
       (typecase iseq
 	(list iseq)
 	(iseq (iseq-code iseq))))))
