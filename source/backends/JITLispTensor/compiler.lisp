@@ -5,14 +5,16 @@
 
 ;; TODO: Eliminate unused MoveTensorNode and allocation with it.
 ;; AVX2 Isn't wokirng? Supper slow -> No, compute-stepby is included to complied code.
-;; with-no-grad is MUST, all copies are ignored
+;; with-no-grad is MUST, since all copies are ignored
 
 ;; Things remained to be optimized:
-;; Scalar add
-;; 加算乗算を結合する? 意味ないか
+;; TODO:
+;; Lparallel
+;; Aggregation of +-*/: (+ (+ 1 1) 1) -> (+ 1 1 1)
 ;; 同じViewのStride演算を結合する
 ;; Strideの計算 実行時にViewとShapeが同じだと判明しているものはそのまま使う
 ;; !sum動く？
+;; !sum !mean ugokanai.... ;;
 ;; ArefをLetでCacheする
 ;; コンパイルされたコードは大量に最適化の余地があるんだけど、単純にするためにそのままにしておく。
 ;; The goal: Softmax関数を動かす Adamをこれで実装する
@@ -61,12 +63,16 @@
 	   (find tensor (blueprint-use-var (tensor-backward toplevel))))
       (push tensor *compiled-tensors*))))
 
+;; !Mean isn't working???
 (defun with-allocating-vectors (tensors body)
   `(let (,@(loop for tensor in tensors
 		 collect `(,(tensor-vec-id tensor) (tensor-vec
-						    ,(if (tensor-backward tensor)
-							 (tensor-id tensor)
-							 tensor)))))
+						    ;; If tensor is produced by the result of any nodes?
+						    
+						    ,(if (typep tensor 'JITLispTensor)
+							 ;; If tensor is produced by other devices, read id. otherwise use itself.
+							 tensor
+							 (tensor-id tensor))))))
      (declare ,@(loop for tensor in tensors
 		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
 	      (ignorable ,@(loop for tensor in tensors
@@ -74,6 +80,7 @@
      ,body))
 
 ;; TODO: Do iteration with each strides/offsets
+;; TODO: lparallel
 (defmacro with-expand-call-with-view (tensors index-char &body body)
   (let ((views-area (gensym)))
     `(call-with-view
@@ -87,12 +94,16 @@
 			   collect `(,(tensor-offset-id tensor) (the fixnum ,(offset-of view 0)))))
 	       (declare (ignorable ,@(loop for tensor in ,tensors collect (tensor-stride-id tensor))
 				   ,@(loop for tensor in ,tensors collect (tensor-offset-id tensor))))
-	       (loop for ,,index-char fixnum upfrom 0 below ,(size-of (car ,views-area) 0)
-		     do (let (,@(loop for tensor in ,tensors
-				      collect `(,(tensor-aref-id tensor) ,(expand-aref tensor))))
-			  (declare (ignorable ,@(loop for tensor in ,tensors collect (tensor-aref-id tensor))))
-			  ;; Call aref in advance:
-			  ,,@body)))))
+	       ;; TODO: For larger scal operations, lparallel would be nice
+	       ;; (cl-waffe2/threads:parallel-dotimes (p *work-num*)  ...)
+	       (dotimes (,,index-char (the fixnum ,(size-of (car ,views-area) 0)))
+		 (let (,@(loop for tensor in ,tensors
+			       collect `(,(tensor-aref-id tensor) ,(expand-aref tensor))))
+		   (declare
+		    (type unsigned-byte ,,index-char)
+		    (ignorable ,@(loop for tensor in ,tensors collect (tensor-aref-id tensor))))
+		   ;; Call aref in advance:
+		   ,,@body)))))
       ,tensors
       :at-least-dim 1)))
 

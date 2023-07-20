@@ -366,7 +366,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	   
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
 		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
-
+	 
 	 ;; Calls an event: on-finalizing-compiling
 	 ;; If JIT is implemented by user, expand user defined forms
 	 

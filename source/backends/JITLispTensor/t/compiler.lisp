@@ -37,3 +37,11 @@
 ;; !add
 ;; (!copy (!sin (!copy A))) Sandwitch by Non-JITCompilable-Nodes
 
+
+;;(with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
+;;	  (with-no-grad (proceed-time (!add (!view (ax+b `(1 3) 0 1) `(:broadcast 3))
+;;					    (ax+b `(3 3) 0 2)))))
+
+;;(with-devices (JITLispTensor cl-waffe2/backends.lisp:LispTensor)
+;;	  (with-no-grad (proceed-time (!copy (lazy-print (randn `(3 3)))))))
+;;

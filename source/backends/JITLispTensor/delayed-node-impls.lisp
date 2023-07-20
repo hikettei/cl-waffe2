@@ -83,10 +83,58 @@
 
 
 ;; Todo: Element-wise kernels... (OK)
-;; Todo: !sas-op (to reverse the order of ops)
-;; Todo: Scalar And Scalar Kernel ... !sub uses
-;; Todo: Eliminate move
-;; Todo: Mathematical APIs
-;; Todo: TEst
+;; Todo: Mathematical kernels
 
+;; X[~] OUT[~] -> OUT[~]
+(macrolet ((define-math-impl (node name &body impl)
+	     `(progn
+		(defmethod implement-op ((op (eql ',name)) opAST &rest inputs)
+		  ,@(or impl
+			`((make-iseq `(,',name ,(car inputs))
+				     (second inputs)))))
+
+		(define-impl (,node
+			      :device JITLispTensor
+			      :reject-p #'only-when-no-grad
+			      :extends (LispJIT-Blueprint))
+			     :forward ((self X out)
+				       (declare (ignore out))
+				       (progn
+					 (setf (blueprint-use-var self) `(,X))
+					 (setf (blueprint-opecode self) ',name)
+					 nil)
+				       `(progn ,X))))))
+  (define-math-impl AbsNode abs)
+  (define-math-impl SignNode signum)
+
+  (define-math-impl SqrtNode sqrt)
+  (define-math-impl SquareNode square
+    (make-iseq `(* ,(car inputs) ,(car inputs))
+	       (second inputs)))
+
+  (define-math-impl SinNode sin)
+  (define-math-impl ASinNode asin)
+  (define-math-impl SinhNode sinh)
+  (define-math-impl ASinHNode asinh)
+
+  (define-math-impl CosNode cos)
+  (define-math-impl AcosNode acos)
+  (define-math-impl CoshNode cosh)
+  (define-math-impl AcosHNode acosh)
+
+  (define-math-impl TanNode tan)
+  (define-math-impl ATanNode atan)
+  (define-math-impl TanhNode tanh)
+  (define-math-impl ATanHNode atanh)
+
+  (define-math-impl ExpNode exp)
+  (define-math-impl LogeNode log)
+
+  (define-math-impl Log2Node log2
+    (make-iseq `(log ,(car inputs) 2)
+	       (second inputs)))
+
+  (define-math-impl Log10Node log10
+    (make-iseq `(log ,(car inputs) 10)
+	       (second inputs))))
 

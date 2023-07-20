@@ -85,13 +85,12 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 				    variable
 				    next-variable)
   "If the node is needed to be compiled, compile."
-  (print current-node)
   (if (apply-compile-p variable next-variable)
       (progn
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
 	;; Later, compiled lisp code will be returned.
-	(print (invoke-compiler! current-node variable next-variable)))
+        (invoke-compiler! current-node variable next-variable))
       nil))
 
