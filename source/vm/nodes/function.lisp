@@ -50,7 +50,7 @@ Return: defun form
 	 (namelist (or (composite-symbol-names composite)
 		       (loop for i upfrom 0 below (length inputs)
 			     collect (nth-subscript i))))
-	 (result (apply #'call composite inputs))
+	 (result (with-no-grad (apply #'call composite inputs)))
 	 (self   (gensym))
 	 (model-name (symb 'compiled-
 			   function-name
