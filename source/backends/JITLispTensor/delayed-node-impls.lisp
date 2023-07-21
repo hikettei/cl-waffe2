@@ -20,19 +20,26 @@
 			      :reject-p #'only-when-no-grad
 			      :extends (LispJIT-Blueprint))
 			     :forward ((self x y)
+				       ;; Called at a Toplevel
 				       (progn
 					 (setf (blueprint-use-var self) `(,x ,y))
 					 (setf (blueprint-opecode self) ',lisp-op)
 					 nil)
-				       
+
+				       ;; Embedding into JIT
 				       `(progn ,x)))
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
-		  (make-iseq
-		   `(progn
-		      (setf ,(car args) (,',lisp-op ,(car args) ,(second args)))
-		      ,(car args))
-		   (car args))))))
+		  (let* ((args-tensor (map 'list #'ast-variable-content (opAST-args opAST)))
+			 (a-viewed-p  (tensor-projected-p (car args-tensor))))
+		    (make-iseq
+		     
+		     ;; If a tensor is broadcasted, the first argument should be modified.
+		     ;; aref is cached. someone has to coerce ~~~-vec into a (aref ~~~-vec ...) form.
+		     (if a-viewed-p
+			 `(setf ,(->force-aref (car args-tensor)) (,',lisp-op ,(car args) ,(second args)))
+			 `(,',lisp-op ,(car args) ,(second args)))
+		     (car args)))))))
   (define-arith-impl AddNode +)
   (define-arith-impl SubNode -)
   (define-arith-impl MulNode *)

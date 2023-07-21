@@ -167,6 +167,9 @@
 (defun tensor-aref-id (tensor)
   (symb (tensor-id tensor) '-aref))
 
+(defun ->force-aref (tensor)
+  (expand-aref tensor))
+
 (defun view->accessors (views index-symbol)
   "View -> '(aref tensor i)"
   (let ((result (make-hash-table)))
