@@ -62,7 +62,7 @@
 		       `(progn ,x)))
 
 (defmethod implement-op ((op (eql 'inverse)) opAST &rest args)
-  (make-iseq `(progn (setf ,(car args) (/ 1 ,(car args))) ,(car args)) (car args)))
+  (make-iseq `(/ 1 ,(car args)) (car args)))
 
 ;;
 ;; Scalar-Mat Operation family are originally declared as:
@@ -86,8 +86,8 @@
   (define-scalar-mat-impl ScalarMul *)
 (define-scalar-mat-impl ScalarDiv /))
 
-A *= 0 <- 0 isn't broadcasted
-so be it
+Broadcasted_Array * 0
+↑tends to be complicated. So be it...
 |#
 
 
@@ -100,7 +100,7 @@ so be it
 		(defmethod implement-op ((op (eql ',name)) opAST &rest inputs)
 		  ,@(or impl
 			`((make-iseq
-			   `(progn (setf ,(car inputs) (,',name ,(car inputs))) ,(car inputs))
+			   `(,',name ,(car inputs))
 			   (second inputs)))))
 
 		(define-impl (,node
@@ -119,9 +119,7 @@ so be it
 
   (define-math-impl SqrtNode sqrt)
   (define-math-impl SquareNode square
-    (make-iseq `(progn
-		  (setf ,(car inputs) (* ,(car inputs) ,(car inputs)))
-		  ,(car inputs))
+    (make-iseq `(* ,(car inputs) ,(car inputs))
 	       (second inputs)))
 
   (define-math-impl SinNode sin)
@@ -143,14 +141,10 @@ so be it
   (define-math-impl LogeNode log)
 
   (define-math-impl Log2Node log2
-    (make-iseq `(progn
-		  (setf ,(car inputs) (log ,(car inputs) 2))
-		  ,(car inputs))
+    (make-iseq `(log ,(car inputs) 2)
 	       (second inputs)))
 
   (define-math-impl Log10Node log10
-    (make-iseq `(progn
-		  (setf ,(car inputs) (log ,(car inputs) 10))
-		  ,(car inputs))
+    (make-iseq `(log ,(car inputs) 10)
 	       (second inputs))))
 
