@@ -66,13 +66,12 @@
 ;; !Mean isn't working???
 (defun with-allocating-vectors (tensors body)
   `(let (,@(loop for tensor in tensors
-		 collect `(,(tensor-vec-id tensor) (tensor-vec
+		 collect `(,(tensor-vec-id tensor) (tensor-vec 
 						    ;; If tensor is produced by the result of any nodes?
-						    
 						    ,(if (typep tensor 'JITLispTensor)
 							 ;; If tensor is produced by other devices, read id. otherwise use itself.
 							 tensor
-							 (tensor-id tensor))))))
+							 `(read-result ,tensor))))))
      (declare ,@(loop for tensor in tensors
 		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
 	      (ignorable ,@(loop for tensor in tensors
@@ -192,7 +191,7 @@
 
 (defun trace-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
-  (let* ((*tensors-use* nil)
+  (let* (;;(*tensors-use* nil)
 	 (tree (explore-and-compile! compile-toplevel)))
     `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree)))
 
@@ -216,7 +215,9 @@
 
 			     if (eql (ast-variable-type var) :scalar)
 			       ;; Cache: accessing to scalar
-			       collect `(the ,(dtype->lisp-type (dtype (ast-variable-content var))) (tensor-vec ,(tensor-id (ast-variable-content var))))))))
+			       collect (let ((scal-val (ast-variable-content var)))
+					 `(the ,(dtype->lisp-type (dtype (ast-variable-content var)))
+					       (tensor-vec (read-result ,scal-val))))))))
       (typecase iseq
 	(list iseq)
 	(iseq (iseq-code iseq))))))

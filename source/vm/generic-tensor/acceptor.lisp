@@ -300,6 +300,12 @@ permute-order : ~a
 
   (shape-equal-list declared-shape (shape tensor)))
 
+(defun read-result (tensor)
+ "Returns the result of computing of tensor in the compiled code"
+  (declare (type AbstractTensor tensor))
+
+  (nth (tensor-out-n tensor) (statecontainer-forward-result (tensor-state tensor))))
+
 ;; Set *runtime-shape-inspection* = t to detect run-time shape-error
 (defun compile-forward-chain (toplevel
 			      &key
@@ -348,7 +354,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 				collect `(,p ,s))
 			(,(tensor-id toplevel) (progn ,toplevel)))
 
-	 ;; The Operation hasn't done yet...
+	 ;; The Operation hasn't done yet:
 	 ;; The code below seems ugly...
 	 
 	 (when (or (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
