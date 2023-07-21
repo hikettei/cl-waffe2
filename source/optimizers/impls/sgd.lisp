@@ -20,13 +20,14 @@ Param_{new}\\gets{Param - Param_{grad}\\times{lr}}
 	   :on-call-> ((self param grad lr)
 		       (declare (ignore self))
 		       ;; Composite Function: Side Effects on Param?
-		       (A-=B param (!scalar-mul lr grad)))))
+		       (A-=B param (A*=scal grad lr)))))
 
-(define-composite-function (SGD-Compute-Form) step-sgd)
+(define-composite-function (SGD-Compute-Form) step-sgd :compile-mode :default)
 
 (defmethod step-optimize ((optimizer SGD))
   (let* ((lr    (make-tensor (sgd-lr optimizer)))
 	 (param (read-parameter optimizer))
 	 (grad  (grad param)))
-    (step-sgd param grad lr)))
+    (with-no-grad
+      (step-sgd param grad lr))))
 
