@@ -29,7 +29,9 @@
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
 		  (make-iseq
-		   `(,',lisp-op ,(car args) ,(second args))
+		   `(progn
+		      (setf ,(car args) (,',lisp-op ,(car args) ,(second args)))
+		      ,(car args))
 		   (car args))))))
   (define-arith-impl AddNode +)
   (define-arith-impl SubNode -)
@@ -60,12 +62,14 @@
 		       `(progn ,x)))
 
 (defmethod implement-op ((op (eql 'inverse)) opAST &rest args)
-  (make-iseq `(/ 1 ,(car args)) (car args)))
+  (make-iseq `(progn (setf ,(car args) (/ 1 ,(car args))) ,(car args)) (car args)))
 
 ;;
 ;; Scalar-Mat Operation family are originally declared as:
 ;; (A[~] Scalar[scal] -> A[~] where scal = 1)
 ;;
+
+#|
 (macrolet ((define-scalar-mat-impl (name lisp-op)
 	     `(define-impl (,name
 			    :device JITLispTensor
@@ -80,7 +84,11 @@
   (define-scalar-mat-impl ScalarAdd +)
   (define-scalar-mat-impl ScalarSub -)
   (define-scalar-mat-impl ScalarMul *)
-  (define-scalar-mat-impl ScalarDiv /))
+(define-scalar-mat-impl ScalarDiv /))
+
+A *= 0 <- 0 isn't broadcasted
+so be it
+|#
 
 
 ;; Todo: Element-wise kernels... (OK)
@@ -91,8 +99,9 @@
 	     `(progn
 		(defmethod implement-op ((op (eql ',name)) opAST &rest inputs)
 		  ,@(or impl
-			`((make-iseq `(,',name ,(car inputs))
-				     (second inputs)))))
+			`((make-iseq
+			   `(progn (setf ,(car inputs) (,',name ,(car inputs))) ,(car inputs))
+			   (second inputs)))))
 
 		(define-impl (,node
 			      :device JITLispTensor
@@ -110,7 +119,9 @@
 
   (define-math-impl SqrtNode sqrt)
   (define-math-impl SquareNode square
-    (make-iseq `(* ,(car inputs) ,(car inputs))
+    (make-iseq `(progn
+		  (setf ,(car inputs) (* ,(car inputs) ,(car inputs)))
+		  ,(car inputs))
 	       (second inputs)))
 
   (define-math-impl SinNode sin)
@@ -132,10 +143,14 @@
   (define-math-impl LogeNode log)
 
   (define-math-impl Log2Node log2
-    (make-iseq `(log ,(car inputs) 2)
+    (make-iseq `(progn
+		  (setf ,(car inputs) (log ,(car inputs) 2))
+		  ,(car inputs))
 	       (second inputs)))
 
   (define-math-impl Log10Node log10
-    (make-iseq `(log ,(car inputs) 10)
+    (make-iseq `(progn
+		  (setf ,(car inputs) (log ,(car inputs) 10))
+		  ,(car inputs))
 	       (second inputs))))
 

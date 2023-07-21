@@ -304,7 +304,10 @@ permute-order : ~a
  "Returns the result of computing of tensor in the compiled code"
   (declare (type AbstractTensor tensor))
 
-  (nth (tensor-out-n tensor) (statecontainer-forward-result (tensor-state tensor))))
+  (let ((state (tensor-state tensor)))
+    (if state
+	(nth (tensor-out-n tensor) (statecontainer-forward-result (tensor-state tensor)))
+	tensor)))
 
 ;; Set *runtime-shape-inspection* = t to detect run-time shape-error
 (defun compile-forward-chain (toplevel

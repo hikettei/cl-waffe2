@@ -71,7 +71,7 @@
 						    ,(if (typep tensor 'JITLispTensor)
 							 ;; If tensor is produced by other devices, read id. otherwise use itself.
 							 tensor
-							 `(read-result ,tensor))))))
+							 `(tensor-id ,tensor))))))
      (declare ,@(loop for tensor in tensors
 		      collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-vec-id tensor)))
 	      (ignorable ,@(loop for tensor in tensors
@@ -193,7 +193,7 @@
   (declare (type opAST compile-toplevel))
   (let* (;;(*tensors-use* nil)
 	 (tree (explore-and-compile! compile-toplevel)))
-    `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree)))
+    (print `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree))))
 
 (defun explore-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
