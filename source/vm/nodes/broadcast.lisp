@@ -1,6 +1,14 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+;;
+;; Forward [Shape-Error]
+;;  |
+;; [apply-broadcast] (If there's flexible axes)
+;;  |
+;; Forward (If failed, never broadcasted)
+;;  |
+ ;; out
 (defun apply-broadcast (input-states inputs uprankable-list)
   (let* ((largest-axis (loop for i in input-states
 			     for tensor in inputs

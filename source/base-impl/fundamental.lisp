@@ -665,7 +665,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 (!flexible tensor)
 ```
 
-The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.
+The function !flexible inserts a `broadcastable axes` to the tensor at the given position `at` (specified like: 1 2 ... -1 -2 ...).
 
 That is:
 
@@ -674,7 +674,61 @@ Tensor = (10 10) -> [!flexible] -> Tensor' = (1 ... 1 10 10)
                                                  ^ <1 x N>
 ```
 
-Note that added axes could be broadcasted automatically when the operation called with multiple arguments."
+Note that added axes could be broadcasted automatically when the operation called with multiple arguments.
+
+### Example
+
+`!flexible` is a fundamental operation when using broadcasting in cl-waffe2. And usually called via `%transform` macro for readability.
+
+```lisp
+CL-WAFFE2-REPL> (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))
+
+{CPUTENSOR[float] :shape (3 <1 x N>) :named ChainTMP1631118 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631165 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+CL-WAFFE2-REPL> (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631189 
+  :vec-state [computed]
+  ((0.0 0.0 0.0)
+   (1.0 1.0 1.0)
+   (2.0 2.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+CL-WAFFE2-REPL> (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0))))
+
+{CPUTENSOR[float] :shape (<1 x N> 3) :named ChainTMP1631205 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631248 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+CL-WAFFE2-REPL> (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631272 
+  :vec-state [computed]
+  ((0.0 1.0 2.0)
+   (0.0 1.0 2.0)
+   (0.0 1.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+"
   (declare (type fixnum at))
   (let ((out (forward (Flexible-Rank-Node At) tensor))
 	(at (if (>= at 0)
