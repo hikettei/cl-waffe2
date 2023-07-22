@@ -4,6 +4,7 @@
 ;; Here, we provide an implementation of einsum dedicated to form like: A -> B, from an one tensor to an one tensor.
 
 ;; No GPU Support?
+#|
 (defnode (Bijective-Einsum-Transform (self iterators from to)
 	  :slots ((iterators :initarg :iterators :initform nil :reader read-iterators))
 	  :where (A[from] out[to] -> out[to])))
@@ -48,4 +49,5 @@
 
     (print iterators)
     nil
-    ))
+))
+|#

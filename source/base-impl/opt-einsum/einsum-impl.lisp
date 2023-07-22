@@ -157,6 +157,7 @@
 ;; 2. Normal einsum
 
 ;; 3. Defactorize inputs and find the minimum combination, calling 2.
+#|
 (defun compile-einsum (from to shape-before shape-after let-bindings)
   (cond
     ((= (length shape-before) 1)
@@ -176,3 +177,4 @@
 
      nil)))
 
+|#

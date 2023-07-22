@@ -837,6 +837,8 @@ Note that view is only created for Tensors, not a Scalar.
 		 :order (order tensor)
 		 :shape (copy-list (slot-value tensor 'orig-shape))
 		 :projected-p t
+		 ;; If you have encounter unknown view error related to view, consider thining :view of detach-and-clone
+		 :view (copy-list (map 'list #'force-list (tensor-view tensor)))
 		 :past-view (copy-list (tensor-view tensor))
 		 :input-shape (copy-list (tensor-input-shape tensor))
 		 :facet (tensor-facet tensor)

@@ -277,14 +277,14 @@ Subscripts are following:
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
 "
-  (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
-	(broadcast-reverser
-	  (loop for s in subscripts
-		if (and (listp s)
-			(eql (car s) :broadcast))
-		  collect 0
-		else
-		  collect t)))
+  (let* ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
+	 (broadcast-reverser
+	   (loop for s in (tensor-view out)
+		 if (and (listp (force-list s))
+			 (eql (car (force-list s)) :broadcast))
+		   collect 0
+		 else
+		   collect t)))
     ;; Update Chains
     (values
      (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)

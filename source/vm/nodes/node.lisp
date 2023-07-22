@@ -3,6 +3,7 @@
 
 ;; TODO: Error Printings
 (defparameter *enable-broadcasting-auto* t) ;; This parameter never exported/modified by users, just used to prevent recursively call of forward
+(defparameter *restart-variable-from* nil)
 
 (defclass AbstractNode ()
   ((local-variables :accessor node-local-variables :type list :initform nil)
@@ -121,6 +122,7 @@ Here's a list of reports.
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node &rest inputs))
 
+;; ugh... steadly it gets ugly...
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
@@ -129,14 +131,15 @@ Here's a list of reports.
   ;; TODO: Put warning when !t without matmul
 
   (let* ((save-for-backward (node-save-for-backward node))
-	 (inputs (loop for i in inputs
-		       for k upfrom 0
-		       if (and
-			   (not *no-grad*)
-			   (nth k save-for-backward)) ;; If T?
-			 collect (system-lazy-set-save-for-backward i)
-		       else
-			 collect i))
+	 (inputs (or (when *restart-variable-from* inputs) ;; No additional save-for-backward is created.
+		     (loop for i in inputs
+			   for k upfrom 0
+			   if (and
+			       (not *no-grad*)
+			       (nth k save-for-backward)) ;; If T?
+			     collect (system-lazy-set-save-for-backward i)
+			   else
+			     collect i)))
 	 (transition-function     (abstractnode-node node))  ;; original subscript
 	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
@@ -173,7 +176,13 @@ Here's a list of reports.
 		       (find t (mapcar #'(lambda (x y) (and (tensor-flexible-p x) y)) inputs uprankable-list)))
 		  ;; Update ranks and try again...
 		  (let ((inputs-new (apply-broadcast input-states inputs uprankable-list))
-			(*enable-broadcasting-auto* nil))
+			(*enable-broadcasting-auto* nil)
+			(*restart-variable-from* inputs)) ;; (tensor-variable out) records the first call of tensors (top_inputs)
+		    ;;  Forward:         Broadcast:          Restart
+		    ;; 
+		    ;; top_inputs -> View/Reshape/Uprank -> (forward ...)
+		    ;; inputs-top -> inputs-new nodes are continuous.
+		    ;; because inputs-new are made from inputs-top
 		    (return-from forward (apply #'forward node inputs-new)))
 		  ;; Otherwise the operation was invaild.
 		  (describe-problems node detected-errors inputs out-state))

@@ -438,6 +438,7 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
   "Tensor[2:10][:broadcast 10]"
   (error "TODO [2:10] -> [:broadcast 10]"))
 
+;; (!view (!view (randn `(1)) `(:broadcast 10)) t) = `(10)
 ;; Tensor[:broadcast n] -> Any
 (defmethod step-subscript ((x (eql :broadcast))
 			   (y (eql :t))
@@ -445,6 +446,7 @@ I.e.: From viewpoint of x-orig, x-orig[1:5][0] is x-orig[1]"
 			   after
 			   size)
   "Tensor[:broadcast 10][t] -> :broadcast 10"
+  ;; Reset Broadcasting
   (step-subscript :t :broadcast before after size))
 
 (defmethod step-subscript ((x (eql :broadcast))

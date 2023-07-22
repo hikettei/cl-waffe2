@@ -6,7 +6,7 @@
 ;;
 ;; (defmacro %einsum %implict-einsum)
 ;; Add a reader macro: #E
-
+#|
 
 (defmacro %einsum (&body einsum-subscripts)
   "
@@ -33,3 +33,4 @@
 
 ;; Broadcastの仕様をちゃんと作ってからEinsumに取りかかったほうがいい気がするが・・・
 
+|#

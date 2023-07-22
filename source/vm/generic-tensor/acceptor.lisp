@@ -411,7 +411,7 @@ The definition/implementation of nodes could be invaild."
 (defun compile-backward-chain (toplevel past-dy)
   "Constructs the computation node for backwards recursively."
   (declare (type AbstractTensor toplevel past-dy))
-  
+
   (when (null (tensor-backward toplevel))
     ;; Gradient-add-form here?
     (return-from compile-backward-chain
