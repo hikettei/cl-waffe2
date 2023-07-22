@@ -5,6 +5,8 @@
 ;; delayed-node-impls.lisp provides define-impl forms of principle operations of JITLispTensor.
 ;;
 
+;; Giving up reduction?
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun only-when-no-grad (&rest inputs)
     (declare (ignore inputs))
@@ -30,16 +32,10 @@
 				       `(progn ,x)))
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
-		  (let* ((args-tensor (map 'list #'ast-variable-content (opAST-args opAST)))
-			 (a-viewed-p  (tensor-projected-p (car args-tensor))))
-		    (make-iseq
-		     
-		     ;; If a tensor is broadcasted, the first argument should be modified.
-		     ;; aref is cached. someone has to coerce ~~~-vec into a (aref ~~~-vec ...) form.
-		     (if a-viewed-p
-			 `(setf ,(->force-aref (car args-tensor)) (,',lisp-op ,(car args) ,(second args)))
-			 `(,',lisp-op ,(car args) ,(second args)))
-		     (car args)))))))
+		  (make-iseq
+		   `(,',lisp-op ,(car args) ,(second args))
+		   
+		   (car args))))))
   (define-arith-impl AddNode +)
   (define-arith-impl SubNode -)
   (define-arith-impl MulNode *)
@@ -76,7 +72,7 @@
 ;; (A[~] Scalar[scal] -> A[~] where scal = 1)
 ;;
 
-#|
+
 (macrolet ((define-scalar-mat-impl (name lisp-op)
 	     `(define-impl (,name
 			    :device JITLispTensor
@@ -91,11 +87,10 @@
   (define-scalar-mat-impl ScalarAdd +)
   (define-scalar-mat-impl ScalarSub -)
   (define-scalar-mat-impl ScalarMul *)
-(define-scalar-mat-impl ScalarDiv /))
+  (define-scalar-mat-impl ScalarDiv /))
 
-Broadcasted_Array * 0
-↑tends to be complicated. So be it...
-|#
+;;Broadcasted_Array * 0
+;;↑tends to be complicated. So be it...
 
 
 ;; Todo: Element-wise kernels... (OK)
