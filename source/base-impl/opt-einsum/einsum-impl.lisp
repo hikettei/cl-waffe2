@@ -30,7 +30,7 @@
 ;; ============================================================
 
 ;;
-;; defpathでpathを定義 -> もしあればOpenBLASかcuBLASで置き換える
+;; defrouteでrouteを定義 -> もしあればOpenBLASかcuBLASで置き換える
 ;; 
 
 ;; ================================================================
@@ -96,7 +96,11 @@
 ;; Defactorizing matmul
 ;; When the number of args >= 3:
 ;; A[a b] @ B[c d] @ C[e f]
-;;    ^ Someone has to minimize its O(n).
+;;    ^ 一度に計算できないから
+;; (A @ B) @ Cとかにする 計算量は頑張って最小化
+;;
+
+
 ;;
 ;; Some combinations of einsum (e.g.: matmul, element-wise axpy, transpose) can be accelerated by OpenBLAS/CUDA Backend if the currently using device supports:
 ;; We replace such combination as possible as we can
@@ -141,5 +145,34 @@
 
 ;;(defstruct Compiled-Einsum)
 
+;; Einsum has a three behaviour depending on the length of shape-before
+
+;; 1. Dispatching Permute/View/Sum/Flexible
+;; (einsum A[i j] -> [scal] where scal = 1) to summarize
+;; (einsum A[i i] -> [i])   to diagnoal
+;; (einsum A[i j] -> [i i]) to sum axis=1
+;; (einsum A[a ~ b] -> [~]) to make make A broadcastable
+;; (dispatched through routers) if no hit, expands the kernel.
+
+;; 2. Normal einsum
+
+;; 3. Defactorize inputs and find the minimum combination, calling 2.
 (defun compile-einsum (from to shape-before shape-after let-bindings)
-  )
+  (cond
+    ((= (length shape-before) 1)
+     (make-transform
+      (symbol-eq (car from) (car to))
+      (car from)
+      (car to)
+      (car shape-before)
+      (car shape-after)
+      (map 'list #'car let-bindings)))
+    
+    ((= (length shape-before) 2)
+     (let ((einsum (make-einsum from to shape-before shape-after (map 'list #'car let-bindings))))
+
+       einsum))
+    (T
+
+     nil)))
+

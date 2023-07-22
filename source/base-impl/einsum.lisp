@@ -5,9 +5,8 @@
 
 ;;
 ;; (defmacro %einsum %implict-einsum)
-;;
+;; Add a reader macro: #E
 
-;; 行列のShapeはわかってるか一部分だけわかってる (10 batch-size) みたいな
 
 (defmacro %einsum (&body einsum-subscripts)
   "
@@ -25,4 +24,12 @@
 
 "
   `(%einsum ,@einsum-subscripts -> [~]))
+
+;;
+;; add: transform, an alias for einsum but (length before) == 1
+;; (transform A[i j] -> A[i ~ j]) ;; => (i <1xN> j) shape is returned.
+;;
+
+
+;; Broadcastの仕様をちゃんと作ってからEinsumに取りかかったほうがいい気がするが・・・
 

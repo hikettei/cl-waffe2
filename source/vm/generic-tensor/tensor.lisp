@@ -70,7 +70,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
    (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
-   (flexible-p :initform nil :accessor tensor-flexible-p :type boolean)
+   (flexible-p :initform nil :accessor tensor-flexible-p :type (or boolean fixnum))
    (tensor-n-ref :initform 0 :accessor tensor-n-ref :type fixnum) ;; For optimizing
    (tensor-already-traced :initform nil :accessor tensor-traced-p :type boolean)
    
@@ -230,7 +230,7 @@ If t, the tensor has created by `parameter` or tensors whose ancestor-param-p=t.
 
 ### [slot] flexible-p (Boolean)
 
-If t, the tensor is `broadcastable`
+Set fixnum to add broadcastable axis.
 
 ### [slot] facet (keyword)
 
@@ -992,13 +992,18 @@ The function parameter computes all the previous nodes of the given tensor if an
 	(shape      (shape tensor)))
     (with-output-to-string (str)
       (format str "(")
-      (when flexible-p
-	(format str "<1 x N> "))
       (loop for i upfrom 0
 	    for s in shape
-	    do (format str "~a" s)
+	    if (and flexible-p
+		    (= i flexible-p))
+	      do (format str "<1 x N> ")
+	    do (format str "~a" s)	    
 	    unless (= i (1- (length shape))) ;; unless the last
 	      do (format str " "))
+      
+      (when (and flexible-p
+		 (= (length shape) flexible-p))
+	(format str " <1 x N>"))
       (format str ")"))))
 
 (defun state-name (tensor state)

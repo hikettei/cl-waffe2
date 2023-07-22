@@ -2,6 +2,7 @@
 (in-package :cl-waffe2/vm.nodes)
 
 ;; TODO: Error Printings
+(defparameter *enable-broadcasting-auto* t) ;; This parameter never exported/modified by users, just used to prevent recursively call of forward
 
 (defclass AbstractNode ()
   ((local-variables :accessor node-local-variables :type list :initform nil)
@@ -166,48 +167,14 @@ Here's a list of reports.
 
 	      ;; The node is declared as uprankable
 	      ;;  A[~ x]   B[x]   -> B[x]
-	      ;; flexible normal
-	      (if (find t (mapcar #'(lambda (x y)
-				      (and (tensor-flexible-p x) y))
-				  inputs uprankable-list))
+
+	      ;; Uprankable Nodes are subject to broadcasted
+	      (if (and *enable-broadcasting-auto*
+		       (find t (mapcar #'(lambda (x y) (and (tensor-flexible-p x) y)) inputs uprankable-list)))
 		  ;; Update ranks and try again...
-		  (let* ((largest-axis (loop for i in input-states
-					     for tensor in inputs
-					     unless (tensor-flexible-p tensor)
-					       maximize (length i)))
-			 (largest-axis
-			   (if (= largest-axis 0) ;; every inputs are flexible
-			       (loop for i in input-states
-				     maximize (length i))
-			       largest-axis))
-			 (largest-axis-shape
-			   (shape
-			    (find largest-axis inputs
-				  :test #'=
-				  :key #'(lambda (x) (length (shape x)))))))
-		    ;; The :where is...
-		    ;; [~ x y] <- it is ok to apply uprank rule.
-		    ;; [x y]   <- it is ng to apply uprank rule.
-		    (return-from forward
-		      (apply
-		       #'forward
-		       node
-		       (loop for input in inputs
-			     for uprankable in uprankable-list
-			     if (and (tensor-flexible-p input)
-				     uprankable)
-			       collect (let* ((rankup-n (- largest-axis (length (shape input))))
-					      (out (cl-waffe2/base-impl:!rankup
-						    input
-						    rankup-n))
-					      (subscripts (loop for i upfrom 0 below rankup-n
-								collect `(:broadcast ,(nth i largest-axis-shape))))
-					      (out (apply #'cl-waffe2/base-impl:!view out subscripts)))
-					 ;; Apply Broadcast to flexible axis
-					 (setf (tensor-flexible-p out) nil)
-					 out)
-			     else
-			       collect input))))
+		  (let ((inputs-new (apply-broadcast input-states inputs uprankable-list))
+			(*enable-broadcasting-auto* nil))
+		    (apply #'forward node inputs-new))
 		  ;; Otherwise the operation was invaild.
 		  (describe-problems node detected-errors inputs out-state))
 	      (setq out-state out-state1))))
