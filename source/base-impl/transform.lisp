@@ -18,7 +18,7 @@
 		 `(list :broadcast ,(intern latter-part))))
 	   arg)))
     (T
-     (error "unknown type of args"))))
+     (error "%transform: unknown syntax of view: ~a" arg))))
 
 (defmacro %transform (&body transform-syntax)
   "
@@ -81,8 +81,6 @@ If symbols used before `->` are also appeared in after `->`, the corresponding s
 Set symbols (which aren't used before `->`) or fixnum to make a index. `(start end)` also creates a slice. Setting characters like `*10` `*a` broadcasts the axis.
 
 If `~` were used after `->`, the macro is expanded into `!flexible ...`, or call `!permute` as long as all symbols appeared before `->` were also used after `->`. Otherwise, call `!view`.
-
-Note that this macro also accessed by the reader macro `#T`
 "
   (multiple-value-bind (names-from names-to subs-from subs-to let-bindings) (parse-einsum-syntax `,transform-syntax)
     (declare (ignore names-to))

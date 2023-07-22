@@ -35,6 +35,21 @@
 	  (T
 	   (symbol->idx s table)))))
 
+(defun shape->ids-permute (shape table &key
+					 (broadcast '~)
+					 (declared nil))
+  (loop with ncount = (1- (length (alexandria:hash-table-keys table)))
+        for s in shape
+	collect
+	(cond
+	  ((find s declared :test #'symbol-eq)
+	   nil)
+	  ((symbol-eq s broadcast)
+	   s)
+	  (T
+	   (if (symbol->idx s table)
+	       (- ncount (symbol->idx s table)))))))
+
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))
