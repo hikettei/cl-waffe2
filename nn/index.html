@@ -187,13 +187,13 @@ ReLU(x) = max(x, 0)
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1417 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP3228 
   :vec-state [computed]
-  ((-0.0        -0.0        1.975988    ~ 2.6147454   1.2552326   -0.0)                   
-   (0.76103824  0.080851234 -0.0        ~ 0.1685591   -0.0        -0.0)   
+  ((-0.0        -0.0        -0.0        ~ 0.49666062  0.9852601   -0.0)                   
+   (-0.0        1.8804568   0.986707    ~ -0.0        0.51464295  -0.0)   
                 ...
-   (1.8325363   0.27987656  -0.0        ~ -0.0        -0.0        -0.0)
-   (0.2005611   -0.0        0.052415702 ~ 0.25025347  -0.0        -0.0))
+   (2.1753807   -0.0        0.91856265  ~ 0.9379178   2.05032     0.11047221)
+   (1.2239017   1.7646626   0.09464423  ~ 1.1347765   0.59245276  0.06533106))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -208,13 +208,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 <h3 id="example_1">Example</h3>
 <pre><code class="language-lisp">(proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1730 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP3541 
   :vec-state [computed]
-  ((0.71292    0.6855479  0.7652124  ~ 0.5553089  0.17005274 0.21288207)                  
-   (0.33826295 0.6008625  0.28127894 ~ 0.41916075 0.1272022  0.43307915)   
-               ...
-   (0.27530894 0.9130255  0.28226978 ~ 0.7711161  0.75187397 0.4225798)
-   (0.66495955 0.18262608 0.42268223 ~ 0.656544   0.40799212 0.76683646))
+  ((0.80563885  0.53765744  0.77151203  ~ 0.9643239   0.6706047   0.71123135)                   
+   (0.2943471   0.23736556  0.32364336  ~ 0.5261212   0.7566072   0.22855598)   
+                ...
+   (0.69619596  0.11914415  0.6037336   ~ 0.8480662   0.39654222  0.36058164)
+   (0.54149055  0.47243506  0.503598    ~ 0.26494858  0.40712014  0.7131819))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -231,9 +231,9 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = abs(x_n - y_n)
 <h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP2170 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP3981 
   :vec-state [computed]
-  ((1.1390866))
+  ((1.0332493))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -250,9 +250,9 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
 <h3 id="example_3">Example</h3>
 <pre><code class="language-lisp">(proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP2584 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP4395 
   :vec-state [computed]
-  ((1.4544442))
+  ((1.6465957))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -308,7 +308,7 @@ y = xA^\intercal + b
 <h3 id="example_4">Example</h3>
 <pre><code class="language-lisp">(LinearLayer 10 5)
 
-&lt;Composite: LINEARLAYER{W2588}(
+&lt;Composite: LINEARLAYER{W4399}(
     &lt;Input : ((~ BATCH-SIZE 10)) -&gt; Output: ((~ BATCH-SIZE 5))&gt;
 
     WEIGHTS -&gt; (5 10)

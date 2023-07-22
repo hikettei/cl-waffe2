@@ -339,7 +339,7 @@
 <h3 id="slot-ancestor-param-p-boolean">[slot] ancestor-param-p (Boolean)</h3>
 <p>If t, the tensor has created by <code>parameter</code> or tensors whose ancestor-param-p=t.</p>
 <h3 id="slot-flexible-p-boolean">[slot] flexible-p (Boolean)</h3>
-<p>If t, the tensor is <code>broadcastable</code></p>
+<p>Set fixnum to add broadcastable axis.</p>
 <h3 id="slot-facet-keyword">[slot] facet (keyword)</h3>
 <p>Tensors has a two state:</p>
 <ol>
@@ -478,7 +478,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1295 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP3106 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -491,10 +491,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53A4361B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53959FFB}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53A4161B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53AB99DB}&gt;
 
 += [Tensors in the computation node] =======+
 

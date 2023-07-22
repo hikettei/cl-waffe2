@@ -228,6 +228,10 @@
     <li class="toctree-l2"><a class="reference internal" href="#function-flatten">[function] !flatten</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-rankup">[function] !rankup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-scal">[function] -&gt;scal</a>
     </li>
@@ -253,7 +257,25 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-transform">[macro] %transform</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#syntax">Syntax</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#adding-an-broadcastable-axis">Adding an broadcastable axis.</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#adjustable-dimensions">Adjustable dimensions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#shuffling-the-permution-of-tensor">Shuffling the permution of tensor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#make-a-view-of-tensors">Make a view of tensors.</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-flexible">[function] !flexible</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-abs">[function] !abs</a>
         <ul>
@@ -990,9 +1012,9 @@ Stride     :   4  1  2
 </code></pre>
 <p>equivalent to the <code>(!reshape tensor t)</code></p>
 <h2 id="function-rankup">[function] !rankup</h2>
-<pre><code class="language-lisp">(!rankup tensor ntimes)
+<pre><code class="language-lisp">(!rankup tensor ntimes &amp;key (at 0))
 </code></pre>
-<p>The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.</p>
+<p>The function !rankup appends/reduces 1 at <code>at</code> into the given tensor's shape for ntimes.</p>
 <ol>
 <li>
 <p>If <code>ntimes</code> &gt; 0, appends 1</p>
@@ -1001,6 +1023,24 @@ Stride     :   4  1  2
 <p>If <code>ntimes</code> &lt; 0, reduces 1, if the axis=1, otherwise returns error.</p>
 </li>
 </ol>
+<h3 id="examples">Examples</h3>
+<pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (!rankup (randn `(3 3)) 3 :at 1)
+{CPUTENSOR[float] :shape (3 1 1 1 3) :named ChainTMP1459457 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (3 1 1 1 3) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -&gt; B[AFTER])&gt;}
+CL-WAFFE2-REPL&gt; (!rankup * -3 :at 1)
+
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1459467 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (3 3) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -&gt; B[AFTER])&gt;}
+CL-WAFFE2-REPL&gt;
+</code></pre>
 <h2 id="function-scal">[function] -&gt;scal</h2>
 <pre><code>(-&gt;scal matrix-tensor)
 </code></pre>
@@ -1062,15 +1102,97 @@ Stride     :   4  1  2
 <p>The function proceed-backward calls forward and backwrd of the tensor.</p>
 <h3 id="output_1">Output</h3>
 <p><code>T</code> (which indicates backward is succeed)</p>
+<h2 id="macro-transform">[macro] %transform</h2>
+<pre><code class="language-lisp">(%transform &amp;body transform-syntax)
+</code></pre>
+<p><code>%transform</code> is a macro to describe <code>!view</code>, <code>!permute</code> and <code>broadcasting</code> of the given tensors together in a concise manner. In short word, <code>%transform = !view + !permute + Broadcasting</code>. The transformation of tensor are described on the same syntax of <code>Subscript DSL</code> but before and after <code>-&gt;</code>, there is always one tensor for each.</p>
+<pre><code>(Example)
+(%transform A[i j] -&gt; A[j i])
+</code></pre>
+<p>The variable names (e.g.: <code>A</code>) are exactly the name of the variable used by the <code>%transform</code> macro, which must be bound in scope. It is optional to give the name to the tensor after <code>-&gt;</code>.</p>
+<pre><code class="language-lisp">(defun transpose-revisit (tensor)
+    (%transform tensor[~ i j] -&gt; [j i]))
+</code></pre>
+<h3 id="syntax">Syntax</h3>
+<p>Following the rules below, <code>%transform</code> calls appropriate functions.</p>
+<h3 id="adding-an-broadcastable-axis">Adding an broadcastable axis.</h3>
+<p>The <code>broadcastable axis</code> is the range in which <code>1</code> of the shape of tensors can be added if needed, and at most one exists in one matrix.</p>
+<p>If the subscripts of the tensor after <code>-&gt;</code> includes <code>~</code>, the corresponding position of the shape becomes <code>broadcastable</code>.</p>
+<p>For example:</p>
+<pre><code class="language-lisp">(%transform A[i j] -&gt; A[~ i j])
+(%transform A[~ i j] -&gt; A[~ i j])
+</code></pre>
+<h3 id="adjustable-dimensions">Adjustable dimensions</h3>
+<p>the <code>~</code> symbol used before <code>-&gt;</code> means: the number of dimensions of the corresponding part could be anything.</p>
+<pre><code class="language-lisp">(%transform A[~ i j] -&gt; A[i j]
+</code></pre>
+<h3 id="shuffling-the-permution-of-tensor">Shuffling the permution of tensor</h3>
+<p>If symbols used before <code>-&gt;</code> are also appeared in after <code>-&gt;</code>, the corresponding symbols indicate the permution of tensor.</p>
+<pre><code class="language-lisp">(%transform A[i j] -&gt; [j i])
+(%transform A[~ i j] -&gt; [j i])
+(%transform A[i ~ j] -&gt; [j i]) ;; the same as (!permute a 1 :~ 0)
+</code></pre>
+<h3 id="make-a-view-of-tensors">Make a view of tensors.</h3>
+<p>Set symbols (which aren't used before <code>-&gt;</code>) or fixnum to make a index. <code>(start end)</code> also creates a slice. Setting characters like <code>*10</code> <code>*a</code> broadcasts the axis.</p>
+<p>If <code>~</code> were used after <code>-&gt;</code>, the macro is expanded into <code>!flexible ...</code>, or call <code>!permute</code> as long as all symbols appeared before <code>-&gt;</code> were also used after <code>-&gt;</code>. Otherwise, call <code>!view</code>.</p>
 <h2 id="function-flexible">[function] !flexible</h2>
 <pre><code>(!flexible tensor)
 </code></pre>
-<p>The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.</p>
+<p>The function !flexible inserts a <code>broadcastable axes</code> to the tensor at the given position <code>at</code> (specified like: 1 2 ... -1 -2 ...).</p>
 <p>That is:</p>
 <pre><code>Tensor = (10 10) -&gt; [!flexible] -&gt; Tensor' = (1 ... 1 10 10)
                                                  ^ &lt;1 x N&gt;
 </code></pre>
 <p>Note that added axes could be broadcasted automatically when the operation called with multiple arguments.</p>
+<h3 id="example_2">Example</h3>
+<p><code>!flexible</code> is a fundamental operation when using broadcasting in cl-waffe2. And usually called via <code>%transform</code> macro for readability.</p>
+<pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))
+
+{CPUTENSOR[float] :shape (3 &lt;1 x N&gt;) :named ChainTMP1631118 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: FLEXIBLE-RANK-NODE-T (A[~] -&gt; A[~])&gt;} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631165 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (3 3) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
+CL-WAFFE2-REPL&gt; (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631189 
+  :vec-state [computed]
+  ((0.0 0.0 0.0)
+   (1.0 1.0 1.0)
+   (2.0 2.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+CL-WAFFE2-REPL&gt; (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0))))
+
+{CPUTENSOR[float] :shape (&lt;1 x N&gt; 3) :named ChainTMP1631205 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: FLEXIBLE-RANK-NODE-T (A[~] -&gt; A[~])&gt;} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631248 
+  :vec-state [maybe-not-computed]
+  &lt;&lt;Not-Embodied (3 3) Tensor&gt;&gt;
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
+CL-WAFFE2-REPL&gt; (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631272 
+  :vec-state [computed]
+  ((0.0 1.0 2.0)
+   (0.0 1.0 2.0)
+   (0.0 1.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
 <h2 id="function-abs">[function] !abs</h2>
 <pre><code class="language-lisp">(!abs x &amp;key (-&gt; nil))
 </code></pre>
