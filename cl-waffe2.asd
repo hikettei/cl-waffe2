@@ -63,6 +63,13 @@
 	       (:file "base-impl/reduction")
 	       (:file "base-impl/mathematics")
 	       (:file "base-impl/logical")
+	       (:file "base-impl/einsum")
+
+	       ;; opt-einsum
+
+	       (:file "base-impl/opt-einsum/subscripts")
+	       (:file "base-impl/opt-einsum/einsum-impl")
+	       
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")
