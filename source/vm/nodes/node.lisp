@@ -174,7 +174,7 @@ Here's a list of reports.
 		  ;; Update ranks and try again...
 		  (let ((inputs-new (apply-broadcast input-states inputs uprankable-list))
 			(*enable-broadcasting-auto* nil))
-		    (apply #'forward node inputs-new))
+		    (return-from forward (apply #'forward node inputs-new)))
 		  ;; Otherwise the operation was invaild.
 		  (describe-problems node detected-errors inputs out-state))
 	      (setq out-state out-state1))))

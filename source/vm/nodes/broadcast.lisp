@@ -19,7 +19,7 @@
     ;; The :where is...
     ;; [~ x y] <- it is ok to apply uprank rule.
     ;; [x y]   <- it is ng to apply uprank rule.
-    (print
+
     (loop for input in inputs
 	  for uprankable in uprankable-list
 	  if (and (tensor-flexible-p input)
@@ -39,5 +39,5 @@
 		      (setf (tensor-flexible-p out) nil)
 		      out)
 	  else
-	    collect input))))
+	    collect input)))
 

@@ -82,24 +82,23 @@ A simple Adam
   (let* ((lr-t (adam-step-lr optimizer))
 	 (param (read-parameter optimizer))
 	 (grad  (grad param)))
+    (with-no-grad
+      ;; TODO: Cache?
+      (apply-adam-step-m
+       (adam-m optimizer)
+       grad
+       (make-tensor (beta1-of optimizer)))
 
-    ;; TODO: Cache?
-    (apply-adam-step-m
-     (adam-m optimizer)
-     grad
-     (make-tensor (beta1-of optimizer)))
+      (apply-adam-step-v
+       (adam-v optimizer)
+       grad
+       (make-tensor (beta2-of optimizer)))
 
-    (apply-adam-step-v
-     (adam-v optimizer)
-     grad
-     (make-tensor (beta2-of optimizer)))
-
-    (apply-adam-step-param
-     (adam-m optimizer)
-     (adam-v optimizer)
-     param
-     (make-tensor lr-t)
-     (make-tensor (eps-of optimizer)))
-    nil))
-
+      (apply-adam-step-param
+       (adam-m optimizer)
+       (adam-v optimizer)
+       param
+       (make-tensor lr-t)
+       (make-tensor (eps-of optimizer)))
+      nil)))
 

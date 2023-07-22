@@ -429,7 +429,7 @@ CL-WAFFE2-REPL> (!rankup * -3 :at 1)
   :facet :input
   :requires-grad NIL
   :backward <Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -> B[AFTER])>}
-CL-WAFFE2-REPL> 
+CL-WAFFE2-REPL>
 ```
 "
   (declare (type AbstractTensor tensor)

@@ -257,7 +257,8 @@ See also:
   
   (assert (every #'(lambda (tensor) (shape-equal-list (butlast (shape tensor) at-least-dim) (butlast shape at-least-dim))) tensors)
 	  nil
-	  "call-with-view failed with assertion: All all tensors has the same dimensions of batch-area, butgot ~a."
+	  "call-with-view failed with assertion: All all tensors has the same dimensions of batch-area:
+butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
   (labels ((explore (rest-dim offsets-place used-symbols &aux (target-dim (- dims rest-dim)))
