@@ -148,6 +148,9 @@
 
 ;; (proceed tensor)や(build out)関数を通して初めて計算を実行することができます。
 
+;; 小さいスケールの行列やスカラー値に対しても高速に動作します:
+(proceed-time (!matmul (randn `(1 1)) (randn `(1 1))))
+
 ;; 複数の計算を組み合わせてノードを構築していき、答えが欲しくなったタイミングでProceedを呼び出してください。
 ;; ~ Examples ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -749,7 +752,7 @@ Previous dout:
 ;;:backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
 
 
-;; Broadcasting: 1 x 3行列を3 x 3行列かのようにRepeatする
+;; 手動Broadcasting: 1 x 3行列を3 x 3行列かのようにRepeatする
 (print (!view (ax+b `(1 3) 1 0) `(:broadcast 3)))
 
 ;;{CPUTENSOR[float] :shape (1 3) -> :view (<(BROADCAST 3)> <T>) -> :visible-shape (3 3) :named ChainTMP6216 
@@ -828,6 +831,172 @@ Previous dout:
 (print (->scal (randn `(1 1))))
 
 (print (->mat  (make-tensor 1.0)))
+
+;; ==================================
+;;  Optional Broadcasting
+;; ==================================
+
+;; cl-waffe2において、Broadcastingルールは自動で適用されません。
+
+(!add (randn `(3 3)) (randn `(3 1))) ;; numpyでは1はブロードキャストされますが、cl-waffe2ではエラーになります。
+
+;; numpy方式のbroadcastingは記述量が少なくなる反面、文脈によっては非自明な変換や意図しない動作を伴うことがあります。
+;; そのため、cl-waffe2ではBroadcasting可能なShapeの範囲以外は自動でBroadcastingされないルールをしています。
+
+;; 1. Broadcastingが呼び出される条件
+;; 例えば加算ノードのwhere句: A[~] B[~] -> A[~]において~に対応する部分はBroadcast可能領域として宣言されます。~に対応する部分のShapeで, 次元数が一致しない 若しくは 対応する軸の値が一致しない場合, 次の関数に宣言された軸を追加していい領域に1を追加して!viewを通して:broadcastを適用し, もう一度加算ノードを呼び出します。
+
+;; 1を追加してrepeatしていい領域は!flexible関数によって宣言されます。(%transformマクロを用いるとより可読性の高い方法で記述できます。)
+;; 例えば
+
+(print (!flexible (ax+b `(3 3) 1 0) :at 0))
+
+;;{CPUTENSOR[float] :shape (<1 x N> 3 3) :named ChainTMP5932 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0)
+;;   (3.0 4.0 5.0)
+;;   (6.0 7.0 8.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;; :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+
+(print (!flexible (ax+b `(3 3) 1 0) :at 1))
+
+;;{CPUTENSOR[float] :shape (3 <1 x N> 3) :named ChainTMP5932 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0)
+;;   (3.0 4.0 5.0)
+;;   (6.0 7.0 8.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;; :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+
+(print (!flexible (ax+b `(3 3) 1 0) :at 2))
+
+;;{CPUTENSOR[float] :shape (3 3 <1 x N>) :named ChainTMP5932 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0)
+;;   (3.0 4.0 5.0)
+;;   (6.0 7.0 8.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;; :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+
+;; 新しく追加された<1 x N>という軸がまさにBroadcast可能な軸で、この軸はcl-waffe2が自由に1を追加したり、新しく追加した1をRepeatしていいことを宣言します。
+
+;;
+(print (proceed (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))))
+
+;;{CPUTENSOR[float] :shape (3 <1 x N>) :named ChainTMP5999 
+;;  :vec-state [maybe-not-computed]
+;;  (0.0 1.0 2.0)
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+;;{CPUTENSOR[float] :shape (3 3) :named ChainTMP6070 
+;;  :vec-state [computed]
+;;  ((0.0 0.0 0.0)
+;;   (1.0 1.0 1.0)
+;;   (2.0 2.0 2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;:backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+(print (proceed (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at 0)))))
+
+;;{CPUTENSOR[float] :shape (<1 x N> 3) :named ChainTMP6086 
+;;  :vec-state [maybe-not-computed]
+;;  (0.0 1.0 2.0)
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+;;{CPUTENSOR[float] :shape (3 3) :named ChainTMP6153 
+;;  :vec-state [computed]
+;;  ((0.0 1.0 2.0)
+;;   (0.0 1.0 2.0)
+;;   (0.0 1.0 2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+;; この例のように行/列ごとの加算なども自明に行うことができ、最小限の記述で意図しない動作を減らすことに役立ちます。
+
+;; ==================================
+;;  %transformマクロ
+;; ==================================
+
+;; %transformマクロはSubscript DSLと同じ文法で、!flexible !view !permuteを自明に表現するためのマクロです。
+
+;; broadcast
+;; 対応する~の位置に<1 x N>を追加します。
+
+(let ((a (ax+b `(3 3) 1 0)))
+  (print (%transform a[i j] -> [i ~ j])))
+
+;;{CPUTENSOR[float] :shape (3 <1 x N> 3) :named ChainTMP6168 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0)
+;;   (3.0 4.0 5.0)
+;;   (6.0 7.0 8.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
+
+;; Permute
+
+(let ((a (ax+b `(3 3) 1 0)))
+  (print (%transform a[i j] -> [j i])))
+
+;;{CPUTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3) :named ChainTMP6186 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 3.0 6.0)
+;;   (1.0 4.0 7.0)
+;;   (2.0 5.0 8.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: LAZYTRANSPOSENODE-T (A[~ I J] -> A[~ I J])>} 
+
+;; View
+
+;; *1 *aのように記述すると対応する軸をBroadcastします。
+(let ((a (ax+b `(1 3) 1 0)))
+  (print (%transform A[i j] -> [*3 t])))
+
+;;{CPUTENSOR[float] :shape (1 3) -> :view (<(BROADCAST 3)> <T>) -> :visible-shape ;;(3 3) :named ChainTMP6202 
+;;  :vec-state [maybe-not-computed]
+;;  ((0.0 1.0 2.0)
+;;   (0.0 1.0 2.0)
+;;   (0.0 1.0 2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+
+;; Sliceやシンボルも使えます。
+(let ((a (ax+b `(3 5 2) 1 0)))
+  (print (%transform a[i j k] -> [(0 m) t 1] where m = 3)))
+
+#|
+{CPUTENSOR[float] :shape (3 5 2) -> :view (<(0 3)> <T> <1>) -> :visible-shape (3 5 1) :named ChainTMP6556 
+  :vec-state [maybe-not-computed]
+  (((1.0)              
+    (3.0)    
+     ...
+    (7.0)
+    (9.0))
+   ((11.0)              
+    (13.0)    
+      ...
+    (17.0)
+    (19.0))
+   ((21.0)              
+    (23.0)    
+      ...
+    (27.0)
+    (29.0)))
+  :facet :input
+  :requires-grad NIL
+:backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+|#
 
 ;; ====================================================
 ;; AbstractTensorをCommon Lisp標準配列として取り扱う
