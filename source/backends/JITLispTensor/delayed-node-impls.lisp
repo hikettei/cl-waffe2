@@ -5,6 +5,8 @@
 ;; delayed-node-impls.lisp provides define-impl forms of principle operations of JITLispTensor.
 ;;
 
+;; Giving up reduction?
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun only-when-no-grad (&rest inputs)
     (declare (ignore inputs))
@@ -20,16 +22,19 @@
 			      :reject-p #'only-when-no-grad
 			      :extends (LispJIT-Blueprint))
 			     :forward ((self x y)
+				       ;; Called at a Toplevel
 				       (progn
 					 (setf (blueprint-use-var self) `(,x ,y))
 					 (setf (blueprint-opecode self) ',lisp-op)
 					 nil)
-				       
+
+				       ;; Embedding into JIT
 				       `(progn ,x)))
 
 		(defmethod implement-op ((opcode (eql ',lisp-op)) opAST &rest args)
 		  (make-iseq
 		   `(,',lisp-op ,(car args) ,(second args))
+		   
 		   (car args))))))
   (define-arith-impl AddNode +)
   (define-arith-impl SubNode -)
@@ -66,6 +71,8 @@
 ;; Scalar-Mat Operation family are originally declared as:
 ;; (A[~] Scalar[scal] -> A[~] where scal = 1)
 ;;
+
+
 (macrolet ((define-scalar-mat-impl (name lisp-op)
 	     `(define-impl (,name
 			    :device JITLispTensor
@@ -82,6 +89,9 @@
   (define-scalar-mat-impl ScalarMul *)
   (define-scalar-mat-impl ScalarDiv /))
 
+;;Broadcasted_Array * 0
+;;↑tends to be complicated. So be it...
+
 
 ;; Todo: Element-wise kernels... (OK)
 ;; Todo: Mathematical kernels
@@ -91,8 +101,9 @@
 	     `(progn
 		(defmethod implement-op ((op (eql ',name)) opAST &rest inputs)
 		  ,@(or impl
-			`((make-iseq `(,',name ,(car inputs))
-				     (second inputs)))))
+			`((make-iseq
+			   `(,',name ,(car inputs))
+			   (second inputs)))))
 
 		(define-impl (,node
 			      :device JITLispTensor

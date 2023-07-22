@@ -277,14 +277,14 @@ Subscripts are following:
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
 "
-  (let ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
-	(broadcast-reverser
-	  (loop for s in subscripts
-		if (and (listp s)
-			(eql (car s) :broadcast))
-		  collect 0
-		else
-		  collect t)))
+  (let* ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
+	 (broadcast-reverser
+	   (loop for s in (tensor-view out)
+		 if (and (listp (force-list s))
+			 (eql (car (force-list s)) :broadcast))
+		   collect 0
+		 else
+		   collect t)))
     ;; Update Chains
     (values
      (forward (ViewTensorNode subscripts (shape out) (shape tensor)) out tensor)
@@ -396,24 +396,50 @@ Before and after the operation, the total elements of tensors must correspond.
 equivalent to the `(!reshape tensor t)`
 "
     (!reshape tensor t)))
-
-(declaim (ftype (function (AbstractTensor fixnum) AbstractTensor) !rankup))
-(defun !rankup (tensor ntimes)
+(declaim (ftype (function (AbstractTensor fixnum &key (:at fixnum)) AbstractTensor) !rankup))
+(defun !rankup (tensor ntimes &key (at 0))
   "
 ## [function] !rankup
 
 ```lisp
-(!rankup tensor ntimes)
+(!rankup tensor ntimes &key (at 0))
 ```
 
-The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.
+The function !rankup appends/reduces 1 at `at` into the given tensor's shape for ntimes.
 
 1. If `ntimes` > 0, appends 1
 
-2. If `ntimes` < 0, reduces 1, if the axis=1, otherwise returns error."
+2. If `ntimes` < 0, reduces 1, if the axis=1, otherwise returns error.
+
+### Examples
+
+```lisp
+CL-WAFFE2-REPL> (!rankup (randn `(3 3)) 3 :at 1)
+{CPUTENSOR[float] :shape (3 1 1 1 3) :named ChainTMP1459457 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 1 1 1 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -> B[AFTER])>}
+CL-WAFFE2-REPL> (!rankup * -3 :at 1)
+
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1459467 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -> B[AFTER])>}
+CL-WAFFE2-REPL>
+```
+"
   (declare (type AbstractTensor tensor)
-	   (type fixnum ntimes))
-  (let ((shape (copy-list (shape tensor))))
+	   (type fixnum ntimes at))
+  (let* ((at (if (>= at 0)
+		 at
+		 (+ (dims tensor) at)))
+	 ;; (leading-shape 1 ... 1 last-shape)
+	 (leading-shape (subseq (shape tensor) 0 at))
+	 (shape         (nthcdr at (copy-list (shape tensor)))))
     (if (< ntimes 0)
 	(loop for i fixnum upfrom 0 below (abs ntimes)
 	      do (if (= (car shape) 1)
@@ -422,8 +448,7 @@ The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.
 	(loop for i fixnum upfrom 0 below ntimes
 	      do (push 1 shape)))
     ;; TODO: view broadcast
-    (apply #'!reshape tensor shape)))
-
+    (apply #'!reshape tensor `(,@leading-shape ,@shape))))
 
 (defnode (Mat->ScalarNode (myself)
 	  :out-scalar-p t
@@ -623,15 +648,16 @@ The function proceed-backward calls forward and backwrd of the tensor.
 ;; Broadcast APIs
 ;; ===============================================================
 
-(defnode (Flexible-Rank-Node (myself)
+(defnode (Flexible-Rank-Node (myself At)
 	  :where (A[~] -> A[~])
+	  :slots ((at :initarg :at :reader flex-at))
 	  :backward ((self dout dx)
 		     (declare (ignore dx))
-		     (values (!flexible dout)))))
+		     (values (!flexible dout :at (flex-at self))))))
 
 (define-impl (Flexible-Rank-Node :device t) :forward ((self x) `(progn ,x)))
 
-(defun !flexible (tensor)
+(defun !flexible (tensor &key (at 0))
   "
 ## [function] !flexible
 
@@ -639,7 +665,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 (!flexible tensor)
 ```
 
-The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.
+The function !flexible inserts a `broadcastable axes` to the tensor at the given position `at` (specified like: 1 2 ... -1 -2 ...).
 
 That is:
 
@@ -648,9 +674,71 @@ Tensor = (10 10) -> [!flexible] -> Tensor' = (1 ... 1 10 10)
                                                  ^ <1 x N>
 ```
 
-Note that added axes could be broadcasted automatically when the operation called with multiple arguments."
-  (let ((out (forward (Flexible-Rank-Node) tensor)))
-    (setf (tensor-flexible-p out) t)
+Note that added axes could be broadcasted automatically when the operation called with multiple arguments.
+
+### Example
+
+`!flexible` is a fundamental operation when using broadcasting in cl-waffe2. And usually called via `%transform` macro for readability.
+
+```lisp
+CL-WAFFE2-REPL> (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))
+
+{CPUTENSOR[float] :shape (3 <1 x N>) :named ChainTMP1631118 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631165 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+CL-WAFFE2-REPL> (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631189 
+  :vec-state [computed]
+  ((0.0 0.0 0.0)
+   (1.0 1.0 1.0)
+   (2.0 2.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+CL-WAFFE2-REPL> (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0))))
+
+{CPUTENSOR[float] :shape (<1 x N> 3) :named ChainTMP1631205 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631248 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+CL-WAFFE2-REPL> (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631272 
+  :vec-state [computed]
+  ((0.0 1.0 2.0)
+   (0.0 1.0 2.0)
+   (0.0 1.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+"
+  (declare (type fixnum at))
+  (let ((out (forward (Flexible-Rank-Node At) tensor))
+	(at (if (>= at 0)
+		at
+		(+ 1 (dims tensor) at))))
+    (when (or (not (>= at 0))
+	      (> at (dims tensor)))
+      (error "!flexible: can't add an broadcastable axis to the position ~a,"
+	     at))
+    (setf (tensor-flexible-p out) at)
     out))
 
 

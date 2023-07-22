@@ -77,7 +77,7 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
    (funcall (compose #'not #'tensor-lisp-jit-p) next-variable)
 
    ;; The change of shapes is detected:
-   (and (not (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable))))))
+   (and (not (cl-waffe2/vm.generic-tensor::shape-equal-list (actual-shape variable) (actual-shape next-variable))))))
 
 (defparameter *compiling-ntime-count* 0)
 

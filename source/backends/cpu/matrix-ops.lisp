@@ -36,13 +36,15 @@
       (assert (equal (reverse (last (shape a) 2))
 		     (last (shape a1) 2))
 	      nil
-	      "expand-gemm-form: Assertion Failed."))
+	      "expand-gemm-form: Assertion Failed 1: ~a ~a."
+	      (shape a) (shape a1)))
 
     (when trans-b?
       (assert (equal (reverse (last (shape b) 2))
 		     (last (shape b1) 2))
 	      nil
-	      "expand-gemm-form: Assertion Failed."))
+	      "expand-gemm-form: Assertion Failed 2: ~a ~a."
+	      (shape b) (shape b1)))
 
     ;; a, b ... untranspsoed tensor
     ;; they're just used to compute strides

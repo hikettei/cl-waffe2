@@ -19,6 +19,7 @@
    #:ScalarTensor
 
    #:tensor-backward
+   #:read-result
    #:tensor-variables
    #:tensor-state
    #:tensor-out-n

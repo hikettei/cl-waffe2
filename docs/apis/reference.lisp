@@ -143,6 +143,7 @@
     (caller-doc proceed-time)
     (caller-doc proceed-backward)
 
+    (caller-doc %transform)
     (caller-doc !flexible)
 
     (caller-doc !abs)

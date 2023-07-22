@@ -20,7 +20,9 @@
 	       :lparallel
 	       :bordeaux-threads
 	       :closer-mop
+	       :optima
 	       :trivial-garbage)
+  ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
@@ -48,6 +50,7 @@
 
 	       (:file "vm/nodes/shape-error")
 	       (:file "vm/nodes/shape")
+	       (:file "vm/nodes/broadcast")
 	       (:file "vm/nodes/node")
 	       (:file "vm/nodes/conditions")
 	       (:file "vm/nodes/defnode")
@@ -63,6 +66,8 @@
 	       (:file "base-impl/reduction")
 	       (:file "base-impl/mathematics")
 	       (:file "base-impl/logical")
+	       (:file "base-impl/transform")
+	       
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")
@@ -110,6 +115,12 @@
 	       (:file "utils")
 	       (:file "network")
 	       (:file "trainer")
+
+	       (:file "base-impl/einsum")
+	       (:file "base-impl/opt-einsum/subscripts")
+	       (:file "base-impl/opt-einsum/einsum-impl")
+	       (:file "base-impl/opt-einsum/utils")
+	       (:file "base-impl/opt-einsum/bijective-transform")
 	       
 	       (:file "viz/package")
 	       (:file "viz/ast")
