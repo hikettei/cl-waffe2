@@ -19,20 +19,25 @@
     ;; The :where is...
     ;; [~ x y] <- it is ok to apply uprank rule.
     ;; [x y]   <- it is ng to apply uprank rule.
+    (print
     (loop for input in inputs
 	  for uprankable in uprankable-list
 	  if (and (tensor-flexible-p input)
 		  uprankable)
 	    collect (let* ((rankup-n (- largest-axis (length (shape input))))
-			   (out (cl-waffe2/base-impl:!rankup ;; -> unsqueeze
+			   (out (cl-waffe2/base-impl:!rankup
 				 input
-				 rankup-n))
-			   (subscripts (loop for i upfrom 0 below rankup-n
-					     collect `(:broadcast ,(nth i largest-axis-shape))))
-			   (out (apply #'cl-waffe2/base-impl:!view out subscripts)))
+				 rankup-n
+				 :at (tensor-flexible-p input)))
+			   (view-pad (loop for i upfrom 0 below (tensor-flexible-p input)
+					   collect t))
+			   (subscripts (loop with bias = (tensor-flexible-p input)
+					     for i upfrom 0 below rankup-n
+					     collect `(:broadcast ,(nth (+ bias i) largest-axis-shape))))
+			   (out (apply #'cl-waffe2/base-impl:!view out `(,@view-pad ,@subscripts))))
 		      ;; Apply Broadcast to flexible axis
 		      (setf (tensor-flexible-p out) nil)
 		      out)
 	  else
-	    collect input)))
+	    collect input))))
 

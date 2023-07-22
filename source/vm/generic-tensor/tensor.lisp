@@ -1077,6 +1077,8 @@ The function parameter computes all the previous nodes of the given tensor if an
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
+      ;; Keep The Tensor Broadcastable!
+      (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
       ;; !! Before and after save4bw, result == tensor.
       result)))
 	
