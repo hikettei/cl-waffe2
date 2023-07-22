@@ -30,7 +30,4 @@
 ;; (transform A[i j] -> A[i ~ j]) ;; => (i <1xN> j) shape is returned.
 ;;
 
-
-;; Broadcastの仕様をちゃんと作ってからEinsumに取りかかったほうがいい気がするが・・・
-
 |#

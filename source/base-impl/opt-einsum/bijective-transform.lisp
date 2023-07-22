@@ -27,8 +27,6 @@
   )
 ;; Make it contiguous in advance
 
-;; with-facetで色々やる
-
 
 (defun make-transform (from-me-to-me ;; A[i j] -> A[j i]
 		       before-symbol

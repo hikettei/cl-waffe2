@@ -2,22 +2,6 @@
 
 (in-package :cl-waffe2/base-impl)
 
-;; 今からやる：Broadcast/Einsum
-
-;; TODO: Broadcastの仕様とバグを整理する
-;;       Optional Broadcastingはeinsumを介して使えるようにしたい。
-;;
-;; Optional Broadcast ... einsumかflexibleで<1 x N>をShapeに追加する
-;;                        rankが足りない方は自動でrankupされてbroadcastされる
-;;
-
-;; cl-waffe2では、View APIこそが行列のIterationを操る最も最強なAPI
-;; 高速化の観点から、**einsumは二の次**に止める必要がある
-;; つまり、なるべくeinsumもView API/PermuteのBroadcastingを活用すべき
-;; 基本思想: einsumはView APIを介してpermutionやBroadcastingを操り、ついでに積の計算ができるもの. あとついでにLisp Tensor Backendで一旦Matmulを実装したい。
-
-;; 一部はeinsumのスケールが事前にわかってる
-
 ;; ============================================================
 ;; Referenced:
 ;; https://zenn.dev/lotz/articles/b77c3434fa9451fcc927
@@ -29,9 +13,7 @@
 ;; https://discuss.pytorch.org/t/automatic-differentation-for-pytorch-einsum/112504
 ;; ============================================================
 
-;;
-;; defrouteでrouteを定義 -> もしあればOpenBLASかcuBLASで置き換える
-;; 
+;;;; 
 
 ;; ================================================================
 ;; einsum.lisp provides the einsten notation:

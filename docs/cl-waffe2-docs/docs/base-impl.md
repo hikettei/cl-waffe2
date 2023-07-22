@@ -515,14 +515,36 @@ equivalent to the `(!reshape tensor t)`
 ## [function] !rankup
 
 ```lisp
-(!rankup tensor ntimes)
+(!rankup tensor ntimes &key (at 0))
 ```
 
-The function !rankup appends/reduces 1 into the given tensor's shape for ntimes.
+The function !rankup appends/reduces 1 at `at` into the given tensor's shape for ntimes.
 
 1. If `ntimes` > 0, appends 1
 
 2. If `ntimes` < 0, reduces 1, if the axis=1, otherwise returns error.
+
+### Examples
+
+```lisp
+CL-WAFFE2-REPL> (!rankup (randn `(3 3)) 3 :at 1)
+{CPUTENSOR[float] :shape (3 1 1 1 3) :named ChainTMP1459457 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 1 1 1 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -> B[AFTER])>}
+CL-WAFFE2-REPL> (!rankup * -3 :at 1)
+
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1459467 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: RESHAPETENSORNODE-T (A[BEFORE] B[AFTER] -> B[AFTER])>}
+CL-WAFFE2-REPL>
+```
+
 ## [function] ->scal
 
 ```
@@ -617,13 +639,74 @@ The function proceed-backward calls forward and backwrd of the tensor.
 
 `T` (which indicates backward is succeed)
 
+## [macro] %transform
+
+```lisp
+(%transform &body transform-syntax)
+```
+
+`%transform` is a macro to describe `!view`, `!permute` and `broadcasting` of the given tensors together in a concise manner. In short word, `%transform = !view + !permute + Broadcasting`. The transformation of tensor are described on the same syntax of `Subscript DSL` but before and after `->`, there is always one tensor for each.
+
+```
+(Example)
+(%transform A[i j] -> A[j i])
+```
+
+The variable names (e.g.: `A`) are exactly the name of the variable used by the `%transform` macro, which must be bound in scope. It is optional to give the name to the tensor after `->`.
+
+```lisp
+(defun transpose-revisit (tensor)
+    (%transform tensor[~ i j] -> [j i]))
+```
+
+### Syntax
+
+Following the rules below, `%transform` calls appropriate functions.
+
+### Adding an broadcastable axis.
+
+The `broadcastable axis` is the range in which `1` of the shape of tensors can be added if needed, and at most one exists in one matrix.
+
+If the subscripts of the tensor after `->` includes `~`, the corresponding position of the shape becomes `broadcastable`.
+
+For example:
+
+```lisp
+(%transform A[i j] -> A[~ i j])
+(%transform A[~ i j] -> A[~ i j])
+```
+
+### Adjustable dimensions
+
+the `~` symbol used before `->` means: the number of dimensions of the corresponding part could be anything.
+
+```lisp
+(%transform A[~ i j] -> A[i j]
+```
+
+### Shuffling the permution of tensor
+
+If symbols used before `->` are also appeared in after `->`, the corresponding symbols indicate the permution of tensor.
+
+```lisp
+(%transform A[i j] -> [j i])
+(%transform A[~ i j] -> [j i])
+(%transform A[i ~ j] -> [j i]) ;; the same as (!permute a 1 :~ 0)
+```
+
+### Make a view of tensors.
+
+Set symbols (which aren't used before `->`) or fixnum to make a index. `(start end)` also creates a slice. Setting characters like `*10` `*a` broadcasts the axis.
+
+If `~` were used after `->`, the macro is expanded into `!flexible ...`, or call `!permute` as long as all symbols appeared before `->` were also used after `->`. Otherwise, call `!view`.
+
 ## [function] !flexible
 
 ```
 (!flexible tensor)
 ```
 
-The function !flexible returns a node which adds 1 (which is broadcastable) to the head of the shape of tensor.
+The function !flexible inserts a `broadcastable axes` to the tensor at the given position `at` (specified like: 1 2 ... -1 -2 ...).
 
 That is:
 
@@ -633,6 +716,60 @@ Tensor = (10 10) -> [!flexible] -> Tensor' = (1 ... 1 10 10)
 ```
 
 Note that added axes could be broadcasted automatically when the operation called with multiple arguments.
+
+### Example
+
+`!flexible` is a fundamental operation when using broadcasting in cl-waffe2. And usually called via `%transform` macro for readability.
+
+```lisp
+CL-WAFFE2-REPL> (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))
+
+{CPUTENSOR[float] :shape (3 <1 x N>) :named ChainTMP1631118 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631165 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+CL-WAFFE2-REPL> (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631189 
+  :vec-state [computed]
+  ((0.0 0.0 0.0)
+   (1.0 1.0 1.0)
+   (2.0 2.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+CL-WAFFE2-REPL> (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0))))
+
+{CPUTENSOR[float] :shape (<1 x N> 3) :named ChainTMP1631205 
+  :vec-state [maybe-not-computed]
+  (0.0 1.0 2.0)
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>} 
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631248 
+  :vec-state [maybe-not-computed]
+  <<Not-Embodied (3 3) Tensor>>
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+CL-WAFFE2-REPL> (proceed *)
+{CPUTENSOR[float] :shape (3 3) :named ChainTMP1631272 
+  :vec-state [computed]
+  ((0.0 1.0 2.0)
+   (0.0 1.0 2.0)
+   (0.0 1.0 2.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
 ## [function] !abs
 
 ```lisp
