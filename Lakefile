@@ -20,3 +20,7 @@
 
 (task "gendoc" ()
       (sh "ros ./roswell/cl-waffe2-test.ros gendoc"))
+
+(task "bench" ()
+      (sh "rlwrap ros run --load ./benchmarks/package.lisp"))
+
