@@ -51,20 +51,21 @@
 	(let ((t2 (get-internal-real-time)))
 	  (float (/ (- t2 t1) internal-time-units-per-second)))))))
 
-(defun measure-bench (function from to by)
+(defun measure-bench (function from to by times)
   (values
    (loop for N fixnum upfrom from to to by by
 	 collect N)
    (loop for N fixnum upfrom from to to by by
 	 do (format t "N = ~a ...~%" N)
-	 collect (funcall function N))))
+	 collect (funcall function N :times times))))
 
 (defun bench (functions
 	      titles
 	      &key
 		(from 1)
 		(to   300)
-		(by   10))
+		(by   10)
+		(times))
   (let ((x-seqs)
 	(y-seqs)
 	(titles-use))
@@ -73,8 +74,8 @@
      #'(lambda (title f)
 	 (format t "[INFO] Benchmarking on ~a. from=~a to=~a by=~a~%"
 		 f from to by)
-	 (sb-ext:gc :full t)
-	 (multiple-value-bind (x y) (measure-bench f from to by)
+	 ;;(sb-ext:gc :full t)
+	 (multiple-value-bind (x y) (measure-bench f from to by times)
 	   (push x x-seqs)
 	   (push y y-seqs)
 	   (push title titles-use)))
@@ -87,14 +88,22 @@
 	   :y-label "Matrix Scale (N x N)"
 	   :x-logscale t
 	   :y-logscale t
-	   :output "./assets/mm_bench.png")))
+	   :output "./assets/mm_bench_1000.png")
+
+    (plots (reverse y-seqs)
+	   :x-seqs (reverse x-seqs)
+	   :title-list (reverse titles-use)
+	   :x-label "time (s)"
+	   :y-label "Matrix Scale (N x N)"
+	   :output "./assets/mm_bench_1000_normal.png")))
 
 (bench
  (list #'cl-waffe2-bench #'cl-waffe-bench #'cl-waffe-bench-in-place)
  (list "cl-waffe2" "cl-waffe" "cl-waffe (In-place)")
  :from 1
  :to 500
- :by 10)
+ :by 10
+ :times 1000)
 
 ;; cl-waffe
 ;; cl-waffe (in-place)
