@@ -1080,7 +1080,8 @@ The function parameter computes all the previous nodes of the given tensor if an
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
       ;; Keep The Tensor Broadcastable!
-      (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
+      ;; (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
+      ;; (!matmul (!flexible (randn `(3 5))) (!t (randn `(3 3 5))))
       ;; !! Before and after save4bw, result == tensor.
       result)))
 	
@@ -1130,12 +1131,12 @@ Returns shape but <1 x N> parts are replaced with -1.
 	  for s in shape
 	  if (and flexible-p
 		  (= i flexible-p))
-	    do (push 1 out)
+	    do (push -1 out)
 	  do (push s out))
     
     (when (and flexible-p
 	       (= (length shape) flexible-p))
-      (push 1 out))
+      (push -1 out))
     (reverse out)))
 
 

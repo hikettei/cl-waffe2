@@ -2,7 +2,10 @@
 (in-package :cl-waffe2/base-impl)
 
 ;;
-;; Add a reader macro: #T
+
+;; TODO
+;; 1. using a list (%transform A[i j] -> [*to] where to = (shape A))
+;; 2. [BugFix] (!view (randn `(3 3)) `(:broadcast 10) t) is OK??
 
 (defun parse-as-view-arg (arg)
   (typecase arg
@@ -123,10 +126,17 @@ the symbol ~~ can only appear either before or after `->`"
 	    `(when (not (= ,(length subs-from)
 			   (dims ,read-variable)))
 	       (error "rank do not match")))
-	 
+
+	 ;; Priorities = (Broadcast Permute View)
 	 ,(cond
 	    (~after
-	     `(!flexible ,read-variable :at ,add-broadcasting-pos))
+	     ;; ~ i j
+	     ;; If the order is permuted
+	     ;; Transform again
+	     (let ((broadcast-out `(!flexible ,read-variable :at ,add-broadcasting-pos)))
+	       (print permute-order)
+	       broadcast-out
+	       ))
 	    ((every #'numberp permute-order)
 	     `(!permute ,read-variable
 			,@(loop for before in subs-from

@@ -122,6 +122,26 @@ Here's a list of reports.
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node &rest inputs))
 
+(defun parse-broadcasted-shape (shapes)
+  (flet ((apply-refine (list)
+	   (loop for s in list
+		 unless (and *enable-broadcasting-auto* ;; not created by broadcast
+			     (equal s -1))
+		   collect (if (equal s -1)
+			       1
+			       s))))
+    (map 'list #'apply-refine shapes)))
+
+;; Optim:
+;;
+;; (3 -1 3)
+;; (3 3 -1)
+;;
+;; (-1 3 3)
+;;    (3 3)
+;;
+
+			       
 ;; ugh... steadly it gets ugly...
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
@@ -137,7 +157,7 @@ Here's a list of reports.
 			   if (and
 			       (not *no-grad*)
 			       (nth k save-for-backward)) ;; If T?
-			     collect (system-lazy-set-save-for-backward i)
+			     collect (let ((*enable-broadcasting-auto* nil)) (system-lazy-set-save-for-backward i))
 			   else
 			     collect i)))
 	 (transition-function     (abstractnode-node node))  ;; original subscript
@@ -148,7 +168,7 @@ Here's a list of reports.
 	 (input-states (if *enable-broadcasting-auto*
 			   (map 'list #'shape-with-broadcastable inputs)
 			   (map 'list #'shape inputs)))
-			   
+	 
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
@@ -182,7 +202,7 @@ Here's a list of reports.
 		       (find t (mapcar #'(lambda (x y) (and (tensor-flexible-p x) y)) inputs uprankable-list)))
 		  ;; Update ranks and try again...
 		  (let* ((*enable-broadcasting-auto* nil)
-			 (inputs-new (apply-broadcast input-states inputs uprankable-list))			 
+			 (inputs-new (apply-broadcast input-states inputs uprankable-list))
 			 (*restart-variable-from* inputs)) ;; (tensor-variable out) records the first call of tensors (top_inputs)
 		    ;;  Forward:         Broadcast:          Restart
 		    ;; 
@@ -206,6 +226,7 @@ Here's a list of reports.
       ;; can be realised with self ...
       ;; recompute grad
 
+      (setq out-state (parse-broadcasted-shape out-state))
       (setf (node-output-shape node) out-state)
 
       (let* ((forward-form (call-next-method))

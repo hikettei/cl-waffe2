@@ -361,7 +361,6 @@ Before and after the operation, the total elements of tensors must correspond.
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
-
     
     (assert (= (apply #'* (shape tensor))
 	       (apply #'* shapes))
