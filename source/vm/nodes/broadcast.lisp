@@ -8,7 +8,7 @@
 ;;  |
 ;; Forward (If failed, never broadcasted)
 ;;  |
- ;; out
+;; out
 (defun apply-broadcast (input-states inputs uprankable-list)
   (let* ((largest-axis (loop for i in input-states
 			     for tensor in inputs

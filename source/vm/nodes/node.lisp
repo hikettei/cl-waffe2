@@ -145,7 +145,10 @@ Here's a list of reports.
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
 	 ;; replace <1 x N> = -1 for instance
-	 (input-states (map 'list #'shape inputs))
+	 (input-states (if *enable-broadcasting-auto*
+			   (map 'list #'shape-with-broadcastable inputs)
+			   (map 'list #'shape inputs)))
+			   
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
@@ -178,9 +181,9 @@ Here's a list of reports.
 	      (if (and *enable-broadcasting-auto*
 		       (find t (mapcar #'(lambda (x y) (and (tensor-flexible-p x) y)) inputs uprankable-list)))
 		  ;; Update ranks and try again...
-		  (let ((inputs-new (apply-broadcast input-states inputs uprankable-list))
-			(*enable-broadcasting-auto* nil)
-			(*restart-variable-from* inputs)) ;; (tensor-variable out) records the first call of tensors (top_inputs)
+		  (let* ((*enable-broadcasting-auto* nil)
+			 (inputs-new (apply-broadcast input-states inputs uprankable-list))			 
+			 (*restart-variable-from* inputs)) ;; (tensor-variable out) records the first call of tensors (top_inputs)
 		    ;;  Forward:         Broadcast:          Restart
 		    ;; 
 		    ;; top_inputs -> View/Reshape/Uprank -> (forward ...)
