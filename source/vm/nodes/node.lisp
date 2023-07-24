@@ -165,9 +165,7 @@ Here's a list of reports.
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
 	 ;; replace <1 x N> = -1 for instance
-	 (input-states (if *enable-broadcasting-auto*
-			   (map 'list #'shape-with-broadcastable inputs)
-			   (map 'list #'shape inputs)))
+	 (input-states (map 'list #'shape inputs))
 	 
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))

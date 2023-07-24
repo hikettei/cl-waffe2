@@ -1080,7 +1080,7 @@ The function parameter computes all the previous nodes of the given tensor if an
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
       ;; Keep The Tensor Broadcastable!
-      ;; (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
+      (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
       ;; (!matmul (!flexible (randn `(3 5))) (!t (randn `(3 3 5))))
       ;; !! Before and after save4bw, result == tensor.
       result)))
