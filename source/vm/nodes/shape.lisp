@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-;; shaping-formatのパーサーなど
-
-
 (defun range (start end)
   (loop for i upfrom start below end collect i))
 
@@ -680,4 +677,325 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		       (symbol-eq (car s) '~))
 		   first-state)
 	      (list first-state out-state)))))
+
+
+
+
+
+
+
+;; ↓ Ituka yarou...
+
+;; Refactor Version...
+(defun expand-rank-check-forms (input-names first-states prev-subscripts detected-errors rank-err)
+  "Comparing all ranks between first-state and prev-subscripts.
+If any, appends Rank-Error to detected-errors"
+  `(progn
+     ;; Iterate by args (e.g.: A B C...)
+     ,@(loop for name  in input-names
+	     for state in first-states
+	     for nth fixnum upfrom 0
+	     collect `(when (= ,(length state) (nth ,nth ,prev-subscripts))
+			(setq ,rank-err t)
+			(push
+			 (make-rank-error
+			  :position      ,nth
+			  :excepted-rank ,(length state)
+			  :butgot        (length (nth ,nth ,prev-subscripts)))
+			 ,detected-errors)))))
+
+(defun expand-least-rank-check-forms (input-names first-states prev-subscripts detected-errors rank-err)
+  `(progn
+     ,@(loop for name in input-names
+	     for state in first-states
+	     for nth fixnum upfrom 0
+	     collect
+	     (let ((least-dim (- (length state) (count '~ state :test #'symbol-eq))))
+	       `(when (< (length (nth ,nth ,prev-subscripts)) ,least-dim)
+		  (setq ,rank-err t)
+		  (push
+		   (make-rank-atleast-error
+		    :position ,nth
+		    :first-state ',state
+		    :butgot (length (nth ,nth ,prev-subscripts)))
+		   ,detected-errors))))))
+
+(defun expand-number-of-args-check-forms (previous-subscripts input-states out-state detected-errors)
+  `(unless (= (length ,previous-subscripts) ,(length input-states))
+     (push
+      (make-number-of-args
+       :first-state ',input-states
+       :out-state ',out-state
+       :previous-subscripts ,previous-subscripts)
+      ,detected-errors)))
+
+(defun expand-flex-dim-ident-form (nth-argument
+				   pos1 pos2
+				   symbol shape
+				   out-omit-p detected-errors
+				   ~
+				   &aux (pos (gensym)))
+  (declare (ignore symbol))
+  ;; out-omit-p == '~
+  `(loop for ,pos upfrom ,pos1 below (- (length ,shape) ,pos2)
+	 do ,(when out-omit-p
+	       `(when (and (not (null (nth ,pos ,~)))
+			   (not (shape-equal-1 ,pos ,~ ,shape)))
+		  (push
+		   (make-flex-mismatch-error
+		    :position ,nth-argument
+		    :excepted (nth ,pos ,~)
+		    :butgot   (nth ,pos ,shape))
+		   ,detected-errors)))
+	    (num-major-setf (nth ,pos ,~) (nth ,pos ,shape))))
+
+(defun expand-dim-ident-form (nth-arg pos1 pos2
+			      symbol shape detected-errors
+			      &aux (pos (gensym)))
+  `(cond
+     ((< ,nth-arg ,pos1)
+      (when (and (not (null ,symbol))
+		 (or
+		  ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
+		  (and (symbolp ,symbol)
+		       (symbolp (nth ,nth-arg ,shape)))
+		  (and (numberp ,symbol)
+		       (numberp (nth ,nth-arg ,shape))))
+		 (not
+		  (equal ,symbol (nth ,nth-arg ,shape))))
+	(push
+	 (make-shape-mismatch-error
+	  :position ,nth-arg
+	  :excepted ,symbol
+	  :butgot   (nth ,nth-arg ,shape))
+	 ,detected-errors))
+      (num-major-setq ,symbol (nth ,nth-arg ,shape)))
+     ((> (- (length ,shape) ,nth-arg) ,pos1)
+      (let ((,pos (- (1- (length ,shape)) (- ,pos2 ,nth-arg))))
+	(when (and (not (null ,symbol))
+		   (or
+		    ;; ('a 'a) or (10 10), not ('a 1) (1 'a)
+		    (and (symbolp ,symbol)
+			 (symbolp (nth ,nth-arg ,shape)))
+		    (and (numberp ,symbol)
+			 (numberp (nth ,nth-arg ,shape))))
+		   (not
+		    (equal ,symbol (nth ,pos ,shape))))
+	  (push
+	   (make-shape-mismatch-error
+	    :position ,nth-arg
+	    :excepted ,symbol
+	    :butgot   (nth ,nth-arg ,shape))
+	   ,detected-errors))
+	(num-major-setq ,symbol (nth ,pos ,shape))))))
+
+;; Refactoring isn't done yet.
+(defun create-subscript-p1 (subscripts
+			    &key
+			      (allow-symbol nil)
+			      (macroexpand nil)
+			      (fixed nil)
+			      (return-body nil)
+			      (local-variables nil)
+			    &aux
+			      (rank-error-p (gensym "rank-err-p"))
+			      (previous-subscripts (gensym "PreviousShape"))
+			      (known-symbols (gensym))
+			      (detected-errors     (gensym "err")))
+  "Returns a inlined version of subscript checker
+
+Inputs:
+    allow-symbol - If t, never produce error even when the predicted output includes symbols
+    fixed        - If t, ~ is ignored.
+
+Return: (values body output-names first-state (list first-state out-state))
+"
+  (declare (type list local-variables))
+  (multiple-value-bind (input-names
+			output-names
+			first-state
+			out-state
+			let-binding)
+      (parse-subscript subscripts :fixed fixed)
+    (declare (optimize (speed 3))
+	     (type list input-names output-names first-state out-state let-binding))
+
+    ;; input-names  ... (A B)
+    ;; output-names ... (C D)
+    ;; first-state  ... ((~ x y z) (i j))
+    ;; output-state ... ((~ x y z) (i j))
+
+    (print input-names)
+    (print output-names)
+    (print first-state)
+    (print out-state)
+    (print let-binding)
+
+    (let ((out-omit-p (find '~ (the list (flatten out-state)) :test #'symbol-eq))
+	  (initial-symbols))
+
+      ;; Register all symbols to be determined to initial-tables
+      (mapc #'(lambda (name)
+		(unless (find name initial-symbols :test #'symbol-eq)
+		  (push name initial-symbols)))
+	    (flatten first-state))
+
+      (mapc #'(lambda (name)
+		(unless (find name initial-symbols :test #'symbol-eq)
+		  (push name initial-symbols)))
+	    (flatten out-state))
+
+      ;; ~ can be used at once and is a special symbol!
+      ;; initial-symbols = (~ i j k ...)
+
+      
+      (let* ((~ (find '~ initial-symbols :test #'symbol-eq))
+	     (flexdim-n (loop for input in first-state ;; the list of arguments which includes ~
+			      for k fixnum upfrom 0
+			      if (find '~ (the list (flatten input)) :test #'symbol-eq)
+				collect k))
+	     (body `(lambda (,previous-subscripts
+			     &aux
+			       (,known-symbols (find-symbols (flatten ,previous-subscripts)))
+			       (,rank-error-p)
+			       (,detected-errors))
+
+		      ;; In the context, ~ must be used as the same rank
+		      ,(when (and flexdim-n (not fixed))
+			 `(let ((dim)
+				(accd))
+			    (loop for k in ',flexdim-n
+				  if (null dim)
+				    do (setq dim (length (nth k ,previous-subscripts)))
+				       (setq accd k)
+				  unless (= dim (length (nth k ,previous-subscripts)))
+				    do (push
+					(make-rank-mismatch-error
+					 :position k
+					 :excepted (length accd)
+					 :butgot   (length (nth k ,previous-subscripts)))
+					,detected-errors))))
+		      
+		      ;; Binding where a = 1 / a = (shape x) ...
+		      ;; Place undetermined symbols (as long as they wasn't initialized by where)
+		      (let* (,@let-binding
+			     ,@(loop for symbol in initial-symbols
+				     unless (or
+					     (symbol-eq symbol '~)
+					     (find symbol let-binding :key #'car :test #'symbol-eq))
+				       collect (if (find (the symbol symbol) (the list local-variables))
+						   `(,symbol ,symbol)
+						   `(,symbol)))
+			     ;; ~ = (nil nil nil) of max dim
+			     ,@(when ~ ;; ~ was once used?
+				 `((,~ (loop for s upfrom 0 below (loop for p in ,previous-subscripts maximize (length p))
+					     collect nil)))))
+			(declare (ignorable ,@initial-symbols))
+			
+
+
+			,(if fixed
+			     ;; If ~ weren't used, do a rank check
+			     ;; symbols could be also a list: A[after] where after = (shape ...)
+			     ;; So do it after placing let-binding
+			     
+			     (expand-rank-check-forms
+			      input-names
+			      first-state
+			      previous-subscripts
+			      detected-errors
+			      rank-error-p)
+
+			     ;; even if ~ were used in subscript
+			     ;; (1) for [~ i j] is still invaild.
+			     (expand-least-rank-check-forms
+			      input-names
+			      first-state
+			      previous-subscripts
+			      detected-errors
+			      rank-error-p))
+
+			;; checking number of arguments
+			;; ((1 2)) with A[i j] -> B[i j] is invaild for example.
+
+			,(expand-number-of-args-check-forms
+			  previous-subscripts
+			  first-state
+			  out-state
+			  detected-errors)
+
+			;; Starting Predicting Output Shapes
+			;; Create and fullfil table			
+
+			,@(loop for subscript in first-state
+				for i fixnum upfrom 0
+				collect
+				;; Iterate by Arguments
+				;; input = (~ i j) (~ j i) ...
+				;; nth   = 0 1 2...
+
+				;; ~ is flexible
+				;; 0 1 ... ~
+				;; ~ 0 1 ...
+				`(progn
+				   ,@(loop
+				       with pos1 = (or (position '~ (the list subscript) :test #'symbol-eq) (length subscript))
+				       with pos2 = (or (position '~ (reverse subscript) :test #'symbol-eq) 0)
+				       with shape = `(nth ,i ,previous-subscripts)
+				       for nth fixnum upfrom 0
+				       for symbol in subscript
+
+				       if (symbol-eq symbol '~)
+					 collect (expand-flex-dim-ident-form
+						  nth
+						  pos1 pos2
+						  symbol shape
+						  out-omit-p detected-errors ~)
+				       else
+					 collect (expand-dim-ident-form
+						  nth pos1 pos1 symbol shape detected-errors))))
+
+			
+			;; At last, we can inference out-state from the table
+
+			;; Lambda Must Return:
+			;; (value (list out-shape1 out-shape2 ...) all-errors rank-error-p
+
+			(values
+			 (flet ((merge-and-inf (shapes symbols)
+				  (map 'list #'(lambda (s name position)
+						 (or (when (or (not (symbolp s)) ;; S = 1 2 3...?
+							       (find s ,known-symbols :test #'symbol-eq))
+						       s)
+						     ,(if allow-symbol ;; allow-symbols=t -> returns known symbol
+							  ~
+							  `(make-shape-mismatch-error
+							    :position position
+							    :excepted nil
+							    :butgot   name))))
+				       shapes symbols (range 0 (length symbols)))))
+			   (list ,@(map 'list #'(lambda (state) `(flatten (merge-and-inf (list ,@state) ',state))) out-state)))
+			 (reverse ,detected-errors)
+			 ,rank-error-p
+			 (list ,@(map 'list #'(lambda (arg)
+						`(flatten (list ,@arg)))
+				      first-state)))))))
+
+	(when macroexpand
+	  (print body))
+
+	(values (if return-body
+		    body
+		    (compile nil body))
+		(map 'list
+		     #'(lambda (sym)
+			 (position sym (the list input-names) :test #'symbol-eq))
+		     output-names)
+		(map 'list
+		     #'(lambda (s)
+			 ;; The first rank is broadcastable?
+			 (symbol-eq (car s) '~))
+		     first-state)
+		(list first-state out-state))))))
+
 

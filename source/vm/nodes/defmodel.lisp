@@ -125,6 +125,7 @@ Every time the composite is rendered, this function is called.
 
   )
 
+;; Update?
 (defmethod composite-error ((model Composite) error-content)
   (shaping-error "Shaping-Error is detected when calling Composite.
 
@@ -411,14 +412,16 @@ An constructor function for ~a."
 				   `(multiple-value-list (subscript ,where :fixed :t :allow-symbol t :constructor-args ,constructor-arguments)))))
 	   (declare (ignorable ,subscript-p1 ,subscript-p2))
 	   ;; Todo: Refactoring -> test-subscript-p
+	   ;; test-subscript-p is only used to trace computation node
+	   ;; Broadcasting isn't subject to consider.
 	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
 		      ;; inputs  = 
 		      ;; inputs1 = 
-		      ;; inputs2 = 
+		      ;; inputs2 =
 		      (declare (ignorable ,self-place1 ,inputs ,inputs1 ,inputs2))
 		      ,(if use-linter-p
 			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
-				 (funcall (car ,subscript-p2) (or ,inputs ,inputs2))
+				(funcall (car ,subscript-p2) (or ,inputs ,inputs2))
 			      (if ,try-rank-error
 				  (multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
 				      (funcall (car ,subscript-p1) (or ,inputs ,inputs1))

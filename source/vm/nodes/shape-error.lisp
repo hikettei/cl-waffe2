@@ -20,14 +20,24 @@
   "A[~ i j] with (1)"
   position
   first-state
-  declared
   butgot)
 
-(defstruct Fixed-Arg-Rank-Error
-  "A[i j] with (1 2 3)"
+(defstruct rank-mismatch-error
+  "(5 3 2) (5 3) in [~ i] [~ i]"
   position
-  first-state
-  declared
+  excepted
+  butgot)
+
+(defstruct flex-mismatch-error
+  "~ do not match"
+  position
+  excepted
+  butgot)
+
+(defstruct shape-mismatch-error
+  "Shapes do not match"
+  position
+  excepted
   butgot)
 
 (deftype call-form-error-t ()
@@ -36,8 +46,7 @@
 (deftype rank-error-t ()
   "A family of Rank-Error struct"
   `(or rank-error
-       rank-atleast-error
-       fixed-arg-rank-error))
+       rank-atleast-error))
 
 (defun compile-call-form-error (nth errorlist)
   (declare (type list errorlist))

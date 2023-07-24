@@ -144,18 +144,21 @@ Here's a list of reports.
 	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
-	 (input-states (loop for i in inputs collect (shape i)))
+	 ;; replace <1 x N> = -1 for instance
+	 (input-states (map 'list #'shape inputs))
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
+      ;;(setq out-state (delete-broadcast out-state))
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
 
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
 	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
+	  ;;(setq out-state1 (delete-broadcast out-state1))
 
 	  ;; Enhancement
 	  ;; CALL-VIEW-AND-CONTINUE

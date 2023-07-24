@@ -19,6 +19,7 @@
 		#:tensor-view
 		#:requires-grad
 		#:make-tensor
+		#:shape-with-broadcastable
 		#:make-input
 		#:actual-shape
 		#:set-input

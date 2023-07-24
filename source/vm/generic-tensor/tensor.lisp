@@ -1115,4 +1115,27 @@ The function parameter computes all the previous nodes of the given tensor if an
 	(funcall (gradient-resetter tensor))
 	(warn "Couldn't reset gradients of tensor, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
 
+(defun shape-with-broadcastable (tensor)
+  "
+## [function] shape-with-broadcastable
+
+Returns shape but <1 x N> parts are replaced with -1.
+"
+  (declare (type AbstractTensor tensor))
+  (let ((flexible-p (tensor-flexible-p tensor))
+	(shape      (shape tensor))
+	(out))
+
+    (loop for i upfrom 0
+	  for s in shape
+	  if (and flexible-p
+		  (= i flexible-p))
+	    do (push 1 out)
+	  do (push s out))
+    
+    (when (and flexible-p
+	       (= (length shape) flexible-p))
+      (push 1 out))
+    (reverse out)))
+
 

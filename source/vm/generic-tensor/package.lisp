@@ -27,6 +27,7 @@
    #:tensor-facet
    #:tensor-stride
    #:tensor-name
+   #:shape-with-broadcastable
    #:dtype
    #:tensor-attribute
    #:tensor-protect-me
