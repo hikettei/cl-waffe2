@@ -28,10 +28,17 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 Aiming to develop a framework that can be applied to everything in an initial phase, can lead to ruin. So I've formulated the following principle goals:
 
-- Provide Multi-dimensional and View-API-First AbstractArrays(AbstractTensor), which users could also extend into another device with the least additional codes.
-- Operations in cl-waffe2 are dedicated to machine learning/deep learning(e.g.: `AD` `optimizing`). If there're shortfalls,  interoperate with other libraries via `simple-array`.
-- Focus on these things: `Formulating Neural Networks in a Common Lispy approach`, `Composing Several Models/Nodes with the least copy (especially when: with-no-grad mode)`
-- Basically, it is  `defined-by-run` but nodes are composed of those compiled by `define-and-run` modes.
+- Extensibility in that there's no barrier between users and developers.
+    - Provide Multi-dimensional and View-API-First AbstractArrays(AbstractTensor), which users could also extend into another device with the least additional codes.
+- Do not increase dependency
+    - Operations in cl-waffe2 are dedicated to machine learning/deep learning(e.g.: `AD` `optimizing`). If there're shortfalls,  interoperate with other libraries via `simple-array`.
+
+- Keep Common Lispy Approach
+    - Python-Free
+    - Formulating Neural Networks in a Common Lispy Approach
+    - Composing Several Models/Nodes with the least copy (especially when: with-no-grad mode)
+
+- (TO BE) Basically, it is `defined-by-run` but nodes are composed of those compiled by `define-and-run` modes.
 
 
 # Concepts/Features
