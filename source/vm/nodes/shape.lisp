@@ -250,6 +250,39 @@ If fixed=t, ~ is ignored."
 	     out)))
     (values inputs outputs first-state out-state let-binding)))
 
+(defun parse-transform-syntax (subscripts)
+  "
+The same as subscript dsl but the number of -> is inf.
+
+Return: (values names subscripts where)
+"
+  (declare (type list subscripts))
+  (let ((subscripts (preprocess-list subscripts))
+	(separated-names)
+	(parsed-subscripts)
+	(let-bindings))
+    (loop named iter
+          while subscripts
+	  do (let ((pos (or (position '-> subscripts :test #'symbol-eq)
+			    (position 'where subscripts :test #'symbol-eq)
+			    (length subscripts))))
+	       (when (null pos)
+		 (return-from iter))
+
+	       (let ((target (subseq subscripts 0 pos)))
+		 (if (find '= target :test #'symbol-eq)
+		     (mapc #'(lambda (x) (push x let-bindings)) (bnf-parse-let-phase target))
+		     (multiple-value-bind (name val) (separate-shape-and-name target)
+		       (push name separated-names)
+		       (push (bnf-parse-variables val) parsed-subscripts))))
+	       (dotimes (i pos) (pop subscripts))
+	       (pop subscripts)))
+    
+    (values (reverse separated-names)
+	    (reverse parsed-subscripts)
+	    (reverse let-bindings))))
+
+;; (print (parse-transform-syntax `(A[i j] -> B[j k] -> C[k i] where k = 1)))
 
 ;; Bug: [~] A[~] -> B [~]
 (defun where->backward (subscripts)
