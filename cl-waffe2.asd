@@ -103,7 +103,7 @@
 	       (:file "nn/activation")
 	       (:file "nn/regression")
 	       (:file "nn/criterion")
-	       
+	       (:file "nn/recurrent")
 	       
 	       (:file "optimizers/defoptimizer")
 

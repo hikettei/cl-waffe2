@@ -365,3 +365,5 @@ But what if one wants to save the given tensors for a future call of backward? Y
 
 
 ;; To Add: define-impl-static
+;; To Add: define-dynamic-node (Embedding defined-by-run nodes with AD)
+

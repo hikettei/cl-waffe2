@@ -27,6 +27,7 @@
     (T
      (error "%transform: unknown syntax of view: ~a" arg))))
 
+;; TODO: This feature isn't enough.
 (defmacro %transform (&body transform-syntax)
   "
 ## [macro] %transform
@@ -138,7 +139,7 @@ the symbol ~~ can only appear either before or after `->`"
 	     ;; If the order is permuted
 	     ;; Transform again
 	     (let ((broadcast-out `(!flexible ,read-variable :at ,add-broadcasting-pos)))
-	       (print permute-order)
+	      ;; (print permute-order)
 	       broadcast-out
 	       ))
 	    ((every #'numberp permute-order)
