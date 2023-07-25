@@ -22,9 +22,17 @@
 
 > ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-cl-waffe2 provides a set of differentiable matrix operations which is aimed to apply to building a neural network model. Operations in cl-waffe2 are accelerated by `Lazy Evaluation` and `JIT Compiling with optimizing nodes.`.
+cl-waffe2 provides a set of differentiable matrix operations which is aimed to apply to build a neural network model. Operations in cl-waffe2 are accelerated by `Lazy Evaluation` and `JIT Compiling with optimizing nodes.`.
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
+
+Aiming to develop a framework that can be applied to everything in an initial phase, can lead to ruin. So I've formulated the following principle goals:
+
+- Provide Multi-dimensional and View-API-First AbstractArrays(AbstractTensor), which users could also extend into another device with the least additional codes.
+- Operations in cl-waffe2 are dedicated to machine learning/deep learning(e.g.: `AD` `optimizing`). If there're shortfalls,  interoperate with other libraries via `simple-array`.
+- Focus on these things: `Formulating Neural Networks in a Common Lispy approach`, `Composing Several Models/Nodes with the least copy (especially when: with-no-grad mode)`
+- Basically, it is  `defined-by-run` but nodes are composed of those compiled by `define-and-run` modes.
+
 
 # Concepts/Features
 
