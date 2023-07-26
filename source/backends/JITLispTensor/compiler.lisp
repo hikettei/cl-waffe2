@@ -1,6 +1,9 @@
 
 (in-package :cl-waffe2/backends.jit.lisp)
 
+
+;; TO DO: Native C++ Compiler(本命)
+;; Fusion
 ;; (defmethod (eql ...) or pattern match)
 
 ;; TODO: Eliminate unused MoveTensorNode and allocation with it.

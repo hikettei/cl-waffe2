@@ -45,6 +45,8 @@
 	       
 	       (:file "vm/generic-tensor/acceptor")
 	       (:file "vm/generic-tensor/tensor")
+	       (:file "vm/generic-tensor/interpreter")
+	       (:file "vm/generic-tensor/lut")
 	       
 	       (:file "vm/generic-tensor/scheduling")
 
@@ -98,17 +100,9 @@
 	       (:file "backends/JITLispTensor/tensor")
 	       (:file "backends/JITLispTensor/jit")
 	       (:file "backends/JITLispTensor/delayed-node-impls")
-
-	       (:file "nn/package")
-	       (:file "nn/activation")
-	       (:file "nn/regression")
-	       (:file "nn/criterion")
-	       
 	       
 	       (:file "optimizers/defoptimizer")
 
-	       (:file "optimizers/impls/sgd")
-	       (:file "optimizers/impls/adam")
 
 	       (:file "package")
 	       (:file "array-converter")
@@ -121,9 +115,19 @@
 	       (:file "base-impl/opt-einsum/einsum-impl")
 	       (:file "base-impl/opt-einsum/utils")
 	       (:file "base-impl/opt-einsum/bijective-transform")
+
+	       (:file "nn/package")
+	       (:file "nn/activation")
+	       (:file "nn/regression")
+	       (:file "nn/criterion")
+	       (:file "nn/recurrent")
+
+	       (:file "optimizers/impls/sgd")
+	       (:file "optimizers/impls/adam")
 	       
 	       (:file "viz/package")
 	       (:file "viz/ast")
+	       (:file "cl-waffe2-repl")
 	       
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))

@@ -2,7 +2,14 @@
 (in-package :cl-waffe2/base-impl)
 
 ;;
-;; Add a reader macro: #T
+
+;; TODO
+;; 1. using a list (%transform A[i j] -> [*to] where to = (shape A))
+;; 2. [BugFix] (!view (randn `(3 3)) `(:broadcast 10) t) is OK??
+
+;; Add: Reshape
+;; Add: Test cases
+;;
 
 (defun parse-as-view-arg (arg)
   (typecase arg
@@ -20,6 +27,7 @@
     (T
      (error "%transform: unknown syntax of view: ~a" arg))))
 
+;; TODO: This feature isn't enough.
 (defmacro %transform (&body transform-syntax)
   "
 ## [macro] %transform
@@ -123,10 +131,17 @@ the symbol ~~ can only appear either before or after `->`"
 	    `(when (not (= ,(length subs-from)
 			   (dims ,read-variable)))
 	       (error "rank do not match")))
-	 
+
+	 ;; Priorities = (Broadcast Permute View)
 	 ,(cond
 	    (~after
-	     `(!flexible ,read-variable :at ,add-broadcasting-pos))
+	     ;; ~ i j
+	     ;; If the order is permuted
+	     ;; Transform again
+	     (let ((broadcast-out `(!flexible ,read-variable :at ,add-broadcasting-pos)))
+	      ;; (print permute-order)
+	       broadcast-out
+	       ))
 	    ((every #'numberp permute-order)
 	     `(!permute ,read-variable
 			,@(loop for before in subs-from
@@ -139,4 +154,51 @@ the symbol ~~ can only appear either before or after `->`"
 	     (let ((args (map 'list #'parse-as-view-arg subs-to)))
 	       `(!view ,read-variable ,@args))))))))
 
+(defun check-one-arg (form)
+  (unless (= (length form) 1)
+    (error "%transform: Each Subscript is applied to a single Tensor.
+~a <- the length should be 1." form)))
+
+(defmacro %transform-revisit (&body transform-syntax)
+  "
+## [macro] %transform
+
+The macro `%transform` provides an abbreviated and much more readble syntax to compose these functions: `!flexible` `!view` `!reshape` `!permute`
+
+```lisp
+(%transform <<First State>> -> <<Second State>> -> <<Third State>> -> ... -> <<Last State>> where ...)
+```
+
+In `<<First State>>`, describe the shape of incoming tensor in this form:
+
+```lisp
+Tensor[Subscript]
+
+A[i j]              ;; reading a variable a
+A[~ i j]            ;; ~ -> the rank of the tensor is anything.
+(randn `(3 3))[i j] ;; Setting function forms directly is ok.
+```
+
+Based on the first state of the tensor declared in `<<First State>>`, these operations are applied successively in subsequent forms.
+
+### Permute
+
+### View
+
+### Adding an broadcastable axis
+
+### Reshape
+
+"
+  (multiple-value-bind (var-names subscripts let-bindings)
+      (cl-waffe2/vm.nodes::parse-transform-syntax `,transform-syntax)
+
+    (let ((target-variable (car var-names))
+	  (target-form     (car subscripts)))
+      (check-one-arg target-variable)
+      (check-one-arg target-form)
+      (print var-names)
+      (print subscripts)
+      (print let-bindings)
+      )))
 

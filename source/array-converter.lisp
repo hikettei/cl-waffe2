@@ -27,42 +27,6 @@ For example, converting `AbstractTensor` -> `simple-array`:
 (convert-tensor-facet (randn `(3 3)) 'simple-array)
 ```
 
-### Performance Issues
-
-In some conditions, `convert-tensor-facet` will run an additional compiling/copying which reduces poor performance. (FixME)
-
-1. `AbstractTensor` to be converted is permuted, or is viewded.
-
-```
-CL-WAFFE2> (time (change-facet (permute* (ax+b `(4 3) 1 0) 0 1) :direction 'simple-array))
-Evaluation took:
-  0.009 seconds of real time
-  0.008980 seconds of total run time (0.006915 user, 0.002065 system)
-  100.00% CPU
-  59 lambdas converted
-  20,883,224 processor cycles
-  2,220,176 bytes consed
-  
-#(0.0 3.0 6.0 9.0 1.0 4.0 7.0 10.0 2.0 5.0 8.0 11.0)
-```
-
-```lisp
-(time (change-facet (view (ax+b `(4 3) 1 0) `(1 2)) :direction 'simple-array))
-Evaluation took:
-  0.010 seconds of real time
-  0.010178 seconds of total run time (0.007312 user, 0.002866 system)
-  100.00% CPU
-  54 lambdas converted
-  24,399,236 processor cycles
-  1,958,160 bytes consed
-  
-#(3.0 4.0 5.0)
-```
-
-This because as of this writing we don't have any measures of moving tensors from non-contiguous to contiguous places, so reluctantly call `(proceed (->contigous tensor))`.
-
-To avoid this, it is recommended to move the tensor into contigous place in advance, in the previous function.
-
 See also: `convert-facet`
 
 "))
@@ -245,5 +209,6 @@ with-facet but input-forms are several.
 		    ,(expand-forms (cdr rest-forms)))
 		 `(progn ,@body))))
     (expand-forms input-forms)))
+
 
 

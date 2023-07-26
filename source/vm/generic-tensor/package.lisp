@@ -17,7 +17,7 @@
   (:export
    #:AbstractTensor
    #:ScalarTensor
-
+   
    #:tensor-backward
    #:read-result
    #:tensor-variables
@@ -27,6 +27,7 @@
    #:tensor-facet
    #:tensor-stride
    #:tensor-name
+   #:shape-with-broadcastable
    #:dtype
    #:tensor-attribute
    #:tensor-protect-me
@@ -111,6 +112,9 @@
    #:compiled-variables
    #:nodevariables-parameters
    #:build
+   #:vm-build
+   #:reset-compiled-function-cache!
+   #:run-node!
    #:set-input
    #:get-input)
 

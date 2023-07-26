@@ -122,6 +122,26 @@ Here's a list of reports.
 (defgeneric forward  (node &rest inputs))
 (defgeneric backward (node &rest inputs))
 
+(defun parse-broadcasted-shape (shapes)
+  (flet ((apply-refine (list)
+	   (loop for s in list
+		 unless (and *enable-broadcasting-auto* ;; not created by broadcast
+			     (equal s -1))
+		   collect (if (equal s -1)
+			       1
+			       s))))
+    (map 'list #'apply-refine shapes)))
+
+;; Optim:
+;;
+;; (3 -1 3)
+;; (3 3 -1)
+;;
+;; (-1 3 3)
+;;    (3 3)
+;;
+
+			       
 ;; ugh... steadly it gets ugly...
 ;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
 ;; Enhancement: A[~] -> B[~] <- replace A with input-name.
@@ -137,25 +157,29 @@ Here's a list of reports.
 			   if (and
 			       (not *no-grad*)
 			       (nth k save-for-backward)) ;; If T?
-			     collect (system-lazy-set-save-for-backward i)
+			     collect (let ((*enable-broadcasting-auto* nil)) (system-lazy-set-save-for-backward i))
 			   else
 			     collect i)))
 	 (transition-function     (abstractnode-node node))  ;; original subscript
 	 (transition-function-sub (abstractnode-node1 node)) ;; subscript without ~
 	 (pointer-states          (transmission-state node)) ;; <- what ptr/view to use?
 	 (uprankable-list (uprank-state node))
-	 (input-states (loop for i in inputs collect (shape i)))
+	 ;; replace <1 x N> = -1 for instance
+	 (input-states (map 'list #'shape inputs))
+	 
 	 ;; Records that Is it worth to trace backward?
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
+      ;;(setq out-state (delete-broadcast out-state))
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
 
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
 	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
+	  ;;(setq out-state1 (delete-broadcast out-state1))
 
 	  ;; Enhancement
 	  ;; CALL-VIEW-AND-CONTINUE
@@ -175,9 +199,9 @@ Here's a list of reports.
 	      (if (and *enable-broadcasting-auto*
 		       (find t (mapcar #'(lambda (x y) (and (tensor-flexible-p x) y)) inputs uprankable-list)))
 		  ;; Update ranks and try again...
-		  (let ((inputs-new (apply-broadcast input-states inputs uprankable-list))
-			(*enable-broadcasting-auto* nil)
-			(*restart-variable-from* inputs)) ;; (tensor-variable out) records the first call of tensors (top_inputs)
+		  (let* ((*enable-broadcasting-auto* nil)
+			 (inputs-new (apply-broadcast input-states inputs uprankable-list))
+			 (*restart-variable-from* inputs)) ;; (tensor-variable out) records the first call of tensors (top_inputs)
 		    ;;  Forward:         Broadcast:          Restart
 		    ;; 
 		    ;; top_inputs -> View/Reshape/Uprank -> (forward ...)
@@ -200,6 +224,7 @@ Here's a list of reports.
       ;; can be realised with self ...
       ;; recompute grad
 
+      (setq out-state (parse-broadcasted-shape out-state))
       (setf (node-output-shape node) out-state)
 
       (let* ((forward-form (call-next-method))
@@ -416,6 +441,32 @@ inputs      ... inputs called with
 		  
 		  ,(with-no-grad
 		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
+
+(defun expand-backward-instant (node dout compile-option &rest inputs-out)
+  (detach dout t)
+  (let* ((inputs-in (loop for input in inputs-out
+			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
+	 ;; Tracing User-Defined-Backward, still not yet compiled.
+	 (out-kernels (apply #'backward node dout inputs-in))
+	 ;; out-kernels = (list x.g y.g)
+	 (out-kernels (loop with argn fixnum = (length inputs-in)
+			    for x in out-kernels
+			    for y in inputs-out
+			    for i upfrom 0
+			    collect (adjust-bw-place x y argn i))))
+    (loop for kernel in out-kernels
+	  collect
+	  (when kernel
+	    (list dout kernel compile-option inputs-out)))))
+
+(defun call-instant-backward (outs)
+  (multiple-value-bind (dout kernel compile-option inputs-out) (apply #'values outs)
+    (with-no-grad
+      (prog1
+	  (cl-waffe2/vm.generic-tensor:run-node! kernel :compile-option compile-option)
+	(detach dout nil)
+	(map 'list #'(lambda (x) (detach x nil)) inputs-out)))))
+
 
 ;; the method backward constructs backward function
 ;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp

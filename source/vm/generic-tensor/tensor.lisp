@@ -1081,6 +1081,7 @@ The function parameter computes all the previous nodes of the given tensor if an
       (setf (save-for-backward-space result) tensor)
       ;; Keep The Tensor Broadcastable!
       (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
+      ;; (!matmul (!flexible (randn `(3 5))) (!t (randn `(3 3 5))))
       ;; !! Before and after save4bw, result == tensor.
       result)))
 	
@@ -1113,6 +1114,45 @@ The function parameter computes all the previous nodes of the given tensor if an
   (when (slot-value tensor 'requires-grad)
     (if (gradient-resetter tensor)
 	(funcall (gradient-resetter tensor))
-	(warn "Couldn't reset gradients of tensor, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
+	(if (scalar-p tensor)
+	    (let ((zero (make-tensor 0 :dtype (dtype tensor))))
+	      (setf (tensor-vec (grad tensor)) (tensor-vec zero)))
+	    (run-node!
+	     (cl-waffe2/vm.nodes:forward
+	      (cl-waffe2/base-impl:ScalarMul (dtype tensor))
+	      (grad tensor)
+	      (make-tensor 0 :dtype (dtype tensor))))))))
 
+(defun shape-with-broadcastable (tensor)
+  "
+## [function] shape-with-broadcastable
+
+Returns shape but <1 x N> parts are replaced with -1.
+"
+  (declare (type AbstractTensor tensor))
+  (let ((flexible-p (tensor-flexible-p tensor))
+	(shape      (shape tensor))
+	(out))
+
+    (loop for i upfrom 0
+	  for s in shape
+	  if (and flexible-p
+		  (= i flexible-p))
+	    do (push -1 out)
+	  do (push s out))
+    
+    (when (and flexible-p
+	       (= (length shape) flexible-p))
+      (push -1 out))
+    (reverse out)))
+
+(defun tensor-actual-stride (tensor)
+  (declare (type AbstractTensor tensor))
+  ;; Returns a stride of tensor, but broadcasted axis=0
+  (loop for s in (tensor-stride tensor)
+	for v in (tensor-view tensor)
+	if (eql (viewtype (force-list v)) :broadcast)
+	  collect 0
+	else
+	  collect s))
 

@@ -19,6 +19,7 @@
 		#:tensor-view
 		#:requires-grad
 		#:make-tensor
+		#:shape-with-broadcastable
 		#:make-input
 		#:actual-shape
 		#:set-input
@@ -48,6 +49,8 @@
    #:forward
    #:backward
    #:expand-backward
+   #:expand-backward-instant
+   #:call-instant-backward
    #:node-passed-p
    #:ignore-shape-error
    #:out-scalar-p

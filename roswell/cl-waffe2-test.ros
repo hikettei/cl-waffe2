@@ -20,5 +20,12 @@ exec ros -Q -- $0 "$@"
     ((equal (car argv) "gendoc")
      (cl-waffe2.docs:generate))
     (T
-     (asdf:test-system :cl-waffe2))))
+     ;; Calling all tests depending on *force-use-build*
+     (let ((cl-waffe2/vm.generic-tensor::*force-use-build* t))
+       (format t "[INFO] Testing under *force-use-build* = t (i.e.: the function vm-build is replaced with build")
+       (asdf:test-system :cl-waffe2))
+     
+     (format t "[INFO] Testing under *force-use-build* = nil (i.e.: vm-build is available)")
+     (let ((cl-waffe2/vm.generic-tensor::*force-use-build* nil))
+       (asdf:test-system :cl-waffe2)))))
 ;;; vim: set ft=lisp lisp:

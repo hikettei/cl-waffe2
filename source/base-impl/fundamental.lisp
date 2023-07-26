@@ -218,11 +218,8 @@ This function is also used to adjust memory alignment of tensor."
 	     ((self dout dx dy) ;; (viewed-tensor old)
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
-		     (res (apply
-			   #'!view
-			   (!move dx (apply #'!view dout inp-sub))
-			   out-sub)))
-		(values nil res))))
+		     (res (!move dx (apply #'!view dout inp-sub))))
+		(values nil (apply #'!view res out-sub)))))
 
 
 (defun !view (tensor &rest subscripts)
@@ -361,7 +358,6 @@ Before and after the operation, the total elements of tensors must correspond.
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
-
     
     (assert (= (apply #'* (shape tensor))
 	       (apply #'* shapes))
@@ -539,7 +535,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 	     :forward ((self x)
 		       (let ((compiled-model (or
 					      (proceed-compiled-model self)
-					      (build x :compile-mode (compile-mode self)))))
+					      (vm-build x :compile-mode (compile-mode self)))))
 			 ;; Compiled-Composite
 			 (setf (proceed-compiled-model self) compiled-model)
 			 
@@ -640,7 +636,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 `T` (which indicates backward is succeed)
 "
   (declare (type AbstractTensor tensor))
-  (let ((compiled-model (build tensor :compile-mode compile-mode)))
+  (let ((compiled-model (vm-build tensor :compile-mode compile-mode)))
     (forward compiled-model)
     (backward compiled-model)))
 
