@@ -48,6 +48,18 @@
 
 ;; What I want to do?: the compiling time of (!sin (!sin (!sin x))) and (!sin x) should be approximately the same, because they're working on the same code ignoring indicating pointer.
 
+
+(defparameter *compiled-function-cache* (make-hash-table))
+(defparameter *compiled-jit-function-cache* (make-hash-table))
+
+(defun reset-compiled-function-cache! ()
+  "
+## [function] reset-compiled-function-cache!
+"
+  (setf *compiled-function-cache* (make-hash-table))
+  (setf *compiled-jit-function-cache* (make-hash-table))
+  t)
+
 ;; Problem: Compiling !softmax called with other nodes is slightly slow.
 
 (defvar *kernel-storeroom* nil "An storeroom to record all kernels used in compiling time.") ;; Corresponds to: (labels ((SinNode-... )) ... )
@@ -129,6 +141,12 @@ TensorViewNameN depicts the path call-with-view traced.
     `(,(kernel-name compiled-function)
       ,@(tensor->id (cdr fbody) (compiled-kernel-args compiled-function)))))
 
+(defun make-funcallable-kernel (compiled-function)
+  (declare (type Compiled-Kernel compiled-function))
+  (let ((fbody (cdar (compiled-kernel-body compiled-function))))
+    (compile nil
+	     `(lambda ,@(tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))))
+
 (defun place-cached-kernels (&rest body)
   "
 Reading *kernel-storeroom*, the function expands the form below.
@@ -179,4 +197,23 @@ Reading *kernel-storeroom*, the function expands the form below.
   (if (compiled-kernel-cache-p kernel-function)
       `(call-cache-fn ,kernel-function ,@inputs)
       `(funcall-kernel ,kernel-function ,@inputs)))
+
+
+;; For toplevel
+(defun funcall-cached-function (kernel-function &rest args)
+  (declare (type Compiled-Kernel kernel-function))
+
+  (let ((target (lut-search-function
+		 *compiled-function-cache*
+		 (compiled-kernel-name kernel-function)
+		 args)))
+    (if (null target)
+	(let ((compiled-function (make-funcallable-kernel kernel-function)))
+	  (lut-search-function
+	   *compiled-function-cache*
+	   (compiled-kernel-name kernel-function)
+	   args
+	   :setme compiled-function)
+	  (apply compiled-function args))
+	(apply target args))))
 

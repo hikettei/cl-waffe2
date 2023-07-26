@@ -1,6 +1,11 @@
 
 (in-package :cl-waffe2/nn)
 
+;;
+;; TODO:
+;; Implement several NN methods to discover the problems/refinements
+;;
+
 
 ;; = [RNN] ================================
 ;;   ...
@@ -13,7 +18,7 @@
 ;; ========================================
 
 ;;
-;; [RNNCell] is a statically working node (JIT is applied), but someone has to wrap [RNNCell] depending on the length of words
+;; [RNNCell] is a statically working node (JIT is applied), but the part where iterates [RNNCell] are dynamically working depending on the length of words.
 ;;
 
 
@@ -31,6 +36,7 @@
 		   (bias2 :initarg :bias2 :reader bias2-of)
 		   ;; (dropout)
 		   (activation :initarg :activation :reader activation-of))
+	   
 	   :initargs (:weight           (xavier-uniform `(,input-size  ,hidden-size) :requires-grad t)
 		      :recurrent-weight (xavier-uniform `(,hidden-size ,hidden-size) :requires-grad t)
 		      :bias1 (when bias
@@ -38,6 +44,7 @@
 		      :bias2 (when bias
 			       (uniform-random `(,hidden-size) -0.01 0.01 :requires-grad t))
 		      :activation activation)
+	   
 	   :where (X_t[batch-size one input-size] hidden_t[batch-size one hidden-size] -> hidden_t+1[batch-size one hidden-size] where one = 1)
 	   :on-call-> ((self x hidden)
 		       (let* ((x1 (!matmul x      (!flexible (weight-of self))))
@@ -55,5 +62,24 @@
 				      h1)))
 			 h1))))
 
+#|
+I have no idea how to iterate RNNCell...
+(defmodel (RNN (self input-size hidden-size
+		     &key
+		     (n-layers 1)
+		     (activation #'!tanh)
+		     (bias t)
+		     &aux
+		     (rnn-layers (loop for i upfrom 0 below n-layers
+				       collect (RNNCell input-size hidden-size
+							:activation activation
+							:bias bias))))
+	   :slots ((rnn-layers :initarg :rnn-layers :reader layers-of))
+	   :initargs (:rnn-layers rnn-layers)
+	   :where (X[batch-size sequence-len dim] Hidden[batch-size one hidden-size] -> Hidden_t+1[batch-size one hidden-size])
+	   :on-call-> ((self x hs)
+		       (loop for layer in (layers-of self)
+			     do (setq hs (call layer x hs)))
+		       hs)))
 
-
+|#

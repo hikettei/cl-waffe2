@@ -178,6 +178,5 @@ out = CrossEntropyLoss(Softmax(x), labels)
 
 Creates an one-hot encoding tensor from the given x
 "
-  
 
   )
