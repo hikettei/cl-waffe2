@@ -7,9 +7,6 @@
 ;; Add Backward tests to define-static-node
 ;; Memo: (call (StaticNode) (parameter (randn `(10 10)))) is n't working for backward
 ;; But (call (StaticNode) (!copy (parameter (randn `(10 10))))) is working.
-;; Add Documents
-;; Update documents
-;; SoftmaxCrossEntropy微分する
 
 ;; ===========================================================
 ;; Static Composite ==========================================
@@ -33,6 +30,9 @@
 
 
 
+
+;; Using proceed instead composite-function is now much wiser desicion.
+
 ;; Implementation of save-for-backward/read-save-for-backward
 ;; Both of them are called with save-for-backward function binded by with-composite-node-mode
 (defun apply-set-save-for-backward (self name tensor)
@@ -41,8 +41,9 @@
 	   (type AbstractTensor tensor))
 
   ;; Is this calling of save-for-backward is reachable? by backward => If so, make a copy.
+
   (when (and (not (>= *under-composite-node-mode* 2))
-	     (null *no-grad*))
+	     (not *no-grad*))
     (let ((past-sv4bw (slot-value self name)))
 
       ;; Save For Backward hasn't created yet?
