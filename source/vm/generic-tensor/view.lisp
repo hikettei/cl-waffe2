@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;; view.lisp make cl-waffe2 unstable...?
+
 (defparameter *unroll-threshold* 3 "Unroll if iternum falls below this threshold")
 
 ;; TO Add: ViewInstruction2D to implement matmul

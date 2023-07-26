@@ -88,6 +88,7 @@
       ;; JITが今のところ動作しない
       ;; 埋め込まれたコードにTensorIDが直接埋め込まれている。
       ;; Cacheの検索をどうやってやるかが課題になる。
+      
       (when node
 	(cl-waffe2/vm.nodes:on-finalizing-compiling
 	 node

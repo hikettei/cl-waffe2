@@ -1146,4 +1146,13 @@ Returns shape but <1 x N> parts are replaced with -1.
       (push -1 out))
     (reverse out)))
 
+(defun tensor-actual-stride (tensor)
+  (declare (type AbstractTensor tensor))
+  ;; Returns a stride of tensor, but broadcasted axis=0
+  (loop for s in (tensor-stride tensor)
+	for v in (tensor-view tensor)
+	if (eql (viewtype (force-list v)) :broadcast)
+	  collect 0
+	else
+	  collect s))
 
