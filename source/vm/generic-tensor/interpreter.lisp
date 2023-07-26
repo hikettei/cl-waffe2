@@ -131,7 +131,7 @@
       (let ((gradients (loop for g in outs
 			     for var in (tensor-variables toplevel)
 			     if (and g (ancestor-param-p var))
-			       collect (cl-waffe2/vm.nodes:call-instant-backward g past-dy)
+			       collect (cl-waffe2/vm.nodes:call-instant-backward g)
 			     else
 			       collect nil)))
 	(loop for var    in (tensor-variables toplevel)

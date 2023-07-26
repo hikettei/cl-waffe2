@@ -459,9 +459,8 @@ inputs      ... inputs called with
 	  (when kernel
 	    (list dout kernel compile-option inputs-out)))))
 
-(defun call-instant-backward (outs prev-dout)
+(defun call-instant-backward (outs)
   (multiple-value-bind (dout kernel compile-option inputs-out) (apply #'values outs)
-    (cl-waffe2/vm.generic-tensor:embody-actual-tensor dout prev-dout)
     (with-no-grad
       (prog1
 	  (cl-waffe2/vm.generic-tensor:run-node! kernel :compile-option compile-option)
