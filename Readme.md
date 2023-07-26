@@ -22,7 +22,7 @@
 
 > ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-cl-waffe2 provides a set of differentiable matrix operations which is aimed to apply to build a neural network model. Operations in cl-waffe2 are accelerated by `Lazy Evaluation` and `JIT Compiling with optimizing nodes.`.
+cl-waffe2 provides flexible and comprehensive matrix operations of mathematical optimization on Common Lisp. For efficiency, everything is lazy-evaluated and later compiled. Users can select these two functions: `proceed` or `build` depending on the situation and execute the operation. This framework is indeed user extensible in that there are no barriers between developers and users. If there is any shortfall, you can extend it.
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
