@@ -58,7 +58,19 @@
 
     (let ((next-states (map 'list #'(lambda (x) (run-node! x :stop-me stop-me :called-with-vars toplevel)) vars)))
       (register-variables vars)
-      
-      (let ((results (multiple-value-list (apply #'funcall-cached-function compiled-fw next-states))))
-	(nth (tensor-out-n toplevel) results)))))
+
+      (when (or (null (statecontainer-forward-result state))
+		(and *calling-backward-mode* (car (statecontainer-backward-result state))))
+	
+	(when (and *calling-backward-mode*
+		   (not (car (statecontainer-backward-result state))))
+	  (setf (statecontainer-backward-result state)
+		(list (null (statecontainer-forward-result state)))))
+
+	(setf (statecontainer-forward-result state)
+	      (multiple-value-list (apply #'funcall-cached-function compiled-fw next-states))))
+
+      ;; on-calling-finalizing...
+      (nth (tensor-out-n toplevel) (statecontainer-forward-result state)))))
+
 
