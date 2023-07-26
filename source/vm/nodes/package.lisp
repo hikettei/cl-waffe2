@@ -49,6 +49,8 @@
    #:forward
    #:backward
    #:expand-backward
+   #:expand-backward-instant
+   #:call-instant-backward
    #:node-passed-p
    #:ignore-shape-error
    #:out-scalar-p

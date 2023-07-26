@@ -32,10 +32,22 @@
 ;;
 ;;
 
+;; run-node! is a proceed dedicated interpreter
+
+;; TODO:
+;;  1. JIT対応はマスト
+;;  2. Interpreter ModeでのBackward生成
+;;
+;; これをもとに、buildの方のも改善してみよ
+;; 一度Lispのマクロと同じ形式で演算を定義すると、その後JITとしてもインタプリタとしても動作します。
+
+;; no make-input
+;; Interpreter Mode
 (defun run-node! (toplevel
 		  &key
 		    (stop-me nil)
-		    (called-with-vars nil))
+		    (called-with-vars nil)
+		    (compile-option))
   "
 ## [function] run-node!
 "
@@ -56,7 +68,7 @@
 	 (node  (tensor-backward toplevel))
 	 (compiled-fw (statecontainer-forward-out-form state)))
 
-    (let ((next-states (map 'list #'(lambda (x) (run-node! x :stop-me stop-me :called-with-vars toplevel)) vars)))
+    (let ((next-states (map 'list #'(lambda (x) (run-node! x :stop-me stop-me :called-with-vars toplevel :compile-option compile-option)) vars)))
       (register-variables vars)
 
       (when (or (null (statecontainer-forward-result state))
@@ -68,9 +80,126 @@
 		(list (null (statecontainer-forward-result state)))))
 
 	(setf (statecontainer-forward-result state)
-	      (multiple-value-list (apply #'funcall-cached-function compiled-fw next-states))))
+	      (multiple-value-list (apply #'funcall-cached-function compiled-fw compile-option next-states))))
+
+      ;; Calling User-defined JIT Compiler
+
+      ;; = [FIXME] ======
+      ;; JITが今のところ動作しない
+      ;; 埋め込まれたコードにTensorIDが直接埋め込まれている。
+      ;; Cacheの検索をどうやってやるかが課題になる。
+      (when node
+	(cl-waffe2/vm.nodes:on-finalizing-compiling
+	 node
+	 toplevel
+	 called-with-vars))
 
       ;; on-calling-finalizing...
       (nth (tensor-out-n toplevel) (statecontainer-forward-result state)))))
 
+;; Bottleneck:
+;; A ton of creation of make-input (forward would be done without creation.)
+;; init-optimizer-utils! -> when called with interpret-mode, replace them with proceed.
+(defun run-node-backward! (toplevel past-dy &key (compile-option nil))
+  (declare (type AbstractTensor toplevel past-dy)
+	   (optimize (speed 3)))
+
+  ;; Adding Gradients
+  (when (null (tensor-backward toplevel))
+    (return-from run-node-backward!
+      (when (slot-value toplevel 'requires-grad)
+	;; TODO: Later, Replace it by interpreter proceed
+	(init-optimizer-utils! toplevel)
+	(add-grads toplevel past-dy))))
+
+  (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
+    (let* ((outs (apply
+		  ;; (backward self dout dx dy dz ...)
+		  ;; -> (backward self dout)
+		  #'cl-waffe2/vm.nodes:expand-backward-instant
+		  ;; Here, we trace the definition of backward.
+		  (tensor-backward toplevel)
+		  past-dy
+		  compile-option
+		  (tensor-variables toplevel))))
+
+      (let ((gradients (loop for g in outs
+			     for var in (tensor-variables toplevel)
+			     if (and g (ancestor-param-p var))
+			       collect (cl-waffe2/vm.nodes:call-instant-backward g past-dy)
+			     else
+			       collect nil)))
+	(loop for var    in (tensor-variables toplevel)
+	      for kernel in outs
+	      for grad   in gradients
+	      if (and kernel
+		      (ancestor-param-p var))
+		do (run-node-backward! var grad :compile-option compile-option))))))
+
+(defun vm-forward-function (toplevel
+			    &key
+			      (compile-mode :default))
+  "
+## [function] vm-forward-function
+"
+
+  (declare (type compile-option-t compile-mode))
+  ;; Pruning unused nodes.
+  (optimize-computation-node! toplevel :speed 1)
+
+  #'(lambda (compiled-composite)
+      (declare (type Compiled-Composite compiled-composite))
+      (let* ((*node-parameters-tmp*))
+	(values
+	 (run-node! toplevel :compile-option (compile-option-form compile-mode))
+	 (setf (slot-value compiled-composite 'variables) (construct-variables-table *node-parameters-tmp*))))))
+
+(defun vm-backward-function (toplevel
+			     &key
+			       (compile-mode :default))
+  "
+## [function] vm-backward-function
+"
+  (declare (type compile-option-t compile-mode))
+
+  (let* ((dout-toplevel (if (scalar-p toplevel)
+			    (make-tensor 1
+					 :dtype (dtype toplevel)
+					 :order (order toplevel))
+			    (make-tensor (shape toplevel)
+					 :dtype (dtype toplevel)
+					 :order (order toplevel)
+					 :initial-element 1)))
+	 (backward-caller #'(lambda ()
+			      (let ((*calling-backward-mode* t))
+				(run-node-backward! toplevel dout-toplevel :compile-option (compile-option-form compile-mode))
+				t))))
+    backward-caller))
+
+
+(defun vm-build (toplevel
+		 &key
+		   (construct-backward? (not *no-grad*))
+		   (compile-mode :fastest))
+  "
+## [function] vm-build
+
+```lisp
+(vm-build toplevel
+	      &key
+		(construct-backward? (not *no-grad*))
+		(compile-mode :fastest))
+```
+"
+  (declare (type AbstractTensor toplevel))
+
+  (let* ((forward (vm-forward-function toplevel :compile-mode compile-mode))
+	 (backward (when construct-backward? (vm-backward-function toplevel :compile-mode compile-mode)))
+	 (model (make-instance 'Compiled-Composite
+			       :variables (construct-variables-table nil)
+			       :compiled-forward  forward
+			       :compiled-backward backward)))
+
+    (setf (slot-value model 'compiled-forward) #'(lambda () (funcall forward model)))
+    model))
 

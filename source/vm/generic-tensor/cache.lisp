@@ -141,11 +141,15 @@ TensorViewNameN depicts the path call-with-view traced.
     `(,(kernel-name compiled-function)
       ,@(tensor->id (cdr fbody) (compiled-kernel-args compiled-function)))))
 
-(defun make-funcallable-kernel (compiled-function)
+(defun make-funcallable-kernel (compiled-function compile-option)
   (declare (type Compiled-Kernel compiled-function))
   (let ((fbody (cdar (compiled-kernel-body compiled-function))))
     (compile nil
-	     `(lambda ,@(tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))))
+	     (let ((out (tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))
+	       (let ((args (car out))
+		     (decl (second out))
+		     (body (cddr out)))
+		 `(lambda ,args ,decl (declare ,compile-option) ,@body))))))
 
 (defun place-cached-kernels (&rest body)
   "
@@ -200,7 +204,7 @@ Reading *kernel-storeroom*, the function expands the form below.
 
 
 ;; For toplevel
-(defun funcall-cached-function (kernel-function &rest args)
+(defun funcall-cached-function (kernel-function compile-option &rest args)
   (declare (type Compiled-Kernel kernel-function))
 
   (let ((target (lut-search-function
@@ -208,7 +212,7 @@ Reading *kernel-storeroom*, the function expands the form below.
 		 (compiled-kernel-name kernel-function)
 		 args)))
     (if (null target)
-	(let ((compiled-function (make-funcallable-kernel kernel-function)))
+	(let ((compiled-function (make-funcallable-kernel kernel-function compile-option)))
 	  (lut-search-function
 	   *compiled-function-cache*
 	   (compiled-kernel-name kernel-function)

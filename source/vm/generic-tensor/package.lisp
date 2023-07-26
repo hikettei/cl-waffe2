@@ -17,7 +17,7 @@
   (:export
    #:AbstractTensor
    #:ScalarTensor
-
+   
    #:tensor-backward
    #:read-result
    #:tensor-variables
@@ -112,6 +112,7 @@
    #:compiled-variables
    #:nodevariables-parameters
    #:build
+   #:run-node!
    #:set-input
    #:get-input)
 
