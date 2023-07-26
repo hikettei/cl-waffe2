@@ -467,7 +467,7 @@ inputs      ... inputs called with
 	  (cl-waffe2/vm.generic-tensor:run-node! kernel :compile-option compile-option)
 	(detach dout nil)
 	(map 'list #'(lambda (x) (detach x nil)) inputs-out)))))
-	
+
 
 ;; the method backward constructs backward function
 ;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp

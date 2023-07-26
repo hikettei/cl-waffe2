@@ -34,14 +34,8 @@
 
 ;; run-node! is a proceed dedicated interpreter
 
-
-;; Support proceed
-;; proceedがinterpretmodeで動く様にする
-;; ^ Test
-;; Docstrings
-;; JIT compiling
-
-;; no make-input
+(defparameter *force-use-build* nil "This parameter is for debug")
+;; No Make-input
 ;; Interpreter Mode
 (defun run-node! (toplevel
 		  &key
@@ -114,11 +108,14 @@
 	    (locally (declare (optimize (speed 1)))
 	      (incf (tensor-vec (grad toplevel)) (tensor-vec past-dy)))
 	    (with-no-grad
-	      (run-node!
-	       (cl-waffe2/vm.nodes:forward
-		(cl-waffe2/base-impl:AddNode (dtype toplevel))
-		(grad toplevel)
-		past-dy)))))))
+	      (progn
+		(detach! past-dy)
+		(run-node!
+		 (cl-waffe2/vm.nodes:forward
+		  (cl-waffe2/base-impl:AddNode (dtype toplevel))
+		  (grad toplevel)
+		  past-dy))
+		(setf (detach-p past-dy) nil)))))))
 
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
     (let* ((outs (apply
@@ -178,10 +175,10 @@
 					 :dtype (dtype toplevel)
 					 :order (order toplevel)
 					 :initial-element 1)))
-	 (backward-caller #'(lambda ()
-			      (let ((*calling-backward-mode* t))
-				(run-node-backward! toplevel dout-toplevel :compile-option (compile-option-form compile-mode))
-				t))))
+	 (backward-caller (lambda ()
+			    (let ((*calling-backward-mode* t))
+			      (run-node-backward! toplevel dout-toplevel :compile-option (compile-option-form compile-mode))
+			      t))))
     backward-caller))
 
 
@@ -200,6 +197,10 @@
 ```
 "
   (declare (type AbstractTensor toplevel))
+
+  (when *force-use-build*
+    (return-from vm-build
+      (build toplevel :construct-backward? construct-backward? :compile-mode compile-mode)))
 
   (let* ((forward (vm-forward-function toplevel :compile-mode compile-mode))
 	 (backward (when construct-backward? (vm-backward-function toplevel :compile-mode compile-mode)))

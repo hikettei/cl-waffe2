@@ -293,6 +293,7 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
     ;; where-static-p -> T,   the phase where isn't used
     ;; where-static-p -> NIL, the phase where is used
     `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
        (defclass ,abstract-name (AbstractNode ,@extends)
 	 (,@slots
 	  (save-for-backward-space1 :initform ',save-for-backward :reader node-save-for-backward1)

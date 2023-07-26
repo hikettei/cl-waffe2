@@ -113,6 +113,7 @@
    #:nodevariables-parameters
    #:build
    #:vm-build
+   #:reset-compiled-function-cache!
    #:run-node!
    #:set-input
    #:get-input)
