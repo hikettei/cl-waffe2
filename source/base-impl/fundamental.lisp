@@ -218,11 +218,8 @@ This function is also used to adjust memory alignment of tensor."
 	     ((self dout dx dy) ;; (viewed-tensor old)
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
-		     (res (apply
-			   #'!view
-			   (!move dx (apply #'!view dout inp-sub))
-			   out-sub)))
-		(values nil res))))
+		     (res (!move dx (apply #'!view dout inp-sub))))
+		(values nil (apply #'!view res out-sub)))))
 
 
 (defun !view (tensor &rest subscripts)

@@ -112,6 +112,7 @@
    #:compiled-variables
    #:nodevariables-parameters
    #:build
+   #:vm-build
    #:run-node!
    #:set-input
    #:get-input)

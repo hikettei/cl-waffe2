@@ -35,18 +35,11 @@
 ;; run-node! is a proceed dedicated interpreter
 
 
-;; BackwardModeでproceed使う
+;; Support proceed
 ;; proceedがinterpretmodeで動く様にする
 ;; ^ Test
 ;; Docstrings
 ;; JIT compiling
-
-;; TODO:
-;;  1. JIT対応はマスト
-;;  2. Interpreter ModeでのBackward生成
-
-;; これをもとに、buildの方のも改善してみよ
-;; 一度Lispのマクロと同じ形式で演算を定義すると、その後JITとしてもインタプリタとしても動作します。
 
 ;; no make-input
 ;; Interpreter Mode
@@ -164,9 +157,9 @@
   #'(lambda (compiled-composite)
       (declare (type Compiled-Composite compiled-composite))
       (let* ((*node-parameters-tmp*))
-	(values
-	 (run-node! toplevel :compile-option (compile-option-form compile-mode))
-	 (setf (slot-value compiled-composite 'variables) (construct-variables-table *node-parameters-tmp*))))))
+	(prog1
+	    (run-node! toplevel :compile-option (compile-option-form compile-mode))
+	  (setf (slot-value compiled-composite 'variables) (construct-variables-table *node-parameters-tmp*))))))
 
 (defun vm-backward-function (toplevel
 			     &key

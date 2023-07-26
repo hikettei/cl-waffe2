@@ -377,7 +377,7 @@ Return: (values after-view error)"
 			   after
 			   size)
   "Tensor[0:10][t] is the equivalent to Tensor[t][0:10]"
-  before)
+  after)
 
 (defmethod step-subscript ((x (eql :slice))
 			   (y (eql :index))

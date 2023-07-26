@@ -18,9 +18,6 @@
 ;; Search-Route = Fname -> Device -> -> Dtype -> Tensor_Stride/Permute
 ;;
 
-;;
-;; 多重ディスパッチの車輪の再発明な気もしなくもない・・・
-;;
 
 (defparameter *tensor-id-table* (make-hash-table)) ;; [Device] -> [Dtype] -> [Stride] -> [ID]
 
@@ -50,6 +47,7 @@
 	(gethash-with-id (dtype tensor) dtype-tree :test #'equal)
       (multiple-value-bind (id3 shape-tree)
 	  (gethash-with-id (tensor-stride tensor) stride-tree :test #'equal)
+	;; (DEVICE DTYPE STRIDE SHAPE)
 	`(,id1 ,id2 ,id3 ,(gethash-leaf (shape tensor) shape-tree))))))
 
 ;;(declaim (inline lut-search-function))
