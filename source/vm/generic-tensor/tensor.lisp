@@ -1114,7 +1114,14 @@ The function parameter computes all the previous nodes of the given tensor if an
   (when (slot-value tensor 'requires-grad)
     (if (gradient-resetter tensor)
 	(funcall (gradient-resetter tensor))
-	(warn "Couldn't reset gradients of tensor, because gradient-resetter for tensor ~a is nil. The result may be wrong." tensor))))
+	(if (scalar-p tensor)
+	    (let ((zero (make-tensor 0 :dtype (dtype tensor))))
+	      (setf (tensor-vec (grad tensor)) (tensor-vec zero)))
+	    (run-node!
+	     (cl-waffe2/vm.nodes:forward
+	      (cl-waffe2/base-impl:ScalarMul (dtype tensor))
+	      (grad tensor)
+	      (make-tensor 0 :dtype (dtype tensor))))))))
 
 (defun shape-with-broadcastable (tensor)
   "

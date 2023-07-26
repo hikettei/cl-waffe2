@@ -34,10 +34,17 @@
 
 ;; run-node! is a proceed dedicated interpreter
 
+
+;; BackwardModeでproceed使う
+;; proceedがinterpretmodeで動く様にする
+;; ^ Test
+;; Docstrings
+;; JIT compiling
+
 ;; TODO:
 ;;  1. JIT対応はマスト
 ;;  2. Interpreter ModeでのBackward生成
-;;
+
 ;; これをもとに、buildの方のも改善してみよ
 ;; 一度Lispのマクロと同じ形式で演算を定義すると、その後JITとしてもインタプリタとしても動作します。
 
@@ -47,7 +54,7 @@
 		  &key
 		    (stop-me nil)
 		    (called-with-vars nil)
-		    (compile-option))
+		    (compile-option `(optimize (speed 3))))
   "
 ## [function] run-node!
 "
@@ -100,7 +107,7 @@
 ;; Bottleneck:
 ;; A ton of creation of make-input (forward would be done without creation.)
 ;; init-optimizer-utils! -> when called with interpret-mode, replace them with proceed.
-(defun run-node-backward! (toplevel past-dy &key (compile-option nil))
+(defun run-node-backward! (toplevel past-dy &key (compile-option `(optimize (speed 3))))
   (declare (type AbstractTensor toplevel past-dy)
 	   (optimize (speed 3)))
 
@@ -109,8 +116,15 @@
     (return-from run-node-backward!
       (when (slot-value toplevel 'requires-grad)
 	;; TODO: Later, Replace it by interpreter proceed
-	(init-optimizer-utils! toplevel)
-	(add-grads toplevel past-dy))))
+	(if (scalar-p toplevel)
+	    (locally (declare (optimize (speed 1)))
+	      (incf (tensor-vec (grad toplevel)) (tensor-vec past-dy)))
+	    (with-no-grad
+	      (run-node!
+	       (cl-waffe2/vm.nodes:forward
+		(cl-waffe2/base-impl:AddNode (dtype toplevel))
+		(grad toplevel)
+		past-dy)))))))
 
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
     (let* ((outs (apply
