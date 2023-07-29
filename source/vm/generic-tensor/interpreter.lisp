@@ -48,6 +48,7 @@
   (declare (type AbstractTensor toplevel)
 	   (type boolean stop-me)
 	   (optimize (speed 3)))
+  (declare (ignore called-with-vars))
 
   (when (or stop-me
 	    (null (tensor-state toplevel)))
@@ -61,6 +62,7 @@
 	 (vars  (tensor-variables toplevel))
 	 (node  (tensor-backward toplevel))
 	 (compiled-fw (statecontainer-forward-out-form state)))
+    (declare (ignore node))
 
     (let ((next-states (map 'list #'(lambda (x) (run-node! x :stop-me stop-me :called-with-vars toplevel :compile-option compile-option)) vars)))
       (register-variables vars)
@@ -75,19 +77,21 @@
 
 	(setf (statecontainer-forward-result state)
 	      (multiple-value-list (apply #'funcall-cached-function compiled-fw compile-option next-states))))
-
+      
       ;; Calling User-defined JIT Compiler
 
       ;; = [FIXME] ======
       ;; JITが今のところ動作しない
       ;; 埋め込まれたコードにTensorIDが直接埋め込まれている。
       ;; Cacheの検索をどうやってやるかが課題になる。
-      
+
+      #|
       (when node
 	(cl-waffe2/vm.nodes:on-finalizing-compiling
 	 node
 	 toplevel
-	 called-with-vars))
+         called-with-vars))
+      |#
 
       ;; on-calling-finalizing...
       (nth (tensor-out-n toplevel) (statecontainer-forward-result state)))))
@@ -108,14 +112,13 @@
 	    (locally (declare (optimize (speed 1)))
 	      (incf (tensor-vec (grad toplevel)) (tensor-vec past-dy)))
 	    (with-no-grad
-	      (progn
-		(detach! past-dy)
-		(run-node!
-		 (cl-waffe2/vm.nodes:forward
-		  (cl-waffe2/base-impl:AddNode (dtype toplevel))
-		  (grad toplevel)
-		  past-dy))
-		(setf (detach-p past-dy) nil)))))))
+	      (detach! past-dy)
+	      (run-node!
+	       (cl-waffe2/vm.nodes:forward
+		(cl-waffe2/base-impl:AddNode (dtype toplevel))
+		(grad toplevel)
+		past-dy))
+	      (setf (detach-p past-dy) nil))))))
 
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
     (let* ((outs (apply
