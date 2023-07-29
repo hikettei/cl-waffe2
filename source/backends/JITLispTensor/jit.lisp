@@ -2,6 +2,14 @@
 (in-package :cl-waffe2/backends.jit.lisp)
 
 ;;
+;; Goals:
+;;   1. Use as a model case when extending to other backends.
+;;   2. FuseOps
+;;   3. Eliminate this constraint: *no-grad* = t
+;;   4. Focusing on composing several operations.
+;;
+
+;;
 ;; :cl-waffe2/backends.jit.lisp provides an example of implementing user-defined JIT Compiler
 ;; in cl-waffe2. This program could be applied into CUDA/Metal/C++ compiler in the future...
 ;;

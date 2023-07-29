@@ -8,7 +8,7 @@
 ;; F() -> G(X, OUT) Function Family
 ;; ==============================================================
 
-
+;; Sparse/Dense Matrices should be separated together.
 (macrolet ((define-math-impl (node-name one-arg-fn densep &aux (lambdap (listp one-arg-fn)))
 	     "Sparse and Dense"
 	     (let ((caller-name (symb node-name '-caller)))
@@ -16,16 +16,16 @@
 		  (,(if densep 'define-with-typevar-dense
 			'define-with-typevar)
 		   (,caller-name u)
-		      (x y offsetx offsety incx incy size)
-		    ;; Y <- F(X)
-		    (declare (optimize (speed 3))
-			     (type (simple-array u (*)) x y)
-			     (type fixnum offsetx offsety incx incy size))
-		    (dotimes (i size)
-		      (setf (aref y (+ offsety (the fixnum (* incy i))))
-			    ,(if lambdap
-				 `(funcall ,one-arg-fn (aref x (+ offsetx (the fixnum (* incx i)))))
-				 `(,one-arg-fn (aref x (+ offsetx (the fixnum (* incx i)))))))))
+		   (x y offsetx offsety incx incy size)
+		   ;; Y <- F(X)
+		   (declare (optimize (speed 3))
+			    (type (simple-array u (*)) x y)
+			    (type fixnum offsetx offsety incx incy size))
+		   (dotimes (i size)
+		     (setf (aref y (+ offsety (the fixnum (* incy i))))
+			   ,(if lambdap
+				`(funcall ,one-arg-fn (aref x (+ offsetx (the fixnum (* incx i)))))
+				`(,one-arg-fn (aref x (+ offsetx (the fixnum (* incx i)))))))))
 		  
 		  (define-impl (,node-name :device LispTensor)
 			       :save-for-backward (t nil)

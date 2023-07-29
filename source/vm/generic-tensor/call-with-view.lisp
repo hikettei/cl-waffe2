@@ -2,6 +2,86 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;; cl-waffe2 has two mode depending on the situation
+
+;;
+;; build:   Supports FuseOps/Fully Inlining (Memo: cl-waffe2 defnode corresponds with IR, conditions, iterations are expressed/implemented as AbstractNode)
+;;
+;; proceed: No supports of FuseOps but working enough fast.
+;;
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; In cl-waffe2, call-with-view is a function used to express an iteration on an AbstractTensor.
+;; And, it is intended to be used for each single operation unit (exp/sin/matmul ...)
+;;
+;; Taking the case of the element-wise function `exp`, the body of :forward can be expressed like:
+;;
+
+;; ====================================================
+;; (loop for i <- (Index considered views)              }
+;;      [Repeating for the rank of tensors]             } <- Expanded by call-with-view
+;;      ...                                             }
+;;      (element-wise-exp tensor stride offset size)    <- Kernel (user-defined)
+;; ====================================================
+
+;;
+;; In addition, cl-waffe2 can apply these optimization methods to the coming tensors:
+;;
+;; 1. Loop Fusion
+;;
+;; A(x) = (loop for i ...
+;;          (element-wise-sin ...))
+;;
+;; B(x) = (loop for i ...
+;;          (element-wise-cos ...))
+;;
+;; Composing A and B (i.e.: A(B(x))), the expanded form would be like:
+;;
+;; (loop for i ...
+;;          (element-wise-sin ...)
+;;          (element-wise-cos ...))
+;;
+;; Here's more, `aref` is still remained to be optimized:
+;;
+;; -> Since loop Fusion is still hard to implement across multiple devices, and I decide to implement it as an extended device, JITLispTensor.
+;;
+;;
+
+;; 2. Inlining
+;;    If the ranks/dimensions are enough small and (LOOP COST) >> (Computation_Time), they're inlined:
+;;
+;; 3. Disregarding Views
+;;
+;;    (10 10) Tensor with view = (T T) -> (100) Tensor as long as kernel-size = 1
+;;
+;;
+;; 4. Parallelize (TODO)
+;;
+;;
+;;
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#|
+(defstruct (Iterator
+(:constructor make-iterator (variables op-form setf-form)))
+"
+## [struct] Iterator
+"
+(variables variables :type list)
+(operation-form op-form :type list)
+(setf-form setf-form :type list))
+
+(defun .it (X Y)
+"Composes the two given Iterators: X and Y. X(Y(...)).
+
+Return: (values X_after Y_after)
+If X and Y are composable, the returned valuess are X_after=nil, Y_after=X(Y(...)).
+Otherwise: (values X Y)"
+(declare (type Iterator X Y))
+)
+|#
+
 
 ;; ===============================================
 ;; call-with-view utils
@@ -20,8 +100,8 @@
 	collect
 	;; offset += stride * start-points
 	`(incf ,(nth k offset-places)
-	        (%* ,(nth k start-points)
-		    ,(nth k stride-places)))))
+	       (%* ,(nth k start-points)
+		   ,(nth k stride-places)))))
 
 (defun expand-view-stride-adder (offset-places
 				 stride-places
@@ -177,12 +257,12 @@ Return: (values offsets-place form)"
   `(let ((stride-places (tensor-gensym-list ,tensors))
 	 (ith (gensym)))
      `(let* (,@(loop for stride-place in stride-places ;; (place <- stride)
-		    for tensor in ,tensors
-		    collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor)))))
-	    (,',endpoint-place ,(car ,end-points))
-	    (,',endpoint-place (if (symbolp ,',endpoint-place)
-				   (read-adjustable-symbol ,',endpoint-place)
-				   ,',endpoint-place)))
+		     for tensor in ,tensors
+		     collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor)))))
+	     (,',endpoint-place ,(car ,end-points))
+	     (,',endpoint-place (if (symbolp ,',endpoint-place)
+				    (read-adjustable-symbol ,',endpoint-place)
+				    ,',endpoint-place)))
 
 	,@(expand-first-offset-adder
 	   ,tensors
@@ -251,9 +331,9 @@ See also:
 "
   
   (declare ;;(optimize (speed 3))
-	   (type function function)
-	   (type list tensors shape)
-	   (type fixnum at-least-dim dims))
+   (type function function)
+   (type list tensors shape)
+   (type fixnum at-least-dim dims))
   
   (assert (every #'(lambda (tensor) (shape-equal-list (butlast (shape tensor) at-least-dim) (butlast shape at-least-dim))) tensors)
 	  nil
