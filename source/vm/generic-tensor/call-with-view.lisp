@@ -5,7 +5,7 @@
 ;; cl-waffe2 has two mode depending on the situation
 
 ;;
-;; build:   Supports FuseOps/Fully Inlining (Memo: defnode corresponds with IR)
+;; build:   Supports FuseOps/Fully Inlining (Memo: cl-waffe2 defnode corresponds with IR, conditions, iterations are expressed/implemented as AbstractNode)
 ;;
 ;; proceed: No supports of FuseOps but working enough fast.
 ;;
@@ -64,22 +64,22 @@
 
 #|
 (defstruct (Iterator
-	    (:constructor make-iterator (variables op-form setf-form)))
-  "
+(:constructor make-iterator (variables op-form setf-form)))
+"
 ## [struct] Iterator
 "
-  (variables variables :type list)
-  (operation-form op-form :type list)
-  (setf-form setf-form :type list))
+(variables variables :type list)
+(operation-form op-form :type list)
+(setf-form setf-form :type list))
 
 (defun .it (X Y)
-  "Composes the two given Iterators: X and Y. X(Y(...)).
+"Composes the two given Iterators: X and Y. X(Y(...)).
 
 Return: (values X_after Y_after)
 If X and Y are composable, the returned valuess are X_after=nil, Y_after=X(Y(...)).
 Otherwise: (values X Y)"
-  (declare (type Iterator X Y))
-  )
+(declare (type Iterator X Y))
+)
 |#
 
 

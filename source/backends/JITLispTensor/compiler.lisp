@@ -199,7 +199,7 @@
   (declare (type opAST compile-toplevel))
   (let* (;;(*tensors-use* nil)
 	 (tree (explore-and-compile! compile-toplevel)))
-    `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree)))
+    (print `(setf ,(expand-aref (opAST-car compile-toplevel)) ,tree))))
 
 (defun explore-and-compile! (compile-toplevel)
   (declare (type opAST compile-toplevel))
