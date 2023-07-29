@@ -22,24 +22,26 @@
 
 > ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-cl-waffe2 provides flexible and comprehensive matrix operations of mathematical optimization on Common Lisp. For efficiency, everything is lazy-evaluated and later compiled. Users can select these two functions: `proceed` or `build` depending on the situation and execute the operation. This framework is indeed user extensible in that there are no barriers between developers and users. If there is any shortfall, you can extend it.
+cl-waffe2 is an experimental Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime.
+As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a framework dedicated to solving optimizing/inferencing deep neural network models using AD, all in Common Lisp. This framework is decoupled from other existing libraries by design, but interoperating with other libraries by efficient use of other libraries via with-facet macros and Common Lisp standard arrays is strongly recommended. I'm just focusing on efficient AD.
+
+Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid options to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function `build` will generate codes which are fully optimized for training models.
+
+Portability to other devices is a major concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.
 
 Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
-Aiming to develop a framework that can be applied to everything in an initial phase, can lead to ruin. So I've formulated the following principle goals:
+### Workloads
 
-- Extensibility in that there's no barrier between users and developers.
-    - Provide Multi-dimensional and View-API-First AbstractArrays(AbstractTensor), which users could also extend into another device with the least additional codes.
-- Do not increase dependency
-    - Operations in cl-waffe2 are dedicated to machine learning/deep learning(e.g.: `AD` `optimizing`). If there're shortfalls,  interoperate with other libraries via `simple-array`.
+- [x] Establish a baseline for generic matrix operations from zero for Common Lisp, as practised by Julia.
+    - Four data structures used in deep learning: `AbstractNode` `AbstractTensor` `AbstractOptimizer`, and `AbstractTrainer`.
+    - Fundamental APIs: `View API/Broadcasting/Permution` `NDArrays with multidimensonal offsets` `build/proceed` `facet of tensors`
+    - Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)
+    - For experiments, implement a backend that runs at minimum speed: `LispTensor`.
 
-- Keep Common Lispy Approach
-    - Python-Free
-    - Formulating Neural Networks in a Common Lispy Approach
-    - Composing Several Models/Nodes with the least copy (especially when: with-no-grad mode)
+- [ ] Construct JIT Compiler from cl-waffe2 to `C++`. and fuse operations and loops.
 
-- (TO BE) Basically, it is `defined-by-run` but nodes are composed of those compiled by `define-and-run` modes.
-
+- [ ] Add basic computation nodes for controling nodes: `MapNode` `IfNode` etc...
 
 # Concepts/Features
 
