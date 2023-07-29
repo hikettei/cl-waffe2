@@ -84,6 +84,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :name name
    :body body
    :args args
+   :cache-when-compiled traceable?
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)
 		   *call-with-view-route*)))

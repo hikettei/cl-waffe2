@@ -68,6 +68,7 @@
 (defstruct Compiled-Kernel
   (name nil :type symbol)            ;; SinNode-CPUTENSOR
   (body nil :type list)              ;; (named-lambda ... () ...)
+  (cache-when-compiled nil :type boolean)
   (cache-p nil :type boolean)
   (args nil :type list)
   (view-route nil :type list)) ;; 2D 3D Flatten ...
@@ -218,11 +219,12 @@ Reading *kernel-storeroom*, the function expands the form below.
 		 args)))
     (if (null target)
 	(let ((compiled-function (make-funcallable-kernel kernel-function compile-option)))
-	  (lut-search-function
-	   *compiled-function-cache*
-	   (compiled-kernel-name kernel-function)
-	   args
-	   :setme compiled-function)
+	  (when (compiled-kernel-cache-when-compiled kernel-function)
+	    (lut-search-function
+	     *compiled-function-cache*
+	     (compiled-kernel-name kernel-function)
+	     args
+	     :setme compiled-function))
 	  (apply compiled-function args))
 	(apply target args))))
 
