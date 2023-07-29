@@ -282,6 +282,7 @@ Usage:
     (expand symbol-names)))
 
 (defun read-symbol (symbol)
+  (declare (optimize (speed 3) (safety 0)))
   (if *adjustable-shape-table*
       (typecase symbol
 	(symbol
