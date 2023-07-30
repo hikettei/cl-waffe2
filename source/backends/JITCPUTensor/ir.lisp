@@ -6,8 +6,7 @@
 (defvar *compiled-tensors* nil "An list of variables used in the computation node.")
 
 (defun add-variable (tensor)
-  ;; If the backward is MoveTensorNode
-  ;; ignore this function on some conditions
+  "Adds the given tensor to *compiled-tensors* if there's no duplicate"
   (unless (find tensor *compiled-tensors*)
     (push tensor *compiled-tensors*)))
 
@@ -16,7 +15,8 @@
 ;; opAST  = {Variable, Leaves}
 ;;
 
-(deftype ast-variable-types () `(and keyword (member :opAST :scalar :tensor :null)))
+(deftype ast-variable-types ()
+  `(and keyword (member :opAST :scalar :tensor :null)))
 
 (defstruct (opAST
 	    (:constructor make-opAST (operation &rest args)))
@@ -67,11 +67,12 @@ an list of AST_Variable
 		 collect (make-ast-variable
 			  (confirm-compiling-area called-var)))))
 
-;; FuseOPs ... opASTの合成演算を考える (e.g.: apply(apply(x)))
-;; コンパイルされたコードの最適化は後で考えよう
-;; ノードの中間地点: A=Bを削除したい
-;; しかし、副作用を期待している部分があるので安易に削除できないから
-;; チョットコマル
+;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; Fuse operations ... would be realised by composing ops  (e.g.: apply(apply(x)))
+;; Delete: A ton of intermidate node, that is,: A=B
+;; However, some A=B nodes are needed and shouldn't be pruned, it interrupts optimizing generating codes...
+;; Anyway, confirm the very least work and then think about it.
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun ir->c (opAST)
   "Recursively this function explores opAST, generating and writing C code to buffer."
@@ -126,11 +127,12 @@ an list of AST_Variable
 	
 	(:set
 
+	 (error ":set isn't available currently")
 	 
-	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST))
-		       "="
-		       (cAref (instruction-displace-to form)))
+	 ;; (write-c-line "~a ~a ~a;~%"
+	 ;;	       (cAref (opAST-car opAST))
+	 ;;	       "="
+	 ;;	       (cAref (instruction-displace-to form)))
 	 )
 
 	(:ignore

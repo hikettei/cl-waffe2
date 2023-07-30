@@ -1,18 +1,7 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;; cl-waffe2 dtype -> C Dtype
-
-;; single-flaot -> float
-;; double-float -> double
-;;        ...
-
-
-;;
-;; (c++defun aaa ((c++type (dtype tensor)) ... ...)
-;;    (inst-set ())
-;;    (inst-load ()))
-;;
+;; LUT: cl-waffe2 dtype -> C type
 
 ;; Memo: https://zenn.dev/mod_poppo/articles/vectorization-and-restrict
 (defun dtype->ctype (dtype)

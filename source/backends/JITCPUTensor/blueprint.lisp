@@ -1,32 +1,35 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;; CPUJITTensor and ScalarTensor are subject to jit-compiled.
+;; In this device, JITCPUTensor and JITCPUScalarTensor are subject to jit-compiled.
+;; Blueprint ... stores corresponding C ir node.
 
 (defclass CPUJIT-Blueprint ()
   ((opecode :initform nil :type symbol :accessor blueprint-opecode)
    (use-vars :initform nil :type list :accessor  blueprint-use-var))
   (:documentation "
 ## [class] CPUJIT-Blueprint
-
-AbstractNodes which extends this class, is recognised as `CPI-JITAble` Node by CPU-JIT-Compiler. This class possess information which is necessary for jit-compiling to cl code.
+Nodes to be involved in JIT, should extend this class.
 "))
 
 (defclass CPUJIT-Scalar-Blueprint (CPUJIT-Blueprint)
   ((opecode :initform nil :type symbol :accessor blueprint-opecode)
    (use-vars :initform nil :type list :accessor  blueprint-use-var))
   (:documentation "
-## [class] CPUJIT-Blueprint
-
-AbstractNodes which extends this class, is recognised as `CPI-JITAble` Node by CPU-JIT-Compiler. This class possess information which is necessary for jit-compiling to cl code.
+## [class] CPUJIT-Scalar-Blueprint
+Nodes to be involved in JIT, should extend this class.
 "))
 
 (defgeneric translate-op (opcode opast &rest args) (:documentation "
 ## [generic] translate-op
 
-Return: OpInstruction
+Return -> Instruction
 "))
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; [TODO]
+;; The generated C codes is merely a copy of the computation node, not optimized.
+;; For efficiency, we have to fuse operations and prune unused nodes.
 ;;
 ;; Instructions that the method translate-op can return are following:
 ;;
@@ -50,4 +53,6 @@ Return: OpInstruction
   (fname function-name :type string)
   (displace-to displace-to :type AbstractTensor)
   (args function-arguments :type list))
+
+;; TODO: Compose :apply instructions and optimize generated c codes.
 

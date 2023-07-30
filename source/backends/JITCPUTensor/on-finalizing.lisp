@@ -31,8 +31,7 @@
 
 (defparameter *compiling-ntime-count* 0)
 
-
-;; MEMO: proceedモードで動作するときはevalする？
+;; Note: eval it when called with vm-build?
 (defmethod on-finalizing-compiling ((current-node CPUJIT-Blueprint)
 				    variable
 				    next-variable)
@@ -42,9 +41,8 @@
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
-        (multiple-value-bind (vars kernel-code) (invoke-compiler! jit-function-name variable)
+        (multiple-value-bind (variables kernel-code) (invoke-compiler! jit-function-name variable)
 	  (print kernel-code)
-	  (print "RESULT")
 	  (print (tensor-id variable)))
 	
 	;; flowchart:

@@ -5,6 +5,7 @@
 (defparameter *indent-width* 0)
 
 (defmacro with-indent (indent &body body)
+  "Add indentations to generated C code with write-c-line"
   `(let ((*indent-width* ,indent)) ,@body))
 
 (defmacro with-compiling-mode (&body body)
@@ -22,9 +23,11 @@
   (apply #'format *compiled-code-buffer* control-string args))
 
 (defparameter *includes*
-  `("immintrin.h" "stdbool.h" "stdlib.h" "math.h" "stdio.h" "stdint.h"))
+  `("immintrin.h" "stdbool.h" "stdlib.h" "math.h" "stdio.h" "stdint.h")
+  "An list of headers that generated code loads first.")
 
 (defun place-toplevel-form (cffi-call-name tensors)
+  "Places headers, function definition and macros."
   (write-buff "~%~%#pragma simd~%")
   ;; #pragma GCC optimize ("O3")
   ;; #pragma GCC target "avx2" avx512 ...
@@ -36,12 +39,12 @@
   (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
 
   ;; Utils
-
   (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
   (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
   )
 
 (defun cAref (tensor)
+  "Reading the given tensor's id, the function returns a string which corresponds to aref in C"
   (declare (type AbstractTensor tensor))
   (if (typep tensor 'JITCPUTensor)
       (format nil "~a[i * ~a_STRIDE]"
@@ -49,10 +52,11 @@
 	      (tensor-id tensor))
       (format nil "~a" (tensor-id tensor))))
 
-;; Tensor -> (Tensor-vec stride offset)
 (defun cFunction (function-name &rest arguments)
   "Header:
-void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)"
+void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)
+
+  Returns the definition form of given function."
 
   (let ((arguments-form
 	  (with-compiling-mode
@@ -71,6 +75,8 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 
 (defun invoke-compiler! (function-name toplevel)
   "
+Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
+
 Return: (values envolved-tensors(but ScalarTensor) toplevel)
 "
   (declare (type JITAbleTensors toplevel))
@@ -79,7 +85,10 @@ Return: (values envolved-tensors(but ScalarTensor) toplevel)
 	 (envolved-nodes (confirm-compiling-area toplevel))
 	 (function-form  (apply #'cFunction function-name *compiled-tensors*)))
     (values
-     *compiled-tensors*
+     ;; Used for expanding call-with-view
+     (loop for tensor in *compiled-tensors*
+	   if (typep tensor 'JITCPUTensor)
+	     collect tensor)
      (with-compiling-mode
        (place-toplevel-form function-name *compiled-tensors*)
 
@@ -91,11 +100,4 @@ Return: (values envolved-tensors(but ScalarTensor) toplevel)
 	   (ir->C envolved-nodes))
 	 (write-c-line "}~%"))
        (write-c-line "}~%")))))
-
-
-;; Workload:
-;; 1. CPUのAVX拡張命令を特定
-;; 2. コンパイルの設定
-;; 3. gccの設定
-;; 4. 動的にCFFIから読み込む
 
