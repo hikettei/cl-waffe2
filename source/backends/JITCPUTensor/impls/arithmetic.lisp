@@ -44,6 +44,14 @@
 			 nil)
 		       `(progn ,out)))
 
+(define-impl (cl-waffe2/base-impl::MoveScalarTensorNode :device JITScalarTensor :extends (CPUJIT-Scalar-Blueprint))
+	     :forward ((self out target)
+		       (progn
+			 (setf (blueprint-use-var self) `(,out ,target))
+			 (setf (blueprint-opecode self) 'move)
+			 nil)
+		       `(progn ,out)))
+
 (defmethod translate-op ((opcode (eql 'move)) opAST &rest args)
   ;; A <- B
   (let ((self (tensor-backward (opAST-car opAST))))
@@ -88,8 +96,24 @@
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Scalar and Scalar Operations:
 ;; ScalarAndScalarAdd ScalarAndScalarSub ScalarAndScalarMul ScalarAndScalarDiv
-;; MoveScalarTensorNode InverseScalarTensorNode
-;;
+;; MoveScalarTensorNode
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+(macrolet ((define-sas-op (name lisp-op)
+	     `(define-impl (,name
+			    :device JITScalarTensor
+			    :extends (CPUJIT-Scalar-Blueprint))
+			   :forward ((self A scalar)
+				     (progn
+				       (setf (blueprint-use-var self) `(,A ,scalar))
+				       (setf (blueprint-opecode self) ',lisp-op)
+				       nil)
+				     `(progn ,A)))))
+
+  (define-sas-op cl-waffe2/base-impl::ScalarAndScalarAdd +)
+  (define-sas-op cl-waffe2/base-impl::ScalarAndScalarSub -)
+  (define-sas-op cl-waffe2/base-impl::ScalarAndScalarMul *)
+  (define-sas-op cl-waffe2/base-impl::ScalarAndScalarDiv /))
 
 
