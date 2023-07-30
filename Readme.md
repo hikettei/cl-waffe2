@@ -236,87 +236,35 @@ The combination of delay evaluation and node definition mechanisms allows all th
 
 # References/Acknowledgments
 
-All comments on this reddit post https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/.
 
-Features of Common Lispy approach to (Better) Numpy. (https://gist.github.com/digikar99/ba2f0bb34021bfdc086b9c1c712ca228)
+・All comments on this Reddit post: [Does anyone have any interest in my deep-learning framework?](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/).
 
-https://www.jsoftware.com/papers/RationalizedAPL.htm
+- digikar99 for giving me intriguing perspectives on some semantics and the publication of a large number of valuable references.
+    - [Features of Common Lispy approach to (Better) Numpy](https://gist.github.com/digikar99/ba2f0bb34021bfdc086b9c1c712ca228)
 
-https://arxiv.org/pdf/1201.6035.pdf
+- [Rationalized APL](https://www.jsoftware.com/papers/RationalizedAPL.htm)
 
-https://www.european-lisp-symposium.org/static/2018/heisig.pdf
+- [Previous research of Petalisp](https://www.european-lisp-symposium.org/static/2018/heisig.pdf)
+    - https://github.com/marcoheisig/Petalisp/tree/master
 
-https://github.com/marcoheisig/Petalisp/tree/master
+- Some of the algorithms implemented within the source code are referenced below:
 
-https://github.com/numpy/numpy/tree/main
+    - https://arxiv.org/pdf/1201.6035.pdf
 
-https://pytorch.org/
+    - https://github.com/melisgl/mgl-mat
 
-https://github.com/melisgl/mgl-mat
+    - https://dl.acm.org/doi/pdf/10.1145/359460.359482
 
-https://dl.acm.org/doi/pdf/10.1145/359460.359482
+    - https://andantesoft.hatenablog.com/entry/2023/04/30/183032
 
-https://andantesoft.hatenablog.com/entry/2023/04/30/183032
+    - Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
 
-Marsaglia, G., & Tsang, W. W. (2000). The ziggurat method for generating random variables. Journal of statistical software.
+    - https://marui.hatenablog.com/entry/2023/01/23/194507
 
-https://marui.hatenablog.com/entry/2023/01/23/194507
+    - https://arxiv.org/abs/1912.01703
 
-https://arxiv.org/abs/1912.01703
+- Existing works of JIT Compiler for Deep Learning:
 
-(More to be added...)
+    - https://arxiv.org/pdf/2002.03794.pdf
 
-
-
-# Workloads
-
-- [x] Add Baseline: AbstractTensor
-- [x] Multiple Backends
-- [x] Pre-Inspection of Shapes
-- [x] Fundamental APIs of view (Broadcasting, Slice, Indexing etc...)
-- [x] Obvious and Intuitive message of Shape-Error.
-- [x] A small DSL to write subscripts (i.e.: :where keyword)
-- [x] A fundamental of forward/backward, and JIT. (acceptor)
-- [x] Fundamental Dtypes
-- [x] Displaying Tensor's all element in a small area.
-- [x] Scheduling and Optimizing the allocation of array, by analyzing the computation node.
-- [x] Pruning the rebundant computation node.
-- [x] ~~Precompute the constant-node.~~ (Partially done?)
-- [x] Basic Arithmetic Operation (+ - * /, and gemm)
-- [ ] Support: Row/Column Major Tensor, and `gemm` (currently tests is too few.)
-- [x] ~~Sampling distributions (dense) -> Add More: gamma, chisquare distribution.~~ -> Add: `Orthogonal`
-- [x] Sampling distributions (sparse)
-- [ ] Features on casting dtype is still not enough.
-- [ ] Parallelize the computation node by lparallel. (No need to do this?)
-- [ ] Let View APIs Support :indices :tflist (with cmp operations, bit-matrix)
-- [ ] View API: permute first iteration
-- [x] Add: ~~!reshape with -1, unsqueeze, squeeze, repeat.~~ -> repeat/unsqueeze/squeeze is remained to be implemented.
-- [ ] CUDA Backend (Also, metal backends etc could be realised).
-- [ ] Give a strong features to cl-waffe2/viz
-- [x] Prepare documentations and examples (ongoing)
-- [x] Basic APIs for both LispTensor and CPUTensor.  (To Add: gemm without BLAS, impelement it as NoBlasMatmulTensor because it is signifcantly slow)
-- [x] Formulate specifications of nodes.
-- [x] Use Cl/CD
-- [x] ~~REPL-Friendly Node, (Implemented as proceed function)~~, ~~with-dynamically-mode (no need to do this)~~, set-config
-- [ ] ascognitious
-- [ ] node debugtools
-- [x] Clarify runtime error, ~~backward error(OK)~~
-- [ ] NN Features (Optimizers, etc...)
-- [ ] Train MLP
-- [x] ~~More clever Memory-management.~~ -> Added memory-pool, but theres a lot of room to be improved.
-- [x] Mathematical and Dense Operations (exp log sin cos etc...)
-- [x] Operations like: argmax/argmin, reshape, transpose, swapaxes.
-- [x] Optimize call-with-view, to minimize the number of using funcall. (i.e.: reshape (10 10) into (100) tensor)
-- [x] Fix the issue where [~ a b] can't be applied to 2D Tensor.
-- [ ] Optimized Sparse Matrix
-- [ ] FP16 Matrix
-- [ ] Add/Implement a SIMD Powered Backend for mathematical APIs. (named MathTensor), which provides (for example) approximation of exp in AVX512. It is not portable but written in C/C++ can called via cffi. (use SLEEF?)
-- [ ] (After released v1.0) cl-waffe2 for coalton.
-- [ ] cl-waffe2/linalg, SVD
-- [x] Distinguish the differences between Computed Tensor, and Not-Computed Tensor.
-- [x] AOT Subscript-p
-- [x] optimize forward/backward
-- [x] BugFix: !add x y <- x never resets. (the definition of sum contributed to this problem)
-- [ ] Fix: a ton of style warning
-- [ ] lparallel -> optimized-memory-allocation -> fast-math kernel, fp8 fp16, uint4 etc...
-- [ ] Add: Restarting
+    - See also my reading list: https://github.com/hikettei/cl-waffe2/issues/47
