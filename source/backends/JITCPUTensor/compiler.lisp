@@ -21,7 +21,6 @@
   (dotimes (i *indent-width*) (princ " " *compiled-code-buffer*))
   (apply #'format *compiled-code-buffer* control-string args))
 
-
 (defparameter *includes*
   `("immintrin.h" "stdbool.h" "math.h" "stdio.h" "stdint.h"))
 
@@ -34,7 +33,12 @@
   (loop for include in *includes*
 	do (write-buff "#include <~a>~%" include))
 
-  (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors)))
+  (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+
+  ;; Utils
+
+  (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
+  )
 
 (defun cAref (tensor)
   (declare (type AbstractTensor tensor))

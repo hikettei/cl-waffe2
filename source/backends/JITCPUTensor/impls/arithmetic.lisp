@@ -2,6 +2,13 @@
 (in-package :cl-waffe2/backends.jit.cpu)
 
 
+;; ~~ List of arithmetic operations in cl-waffe2 ~~~~~~~~~~~~
+;; Matrix and Matrix Operations:
+
+;; AddNode/SubNode/MulNode/DivNode + InverseNode/MoveTensorNode
+
+
+
 ;; Arithmetic operation family is originally declared as:
 ;; X <- op(X, Y)
 (macrolet ((define-arith-impl (name lisp-op op-name)
@@ -43,3 +50,46 @@
     (if (movetensor-ignore-me self)
 	(make-inst :ignore "" (second args) (second args))
 	(make-inst :modify "=" (car args) (cdr args)))))
+
+(define-impl (InverseTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
+	     :forward ((self x)
+		       (progn
+			 (setf (blueprint-use-var self) `(,x)
+			       (blueprint-opecode self) 'inverse)
+			 nil)
+		       `(progn ,x)))
+
+(defmethod translate-op ((opcode (eql 'inverse)) opAST &rest args)
+  (make-inst :apply
+	     (format nil "(~a)INV_SCALAR" (dtype->ctype (dtype (car args))))
+	     (car args)
+	     (list (car args))))
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; Scalar and Matrix Operations:
+;; ScalarAdd/ScalarSub/ScalarMul/ScalarDiv
+;;
+
+(macrolet ((define-scalar-mat-impl (name lisp-op)
+	     `(define-impl (,name
+			    :device JITCPUTensor
+			    :extends (CPUJIT-Blueprint))
+			   :forward ((self A scalar)
+				     (progn
+				       (setf (blueprint-use-var self) `(,A ,scalar))
+				       (setf (blueprint-opecode self) ',lisp-op)
+				       nil)
+				     `(progn ,A)))))
+  (define-scalar-mat-impl ScalarAdd +)
+  (define-scalar-mat-impl ScalarSub -)
+  (define-scalar-mat-impl ScalarMul *)
+  (define-scalar-mat-impl ScalarDiv /))
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; Scalar and Scalar Operations:
+;; ScalarAndScalarAdd ScalarAndScalarSub ScalarAndScalarMul ScalarAndScalarDiv
+;; MoveScalarTensorNode InverseScalarTensorNode
+;;
+
+
+

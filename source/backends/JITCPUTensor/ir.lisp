@@ -106,6 +106,16 @@ an list of AST_Variable
 		       (cAref (instruction-displace-to form)))
 	 )
 	(:apply
+	 ;; A[...] = f(A[...], B[...]);
+	 (write-c-line "~a = ~a(~a);~%"
+		       (cAref (instruction-displace-to form))
+		       (instruction-fname form)
+		       (with-output-to-string (out)
+			 (loop for arg in (instruction-args form)
+			       for i upfrom 0
+			       do (princ (cAref arg) out)
+			       unless (= i (1- (length (instruction-args form))))
+				 do (princ  ", " out))))
 
 	 
 	 (write-c-line "~a ~a ~a;~%"
