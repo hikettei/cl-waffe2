@@ -27,6 +27,8 @@
    #:with-column-major
    #:with-row-major
    #:with-cpu
+
+   #:set-devices-toplevel
    ;;#:with-cuda
    )
 
