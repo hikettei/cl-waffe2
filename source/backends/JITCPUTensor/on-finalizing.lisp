@@ -16,39 +16,51 @@
 
 ;; 
 
-(defparameter *includes*
-  `("immintrin.h" "stdbool.h" "math.h" "stdio.h" "stdint.h"))
 
-(defun place-toplevel-form (cffi-call-name tensors)
-  (write-buff "~%~%#pragma simd~%")
-  ;; #pragma GCC optimize ("O3")
-  ;; #pragma GCC target "avx2" avx512 ...
-  ;; ^ (TODO) cpu_has_avx512 ...
+
+;; ===============================================================================
+;;  Event Handlers
+;; ===============================================================================
+
+(defun apply-compile-p (variable next-variable)
+  "Following the defition of 3., return t if there's a need to run compiling."
+
+  ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
+  ;;       ^ :device=t
   
-  (loop for include in *includes*
-	do (write-buff "#include <~a>~%" include))
+  (or
+   ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
+   (null next-variable)
+   (not (typep next-variable 'JITAbleTensors))
+   (not (or (typep (tensor-backward next-variable) 'CPUJIT-Blueprint)
+	    (typep (tensor-backward next-variable) 'CPUJIT-Scalar-Blueprint)))
 
-  (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors)))
+   ;; The change of shapes is detected:
+   (and
+    (not
+     (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable))))))
 
-;; Tensor -> (Tensor-vec stride offset)
-(defun cFunction (function-name &rest arguments)
-  "Header:
-void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)"
+(defparameter *compiling-ntime-count* 0)
 
-  (let ((arguments-form
-	  (with-compiling-mode
-	    (write-buff "(uint32_t size, ")
-	    (loop for arg in arguments
-		  for n upfrom 0
-		  do (cVar arg
-			   :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id))
-			   :comma (not (= n (1- (length arguments)))))
-		  if (typep arg 'JITCPUTensor)
-		    do (cStride arg :comma (not (= n (1- (length arguments))))))
-	    (write-buff ")"))))
-    (format nil "void ~a~a" function-name arguments-form)))
 
-;; Dynamically calls compiled c shared lib <-> Lisp Programs via CFFI.
+;; MEMO: proceedモードで動作するときはevalする？
+(defmethod on-finalizing-compiling ((current-node CPUJIT-Blueprint)
+				    variable
+				    next-variable)
+  "If the node is needed to be compiled, compile."
+  (if (apply-compile-p variable next-variable)
+      (progn
+	(incf *compiling-ntime-count* 1)
+	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
+	;; Pass these informations to invoke-compiler! function
+        (invoke-compiler! "TMP_FUNCTION" variable)
+	
+	;; flowchart:
+	;; call gcc
+	;; return: `call-c-form
+	
+	)
+      nil))
 
 ;; (defun call-c-form (tensors))
 
