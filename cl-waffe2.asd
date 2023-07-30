@@ -100,6 +100,18 @@
 	       (:file "backends/JITLispTensor/tensor")
 	       (:file "backends/JITLispTensor/jit")
 	       (:file "backends/JITLispTensor/delayed-node-impls")
+
+	       (:file "backends/JITCPUTensor/package")
+	       (:file "backends/JITCPUTensor/tensor")
+	       (:file "backends/JITCPUTensor/blueprint")
+	       (:file "backends/JITCPUTensor/ir")
+	       (:file "backends/JITCPUTensor/on-finalizing")
+	       (:file "backends/JITCPUTensor/dtype")
+	       (:file "backends/JITCPUTensor/compiler")
+	       
+
+	       (:file "backends/JITCPUTensor/impls/arithmetic")
+	       (:file "backends/JITCPUTensor/impls/math")
 	       
 	       (:file "optimizers/defoptimizer")
 
@@ -184,8 +196,7 @@
 		    (symbol-call :fiveam :run! :base-impl-test)
 		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
-		    (symbol-call :fiveam :run! :nn-test)		    
-		    ))
+		    (symbol-call :fiveam :run! :nn-test)))
 
 
 (defpackage :cl-waffe2-docs-asdf
