@@ -27,7 +27,7 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
      (write-buff "~a~a"
 		 (dtype->ctype (dtype tensor))
 		 (if restrict
-		     " restrict * "
+		     (progn nil "* ");;" restrict * "
 		     "* ")))
     (JITCPUScalarTensor
      (write-buff "~a "		
@@ -46,7 +46,7 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
   (declare (type JITCPUTensor))
   (write-buff "~a~a_STRIDE~a"
 	      (if typedef
-		  "int32_t restrict * "
+		  "int32_t "
 		  "")
 	      (tensor-id tensor)
 	      (if comma ", " "")))

@@ -7,7 +7,7 @@
 
 (defun add-variable (tensor)
   "Adds the given tensor to *compiled-tensors* if there's no duplicate"
-  (unless (find tensor *compiled-tensors*)
+  (unless (find (tensor-id tensor) *compiled-tensors* :key #'tensor-id)
     (push tensor *compiled-tensors*)))
 
 ;;
@@ -55,8 +55,8 @@ an list of AST_Variable
       
       ;; Otherwise, we can collect envolved tensors normally:
       (loop for var in (tensor-variables toplevel)
-	    if (apply-compile-p toplevel var)
-	      do (add-variable var)))
+	    ;; if (apply-compile-p toplevel var)
+	    do (add-variable var)))
 
   ;; Explore JITAble Nodes deeper:
   (apply #'make-opAST toplevel

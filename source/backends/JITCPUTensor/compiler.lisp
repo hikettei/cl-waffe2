@@ -60,7 +60,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 
   (let ((arguments-form
 	  (with-compiling-mode
-	    (write-buff "(uint32_t restrict * size, ")
+	    (write-buff "(uint32_t size, ")
 	    (loop for arg in arguments
 		  for n upfrom 0
 		  do (cVar arg

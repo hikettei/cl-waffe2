@@ -42,6 +42,7 @@
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (variables source) (invoke-compiler! jit-function-name variable)
+	  (print source)
 	  (load-foreign-function source)
 	  (print source)
 	  (print (tensor-id variable)))

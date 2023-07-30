@@ -5,7 +5,7 @@
 (defun load-foreign-function (source
 			      &key
 				;; (disassemble t)
-				(compiler "gcc-13")
+				(compiler "gcc")
 				(lang "c"))
   (declare (type string source compiler))
 
@@ -28,8 +28,6 @@
       (unless (zerop (uiop:wait-process process-info))
 	(error "cl-waffe2/backends.jit.cpu: Failed to compile a shared library:~%~a~%"
 	       (alexandria:read-stream-content-into-string error-output))))
-    (print sharedlib)
-    ;;(cffi:load-foreign-library "")
-    ))
+    (cffi:load-foreign-library sharedlib)))
 
 ;; (defmacro call-jit-function
