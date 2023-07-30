@@ -108,6 +108,7 @@
 	       (:file "backends/JITCPUTensor/on-finalizing")
 	       (:file "backends/JITCPUTensor/dtype")
 	       (:file "backends/JITCPUTensor/compiler")
+	       (:file "backends/JITCPUTensor/foreign-function")
 	       
 
 	       (:file "backends/JITCPUTensor/impls/arithmetic")

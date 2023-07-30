@@ -41,8 +41,9 @@
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
-        (multiple-value-bind (variables kernel-code) (invoke-compiler! jit-function-name variable)
-	  (print kernel-code)
+        (multiple-value-bind (variables source) (invoke-compiler! jit-function-name variable)
+	  (load-foreign-function source)
+	  (print source)
 	  (print (tensor-id variable)))
 	
 	;; flowchart:
