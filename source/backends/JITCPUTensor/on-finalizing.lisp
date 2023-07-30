@@ -43,7 +43,9 @@
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (vars kernel-code) (invoke-compiler! jit-function-name variable)
-	  (print kernel-code))
+	  (print kernel-code)
+	  (print "RESULT")
+	  (print (tensor-id variable)))
 	
 	;; flowchart:
 	;;

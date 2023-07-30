@@ -38,9 +38,11 @@
 
 (defun cAref (tensor)
   (declare (type AbstractTensor tensor))
-  (format nil "~a[i * ~a_STRIDE]"
-	  (tensor-id tensor)
-	  (tensor-id tensor)))
+  (if (typep tensor 'JITCPUTensor)
+      (format nil "~a[i * ~a_STRIDE]"
+	      (tensor-id tensor)
+	      (tensor-id tensor))
+      (format nil "~a" (tensor-id tensor))))
 
 ;; Tensor -> (Tensor-vec stride offset)
 (defun cFunction (function-name &rest arguments)
@@ -60,7 +62,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 		  if (typep arg 'JITCPUTensor)
 		    do (cStride arg :comma (not (= n (1- (length arguments))))))
 	    (write-buff ")"))))
-    (format nil "void ~a~a;~%" function-name arguments-form)))
+    (format nil "void ~a~a~%" function-name arguments-form)))
 
 (defun invoke-compiler! (function-name toplevel)
   "
@@ -79,7 +81,7 @@ Return: (values envolved-tensors(but ScalarTensor) toplevel)
        ;; void function-name (...) { ...
        (write-buff "~a { ~%" function-form)
        (with-indent 4
-	 (write-c-line "for(int i=0;i<size;i++) {~%")
+	 (write-c-line "for(int i=0; i<size; i++) {~%")
 	 (with-indent 8
 	   (ir->C envolved-nodes))
 	 (write-c-line "}~%"))

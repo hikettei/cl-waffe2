@@ -67,6 +67,12 @@ an list of AST_Variable
 		 collect (make-ast-variable
 			  (confirm-compiling-area called-var)))))
 
+;; FuseOPs ... opASTの合成演算を考える (e.g.: apply(apply(x)))
+;; コンパイルされたコードの最適化は後で考えよう
+;; ノードの中間地点: A=Bを削除したい
+;; しかし、副作用を期待している部分があるので安易に削除できないから
+;; チョットコマル
+
 (defun ir->c (opAST)
   "Recursively this function explores opAST, generating and writing C code to buffer."
   (declare (type opAST opAST))
@@ -93,14 +99,28 @@ an list of AST_Variable
 	 (write-c-line "~a ~a ~a;~%"
 		       (cAref (instruction-displace-to form))
 		       (instruction-fname form)
-		       (cAref (car (instruction-args form)))))
+		       (cAref (car (instruction-args form))))
+	 (write-c-line "~a ~a ~a;~%"
+		       (cAref (opAST-car opAST))
+		       "="
+		       (cAref (instruction-displace-to form)))
+	 )
 	(:apply
-	 
 
+	 
+	 (write-c-line "~a ~a ~a;~%"
+		       (cAref (opAST-car opAST))
+		       "="
+		       (cAref (instruction-displace-to form)))
 	 )
 	
 	(:set
 
+	 
+	 (write-c-line "~a ~a ~a;~%"
+		       (cAref (opAST-car opAST))
+		       "="
+		       (cAref (instruction-displace-to form)))
 	 )
 
 	(:ignore
