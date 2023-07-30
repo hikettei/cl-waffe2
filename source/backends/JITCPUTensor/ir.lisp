@@ -2,6 +2,7 @@
 (in-package :cl-waffe2/backends.jit.cpu)
 
 
+;; On compiling, we gather tensors which envolved in compiling to *compiled-tensor*.
 (defvar *compiled-tensors* nil "An list of variables used in the computation node.")
 
 (defun add-variable (tensor)
@@ -10,25 +11,27 @@
   (unless (find tensor *compiled-tensors*)
     (push tensor *compiled-tensors*)))
 
-(deftype ast-variable-types () `(and keyword (member :opAST :scalar :tensor :null)))
+;;
+;; Trans: opAST -> <opAST>, Scalar, Tensor, nil
+;; opAST  = {Variable, Leaves}
+;;
 
-(defstruct (iSeq
-	    (:constructor make-iseq (code displace-out-to)))
-  (code code :type (or symbol list))
-  (displace-out-to displace-out-to :type (or symbol list)))
+(deftype ast-variable-types () `(and keyword (member :opAST :scalar :tensor :null)))
 
 (defstruct (opAST
 	    (:constructor make-opAST (operation &rest args)))
-  "opAST is a data structure which is:
-[car args]
-      |
-    an list of AST_Variable"
+  "
+    [car args]
+        |
+an list of AST_Variable
+"
   (car  operation :type (or JITScalarTensor JITCPUTensor))
   (args args :type list))
 
 (defstruct (AST-Variable
 	    (:constructor make-ast-variable
 		(content &aux (type (->op-type content)))))
+  "The end of opAST node."
   (type type :type ast-variable-types)
   (content content :type (or null opAST JITScalarTensor JITCPUTensor)))
 
@@ -44,20 +47,63 @@
   "Tracing the previous variables, returns AST of compiling region."
   (declare (type (or JITScalarTensor JITCPUTensor) toplevel))
 
-  (add-variable toplevel)
-  (let* ((variables (tensor-variables toplevel)))
-    (apply #'make-opAST toplevel
-	   (loop for called-var in variables
-		 if (apply-compile-p toplevel called-var)
-		   collect (progn
-			     (add-variable called-var)
-			     (make-ast-variable called-var))
-		 else
-		   collect (make-ast-variable
-			    (confirm-compiling-area called-var))))))
+  (if (and (movetensor-p (tensor-backward toplevel))
+	   (movetensor-ignore-me (tensor-backward toplevel)))
+      ;; MoveTensorNode: X[~] OUT[~] -> X[~]
+      ;; If pruned, X is never allocated/used.
+      (add-variable (second (tensor-variables toplevel)))
+      
+      ;; Otherwise, we can collect envolved tensors normally:
+      (loop for var in (tensor-variables toplevel)
+	    if (apply-compile-p toplevel var)
+	      do (add-variable var)))
+
+  ;; Explore JITAble Nodes deeper:
+  (apply #'make-opAST toplevel
+	 (loop for called-var in (tensor-variables toplevel)
+	       if (apply-compile-p toplevel called-var)
+		 collect (make-ast-variable called-var)
+	       else
+		 collect (make-ast-variable
+			  (confirm-compiling-area called-var)))))
 
 (defun ir->c (opAST)
+  "Recursively this function explores opAST, generating and writing C code to buffer."
   (declare (type opAST opAST))
 
-  ""
-  )
+  (let ((code (blueprint-opecode (tensor-backward (opAST-car opAST)))))
+
+    (loop for var in (opAST-args opAST)
+	  if (eql (ast-variable-type var) :opAST)
+	    do (ir->C (ast-variable-content var)))
+
+    
+    (let ((form
+	    (apply #'translate-op code opAST
+		   (loop for var in (opAST-args opAST)
+			 if (eql (ast-variable-type var) :opAST)
+			   collect (opAST-car (ast-variable-content var))
+			 if (or (eql (ast-variable-type var) :tensor)
+				(eql (ast-variable-type var) :scalar))
+			   collect (ast-variable-content var)))))
+
+      (case (Instruction-type form)
+	(:modify
+	 ;; A[...] += A[...];
+	 (write-c-line "~a ~a ~a;~%"
+		       (cAref (instruction-displace-to form))
+		       (instruction-fname form)
+		       (cAref (car (instruction-args form)))))
+	(:apply
+	 
+
+	 )
+	
+	(:set
+
+	 )
+
+	(:ignore
+	 
+	 )))))
+

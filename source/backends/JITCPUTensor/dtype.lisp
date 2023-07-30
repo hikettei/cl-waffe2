@@ -53,8 +53,12 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
   (write-buff "~a~a" (tensor-id tensor)
 	      (if comma ", " "")))
 
-(defun cStride (tensor &key (comma nil))
+(defun cStride (tensor &key (comma nil) (typedef t))
   (declare (type JITCPUTensor))
-  (write-buff "int32_t restrict * ~a_STRIDE~a" (tensor-id tensor)
+  (write-buff "~a~a_STRIDE~a"
+	      (if typedef
+		  "int32_t restrict * "
+		  "")
+	      (tensor-id tensor)
 	      (if comma ", " "")))
 

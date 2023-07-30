@@ -4,19 +4,8 @@
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Generating a C Code from cl-waffe2.
 ;; The scope of JIT: Whether the generated code can be expressed with only one `for`.
-;; 
-;; 
-
-
-
-;; Memo: OffsetはLisp側で加算することにする
-;; Pragma SIMDで自動ベクトル化
-;; gemmはOpenBLASのAPIを呼び出す
-;; void NAME ...
-
-;; 
-
-
+;; Most of SIMD part relies on pragma simd.
+;;
 
 ;; ===============================================================================
 ;;  Event Handlers
@@ -49,17 +38,20 @@
 				    next-variable)
   "If the node is needed to be compiled, compile."
   (if (apply-compile-p variable next-variable)
-      (progn
+      (let ((jit-function-name (symbol-name (gensym "JIT_FUNCTION"))))
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
-        (invoke-compiler! "TMP_FUNCTION" variable)
+        (multiple-value-bind (vars kernel-code) (invoke-compiler! jit-function-name variable)
+	  (print kernel-code))
 	
 	;; flowchart:
-	;; call gcc
-	;; return: `call-c-form
+	;;
+	;; call gcc and compile generated code
+	;; return: S-expression form wrapped by call-with-view
+	;; That is, JIT is dedicated to 1d kernel operations
 	
-	)
+	nil)
       nil))
 
 ;; (defun call-c-form (tensors))

@@ -36,6 +36,12 @@
 
   (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors)))
 
+(defun cAref (tensor)
+  (declare (type AbstractTensor tensor))
+  (format nil "~a[i * ~a_STRIDE]"
+	  (tensor-id tensor)
+	  (tensor-id tensor)))
+
 ;; Tensor -> (Tensor-vec stride offset)
 (defun cFunction (function-name &rest arguments)
   "Header:
@@ -48,29 +54,41 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 		  for n upfrom 0
 		  do (cVar arg
 			   :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id))
-			   :comma (not (= n (1- (length arguments)))))
+			   :comma (or
+				   (typep arg 'JITCPUTensor)
+				   (not (= n (1- (length arguments))))))
 		  if (typep arg 'JITCPUTensor)
 		    do (cStride arg :comma (not (= n (1- (length arguments))))))
 	    (write-buff ")"))))
     (format nil "void ~a~a;~%" function-name arguments-form)))
 
 (defun invoke-compiler! (function-name toplevel)
-  ""
+  "
+Return: (values envolved-tensors(but ScalarTensor) toplevel)
+"
   (declare (type JITAbleTensors toplevel))
 
-  (let* ((*compiled-tensors*)
+  (let* ((*compiled-tensors* `(,toplevel))
 	 (envolved-nodes (confirm-compiling-area toplevel))
 	 (function-form  (apply #'cFunction function-name *compiled-tensors*)))
-    (with-compiling-mode
-      (place-toplevel-form function-name *compiled-tensors*)
+    (values
+     *compiled-tensors*
+     (with-compiling-mode
+       (place-toplevel-form function-name *compiled-tensors*)
 
-      ;; void function-name (...) { ...
-      (write-buff "~a { ~%" function-form)
-      (with-indent 4
-	(write-c-line "for(int i=0;i<size;i++) {~%")
-	(with-indent 8
-	  (ir->C envolved-nodes))
-	(write-c-line "}~%"))
-      (write-c-line "}~%"))))
+       ;; void function-name (...) { ...
+       (write-buff "~a { ~%" function-form)
+       (with-indent 4
+	 (write-c-line "for(int i=0;i<size;i++) {~%")
+	 (with-indent 8
+	   (ir->C envolved-nodes))
+	 (write-c-line "}~%"))
+       (write-c-line "}~%")))))
 
+
+;; Workload:
+;; 1. CPUのAVX拡張命令を特定
+;; 2. コンパイルの設定
+;; 3. gccの設定
+;; 4. 動的にCFFIから読み込む
 
