@@ -22,7 +22,7 @@
   (apply #'format *compiled-code-buffer* control-string args))
 
 (defparameter *includes*
-  `("immintrin.h" "stdbool.h" "math.h" "stdio.h" "stdint.h"))
+  `("immintrin.h" "stdbool.h" "stdlib.h" "math.h" "stdio.h" "stdint.h"))
 
 (defun place-toplevel-form (cffi-call-name tensors)
   (write-buff "~%~%#pragma simd~%")
@@ -38,6 +38,7 @@
   ;; Utils
 
   (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
+  (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
   )
 
 (defun cAref (tensor)
