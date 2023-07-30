@@ -14,3 +14,13 @@
      ,@body))
 
 
+(declaim (inline tensor-ptr))
+(defun tensor-ptr (tensor &key (offset 0))
+  (declare (type JITCPUTensor tensor)
+	   (type fixnum offset))
+  #+sbcl
+  (let ((ptr (sb-sys:vector-sap (sb-ext:array-storage-vector (the (simple-array * (*)) (tensor-vec tensor))))))
+    (locally (declare (optimize (speed 1) (safety 1)))
+      (cffi:incf-pointer ptr (the fixnum (* (the fixnum (cffi:foreign-type-size (dtype tensor))) offset)))))
+  #-(or sbcl)
+  (error "JITCPUTensor requires SBCL to access the storage vector!"))

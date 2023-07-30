@@ -77,7 +77,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
   "
 Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
 
-Return: (values envolved-tensors(but ScalarTensor) toplevel)
+Return: (values arguments envolved-tensors(but ScalarTensor) toplevel)
 "
   (declare (type JITAbleTensors toplevel))
 
@@ -85,6 +85,7 @@ Return: (values envolved-tensors(but ScalarTensor) toplevel)
 	 (envolved-nodes (confirm-compiling-area toplevel))
 	 (function-form  (apply #'cFunction function-name *compiled-tensors*)))
     (values
+     *compiled-tensors*
      ;; Used for expanding call-with-view
      (loop for tensor in *compiled-tensors*
 	   if (typep tensor 'JITCPUTensor)

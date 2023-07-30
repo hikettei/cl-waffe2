@@ -41,20 +41,31 @@
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
-        (multiple-value-bind (variables source) (invoke-compiler! jit-function-name variable)
-	  (print source)
+        (multiple-value-bind (arguments tensors source) (invoke-compiler! jit-function-name variable)
 	  (load-foreign-function source)
-	  (print source)
-	  (print (tensor-id variable)))
-	
-	;; flowchart:
-	;;
-	;; call gcc and compile generated code
-	;; return: S-expression form wrapped by call-with-view
-	;; That is, JIT is dedicated to 1d kernel operations
-	
-	nil)
+	  ;;(print source)
+	  ;;(print (tensor-id variable))
+	  (let ((call-form
+		  (if (null tensors)
+		      ;; -> arguments = Scalar
+		      (expand-funcall-form
+		       jit-function-name
+		       arguments
+		       nil)
+		      ;; -> arguments = Scalar + Matrix or Matrix
+		      (call-with-view
+		       #'(lambda (&rest views)
+			   (expand-funcall-form jit-function-name arguments views))
+
+		       tensors
+		       :at-least-dim 1))))
+	    `(progn
+	       ,call-form
+	       ;; Overwrite the results
+	       (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result (tensor-state ,variable))
+		     (list ,variable))))))
       nil))
 
-;; (defun call-c-form (tensors))
+;; TO ADD:
+;; compile option, avx2
 

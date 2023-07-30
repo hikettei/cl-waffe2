@@ -79,7 +79,6 @@ an list of AST_Variable
   (declare (type opAST opAST))
 
   (let ((code (blueprint-opecode (tensor-backward (opAST-car opAST)))))
-
     (loop for var in (opAST-args opAST)
 	  if (eql (ast-variable-type var) :opAST)
 	    do (ir->C (ast-variable-content var)))
