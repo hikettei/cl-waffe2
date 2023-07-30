@@ -25,7 +25,7 @@
         |
 an list of AST_Variable
 "
-  (car  operation :type (or JITScalarTensor JITCPUTensor))
+  (car  operation :type (or JITCPUScalarTensor JITCPUTensor))
   (args args :type list))
 
 (defstruct (AST-Variable
@@ -33,19 +33,19 @@ an list of AST_Variable
 		(content &aux (type (->op-type content)))))
   "The end of opAST node."
   (type type :type ast-variable-types)
-  (content content :type (or null opAST JITScalarTensor JITCPUTensor)))
+  (content content :type (or null opAST JITCPUScalarTensor JITCPUTensor)))
 
 (defun ->op-type (obj)
   (typecase obj
     (opAST :opAST)
     (JITCPUTensor :tensor)
-    (JITScalarTensor  :scalar)
+    (JITCPUScalarTensor  :scalar)
     (null :null)
     (T (error "Detected unknown type of variable: ~a" obj))))
 
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
-  (declare (type (or JITScalarTensor JITCPUTensor) toplevel))
+  (declare (type (or JITCPUScalarTensor JITCPUTensor) toplevel))
 
   (if (and (movetensor-p (tensor-backward toplevel))
 	   (movetensor-ignore-me (tensor-backward toplevel)))

@@ -40,7 +40,7 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
 		 (if restrict
 		     " restrict * "
 		     "* ")))
-    (JITScalarTensor
+    (JITCPUScalarTensor
      (write-buff "~a "		
 		 (dtype->ctype (dtype tensor))))
     (T

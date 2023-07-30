@@ -11,7 +11,8 @@
    :cl-waffe2/vm.nodes
         :cl-waffe2/base-impl)
   (:export
-   #:JITCPUTensor))
+   #:JITCPUTensor
+   #:JITCPUScalarTensor))
 
 (in-package :cl-waffe2/backends.jit.cpu)
 

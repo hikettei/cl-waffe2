@@ -19,7 +19,7 @@
 			     (list (car inputs))))
 
 		(define-impl (,(symb 'scalar- node)
-			      :device JITScalarTensor
+			      :device JITCPUScalarTensor
 			      :extends (CPUJIT-Scalar-Blueprint))
 			     :forward ((self X out)
 				       (declare (ignore out))

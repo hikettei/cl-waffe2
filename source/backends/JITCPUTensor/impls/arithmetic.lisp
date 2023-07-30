@@ -44,7 +44,7 @@
 			 nil)
 		       `(progn ,out)))
 
-(define-impl (cl-waffe2/base-impl::MoveScalarTensorNode :device JITScalarTensor :extends (CPUJIT-Scalar-Blueprint))
+(define-impl (cl-waffe2/base-impl::MoveScalarTensorNode :device JITCPUScalarTensor :extends (CPUJIT-Scalar-Blueprint))
 	     :forward ((self out target)
 		       (progn
 			 (setf (blueprint-use-var self) `(,out ,target))
@@ -102,7 +102,7 @@
 
 (macrolet ((define-sas-op (name lisp-op)
 	     `(define-impl (,name
-			    :device JITScalarTensor
+			    :device JITCPUScalarTensor
 			    :extends (CPUJIT-Scalar-Blueprint))
 			   :forward ((self A scalar)
 				     (progn
