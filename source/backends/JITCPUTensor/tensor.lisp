@@ -15,7 +15,7 @@
 
 ;; Memo: https://groups.google.com/g/comp.lang.lisp/c/4aDbcVUBraQ
 ;; Pinning Arrays?
-
+;; TODO: Do it outside call-with-view
 (declaim (inline tensor-ptr))
 (defun tensor-ptr (tensor &key (offset 0))
   (declare (type JITCPUTensor tensor)

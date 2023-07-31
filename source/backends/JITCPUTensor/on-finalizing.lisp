@@ -27,18 +27,20 @@
 
   ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
   ;;       ^ :device=t
-  
+  (declare (ignore variable))
   (or
    ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
    (null next-variable)
    (not (typep next-variable 'JITAbleTensors))
-   (not (or (typep (tensor-backward next-variable) 'CPUJIT-Blueprint)
-	    (typep (tensor-backward next-variable) 'CPUJIT-Scalar-Blueprint)))
+   (not (typep (tensor-backward next-variable) 'CPUJIT-Blueprint))
 
+   ;; JITCPUTensor do not provide nodes that change shapes of tensors
    ;; The change of shapes is detected:
-   (and
-    (not
-     (cl-waffe2/vm.generic-tensor::shape-equal-list (shape variable) (shape next-variable))))))
+   ;;(and
+   ;; (not
+   ;;  (cl-waffe2/vm.generic-tensor::shape-equal-list (print (shape variable)) (print (shape next-variable)))))
+
+   ))
 
 (defparameter *compiling-ntime-count* 0)
 
@@ -57,6 +59,7 @@
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
 	  (load-foreign-function source)
+	  ;;(print source)
 	  (let ((call-form
 		  (if (null tensors)
 		      ;; -> arguments = Scalar
@@ -74,16 +77,10 @@
 		 (,@(loop for scal in scalars
 			  collect `(,(int-sap-id scal) ,(dtype scal))))
 	       (setf ,@(loop for scal in scalars
-			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec ,scal))))
+			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
 	       ,call-form
-	       
 	       (setf ,@(loop for scal in scalars
-			     append `((tensor-vec ,scal) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
-	       
-	       (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result (tensor-state ,variable))
-		     (list ,variable))))))
+			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))))))
       nil))
 
-;; TO ADD:
-;; compile option, avx2
 
