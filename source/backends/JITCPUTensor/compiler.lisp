@@ -28,8 +28,10 @@
 
 (defun place-toplevel-form (cffi-call-name tensors)
   "Places headers, function definition and macros."
-  (write-buff "~%~%#pragma simd~%")
-  ;; #pragma GCC optimize ("O3")
+  
+  (write-buff "~%~%#pragma SIMD~%")
+  (write-buff "#pragma GCC optimize (\"O3\")~%")
+  ;;(write-buff "#pragma GCC target \"avx2\"")
   ;; #pragma GCC target "avx2" avx512 ...
   ;; ^ (TODO) Identify CPU by cpu_has_avx512 ...
   

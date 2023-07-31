@@ -1,6 +1,14 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+;;TODO:
+;;
+;; コンパイルオプションの設定
+;; 使うコンパイラを設定で宣言
+;; バグ修正 scalar mat?  これメインで動かすのでテストをちゃんと書く
+;; 演算の合成と計算ノードの最適化
+;; restrict option disassemble it.
+
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Generating a C Code from cl-waffe2.
 ;; The scope of JIT: Whether the generated code can be expressed with only one `for`.
@@ -37,7 +45,7 @@
 				    next-variable)
   "If the node is needed to be compiled, compile."
   (if (apply-compile-p variable next-variable)
-      (let ((jit-function-name (symbol-name (gensym "JIT_FUNCTION"))))
+      (let ((jit-function-name (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
@@ -61,6 +69,7 @@
 		       :at-least-dim 1))))
 	    `(progn
 	       ,call-form
+	       ;;(print ,variable)
 	       ;; Overwrite the results
 	       (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result (tensor-state ,variable))
 		     (list ,variable))))))

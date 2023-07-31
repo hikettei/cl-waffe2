@@ -1,11 +1,17 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+(defparameter *default-c-compiler* "gcc" "
+## [parameter] *default-c-compiler*
+
+Specify the command to compile the generated c codes. In default, \"gcc\"
+")
+
 ;; Ref: https://stackoverflow.com/questions/6612169/compile-a-stream-of-data-in-c
 (defun load-foreign-function (source
 			      &key
 				;; (disassemble t)
-				(compiler "gcc")
+				(compiler *default-c-compiler*)
 				(lang "c"))
   (declare (type string source compiler))
 
@@ -16,6 +22,7 @@
 	     (list
 	      compiler "-shared"
 	      "-x" lang
+	      "-fPIC" "-O3" "-march=native"
 	      "-o" (uiop:native-namestring sharedlib) "-"))
 	   (process-info (uiop:launch-program
 			  cmd
