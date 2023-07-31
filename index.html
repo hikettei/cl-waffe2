@@ -43,6 +43,14 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href=".">Home</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#workloads">Workloads</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#concepts">Concepts</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#whats-next">What's next?</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#benchmarks">Benchmarks</a>
@@ -123,7 +131,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <p align="center">
+                <h1 id="_1"></h1>
+<p align="center">
     <a href="https://github.com/hikettei/cl-waffe2">
         <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
     </a>
@@ -141,11 +150,35 @@
   </p>
 </p>
 
+<p><a href="https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml"><img alt="CI" src="https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml/badge.svg?branch=master" /></a></p>
+<h2 id="introduction">Introduction</h2>
 <blockquote>
 <p><strong>⚠️ cl-waffe2 is still in the concept stage and has a limited feature. Also, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.</strong></p>
 </blockquote>
-<p>cl-waffe2 provides a set of differentiable matrix operations which is aimed to apply to build neural network models on Common Lisp.</p>
-<p>The primary concepts and goals of this project is following:</p>
+<p>cl-waffe2 is an experimental Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime.
+As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a framework dedicated to solving optimizing/inferencing deep neural network models using AD, all in Common Lisp. This framework is decoupled from other existing libraries by design, but interoperating with other libraries by efficient use of other libraries via with-facet macros and Common Lisp standard arrays is strongly recommended. I'm just focusing on efficient AD.</p>
+<p>Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two key functions to compile and execute nodes: <code>proceed</code> and <code>build</code>. With the <code>proceed</code> function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function <code>build</code> will generate codes which are fully optimized for training models.</p>
+<p>Portability to other devices is a major concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.</p>
+<h3 id="workloads">Workloads</h3>
+<ul>
+<li>
+<p>[x] Establish a baseline for generic matrix operations from zero for Common Lisp, as practised by Julia.</p>
+<ul>
+<li>Four data structures used in deep learning: <code>AbstractNode</code> <code>AbstractTensor</code> <code>AbstractOptimizer</code>, and <code>AbstractTrainer</code>.</li>
+<li>Fundamental APIs: <code>View API/Broadcasting/Permution</code> <code>NDArrays with multidimensonal offsets</code> <code>build/proceed</code> <code>facet of tensors</code></li>
+<li>Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)</li>
+<li>For experiments, implement a backend that runs at minimum speed: <code>LispTensor</code>.</li>
+</ul>
+</li>
+<li>
+<p>[ ] Construct JIT Compiler from cl-waffe2 to <code>C++</code>. and fuse operations and loops.</p>
+</li>
+<li>
+<p>[ ] Add basic computation nodes for controling nodes: <code>MapNode</code> <code>IfNode</code> etc...</p>
+</li>
+</ul>
+<h3 id="concepts">Concepts</h3>
+<p>This project has been developed on these primal concepts:</p>
 <ol>
 <li>
 <p><code>Do not run until the node is optimized.</code>, that is, Lazy-Evaluation first.</p>
@@ -158,11 +191,10 @@
 </li>
 </ol>
 <p><strong>Everything in this documentation is still incomplete! I guess should be much more polished!</strong></p>
-<h1 id="_1"></h1>
 <h2 id="whats-next">What's next?</h2>
 <ol>
 <li>
-<p><a href="./install">Install cl-waffe2</a></p>
+<p><a href="./install">Installing cl-waffe2</a></p>
 </li>
 <li>
 <p><a href="./overview">Learn the concepts with practical tutorials</a></p>
@@ -230,5 +262,5 @@
 
 <!--
 MkDocs version : 1.4.3
-Build Date UTC : 2023-07-22 12:26:07.404976+00:00
+Build Date UTC : 2023-07-31 12:46:43.085256+00:00
 -->
