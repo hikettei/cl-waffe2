@@ -13,7 +13,8 @@
   (:export
    #:*default-c-compiler*
    #:JITCPUTensor
-   #:JITCPUScalarTensor))
+   #:JITCPUScalarTensor
+   #:with-cpu-jit))
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
