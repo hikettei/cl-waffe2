@@ -1,13 +1,16 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;;TODO:
+;; TODO:
 ;;
-;; コンパイルオプションの設定
-;; 使うコンパイラを設定で宣言
-;; バグ修正 scalar mat?  これメインで動かすのでテストをちゃんと書く
+;; LispTensorより遅い場合がある！！！->計算ノード最適化！！
+;; バグ修正：結果が0になって反映されてない
+;; ノードの終端と途中で呼ばれる場合で色々違う
+
 ;; 演算の合成と計算ノードの最適化
 ;; restrict option disassemble it.
+
+
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Generating a C Code from cl-waffe2.
@@ -39,6 +42,9 @@
 
 (defparameter *compiling-ntime-count* 0)
 
+(defun int-sap-id (tensor)
+  (symb (tensor-id tensor) '-sap))
+
 ;; Note: eval it when called with vm-build?
 (defmethod on-finalizing-compiling ((current-node CPUJIT-Blueprint)
 				    variable
@@ -49,10 +55,8 @@
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
-        (multiple-value-bind (arguments tensors source) (invoke-compiler! jit-function-name variable)
+        (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
 	  (load-foreign-function source)
-	  ;;(print source)
-	  ;;(print (tensor-id variable))
 	  (let ((call-form
 		  (if (null tensors)
 		      ;; -> arguments = Scalar
@@ -64,13 +68,18 @@
 		      (call-with-view
 		       #'(lambda (&rest views)
 			   (expand-funcall-form jit-function-name arguments views))
-
 		       tensors
 		       :at-least-dim 1))))
-	    `(progn
+	    `(cffi:with-foreign-objects
+		 (,@(loop for scal in scalars
+			  collect `(,(int-sap-id scal) ,(dtype scal))))
+	       (setf ,@(loop for scal in scalars
+			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec ,scal))))
 	       ,call-form
-	       ;;(print ,variable)
-	       ;; Overwrite the results
+	       
+	       (setf ,@(loop for scal in scalars
+			     append `((tensor-vec ,scal) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
+	       
 	       (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result (tensor-state ,variable))
 		     (list ,variable))))))
       nil))

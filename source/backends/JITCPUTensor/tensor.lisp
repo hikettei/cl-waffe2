@@ -13,6 +13,8 @@
   `(with-devices (JITCPUTensor JITCPUScalarTensor ,@more-devices)
      ,@body))
 
+;; Memo: https://groups.google.com/g/comp.lang.lisp/c/4aDbcVUBraQ
+;; Pinning Arrays?
 
 (declaim (inline tensor-ptr))
 (defun tensor-ptr (tensor &key (offset 0))

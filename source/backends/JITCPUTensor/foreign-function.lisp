@@ -33,8 +33,13 @@ Specify the command to compile the generated c codes. In default, \"gcc\"
       (unwind-protect (princ source input)
 	(close input))
       (unless (zerop (uiop:wait-process process-info))
-	(error "cl-waffe2/backends.jit.cpu: Failed to compile a shared library:~%~a~%"
-	       (alexandria:read-stream-content-into-string error-output))))
+	(error "cl-waffe2/backends.jit.cpu: Failed to compile a shared library:~%~a~%
+
+Compiled with: ~a
+Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers for cl-waffe2 to use. (If the error is related to gcc.)"
+	       (alexandria:read-stream-content-into-string error-output)
+	       (with-output-to-string (out)
+		 (dolist (c cmd) (princ c out) (princ " " out))))))
     (cffi:load-foreign-library sharedlib)))
 
 (defun expand-funcall-form (function-name args views)
@@ -56,7 +61,7 @@ Specify the command to compile the generated c codes. In default, \"gcc\"
 		  (JITCPUScalarTensor
 		   ;; pass the pointer directly
 		   ;; sb-ext:int-sap
-		   `(,(dtype arg) (tensor-vec ,arg)))
+		   `(:pointer ,(int-sap-id arg)))
 		  (JITCPUTensor
 		   (prog1
 		       ;; tensor_ptr tensor_stride ...

@@ -97,31 +97,31 @@ an list of AST_Variable
 	(:modify
 	 ;; A[...] += A[...];
 	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (instruction-displace-to form))
+		       (cAref (instruction-displace-to form) :pointer t)
 		       (instruction-fname form)
-		       (cAref (car (instruction-args form))))
+		       (cAref (car (instruction-args form)) :pointer t))
 	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST))
+		       (cAref (opAST-car opAST) :pointer t)
 		       "="
-		       (cAref (instruction-displace-to form)))
+		       (cAref (instruction-displace-to form) :pointer t))
 	 )
 	(:apply
 	 ;; A[...] = f(A[...], B[...]);
 	 (write-c-line "~a = ~a(~a);~%"
-		       (cAref (instruction-displace-to form))
+		       (cAref (instruction-displace-to form) :pointer t)
 		       (instruction-fname form)
 		       (with-output-to-string (out)
 			 (loop for arg in (instruction-args form)
 			       for i upfrom 0
-			       do (princ (cAref arg) out)
+			       do (princ (cAref arg :pointer t) out)
 			       unless (= i (1- (length (instruction-args form))))
 				 do (princ  ", " out))))
 
 	 
 	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST))
+		       (cAref (opAST-car opAST) :pointer t)
 		       "="
-		       (cAref (instruction-displace-to form)))
+		       (cAref (instruction-displace-to form) :pointer t))
 	 )
 	
 	(:set
