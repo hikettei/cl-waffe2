@@ -69,6 +69,7 @@
 	       (:file "base-impl/mathematics")
 	       (:file "base-impl/logical")
 	       (:file "base-impl/transform")
+	       (:file "base-impl/ir")
 	       
 
 	       (:file "backends/lisp/package")
@@ -181,6 +182,8 @@
 
 	       (:file "backends/lisp/t/package")
 
+	       (:file "backends/JITCPUTensor/t/package")
+	       
 	       (:file "backends/JITLispTensor/t/package")
 	       (:file "backends/JITLispTensor/t/compiler")
 
@@ -192,9 +195,12 @@
 	       )
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :jit-lisp-test)
+		    (symbol-call :fiveam :run! :jit-cpu-test)
+		    
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
 		    (symbol-call :fiveam :run! :base-impl-test)
+
 		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
 		    (symbol-call :fiveam :run! :nn-test)))
