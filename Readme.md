@@ -263,7 +263,7 @@ The combination of delay evaluation and node definition mechanisms allows all th
 
     - https://arxiv.org/abs/1912.01703
 
-- Existing works of JIT Compiler for Deep Learning:
+- Previous works of JIT Compiler for Deep Learning:
 
     - https://arxiv.org/pdf/2002.03794.pdf
 
