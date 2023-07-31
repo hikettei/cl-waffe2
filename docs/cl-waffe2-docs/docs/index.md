@@ -1,3 +1,4 @@
+#
 
 <p align="center">
     <a href="https://github.com/hikettei/cl-waffe2">
@@ -16,6 +17,10 @@
     <a href="./overview">Tutorials</a>
   </p>
 </p>
+
+[![CI](https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml/badge.svg?branch=master)](https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml)
+
+## Introduction
 
 > __⚠️ cl-waffe2 is still in the concept stage and has a limited feature. Also, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.__
 
@@ -38,6 +43,8 @@ Portability to other devices is a major concern. In particular, cl-waffe2 is des
 
 - [ ] Add basic computation nodes for controling nodes: `MapNode` `IfNode` etc...
 
+### Concepts
+
 This project has been developed on these primal concepts:
 
 1. `Do not run until the node is optimized.`, that is, Lazy-Evaluation first.
@@ -49,11 +56,10 @@ This project has been developed on these primal concepts:
 
 **Everything in this documentation is still incomplete! I guess should be much more polished!**
 
-#
 
 ## What's next?
 
-1. [Install cl-waffe2](./install)
+1. [Installing cl-waffe2](./install)
 
 2. [Learn the concepts with practical tutorials](./overview)
 
