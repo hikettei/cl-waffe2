@@ -28,7 +28,6 @@
      ,@body))
 
 ;; Broadcast_Auto shouldn't be modular, all the nodes defined in cl-waffe2, should work under all combines of config.
-
 (defmacro with-config ((&key
 			  ;; TO ADD:
 			  ;; Global Dtype
@@ -75,4 +74,15 @@
 		      (find :initarg slots))
 		   slots))
        slots))
+
+
+(defun set-devices-toplevel (&rest devices)
+  "
+## [function] set-devices-toplevel
+"
+  (assert (every #'(lambda (x) (subtypep x 'AbstractTensor)) devices)
+	  nil
+	  "set-devices-toplevel: the given device isn't subtype of AbstractTensor: ~a" devices)
+  
+  (setf cl-waffe2/vm.generic-tensor:*using-backend* devices))
 

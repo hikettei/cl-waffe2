@@ -35,11 +35,11 @@
      (export ',name)
      ;; You can use this macro for testing other backends, other dtypes.
      
-     (defmacro ,name (backend)
+     (defmacro ,name (&rest backend)
        #+sbcl(declare (sb-ext:muffle-conditions cl:style-warning))
-       `(let ((*using-backend* '`(,,backend)))
+       `(let ((*using-backend* '`(,,@backend)))
 	  ,@(map 'list #'(lambda (dtype)
-			   `(test ,(symb ', name '- dtype '- backend)
+			   `(test ,(symb ', name '- dtype '- (car backend))
 			      (is (with-dtype ,dtype
 				    (with-memory-pool
 				      (let ((result (progn ,,@body)))

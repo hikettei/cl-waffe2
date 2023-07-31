@@ -94,7 +94,10 @@
   ;; APIs for StateContainer
   (:export
    #:statecontainer
+   #:statecontainer-forward-out-form
    #:make-statecontainer
+
+   #:compiled-kernel-body
    )
 
   (:export

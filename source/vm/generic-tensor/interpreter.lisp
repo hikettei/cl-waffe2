@@ -48,7 +48,6 @@
   (declare (type AbstractTensor toplevel)
 	   (type boolean stop-me)
 	   (optimize (speed 3)))
-  (declare (ignore called-with-vars))
 
   (when (or stop-me
 	    (null (tensor-state toplevel)))
@@ -62,7 +61,6 @@
 	 (vars  (tensor-variables toplevel))
 	 (node  (tensor-backward toplevel))
 	 (compiled-fw (statecontainer-forward-out-form state)))
-    (declare (ignore node))
 
     (let ((next-states (map 'list #'(lambda (x) (run-node! x :stop-me stop-me :called-with-vars toplevel :compile-option compile-option)) vars)))
       (register-variables vars)
@@ -81,17 +79,18 @@
       ;; Calling User-defined JIT Compiler
 
       ;; = [FIXME] ======
-      ;; JITが今のところ動作しない
-      ;; 埋め込まれたコードにTensorIDが直接埋め込まれている。
-      ;; Cacheの検索をどうやってやるかが課題になる。
-
-      #|
+      ;; JIT isn't working on interpreter mode.
+      ;; eval?
+      
+      
       (when node
-	(cl-waffe2/vm.nodes:on-finalizing-compiling
-	 node
-	 toplevel
-         called-with-vars))
-      |#
+	(let ((result (cl-waffe2/vm.nodes:on-finalizing-compiling
+		       node
+		       toplevel
+		       called-with-vars)))
+	  (when result
+	    (eval result))))
+      
 
       ;; on-calling-finalizing...
       (nth (tensor-out-n toplevel) (statecontainer-forward-result state)))))

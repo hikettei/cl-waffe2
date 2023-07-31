@@ -22,6 +22,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (declare (type keyword name))
   (or (eql name :column) (eql name :row)))
 
+(defun find-scalar-tensor ()
+  (or (find 'ScalarTensor *using-backend*
+	    :test #'(lambda (x y) (subtypep y x)))
+      'ScalarTensor))
 ;; orig-shape    ... An using size of storage vec.
 ;; visible-shape ... The shape treated in network
 ;; actual-shape  ... visible-shape ignored broarcasting
@@ -579,7 +583,7 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 		     :facet :exist
 		     :initial-element initial-element
 		     :view view)
-      (make-instance 'ScalarTensor
+      (make-instance (find-scalar-tensor)
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
 		     :shape nil
@@ -622,7 +626,9 @@ For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or 
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
-  (make-instance (if scalar-p 'ScalarTensor (car *using-backend*))
+  (make-instance (if scalar-p
+		     (find-scalar-tensor)
+		     (car *using-backend*))
 		 :scalar-p scalar-p
 		 :create-from create-from
 		 :dtype dtype
@@ -794,7 +800,7 @@ Note that view is only created for Tensors, not a Scalar.
 
   (let ((subscripts
 	  (loop for s in subscripts collect (force-list s))))
-    (when (typep tensor 'ScalarTensor)
+    (when (subtypep (class-name (class-of tensor)) 'ScalarTensor)
       (if (and subscripts
 	       (not (every #'(lambda (x) (eql t x)) subscripts)))
 	  (format t ":BROADCAST IS IGNORED for scalar input (TODO)"))

@@ -300,13 +300,16 @@ permute-order : ~a
 
   (shape-equal-list declared-shape (shape tensor)))
 
+;; TODO: read-result should be inlined
+(declaim (inline read-result)
+	 (ftype (function (AbstractTensor) AbstractTensor) read-result))
 (defun read-result (tensor)
  "Returns the result of computing of tensor in the compiled code"
   (declare (type AbstractTensor tensor))
 
   (let ((state (tensor-state tensor)))
     (if state
-	(nth (tensor-out-n tensor) (statecontainer-forward-result (tensor-state tensor)))
+        (nth (tensor-out-n tensor) (the list (statecontainer-forward-result (tensor-state tensor))))
 	tensor)))
 
 ;; Set *runtime-shape-inspection* = t to detect run-time shape-error
@@ -372,19 +375,19 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	     (setf (statecontainer-backward-result (tensor-state ,(tensor-id toplevel)))
 		   (list (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))
 
+
+	   ;; Calls an event: on-finalizing-compiling
+	   ;; If JIT is implemented by user, expand user defined forms
 	   
 	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
 		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
-	 
-	 ;; Calls an event: on-finalizing-compiling
-	 ;; If JIT is implemented by user, expand user defined forms
-	 
+
 	 ,(when (tensor-backward toplevel)
 	    (cl-waffe2/vm.nodes:on-finalizing-compiling
 	     (tensor-backward toplevel)
 	     toplevel
 	     called-with-vars))
-	   
+	 
 
 	 ;; TODO UPDATE
 	 ,(when (and node
@@ -404,7 +407,6 @@ The definition/implementation of nodes could be invaild."
 		,node
 		(nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
 		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))) ;; Output shape compiled
-	 
 	 
 	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
 

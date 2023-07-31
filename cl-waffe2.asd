@@ -69,6 +69,7 @@
 	       (:file "base-impl/mathematics")
 	       (:file "base-impl/logical")
 	       (:file "base-impl/transform")
+	       (:file "base-impl/ir")
 	       
 
 	       (:file "backends/lisp/package")
@@ -100,6 +101,19 @@
 	       (:file "backends/JITLispTensor/tensor")
 	       (:file "backends/JITLispTensor/jit")
 	       (:file "backends/JITLispTensor/delayed-node-impls")
+
+	       (:file "backends/JITCPUTensor/package")
+	       (:file "backends/JITCPUTensor/tensor")
+	       (:file "backends/JITCPUTensor/blueprint")
+	       (:file "backends/JITCPUTensor/ir")
+	       (:file "backends/JITCPUTensor/on-finalizing")
+	       (:file "backends/JITCPUTensor/dtype")
+	       (:file "backends/JITCPUTensor/compiler")
+	       (:file "backends/JITCPUTensor/foreign-function")
+	       
+
+	       (:file "backends/JITCPUTensor/impls/arithmetic")
+	       (:file "backends/JITCPUTensor/impls/math")
 	       
 	       (:file "optimizers/defoptimizer")
 
@@ -168,6 +182,8 @@
 
 	       (:file "backends/lisp/t/package")
 
+	       (:file "backends/JITCPUTensor/t/package")
+	       
 	       (:file "backends/JITLispTensor/t/package")
 	       (:file "backends/JITLispTensor/t/compiler")
 
@@ -179,13 +195,15 @@
 	       )
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :jit-lisp-test)
+		    
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
 		    (symbol-call :fiveam :run! :base-impl-test)
+
+		    (symbol-call :fiveam :run! :jit-cpu-test)
 		    (symbol-call :fiveam :run! :lisp-backend-test)
 		    (symbol-call :fiveam :run! :test-backends-cpu)
-		    (symbol-call :fiveam :run! :nn-test)		    
-		    ))
+		    (symbol-call :fiveam :run! :nn-test)))
 
 
 (defpackage :cl-waffe2-docs-asdf
