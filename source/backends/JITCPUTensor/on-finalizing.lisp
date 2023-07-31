@@ -1,14 +1,13 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;; TODO:
+;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~
 ;;
-;; LispTensorより遅い場合がある！！！->計算ノード最適化！！
-;; バグ修正：結果が0になって反映されてない
-;; ノードの終端と途中で呼ばれる場合で色々違う
-
-;; 演算の合成と計算ノードの最適化
-;; restrict option disassemble it.
+;; optimize computation nodes
+;; compose and fuse several operations
+;; pruning unused computation nodes
+;; the behaviour sometime wrong without with-no-grad
+;; restrict option, disassemble it.
 
 
 

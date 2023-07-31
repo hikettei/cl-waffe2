@@ -9,7 +9,19 @@
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
   `(or JITCPUTensor JITCPUScalarTensor))
 
+(defun enable-cpu-jit-toplevel (&key
+				  (compiler "gcc"))
+  "
+## [function] enable-cpu-jit-toplevel
+"
+  (setf *default-c-compiler* compiler)
+  (cl-waffe2::set-devices-toplevel 'JITCPUTensor 'JITCPUScalarTensor)
+  t)
+
 (defmacro with-cpu-jit ((&rest more-devices) &body body)
+  "
+## [macro] with-cpu-jit
+"
   `(with-devices (JITCPUTensor JITCPUScalarTensor ,@more-devices)
      ,@body))
 

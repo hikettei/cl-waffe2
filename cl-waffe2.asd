@@ -78,6 +78,7 @@
 	       (:file "backends/lisp/arithmetic")
 	       (:file "backends/lisp/mathematics")
 	       (:file "backends/lisp/logical")
+	       (:file "backends/lisp/matrix-ops")
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
@@ -102,6 +103,7 @@
 	       (:file "backends/JITLispTensor/jit")
 	       (:file "backends/JITLispTensor/delayed-node-impls")
 
+	       (:file "package")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
 	       (:file "backends/JITCPUTensor/blueprint")
@@ -116,9 +118,7 @@
 	       (:file "backends/JITCPUTensor/impls/math")
 	       
 	       (:file "optimizers/defoptimizer")
-
-
-	       (:file "package")
+	       
 	       (:file "array-converter")
 	       (:file "utils")
 	       (:file "network")

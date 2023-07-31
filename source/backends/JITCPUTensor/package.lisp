@@ -14,6 +14,7 @@
    #:*default-c-compiler*
    #:JITCPUTensor
    #:JITCPUScalarTensor
+   #:enable-cpu-jit-toplevel
    #:with-cpu-jit))
 
 (in-package :cl-waffe2/backends.jit.cpu)

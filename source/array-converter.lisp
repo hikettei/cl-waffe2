@@ -5,9 +5,13 @@
 ;; array-converter.lisp provides a converter between: WaffeTensor <-> Other Arrays
 ;;
 
-;;
-;; TODO: List, Array, Simple-Array, Sync
-;;
+;; 1. Array <-> AbstractTensor
+;; (print (change-facet #2A((1 2 3)) :direction 'abstracttensor))
+
+;; 2.
+;; 
+
+;; 3.
 
 (defgeneric convert-tensor-facet (from to)
   (:documentation "
@@ -56,21 +60,6 @@ As of this writing(2023/7/18), we provide these directions in default.
 "
   (convert-tensor-facet array-from direction))
 
-
-#|
-[BugFix]: Stride Changes, Multidimensional Offsets are ignored.
-;; When called with argument, we need to call permute* or view
-;; Moves Place <- Target, and statically working.
-(defmodel (Move-Into-Contiguous (self)
-	   :where (Place[~] Target[~] -> Place[~])
-	   :on-call-> ((self place target)
-		       (declare (ignore self))
-		       (!move place target :force t))))
-
-(define-composite-function (Move-Into-contiguous) move-static)
-|#
-
-
 (defun AbstractCPUTensor->simple-array (from)
   ;; AbstractTensor -> Simple-Array
   (assert (cl-waffe2/vm.generic-tensor::vec from)
@@ -81,12 +70,8 @@ As of this writing(2023/7/18), we provide these directions in default.
 
   (cond
     ((cl-waffe2/vm.generic-tensor::permuted-p from)
-     ;; Permuted?
-     ;; FixME: Convert-Tensor-Facet with permuted is slow
-     ;; because compiling is running.
      (tensor-vec (proceed (->contiguous from) :compile-mode :fastest)))
     ((tensor-projected-p from)
-     ;; FIXME
      (tensor-vec (proceed (!copy from :force t) :compile-mode :fastest)))
     (T
      (tensor-vec from))))
