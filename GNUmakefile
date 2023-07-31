@@ -1,33 +1,34 @@
 SBCL                := sbcl
-SBCL_OPTIONS        := --noinform
+# Avoid loading system-wide libraries (--no-sysinit)
+SBCL_OPTIONS        := --noinform --no-sysinit
 QUICKLOAD_WAFFE2    := --load cl-waffe2.asd --eval '(ql:quickload :cl-waffe2)'
 MKTEMP              := mktemp
 RLWRAP              := rlwrap
 LOGFILE             := $(shell mktemp)
 
-.PHONY: all compile test recordtest repl rlrepl record docs clean delete_quicklisp install_quicklisp add_to_init_file
+.DEFAULT_GOAL := help
 
-all:
-	$(info To compile, type `make compile`)
-	$(info To test, type `make test`)
-	$(info To record test, type `make recordtest`)
-	$(info To run REPL, type `make repl`)
-	$(info To run REPL with rlwrap, type `make rlrepl`)
-	$(info To record REPL session, type `make record`)
-	$(info To generate documents, type `make docs`)
-	$(info To clean FASL, type `make clean`)
+# This code taken from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
+# Japanese version: https://postd.cc/auto-documented-makefile/
+.PHONY: help
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-compile:
+.PHONY: compile
+compile: ## Compile whole project
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(asdf:compile-system :cl-waffe2)' \
 		--quit
 
-test:
+.PHONY: test
+test: ## Run test harness
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(asdf:test-system :cl-waffe2)' \
 		--quit
 
-recordtest:
+.PHONY: recordtest
+recordtest: ## Run test harness with logging
 	$(warning This session will be recorded in $(LOGFILE))
 	$(RLWRAP) --logfile $(LOGFILE) \
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
@@ -35,41 +36,74 @@ recordtest:
 		--quit
 	@printf 'This session has been recorded in %s\n' $(LOGFILE)
 
-repl:
+.PHONY: repl
+repl: ## Launch REPL
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
 
-rlrepl:
+.PHONY: rlrepl
+rlrepl: ## Launch REPL with rlwrap
 	$(RLWRAP) $(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
 
-record:
+.PHONY: record
+record: ## Launch REPL with logging
 	$(warning This session will be recorded in $(LOGFILE))
 	$(RLWRAP) --logfile $(LOGFILE) \
 		$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
 	@printf 'This session has been recorded in %s\n' $(LOGFILE)
 
-docs:
+.PHONY: slynk
+slynk: ## Launch Slynk server
+	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
+		--eval '(ql:quickload :slynk)' \
+		--eval '(slynk:create-server)'
+
+.PHONY: swank
+swank: ## Launch Swank server
+	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
+		--eval '(ql:quickload :swank)' \
+		--eval '(swank:create-server)'
+
+.PHONY: docs
+docs: ## Generate documents
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(ql:quickload :cl-waffe2/docs)' \
 		--eval '(cl-waffe2.docs:generate)' \
 		--quit
 
+.PHONY: rt
+rt: recordtest ## Alias for recordtest
+
+.PHONY: rr
+rr: rlrepl ## Alias for rlrepl
+
+.PHONY: rd
+rd: record ## Alias for record
+
+.PHONY: clean
 clean:
 	rm -rv ~/.cache/common-lisp/sbcl-*
 
+.PHONY: delete_quicklisp
 delete_quicklisp:
 	rm -rv ~/quicklisp
 
 TEMP_QUICKLISP := $(shell mktemp)
+QUICKLISP_SIGNING_KEY := D7A3489DDEFE32B7D0E7CC61307965AB028B5FF7
 
-install_quicklisp:
+.PHONY: install_quicklisp
+install_quicklisp: ## Install Quicklisp
 	curl -sSL -o $(TEMP_QUICKLISP) 'https://beta.quicklisp.org/quicklisp.lisp'
+	curl -sSL -o $(TEMP_QUICKLISP).asc 'https://beta.quicklisp.org/quicklisp.lisp.asc'
+	gpg --batch --recv-keys ${QUICKLISP_SIGNING_KEY}
+	gpg --batch --verify $(TEMP_QUICKLISP).asc $(TEMP_QUICKLISP)
 	$(SBCL) $(SBCL_OPTIONS) \
+		--non-interactive \
 		--load $(TEMP_QUICKLISP) \
-		--eval '(quicklisp-quickstart:install)' \
-		--quit
+		--eval '(quicklisp-quickstart:install)'
 
-add_to_init_file:
+.PHONY: add_to_init_file
+add_to_init_file: ## Enable Quicklisp autoloading
 	$(SBCL) $(SBCL_OPTIONS) \
+		--non-interactive \
 		--load ~/quicklisp/setup.lisp \
-		--eval '(ql:add-to-init-file)' \
-		--quit
+		--eval '(ql-util:without-prompting (ql:add-to-init-file))'
