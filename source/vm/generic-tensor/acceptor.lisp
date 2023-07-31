@@ -301,6 +301,8 @@ permute-order : ~a
   (shape-equal-list declared-shape (shape tensor)))
 
 ;; TODO: read-result should be inlined
+(declaim (inline read-result)
+	 (ftype (function (AbstractTensor) AbstractTensor) read-result))
 (defun read-result (tensor)
  "Returns the result of computing of tensor in the compiled code"
   (declare (type AbstractTensor tensor))
