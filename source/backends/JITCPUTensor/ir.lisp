@@ -123,13 +123,7 @@ an list of AST_Variable
 			 ;; (i.e.: ExistTensor isn't allowed to be in-place)
 			 (copy-for-safety     " // in-place guard for :exist tensors")
 			 ((equal (instruction-fname form) "=") " // intended copy")
-			 (T "")))
-	 
-	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST) :pointer t)
-		       "="
-		       (cAref (instruction-displace-to form) :pointer t))
-	 )
+			 (T ""))))
 	(:apply
 	 ;; A[...] = f(A[...], B[...]);
 	 (write-c-line "~a = ~a(~a);~%"
@@ -140,14 +134,7 @@ an list of AST_Variable
 			       for i upfrom 0
 			       do (princ (cAref arg :pointer t) out)
 			       unless (= i (1- (length (instruction-args form))))
-				 do (princ  ", " out))))
-
-	 
-	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST) :pointer t)
-		       "="
-		       (cAref (instruction-displace-to form) :pointer t))
-	 )
+				 do (princ  ", " out)))))
 	
 	(:set
 	 ;;         type* variable = value
