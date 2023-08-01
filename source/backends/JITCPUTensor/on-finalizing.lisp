@@ -86,12 +86,21 @@
 	       (setf ,@(loop for scal in scalars
 			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
 	       ,call-form
-	       ;; Synchronize In-place
-	       (setf ,@(loop for case in *in-place-routes*
-			     append `((tensor-vec (read-result ,(car case)))
-				      (tensor-vec (read-result ,(cdr case))))))
 	       
+	       ;; Synchronize ScalarTensors
 	       (setf ,@(loop for scal in scalars
-			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))))))
+			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
+
+	       ;; (!sin x) isn't working while (!copy (!sin x)) is ok.
+	       (print ,variable)
+	       (print (read-result ,variable))
+	       
+	       ;; Synchronize In-place (for scalar tensor?)
+	       (let* (,@(loop for case in (reverse *in-place-routes*)
+			      ;; Sort by tensor-id
+			      collect `(,(tensor-id (car case)) (read-result ,(car case)))))
+		 (setf ,@(loop for case in (reverse *in-place-routes*)
+			       append `((tensor-vec ,(tensor-id (car case)))
+					(tensor-vec (read-result ,(cdr case)))))))))))
       nil))
 
