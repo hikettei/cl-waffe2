@@ -77,6 +77,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	    (write-buff ")"))))
     (format nil "void ~a~a~%" function-name arguments-form)))
 
+;; [TODO] Printing JIT Compiler Report
 (defun invoke-compiler! (function-name toplevel)
   "
 Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
@@ -90,17 +91,17 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 	 (function-form  (apply #'cFunction function-name *compiled-tensors*))
 	 (tensors (loop for tensor in *compiled-tensors*
 			if (typep tensor 'JITCPUTensor)
+			  collect tensor))
+	 (scalars (loop for tensor in *compiled-tensors*
+			if (typep tensor 'JITCPUScalarTensor)
 			  collect tensor)))
     (values
      *compiled-tensors*
      ;; Used for expanding call-with-view
      tensors
-     (loop for tensor in *compiled-tensors*
-	   if (typep tensor 'JITCPUScalarTensor)
-	     collect tensor)
+     scalars
      (with-compiling-mode
        (place-toplevel-form function-name *compiled-tensors*)
-
        ;; void function-name (...) { ...
        (write-buff "~a { ~%" function-form)
        (if (null tensors)
@@ -111,6 +112,5 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 	     (with-indent 8
 	       (ir->C envolved-nodes))
 	     (write-c-line "}~%")))
-       
        (write-c-line "}~%")))))
 

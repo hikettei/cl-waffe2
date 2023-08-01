@@ -1,14 +1,13 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;; TODO:
+;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~
 ;;
-;; LispTensorより遅い場合がある！！！->計算ノード最適化！！
-;; バグ修正：結果が0になって反映されてない
-;; ノードの終端と途中で呼ばれる場合で色々違う
-
-;; 演算の合成と計算ノードの最適化
-;; restrict option disassemble it.
+;; optimize computation nodes
+;; compose and fuse several operations
+;; pruning unused computation nodes
+;; the behaviour sometime wrong without with-no-grad
+;; restrict option, disassemble it.
 
 
 
@@ -59,7 +58,9 @@
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
 	  (load-foreign-function source)
-	  ;;(print source)
+
+	  (when *viz-compiled-code*
+	    (format t "== [Log: JITCPUTensor] ===============~%~a~%" source))
 	  (let ((call-form
 		  (if (null tensors)
 		      ;; -> arguments = Scalar
@@ -82,5 +83,4 @@
 	       (setf ,@(loop for scal in scalars
 			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))))))
       nil))
-
 

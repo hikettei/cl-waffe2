@@ -43,6 +43,9 @@ an list of AST_Variable
     (null :null)
     (T (error "Detected unknown type of variable: ~a" obj))))
 
+;; Memo
+;; out_2 = sin(x, out_1)
+;; In this op, out_2 and out_1 indicates the same tensor, but jit doesn't recognise it.
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
   (declare (type (or JITCPUScalarTensor JITCPUTensor) toplevel))
@@ -51,6 +54,7 @@ an list of AST_Variable
 	   (movetensor-ignore-me (tensor-backward toplevel)))
       ;; MoveTensorNode: X[~] OUT[~] -> X[~]
       ;; If pruned, X is never allocated/used.
+      
       (add-variable (second (tensor-variables toplevel)))
       
       ;; Otherwise, we can collect envolved tensors normally:
@@ -84,27 +88,42 @@ an list of AST_Variable
 	    do (ir->C (ast-variable-content var)))
 
     
-    (let ((form
-	    (apply #'translate-op code opAST
-		   (loop for var in (opAST-args opAST)
-			 if (eql (ast-variable-type var) :opAST)
-			   collect (opAST-car (ast-variable-content var))
-			 if (or (eql (ast-variable-type var) :tensor)
-				(eql (ast-variable-type var) :scalar))
-			   collect (ast-variable-content var)))))
+    (let* ((form
+	     (apply #'translate-op code opAST
+		    (loop for var in (opAST-args opAST)
+			  if (eql (ast-variable-type var) :opAST)
+			    collect (opAST-car (ast-variable-content var))
+			  if (or (eql (ast-variable-type var) :tensor)
+				 (eql (ast-variable-type var) :scalar))
+			    collect (ast-variable-content var))))
+	   ;; Identify the usage of "=" in the computation node
+	   (save-for-backward-p ;; "=" is intended to make save4bw?
+	     (and (equal "=" (instruction-fname form))
+		  (system-lazy-read-save-for-backward (opAST-car opAST))))
+	   (copy-for-safety ;; "=" is intended to avoid side effects on ExistTensor?
+	     (and (equal "=" (instruction-fname form))
+		  ;; (axpy! 1.0 ExistTensor ExistTensor) isn't allowed
+		  ;; instead, (axpy! 1.0 ExistTensor (copy ExistTensor))
+		  (eql (tensor-attribute (car (instruction-args form))) :input))))
 
+      (write-c-line "~%")
       (case (Instruction-type form)
 	(:modify
-	 ;; A[...] += A[...];
-	 (write-c-line "~a ~a ~a;~%"
+	 ;; A[...] += A[...]; // comments if any
+	 (write-c-line "// :modify A ~a B~%"
+		       (instruction-fname form))
+	 (write-c-line "~a ~a ~a;~a~%"
 		       (cAref (instruction-displace-to form) :pointer t)
 		       (instruction-fname form)
-		       (cAref (car (instruction-args form)) :pointer t))
-	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST) :pointer t)
-		       "="
-		       (cAref (instruction-displace-to form) :pointer t))
-	 )
+		       (cAref (car (instruction-args form)) :pointer t)
+		       (cond
+			 ;; The operation "=" is placed for saving for backward
+			 (save-for-backward-p " // saving for backward")
+			 ;; The operation "=" is placed for protecting tensors
+			 ;; (i.e.: ExistTensor isn't allowed to be in-place)
+			 (copy-for-safety     " // in-place guard for :exist tensors")
+			 ((equal (instruction-fname form) "=") " // intended copy")
+			 (T ""))))
 	(:apply
 	 ;; A[...] = f(A[...], B[...]);
 	 (write-c-line "~a = ~a(~a);~%"
@@ -115,24 +134,22 @@ an list of AST_Variable
 			       for i upfrom 0
 			       do (princ (cAref arg :pointer t) out)
 			       unless (= i (1- (length (instruction-args form))))
-				 do (princ  ", " out))))
-
-	 
-	 (write-c-line "~a ~a ~a;~%"
-		       (cAref (opAST-car opAST) :pointer t)
-		       "="
-		       (cAref (instruction-displace-to form) :pointer t))
-	 )
+				 do (princ  ", " out)))))
 	
 	(:set
-
-	 (error ":set isn't available currently")
+	 ;;         type* variable = value
+	 ;; moves variable -> value with no copies.
+	 (if (equal "=" (instruction-fname form))
+	     (write-c-line "// in-place mutation~%")
+	     (write-c-line "// :set A = B~%"))
 	 
-	 ;; (write-c-line "~a ~a ~a;~%"
-	 ;;	       (cAref (opAST-car opAST))
-	 ;;	       "="
-	 ;;	       (cAref (instruction-displace-to form)))
+	 (write-c-line "~a* ~a ~a ~a;~%"
+		       (dtype->ctype (dtype (opAST-car opAST)))
+	 	       (tensor-id (opAST-car opAST))
+	 	       "="
+		       (tensor-id (car (instruction-args form))))
 	 )
+	
 
 	(:ignore
 	 

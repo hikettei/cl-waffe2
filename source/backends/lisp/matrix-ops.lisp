@@ -54,7 +54,7 @@
 		 ,index)
 		(incf ,index ,(stride-of o-view 0))))
 	 `(,x ,out)
-	 :force-keep-order t))))
+	 :at-least-dim 1))))
 
 (defun expand-argmin-form (x out &aux (index (gensym)))
   (let ((kernel (min-kernel (dtype x))))
@@ -69,15 +69,15 @@
 		 ,index)
 		(incf ,index ,(stride-of o-view 0))))
 	 `(,x ,out)
-	 :force-keep-order t))))
+	 :at-least-dim 1))))
 
-(define-impl (ArgMax-Node :device LispTensor)
+(define-impl (ArgMax-Node :device LispTensor :cache-when-compiled t)
 	     :forward ((self x out)
 		       `(progn
 			  ,(expand-argmax-form x out)
 			  ,out)))
 
-(define-impl (ArgMin-Node :device LispTensor)
+(define-impl (ArgMin-Node :device LispTensor :cache-when-compiled t)
 	     :forward ((self x out)
 		       `(progn
 			  ,(expand-argmin-form x out)
