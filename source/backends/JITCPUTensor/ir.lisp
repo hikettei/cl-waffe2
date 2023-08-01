@@ -43,9 +43,19 @@ an list of AST_Variable
     (null :null)
     (T (error "Detected unknown type of variable: ~a" obj))))
 
-;; Memo
-;; out_2 = sin(x, out_1)
-;; In this op, out_2 and out_1 indicates the same tensor, but jit doesn't recognise it.
+;; Memo:
+(defun tensor-using-variables (toplevel) ;; = tensor-variables
+  (declare (type (or JITCPUTensor JITCPUScalarTensor) toplevel))
+  ;;  [X]  [Y]
+  ;;    \  /
+  ;;   [MOVE] - toplevel
+  (let* ((variables (tensor-variables toplevel))
+	 (ignore-first-p (and (movetensor-p (tensor-backward toplevel))
+			      (movetensor-ignore-me (tensor-backward toplevel)))))
+    (if ignore-first-p
+	(cdr variables)
+	variables)))
+
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
   (declare (type (or JITCPUScalarTensor JITCPUTensor) toplevel))
@@ -56,11 +66,10 @@ an list of AST_Variable
       ;; If pruned, X is never allocated/used.
       
       (add-variable (second (tensor-variables toplevel)))
-      
       ;; Otherwise, we can collect envolved tensors normally:
       (loop for var in (tensor-variables toplevel)
-	    ;; if (apply-compile-p toplevel var)
-	    do (add-variable var)))
+	    if (apply-compile-p toplevel var)
+	      do (add-variable var)))
 
   ;; Explore JITAble Nodes deeper:
   (apply #'make-opAST toplevel
@@ -110,7 +119,7 @@ an list of AST_Variable
       (case (Instruction-type form)
 	(:modify
 	 ;; A[...] += A[...]; // comments if any
-	 (write-c-line "// :modify A ~a B~%"
+	 (write-c-line "// [modify] A ~a B~%"
 		       (instruction-fname form))
 	 (write-c-line "~a ~a ~a;~a~%"
 		       (cAref (instruction-displace-to form) :pointer t)
@@ -126,6 +135,8 @@ an list of AST_Variable
 			 (T ""))))
 	(:apply
 	 ;; A[...] = f(A[...], B[...]);
+	 (write-c-line "// [apply]  ~a~%"
+		       (instruction-fname form))
 	 (write-c-line "~a = ~a(~a);~%"
 		       (cAref (instruction-displace-to form) :pointer t)
 		       (instruction-fname form)
@@ -140,17 +151,27 @@ an list of AST_Variable
 	 ;;         type* variable = value
 	 ;; moves variable -> value with no copies.
 	 (if (equal "=" (instruction-fname form))
-	     (write-c-line "// in-place mutation~%")
-	     (write-c-line "// :set A = B~%"))
+	     (progn
+	       ;;
+	       ;; float* XXX1 = XXX2;
+	       ;;
+
+	       ;; register in-place mutation at toplevel, so compiler can synchronize them later without copying.
+	       (register-in-place-mutation
+		;; Sync: opAST-car <- car args
+		(opAST-car opAST) (car (instruction-args form)))
+	       
+	       (write-c-line "// [set]    in-place mutation~%")
+	       (write-c-line "int32_t ~a_STRIDE = ~a_STRIDE;~%"
+			     (tensor-id (opAST-car opAST))
+			     (tensor-id (car (instruction-args form)))))
+	     (write-c-line "// [set]    A = B~%"))
 	 
 	 (write-c-line "~a* ~a ~a ~a;~%"
 		       (dtype->ctype (dtype (opAST-car opAST)))
 	 	       (tensor-id (opAST-car opAST))
 	 	       "="
-		       (tensor-id (car (instruction-args form))))
-	 )
-	
-
+		       (tensor-id (car (instruction-args form)))))
 	(:ignore
 	 
 	 )))))

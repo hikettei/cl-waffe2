@@ -42,6 +42,11 @@
    ))
 
 (defparameter *compiling-ntime-count* 0)
+(defvar *in-place-routes* nil)
+
+;; place <- actual-tensor
+(defun register-in-place-mutation (place actual-tensor)
+  (push (cons place actual-tensor) *in-place-routes*))
 
 (defun int-sap-id (tensor)
   (symb (tensor-id tensor) '-sap))
@@ -52,7 +57,8 @@
 				    next-variable)
   "If the node is needed to be compiled, compile."
   (if (apply-compile-p variable next-variable)
-      (let ((jit-function-name (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
+      (let ((*in-place-routes*)
+	    (jit-function-name (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
 	(incf *compiling-ntime-count* 1)
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
@@ -80,6 +86,11 @@
 	       (setf ,@(loop for scal in scalars
 			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
 	       ,call-form
+	       ;; Synchronize In-place
+	       (setf ,@(loop for case in *in-place-routes*
+			     append `((tensor-vec (read-result ,(car case)))
+				      (tensor-vec (read-result ,(cdr case))))))
+	       
 	       (setf ,@(loop for scal in scalars
 			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))))))
       nil))

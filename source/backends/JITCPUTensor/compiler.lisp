@@ -86,7 +86,7 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 "
   (declare (type JITAbleTensors toplevel))
 
-  (let* ((*compiled-tensors* `(,toplevel))
+  (let* ((*compiled-tensors* `())
 	 (envolved-nodes (confirm-compiling-area toplevel))
 	 (function-form  (apply #'cFunction function-name *compiled-tensors*))
 	 (tensors (loop for tensor in *compiled-tensors*
@@ -102,6 +102,18 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
      scalars
      (with-compiling-mode
        (place-toplevel-form function-name *compiled-tensors*)
+
+       
+       (write-buff "~%// [~a Tensors]~%" (length tensors))
+       (dolist (tensor tensors)
+	 (write-buff "// ~a: ~a ~a~%"
+		     (tensor-id tensor)
+		     (shape tensor)
+		     (tensor-attribute tensor)))
+       (write-buff "~%// [~a Scalars]~%" (length scalars))
+       (dolist (tensor scalars)
+	 (write-buff "// ~a: ~a ~a~%" (tensor-id tensor) (shape tensor) (tensor-attribute tensor)))
+       
        ;; void function-name (...) { ...
        (write-buff "~a { ~%" function-form)
        (if (null tensors)
