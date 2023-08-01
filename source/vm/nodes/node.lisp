@@ -258,6 +258,9 @@ Here's a list of reports.
 					 
 					 (tensor-view next-tensor)
 					 (tensor-view input)
+
+					 ;; Memo: extending tensor-id is added later...
+					 (tensor-id next-tensor) (tensor-id input)
 					 
 					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::projected-p)
 					 (slot-value input 'cl-waffe2/vm.generic-tensor::projected-p)
@@ -274,6 +277,7 @@ Here's a list of reports.
 			       (setf (tensor-state next-tensor)     state)
 			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
+			       
 			       next-tensor))))
 	(apply #'values next-tensor)))))
 
