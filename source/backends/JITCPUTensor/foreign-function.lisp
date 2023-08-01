@@ -2,19 +2,19 @@
 (in-package :cl-waffe2/backends.jit.cpu)
 
 (defparameter *default-c-compiler* "gcc" "
-## [parameter] *default-c-compiler*
+## [parameter] `*default-c-compiler*`
 
 Specify the command to compile the generated c codes. In default, \"gcc\".
 ")
 
 (defparameter *compiler-flags* '("-fPIC" "-O3" "-march=native") "
-## [parameter] *compiler-flags*
+## [parameter] `*compiler-flags*`
 
 In default, `*compielr-flags*` = `'(\"-fPIC\" \"-O3\" \"-march=native\")`
 ")
 
 (defparameter *viz-compiled-code* nil "
-## [parameter] *viz-compiled-code*
+## [parameter] `*viz-compiled-code*`
 
 Set t to display the compiled c code to terminal. In default, `nil`
 ")

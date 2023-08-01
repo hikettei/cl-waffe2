@@ -203,8 +203,7 @@
 		  ,@body)))
 
     (with-section "Accessing AbstractTensor as an array of other types."
-      (insert "we provides Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
-
+      (insert "we provide Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
 ")
       
       (with-op-doc #'convert-tensor-facet 't)
@@ -234,4 +233,46 @@ set-input:
 predict:
   describe ..
 ```"))))
+
+(with-page *lisp-tensor-backend* "[package] :cl-waffe2/backends.lisp"
+  (insert
+   "The package `:cl-waffe2/backends.lisp` provides an AbstractTensor `LispTensor` as an external backend, and designed with the aim of portalibity, not performance. Therefore, most implementations of this follow ANSI Common Lisp, so it will work in any environment but concerns remain about speed.
+
+It is recommended that `LispTensor` are installed in the lowest priority of `*using-backend*`, and `Couldnt find any implementation for ...` error will never occurs.")
+
+  (macrolet ((with-op-doc (name type &body body)
+	       `(progn
+		  (placedoc ,name ,type)
+		  ,@body)))
+    (with-op-doc (find-class 'LispTensor) 't)
+    ))
+
+(with-page *cpu-tensor-backend* "[package] :cl-waffe2/backends.cpu"
+  (insert
+   "The package `:cl-waffe2/backends.cpu` provides an AbstractTensor `CPUTensor` where most of its implementation relies on foreign libraries (e.g.: OpenBLAS, oneDNN in the coming future).")
+  
+  (macrolet ((with-op-doc (name type &body body)
+	       `(progn
+		  (placedoc ,name ,type)
+		  ,@body)))
+    (with-op-doc (find-class 'CPUTensor) 't)
+    ))
+
+(with-page *cpu-jit-tensor-backend* "[package] :cl-waffe2/backends.jit.cpu"
+  (insert "The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)")
+  (macrolet ((with-op-doc (name type &body body)
+	       `(progn
+		  (placedoc ,name ,type)
+		  ,@body)))
+    (with-op-doc '*default-c-compiler* 'variable)
+    (with-op-doc '*compiler-flags* 'variable)
+    (with-op-doc '*viz-compiled-code* 'variable)
+
+    (with-op-doc (find-class 'JITCPUTensor) 't)
+    (with-op-doc (find-class 'JITCPUScalarTensor) 't)
+
+    (with-op-doc #'enable-cpu-jit-toplevel 'function)
+    (with-op-doc (macro-function 'with-cpu-jit) 'function)
+    
+    ))
 

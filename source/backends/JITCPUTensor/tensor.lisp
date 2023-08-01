@@ -1,9 +1,15 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-(defclass JITCPUTensor (cl-waffe2/backends.cpu:CPUTensor) nil)
+(defclass JITCPUTensor (cl-waffe2/backends.cpu:CPUTensor) nil
+  (:documentation "
+## [AbstractTensor] JITCPUTensor
+"))
 
-(defclass JITCPUScalarTensor (cl-waffe2/vm.generic-tensor:ScalarTensor) nil)
+(defclass JITCPUScalarTensor (cl-waffe2/vm.generic-tensor:ScalarTensor) nil
+  (:documentation "
+## [AbstractTensor] JITCPUScalarTensor
+"))
 
 (deftype JITAbleTensors ()
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
@@ -25,7 +31,7 @@
 			  (flags '(\"-fPIC\" \"-O3\" \"-march=native\"))))
 ```
 
-Sets `JITCPUTensor` and `JITCPUScalarTensor` to the priority of backends. Place this function in the top of your code that JIT Compiling is needed. Of course, `JITCPUTensor` is developed as a one of `external backends` in cl-waffe2, therefore Local JIT compilation with the `with-devices` macro is another valid option.
+Sets `JITCPUTensor` and `JITCPUScalarTensor` to the top priority of backends. Place this function at the top of your code where JIT Compiling is needed. Of course, `JITCPUTensor` is developed as a one of `external backends` in cl-waffe2, therefore Local JIT compilation with the `with-devices` macro is another valid option.
 
 ### Inputs
 
@@ -42,6 +48,8 @@ Sets `JITCPUTensor` and `JITCPUScalarTensor` to the priority of backends. Place 
 (defmacro with-cpu-jit ((&rest more-devices) &body body)
   "
 ## [macro] with-cpu-jit
+
+Under this macro, two backends (`JITCPUTensor` and `JITCPUScalarTensor`) are installed at the top of the priority list.
 "
   `(with-devices (JITCPUTensor JITCPUScalarTensor ,@more-devices)
      ,@body))
@@ -59,3 +67,4 @@ Sets `JITCPUTensor` and `JITCPUScalarTensor` to the priority of backends. Place 
       (cffi:incf-pointer ptr (the fixnum (* (the fixnum (cffi:foreign-type-size (dtype tensor))) offset)))))
   #-(or sbcl)
   (error "JITCPUTensor requires SBCL to access the storage vector!"))
+

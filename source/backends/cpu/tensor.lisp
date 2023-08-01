@@ -1,7 +1,11 @@
 
 (in-package :cl-waffe2/backends.cpu)
 
-(defclass CPUTensor (AbstractTensor) nil)
+(defclass CPUTensor (AbstractTensor) nil
+  (:documentation "
+## [AbstractTensor] CPUTensor
+
+"))
 
 (defmethod initialize-instance :before ((tensor CPUTensor)
 					&rest initargs

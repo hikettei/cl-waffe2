@@ -13,6 +13,9 @@ nav:
     - cl-waffe2/distributions: distributions.md
     - cl-waffe2/nn: nn.md
     - cl-waffe2/optimizers: optimizer.md
+    - cl-waffe2/backends.lisp: lisp-tensor-backend.md
+    - cl-waffe2/backends.cpu: cpu-tensor-backend.md
+    - cl-waffe2/backends.jit.cpu: cpu-jit-tensor-backend.md
 
 theme: readthedocs
 
