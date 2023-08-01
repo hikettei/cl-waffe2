@@ -51,7 +51,9 @@ an list of AST_Variable
 	   (movetensor-ignore-me (tensor-backward toplevel)))
       ;; MoveTensorNode: X[~] OUT[~] -> X[~]
       ;; If pruned, X is never allocated/used.
+      
       (add-variable (second (tensor-variables toplevel)))
+	
       
       ;; Otherwise, we can collect envolved tensors normally:
       (loop for var in (tensor-variables toplevel)
@@ -84,22 +86,34 @@ an list of AST_Variable
 	    do (ir->C (ast-variable-content var)))
 
     
-    (let ((form
-	    (apply #'translate-op code opAST
-		   (loop for var in (opAST-args opAST)
-			 if (eql (ast-variable-type var) :opAST)
-			   collect (opAST-car (ast-variable-content var))
-			 if (or (eql (ast-variable-type var) :tensor)
-				(eql (ast-variable-type var) :scalar))
-			   collect (ast-variable-content var)))))
+    (let* ((form
+	     (apply #'translate-op code opAST
+		    (loop for var in (opAST-args opAST)
+			  if (eql (ast-variable-type var) :opAST)
+			    collect (opAST-car (ast-variable-content var))
+			  if (or (eql (ast-variable-type var) :tensor)
+				 (eql (ast-variable-type var) :scalar))
+			    collect (ast-variable-content var))))
+	   (save-for-backward-p ;; "=" is intended to make save4bw?
+	     (and (equal "=" (instruction-fname form))
+		  (system-lazy-read-save-for-backward (opAST-car opAST))))
+	   (copy-for-safety ;; "=" is intended to avoid side effects on ExistTensor?
+	     (and (equal "=" (instruction-fname form))
+		  (eql (tensor-attribute (car (instruction-args form))) :input))))
 
       (case (Instruction-type form)
 	(:modify
 	 ;; A[...] += A[...];
-	 (write-c-line "~a ~a ~a;~%"
+	 (write-c-line "~a ~a ~a;~a~%"
 		       (cAref (instruction-displace-to form) :pointer t)
 		       (instruction-fname form)
-		       (cAref (car (instruction-args form)) :pointer t))
+		       (cAref (car (instruction-args form)) :pointer t)
+		       (cond
+			 (save-for-backward-p " // saving for backward")
+			 (copy-for-safety     " // copy for protecting tensors")
+			 ((equal (instruction-fname form) "=") "// intended copy")
+			 (T "")))
+	 
 	 (write-c-line "~a ~a ~a;~%"
 		       (cAref (opAST-car opAST) :pointer t)
 		       "="
@@ -125,14 +139,15 @@ an list of AST_Variable
 	 )
 	
 	(:set
-
-	 (error ":set isn't available currently")
-	 
-	 ;; (write-c-line "~a ~a ~a;~%"
-	 ;;	       (cAref (opAST-car opAST))
-	 ;;	       "="
-	 ;;	       (cAref (instruction-displace-to form)))
+	 ;;         type* variable = value
+	 ;; moves variable -> value with no copies.
+	 (write-c-line "~a* ~a ~a ~a;~%"
+		       (dtype->ctype (dtype (opAST-car opAST)))
+	 	       (tensor-id (opAST-car opAST))
+	 	       "="
+		       (tensor-id (car (instruction-args form))))
 	 )
+	
 
 	(:ignore
 	 

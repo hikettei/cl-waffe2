@@ -84,4 +84,3 @@
 			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))))))
       nil))
 
-

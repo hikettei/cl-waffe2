@@ -56,8 +56,8 @@
   ;; A <- B
   (let ((self (tensor-backward (opAST-car opAST))))
     (if (movetensor-ignore-me self)
-	(make-inst :ignore "" (second args) (second args))
-	(make-inst :modify "=" (car args) (cdr args)))))
+	(make-inst :set     ""   (car args) (cdr args))
+	(make-inst :modify  "="  (car args) (cdr args)))))
 
 (define-impl (InverseTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self x)
