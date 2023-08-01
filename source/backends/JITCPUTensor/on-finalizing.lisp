@@ -92,15 +92,24 @@
 			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
 
 	       ;; (!sin x) isn't working while (!copy (!sin x)) is ok.
-	       (print ,variable)
-	       (print (read-result ,variable))
+	       ,@(loop for tens in tensors
+		       collect `(progn
+				  (print ',(tensor-id tens))
+				  (print ,tens)))
 	       
-	       ;; Synchronize In-place (for scalar tensor?)
+	       ;; Synchronize In-place
 	       (let* (,@(loop for case in (reverse *in-place-routes*)
 			      ;; Sort by tensor-id
 			      collect `(,(tensor-id (car case)) (read-result ,(car case)))))
 		 (setf ,@(loop for case in (reverse *in-place-routes*)
 			       append `((tensor-vec ,(tensor-id (car case)))
-					(tensor-vec (read-result ,(cdr case)))))))))))
+					(tensor-vec (read-result ,(cdr case)))))))
+
+	       ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
+	       ;; Synchronize output if the last node is in-place
+	       ,(let* ((all-tensors `(,@scalars ,@tensors))
+		       (latest-result (find (tensor-id variable) all-tensors :test #'eql :key #'tensor-id)))
+		  (when latest-result
+		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))))))
       nil))
 
