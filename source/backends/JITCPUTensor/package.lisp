@@ -12,6 +12,8 @@
         :cl-waffe2/base-impl)
   (:export
    #:*default-c-compiler*
+   #:*compiler-flags*
+   #:*viz-compiled-code*
    #:JITCPUTensor
    #:JITCPUScalarTensor
    #:enable-cpu-jit-toplevel

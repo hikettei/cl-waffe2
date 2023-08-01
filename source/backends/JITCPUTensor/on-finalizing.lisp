@@ -58,7 +58,9 @@
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
 	  (load-foreign-function source)
-	  ;;(print source)
+
+	  (when *viz-compiled-code*
+	    (format t "== [Log: JITCPUTensor] ===============~%~a~%" source))
 	  (let ((call-form
 		  (if (null tensors)
 		      ;; -> arguments = Scalar

@@ -4,13 +4,24 @@
 (defparameter *default-c-compiler* "gcc" "
 ## [parameter] *default-c-compiler*
 
-Specify the command to compile the generated c codes. In default, \"gcc\"
+Specify the command to compile the generated c codes. In default, \"gcc\".
+")
+
+(defparameter *compiler-flags* '("-fPIC" "-O3" "-march=native") "
+## [parameter] *compiler-flags*
+
+In default, `*compielr-flags*` = `'(\"-fPIC\" \"-O3\" \"-march=native\")`
+")
+
+(defparameter *viz-compiled-code* nil "
+## [parameter] *viz-compiled-code*
+
+Set t to display the compiled c code to terminal. In default, `nil`
 ")
 
 ;; Ref: https://stackoverflow.com/questions/6612169/compile-a-stream-of-data-in-c
 (defun load-foreign-function (source
 			      &key
-				;; (disassemble t)
 				(compiler *default-c-compiler*)
 				(lang "c"))
   (declare (type string source compiler))
@@ -19,11 +30,12 @@ Specify the command to compile the generated c codes. In default, \"gcc\"
     :close-stream
     (let* ((cmd
 	     ;; gcc -shared -o sharedlib
-	     (list
-	      compiler "-shared"
-	      "-x" lang
-	      "-fPIC" "-O3" "-march=native"
-	      "-o" (uiop:native-namestring sharedlib) "-"))
+	     (append
+	      (list
+	       compiler "-shared"
+	       "-x" lang)
+	      *compiler-flags*
+	      (list "-o" (uiop:native-namestring sharedlib) "-")))
 	   (process-info (uiop:launch-program
 			  cmd
 			  :input :stream

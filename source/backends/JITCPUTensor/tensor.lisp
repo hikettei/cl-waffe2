@@ -10,12 +10,33 @@
   `(or JITCPUTensor JITCPUScalarTensor))
 
 (defun enable-cpu-jit-toplevel (&key
-				  (compiler "gcc"))
+				  (more-devices)
+				  (compiler "gcc")
+				  (viz-compiled-code nil)
+				  (flags '("-fPIC" "-O3" "-march=native")))
   "
 ## [function] enable-cpu-jit-toplevel
+
+```lisp
+(enable-cpu-jit-toplevel (&key
+			  (more-devices)
+			  (compiler \"gcc\")
+			  (viz-compiled-code nil)
+			  (flags '(\"-fPIC\" \"-O3\" \"-march=native\"))))
+```
+
+Sets `JITCPUTensor` and `JITCPUScalarTensor` to the priority of backends. Place this function in the top of your code that JIT Compiling is needed. Of course, `JITCPUTensor` is developed as a one of `external backends` in cl-waffe2, therefore Local JIT compilation with the `with-devices` macro is another valid option.
+
+### Inputs
+
+`more-devices[List]` specify the list of device names. they have lower priority than `JITCPUTensor`
+
+`viz-compiled-code[boolean]` Set t to display the compiled c codes.
 "
-  (setf *default-c-compiler* compiler)
-  (cl-waffe2::set-devices-toplevel 'JITCPUTensor 'JITCPUScalarTensor)
+  (setf *default-c-compiler* compiler
+	*viz-compiled-code* viz-compiled-code
+	*compiler-flags* flags)
+  (apply #'cl-waffe2:set-devices-toplevel 'JITCPUTensor 'JITCPUScalarTensor more-devices)
   t)
 
 (defmacro with-cpu-jit ((&rest more-devices) &body body)
