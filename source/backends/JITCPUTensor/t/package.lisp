@@ -11,20 +11,15 @@
 (in-suite :jit-cpu-test)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  
-(add-tester JITCPUTensor)
-(sub-tester JITCPUTensor)
-(mul-tester JITCPUTensor)
-(div-tester JITCPUTensor)
-(move-tester JITCPUTensor)
-
-(scalar-add-tester JITCPUTensor JITCPUScalarTensor)
-(scalar-sub-tester JITCPUTensor JITCPUScalarTensor)
-(scalar-mul-tester JITCPUTensor JITCPUScalarTensor)
-(scalar-div-tester JITCPUTensor JITCPUScalarTensor)
-
-(sum-tester LispTensor JITCPUScalarTensor)
-
-(mathematical-test-set JITCPUTensor JITCPUScalarTensor)
-)
+  (add-tester JITCPUTensor)
+  (sub-tester JITCPUTensor)
+  (mul-tester JITCPUTensor)
+  (div-tester JITCPUTensor)
+  (move-tester JITCPUTensor)
+  (scalar-add-tester JITCPUTensor JITCPUScalarTensor)
+  (scalar-sub-tester JITCPUTensor JITCPUScalarTensor)
+  (scalar-mul-tester JITCPUTensor JITCPUScalarTensor)
+  (scalar-div-tester JITCPUTensor JITCPUScalarTensor)
+  (sum-tester LispTensor JITCPUScalarTensor)
+  (mathematical-test-set JITCPUTensor JITCPUScalarTensor))
 

@@ -61,7 +61,9 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
   (let ((view-count 0))
     (flet ((read-view (nth)
 	     (let ((out (nth nth views)))
-	       out)))
+	       (if (null out)
+		   (error "cl-waffe2/backends.cpu.jit:expand-funcall-form view exhausted")
+		   out))))
       `(cffi:foreign-funcall
 	,function-name
 	,@(if (null views)
