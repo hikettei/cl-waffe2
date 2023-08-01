@@ -87,6 +87,8 @@ an list of AST_Variable
 ;; Anyway, confirm the very least work and then think about it.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; [modify] -> [apply] could be reduced?
+
 (defun ir->c (opAST)
   "Recursively this function explores opAST, generating and writing C code to buffer."
   (declare (type opAST opAST))

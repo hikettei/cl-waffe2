@@ -90,12 +90,6 @@
 	       ;; Synchronize ScalarTensors
 	       (setf ,@(loop for scal in scalars
 			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
-
-	       ;; (!sin x) isn't working while (!copy (!sin x)) is ok.
-	       ,@(loop for tens in tensors
-		       collect `(progn
-				  (print ',(tensor-id tens))
-				  (print ,tens)))
 	       
 	       ;; Synchronize In-place
 	       (let* (,@(loop for case in (reverse *in-place-routes*)
@@ -105,6 +99,16 @@
 			       append `((tensor-vec ,(tensor-id (car case)))
 					(tensor-vec (read-result ,(cdr case)))))))
 
+	       ;; (!sin x) isn't working while (!copy (!sin x)) is ok.
+	       ,@(loop for tens in tensors
+		       collect `(progn
+				  (print ',(tensor-id tens))
+				  (print (read-result ,tens))))
+
+	       (print "VAR")
+	       (print ',(tensor-id variable))
+	       (print (read-result ,variable))
+	       
 	       ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
 	       ;; Synchronize output if the last node is in-place
 	       ,(let* ((all-tensors `(,@scalars ,@tensors))
