@@ -87,7 +87,8 @@
 	(let ((result (cl-waffe2/vm.nodes:on-finalizing-compiling
 		       node
 		       toplevel
-		       called-with-vars)))
+		       called-with-vars
+		       t)))
 	  (when result
 	    (eval result))))
       

@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/backends.jit.lisp)
 
+
 ;;
 ;; Goals:
 ;;   1. Use as a model case when extending to other backends.
@@ -91,7 +92,8 @@ AbstractNodes which extends this class, is recognised as `LispJITAble` Node by L
 
 (defmethod on-finalizing-compiling ((current-node LispJIT-Blueprint)
 				    variable
-				    next-variable)
+				    next-variable
+				    compile-me)
   "If the node is needed to be compiled, compile."
   (if (apply-compile-p variable next-variable)
       (progn

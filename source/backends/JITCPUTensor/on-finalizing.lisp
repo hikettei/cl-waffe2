@@ -60,23 +60,20 @@
 
 (defparameter *caching-c-source* nil)
 (defun maybe-load-foreign-function (source end-of-node-p)
-  (if end-of-node-p
-      (when *caching-c-source*
-	(load-foreign-function
-	 (concatenate 'string
-		      *caching-c-source*
-		      (format nil "~%")
-		      source))
-	(setf *caching-c-source* nil))
-      (setf *caching-c-source* (concatenate 'string
-					    (or *caching-c-source* "")
-					    (format nil "~%")
-					    source))))
+  (setf *caching-c-source* (concatenate 'string
+					(or *caching-c-source* "")
+					(format nil "~%")
+					source))
+  
+  (when (and end-of-node-p *caching-c-source*)
+    (load-foreign-function *caching-c-source*)
+    (setf *caching-c-source* nil)))
 
 ;; Note: eval it when called with vm-build?
 (defmethod on-finalizing-compiling ((current-node CPUJIT-Blueprint)
 				    variable
-				    next-variable)
+				    next-variable
+				    compile-me)
   "If the node is needed to be compiled, compile."
   
   (if (apply-compile-p variable next-variable)
@@ -89,8 +86,7 @@
 
 	  ;; [TODO]: multiple call of gcc may result low performance
 	  ;; Cache it
-	  (maybe-load-foreign-function source (null next-variable))
-
+	  (maybe-load-foreign-function source (or compile-me (null next-variable)))
 	  (when *viz-compiled-code*
 	    (format t "== [Log: JITCPUTensor] ===============~%~a~%" source))
 	  

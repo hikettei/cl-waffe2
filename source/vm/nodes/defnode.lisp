@@ -6,13 +6,13 @@
 (defparameter *node-reject-case-table* (make-hash-table))
 
 (defgeneric on-finalizing-compiling
-    (current-node variable next-variable)
+    (current-node variable next-variable compile-me)
   (:documentation
    "
 ## [generic] on-finalizing-compiling
 
 ```lisp
-(on-finalizing-compiling current-node variable next-variable)
+(on-finalizing-compiling current-node variable next-variable compile-me)
 ```
 
 The generic function `on-finalizing-compiling` is invoked after the body of `define-impl` is expanded when performing `compile-chain-forward`.
@@ -43,10 +43,12 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 
 `next-variables (i.e.: corresponding variable of MoveTensorNode2)` returns corresponding variable of next node.
 
+`compile-me[boolean]` If t, cl-waffe2 needs compiled code that works instantly.
+
 See also: `the implementation of JITLispTensor`.
 "))
 
-(defmethod on-finalizing-compiling ((current-node AbstractNode) variable next-variables)
+(defmethod on-finalizing-compiling ((current-node AbstractNode) variable next-variables compile-me)
   (declare (ignore variable next-variables))
   (when (next-method-p)
     (call-next-method)))
