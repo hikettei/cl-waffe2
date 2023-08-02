@@ -380,7 +380,8 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	    (cl-waffe2/vm.nodes:on-finalizing-compiling
 	     (tensor-backward toplevel)
 	     toplevel
-	     called-with-vars))
+	     called-with-vars
+	     nil))
 	 
 
 	 ;; TODO UPDATE

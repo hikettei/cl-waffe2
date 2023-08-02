@@ -33,3 +33,6 @@
 (defun symb (&rest inputs)
   (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out)))))
 
+(defun delete-newlines (string)
+  (cl-ppcre:regex-replace-all #\newline string " "))
+

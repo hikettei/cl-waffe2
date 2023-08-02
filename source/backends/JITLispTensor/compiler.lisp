@@ -42,7 +42,7 @@
 	    (:constructor make-iseq (code displace-out-to)))
   (code code :type (or symbol list))
   (displace-out-to displace-out-to :type (or symbol list)))
-    
+
 (defstruct (opAST
 	    (:constructor make-opAST (operation &rest args)))
   "opAST is a data structure which is:

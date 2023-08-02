@@ -183,6 +183,7 @@
 	       (:file "backends/lisp/t/package")
 
 	       (:file "backends/JITCPUTensor/t/package")
+	       (:file "backends/JITCPUTensor/t/jit")
 	       
 	       (:file "backends/JITLispTensor/t/package")
 	       (:file "backends/JITLispTensor/t/compiler")
