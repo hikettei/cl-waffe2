@@ -28,21 +28,22 @@
 
 (defun place-toplevel-form (cffi-call-name tensors)
   "Places headers, function definition and macros."
-  
-  (write-buff "~%#pragma SIMD~%")
-  ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
-  ;;(write-buff "#pragma GCC target \"avx2\"")
-  ;; #pragma GCC target "avx2" avx512 ...
-  
-  (loop for include in *includes*
-	do (write-buff "#include <~a>~%" include))
 
-  (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+  (when (null *caching-c-source*) 
+    (write-buff "~%#pragma SIMD~%")
+    ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
+    ;;(write-buff "#pragma GCC target \"avx2\"")
+    ;; #pragma GCC target "avx2" avx512 ...
+    
+    (loop for include in *includes*
+	  do (write-buff "#include <~a>~%" include))
 
-  ;; Utils
-  (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
-  (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
-  )
+    (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+
+    ;; Utils
+    (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
+    (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
+    ))
 
 (defun cAref (tensor &key (pointer nil))
   "Reading the given tensor's id, the function returns a string which corresponds to aref in C"

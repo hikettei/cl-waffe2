@@ -57,11 +57,28 @@
 (defun int-sap-id (tensor)
   (symb (tensor-id tensor) '-sap))
 
+
+(defparameter *caching-c-source* nil)
+(defun maybe-load-foreign-function (source end-of-node-p)
+  (if end-of-node-p
+      (when *caching-c-source*
+	(load-foreign-function
+	 (concatenate 'string
+		      *caching-c-source*
+		      (format nil "~%")
+		      source))
+	(setf *caching-c-source* nil))
+      (setf *caching-c-source* (concatenate 'string
+					    (or *caching-c-source* "")
+					    (format nil "~%")
+					    source))))
+
 ;; Note: eval it when called with vm-build?
 (defmethod on-finalizing-compiling ((current-node CPUJIT-Blueprint)
 				    variable
 				    next-variable)
   "If the node is needed to be compiled, compile."
+  
   (if (apply-compile-p variable next-variable)
       (let ((*in-place-routes*)
 	    (jit-function-name (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
@@ -69,10 +86,14 @@
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
-	  (load-foreign-function source)
+
+	  ;; [TODO]: multiple call of gcc may result low performance
+	  ;; Cache it
+	  (maybe-load-foreign-function source (null next-variable))
 
 	  (when *viz-compiled-code*
 	    (format t "== [Log: JITCPUTensor] ===============~%~a~%" source))
+	  
 	  (let ((call-form
 		  (if (null tensors)
 		      ;; -> arguments = Scalar
@@ -108,7 +129,7 @@
 			       append `((tensor-vec ,(tensor-id (car case)))
 					(tensor-vec (read-result ,(cdr case)))))))
 
-	              
+	       
 	       ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
 	       ;; Synchronize output if the last node is in-place
 	       ,(let* ((all-tensors `(,@scalars ,@tensors))
