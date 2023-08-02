@@ -77,6 +77,12 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	    (write-buff ")"))))
     (format nil "void ~a~a~%" function-name arguments-form)))
 
+(defun insert-loop-for ()
+  (let ((back-indent-size (max 0 (- *indent-width* 4))))
+    (with-indent back-indent-size
+      (write-c-line "}~%~%")
+      (write-c-line "for(int i=0; i<size; i++) {~%"))))
+
 ;; [TODO] Printing JIT Compiler Report
 (defun invoke-compiler! (function-name toplevel)
   "

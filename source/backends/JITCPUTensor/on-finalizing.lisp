@@ -21,24 +21,30 @@
 ;;  Event Handlers
 ;; ===============================================================================
 
+;; End <-> Top
+;;             / variable
+;; next-variable
+;;             \ variable
+
 (defun apply-compile-p (variable next-variable)
   "Following the defition of 3., return t if there's a need to run compiling."
 
   ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
   ;;       ^ :device=t
-  (declare (ignore variable))
   (or
    ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
    (null next-variable)
-   (not (typep next-variable 'JITAbleTensors))
+   ;;(not (typep next-variable 'JITAbleTensors))
    (not (typep (tensor-backward next-variable) 'CPUJIT-Blueprint))
 
-   ;; JITCPUTensor do not provide nodes that change shapes of tensors
-   ;; The change of shapes is detected:
-   ;;(and
-   ;; (not
-   ;;  (cl-waffe2/vm.generic-tensor::shape-equal-list (print (shape variable)) (print (shape next-variable)))))
-
+   ;; Composing element-wise operations with the same iteration.
+   ;; Split iteraton:
+   
+   (null (tensor-variables next-variable))
+   ;; この条件つければ動くけど
+   ;; コンパイルされたコードが細切りになってしまう・・・
+   (some #'tensor-projected-p (tensor-variables next-variable))
+   
    ))
 
 (defparameter *compiling-ntime-count* 0)

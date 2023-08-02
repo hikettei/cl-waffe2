@@ -3,13 +3,9 @@
 
 (in-suite :jit-cpu-test)
 
-;; TODO: Write tests
 
-;; A+=B (!copy (!view ...))
-;; CopyとView以外は動く -> それさえ動けばSoftmax ugoku
-;; with-no-grad
-
-;;(test arithmetic-[normal+normal])
+;; Testing call-with-view/In-place mutation are working well
+;; Also: do tests on with-no-grad mode.
 
 (defun M= (a b)
   (every #'= a b))
@@ -42,6 +38,8 @@
 	 (tensor-vec
 	  (ax+b `(3 3) 0 0))))))
 
+
+;; Broadcasting += Normal
 (test arithmetic-[broadcast]A+B
   (is (with-cpu-jit ()
 	(M=
