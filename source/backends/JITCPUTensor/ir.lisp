@@ -137,54 +137,28 @@ an list of AST_Variable
 	   (and (equal "=" (instruction-fname form))
 		;; (axpy! 1.0 ExistTensor ExistTensor) isn't allowed
 		;; instead, (axpy! 1.0 ExistTensor (copy ExistTensor))
-		(eql (tensor-attribute (car (instruction-args form))) :input)))
-
-	 ;; TODO: Test modify-ignore-flag is working well.
-	 (modify-ignore-flag
-	   ;; A1 = A2
-	   ;; A1 = AX
-	   ;; ->
-	   ;; A1 = AX
-	   (and (equal (instruction-fname form) "=")
-		nil
-		(every (compose #'not #'null #'tensor-backward #'ast-variable-content)
-		       (opAST-args opAST))
-		(some
-		 #'(lambda (next-inst)
-		     (and next-inst
-			  (or (eql :apply (instruction-type form))
-			      (equal "=" (instruction-fname form)))
-			  (equal (tensor-id (instruction-displace-to form))
-				 (tensor-id (instruction-displace-to next-inst)))))
-		 (map 'list
-		      #'(lambda (x)
-			  (when (eql (ast-variable-type x) :opAST)
-			    (op->inst (ast-variable-content x))))
-		      (opAST-args opAST))))))
+		(eql (tensor-attribute (car (instruction-args form))) :input))))
     
 
     (write-c-line "~%")
     (case (Instruction-type form)
       (:modify
        ;; A[...] += A[...]; // comments if any
-       (when modify-ignore-flag
-	 (write-c-line "// [modify] A = B is ignored.~%"))
        
-       (when (not modify-ignore-flag)
-	 (write-c-line "// [modify] A ~a B~%"
-		       (instruction-fname form))
-	 (write-c-line "~a ~a ~a;~a~%"
-		       (cAref (instruction-displace-to form) :pointer t)
-		       (instruction-fname form)
-		       (cAref (car (instruction-args form)) :pointer t)
-		       (cond
-			 ;; The operation "=" is placed for saving for backward
-			 (save-for-backward-p " // saving for backward")
-			 ;; The operation "=" is placed for protecting tensors
-			 ;; (i.e.: ExistTensor isn't allowed to be in-place)
-			 (copy-for-safety     " // in-place guard for :exist tensors")
-			 ((equal (instruction-fname form) "=") " // intended copy")
-			 (T "")))))
+       (write-c-line "// [modify] A ~a B~%"
+		     (instruction-fname form))
+       (write-c-line "~a ~a ~a;~a~%"
+		     (cAref (instruction-displace-to form) :pointer t)
+		     (instruction-fname form)
+		     (cAref (car (instruction-args form)) :pointer t)
+		     (cond
+		       ;; The operation "=" is placed for saving for backward
+		       (save-for-backward-p " // saving for backward")
+		       ;; The operation "=" is placed for protecting tensors
+		       ;; (i.e.: ExistTensor isn't allowed to be in-place)
+		       (copy-for-safety     " // in-place guard for :exist tensors")
+		       ((equal (instruction-fname form) "=") " // intended copy")
+		       (T ""))))
       (:apply
        ;; A[...] = f(A[...], B[...]);
        (write-c-line "// [apply]  ~a~%"

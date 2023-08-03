@@ -42,7 +42,6 @@
 
   ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
   ;;       ^ :device=t
-  (declare (ignore variable))
   (or
    ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
    (null next-variable)
@@ -52,6 +51,7 @@
    
    ;; Composing element-wise operations with the same iteration.
    ;; Split iteraton:
+   (detach-p variable)
    (some #'tensor-projected-p (tensor-variables next-variable))
    ))
 
@@ -117,7 +117,7 @@
 	       (setf ,@(loop for scal in scalars
 			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
 	       ,call-form
-	       
+
 	       ;; Synchronize ScalarTensors
 	       (setf ,@(loop for scal in scalars
 			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
@@ -129,7 +129,6 @@
 		 (setf ,@(loop for case in (reverse *in-place-routes*)
 			       append `((tensor-vec ,(tensor-id (car case)))
 					(tensor-vec (read-result ,(cdr case)))))))
-
 	       
 	       ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
 	       ;; Synchronize output if the last node is in-place
