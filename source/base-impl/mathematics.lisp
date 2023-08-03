@@ -114,10 +114,10 @@ OUT_{copy}\\gets{~(~a~)(X)}
 				   x)))
 			(if ->
 			    (forward (,scal-node-name) x ->)
-			    (forward (,scal-node-name) x (!copy x))))
+			    (forward (,scal-node-name) x (make-clone x))))
 		      (if ->
 			  (forward (,node-name) x ->)
-			  (forward (,node-name) x (!copy x)))))))))
+			  (forward (,node-name) x (make-clone x)))))))))
 
   ;; define-elwise-node will define: nameNode, !name.
 
@@ -281,7 +281,7 @@ Output:
 	       n)))
     (if ->
 	(forward (ExptNode) x -> n)
-	(forward (ExptNode) x (make-input (shape x) nil :dtype (dtype x) :order (order x)) n))))
+	(forward (ExptNode) x (make-clone x) n))))
 
 ;; !pow
 

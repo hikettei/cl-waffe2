@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-
 ;; On compiling, we gather tensors which envolved in compiling to *compiled-tensor*.
 (defvar *compiled-tensors* nil "An list of variables used in the computation node.")
 
@@ -56,7 +55,17 @@ an list of AST_Variable
 	(cdr variables)
 	variables)))
 
-;; Confirm-compiling-areaで正しい範囲の計算ノードを切り取れていない・・・
+;; [FixME]: Circulation of !copy
+;;  sin(x)
+;;
+;;     a
+;;   /   \
+;; sin  copy ... <- copy should be detached from nodes.
+;;  | <- |
+;;  |
+;; out
+;;
+
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
   (declare (type (or JITCPUScalarTensor JITCPUTensor) toplevel))
@@ -75,11 +84,22 @@ an list of AST_Variable
   ;; Explore JITAble Nodes deeper:
   (apply #'make-opAST toplevel
 	 (loop for called-var in (tensor-variables toplevel)
-	       if (apply-compile-p toplevel called-var)
+	       if (or ;;(apply-compile-p called-var toplevel) ;; !Mul 0
+		      ;;(apply-compile-p toplevel called-var) ;;!softmax
+		      (not (typep (tensor-backward called-var) 'CPUJIT-Blueprint))
+		      (tensor-projected-p called-var)
+		      (detach-p called-var))
 		 collect (make-ast-variable called-var)
 	       else
 		 collect (make-ast-variable
 			  (confirm-compiling-area called-var)))))
+
+(defun viz-ast (top &key (indent 0))
+  (dotimes (i indent) (princ " "))
+  (format t "~a~%" (blueprint-opecode (tensor-backward (opAST-car top))))
+  (dolist (arg (opAST-args top))
+    (when (eql (ast-variable-type arg) :opAST)
+      (viz-ast (ast-variable-content arg) :indent (+ 2 indent)))))
 
 ;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Fuse operations ... would be realised by composing ops  (e.g.: apply(apply(x)))
@@ -103,99 +123,84 @@ an list of AST_Variable
   "Recursively this function explores opAST, generating and writing C code to buffer."
   (declare (type opAST opAST))
 
-  (progn;let ((code (blueprint-opecode (tensor-backward (opAST-car opAST)))))
-    (loop for var in (opAST-args opAST)
-	  if (eql (ast-variable-type var) :opAST)
-	    do (ir->C (ast-variable-content var)))
-
+  (when (null (tensor-backward (opAST-car opAST)))
+    (return-from ir->C))
+  
+  (loop for var in (opAST-args opAST)
+	if (eql (ast-variable-type var) :opAST)
+	  do (ir->C (ast-variable-content var)))
+  
+  (let* ((form (op->inst opAST))
+	 ;; Identify the usage of "=" in the computation node
+	 (save-for-backward-p ;; "=" is intended to make save4bw?
+	   (and (equal "=" (instruction-fname form))
+		(system-lazy-read-save-for-backward (opAST-car opAST))))
+	 (copy-for-safety ;; "=" is intended to avoid side effects on ExistTensor?
+	   (and (equal "=" (instruction-fname form))
+		;; (axpy! 1.0 ExistTensor ExistTensor) isn't allowed
+		;; instead, (axpy! 1.0 ExistTensor (copy ExistTensor))
+		(eql (tensor-attribute (car (instruction-args form))) :input))))
     
-    (let* ((form (op->inst opAST))
-	   ;; Identify the usage of "=" in the computation node
-	   (save-for-backward-p ;; "=" is intended to make save4bw?
-	     (and (equal "=" (instruction-fname form))
-		  (system-lazy-read-save-for-backward (opAST-car opAST))))
-	   (copy-for-safety ;; "=" is intended to avoid side effects on ExistTensor?
-	     (and (equal "=" (instruction-fname form))
-		  ;; (axpy! 1.0 ExistTensor ExistTensor) isn't allowed
-		  ;; instead, (axpy! 1.0 ExistTensor (copy ExistTensor))
-		  (eql (tensor-attribute (car (instruction-args form))) :input)))
 
-	   ;; TODO: Test modify-ignore-flag is working well.
-	   (modify-ignore-flag
-	     ;; A1 = A2
-	     ;; A1 = AX
-	     (and (equal (instruction-fname form) "=")
-		  (some
-		   #'(lambda (next-inst)
-		       (and next-inst
-			    ;;(equal (instruction-fname next-inst) "=")
-			    (equal (tensor-id (instruction-displace-to form))
-				   (tensor-id (instruction-displace-to next-inst)))))
-		   (map 'list #'(lambda (x) (when (eql (ast-variable-type x) :opAST) (op->inst (ast-variable-content x)))) (opAST-args opAST))))))
+    (write-c-line "~%")
+    (case (Instruction-type form)
+      (:modify
+       ;; A[...] += A[...]; // comments if any
+       
+       (write-c-line "// [modify] A ~a B~%"
+		     (instruction-fname form))
+       (write-c-line "~a ~a ~a;~a~%"
+		     (cAref (instruction-displace-to form) :pointer t)
+		     (instruction-fname form)
+		     (cAref (car (instruction-args form)) :pointer t)
+		     (cond
+		       ;; The operation "=" is placed for saving for backward
+		       (save-for-backward-p " // saving for backward")
+		       ;; The operation "=" is placed for protecting tensors
+		       ;; (i.e.: ExistTensor isn't allowed to be in-place)
+		       (copy-for-safety     " // in-place guard for :exist tensors")
+		       ((equal (instruction-fname form) "=") " // intended copy")
+		       (T ""))))
+      (:apply
+       ;; A[...] = f(A[...], B[...]);
+       (write-c-line "// [apply]  ~a~%"
+		     (instruction-fname form))
+       (write-c-line "~a = ~a(~a);~%"
+		     (cAref (instruction-displace-to form) :pointer t)
+		     (instruction-fname form)
+		     (with-output-to-string (out)
+		       (loop for arg in (instruction-args form)
+			     for i upfrom 0
+			     do (princ (cAref arg :pointer t) out)
+			     unless (= i (1- (length (instruction-args form))))
+			       do (princ  ", " out)))))
       
+      (:set
+       ;;         type* variable = value
+       ;; moves variable -> value with no copies.
+       (if (equal "=" (instruction-fname form))
+	   (progn
+	     ;;
+	     ;; float* XXX1 = XXX2;
+	     ;;
 
-      (write-c-line "~%")
-      (case (Instruction-type form)
-	(:modify
-	 ;; A[...] += A[...]; // comments if any
-	 (when modify-ignore-flag
-	   (write-c-line "// [modify] A = B is ignored.~%"))
-	 
-	 (when (not modify-ignore-flag)
-	   (write-c-line "// [modify] A ~a B~%"
-			 (instruction-fname form))
-	   (write-c-line "~a ~a ~a;~a~%"
-			 (cAref (instruction-displace-to form) :pointer t)
-			 (instruction-fname form)
-			 (cAref (car (instruction-args form)) :pointer t)
-			 (cond
-			   ;; The operation "=" is placed for saving for backward
-			   (save-for-backward-p " // saving for backward")
-			   ;; The operation "=" is placed for protecting tensors
-			   ;; (i.e.: ExistTensor isn't allowed to be in-place)
-			   (copy-for-safety     " // in-place guard for :exist tensors")
-			   ((equal (instruction-fname form) "=") " // intended copy")
-			   (T "")))))
-	(:apply
-	 ;; A[...] = f(A[...], B[...]);
-	 (write-c-line "// [apply]  ~a~%"
-		       (instruction-fname form))
-	 (write-c-line "~a = ~a(~a);~%"
-		       (cAref (instruction-displace-to form) :pointer t)
-		       (instruction-fname form)
-		       (with-output-to-string (out)
-			 (loop for arg in (instruction-args form)
-			       for i upfrom 0
-			       do (princ (cAref arg :pointer t) out)
-			       unless (= i (1- (length (instruction-args form))))
-				 do (princ  ", " out)))))
-	
-	(:set
-	 ;;         type* variable = value
-	 ;; moves variable -> value with no copies.
-	 (if (equal "=" (instruction-fname form))
-	     (progn
-	       ;;
-	       ;; float* XXX1 = XXX2;
-	       ;;
-
-	       ;; register in-place mutation at toplevel, so compiler can synchronize them later without copying.
-	       (register-in-place-mutation
-		;; Sync: opAST-car <- car args
-		(opAST-car opAST) (car (instruction-args form)))
-	       
-	       (write-c-line "// [set]    in-place mutation~%")
-	       (write-c-line "int32_t ~a_STRIDE = ~a_STRIDE;~%"
-			     (tensor-id (opAST-car opAST))
-			     (tensor-id (car (instruction-args form)))))
-	     (write-c-line "// [set]    A = B~%"))
-	 
-	 (write-c-line "~a* ~a ~a ~a;~%"
-		       (dtype->ctype (dtype (opAST-car opAST)))
-	 	       (tensor-id (opAST-car opAST))
-	 	       "="
-		       (tensor-id (car (instruction-args form)))))
-	(:ignore
-	 
-	 )))))
+	     ;; register in-place mutation at toplevel, so compiler can synchronize them later without copying.
+	     (register-in-place-mutation
+	      ;; Sync: opAST-car <- car args
+	      (opAST-car opAST) (car (instruction-args form)))
+	     
+	     (write-c-line "// [set]    in-place mutation~%")
+	     (write-c-line "int32_t ~a_STRIDE = ~a_STRIDE;~%"
+			   (tensor-id (opAST-car opAST))
+			   (tensor-id (car (instruction-args form)))))
+	   (write-c-line "// [set]    A = B~%"))
+       
+       (write-c-line "~a* ~a ~a ~a;~%"
+		     (dtype->ctype (dtype (opAST-car opAST)))
+	 	     (tensor-id (opAST-car opAST))
+	 	     "="
+		     (tensor-id (car (instruction-args form)))))
+      (:ignore
+       
+       ))))
 
