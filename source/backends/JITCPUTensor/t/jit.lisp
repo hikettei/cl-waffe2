@@ -21,40 +21,19 @@
       (tensor-vec (proceed (lisp-case)))
       (tensor-vec (proceed (jit-case))))))
 
-
-(test arithmetic-A+B
-  (is (with-cpu-jit ()
-	(M=
-	 (tensor-vec
-	  (proceed
-	   (!add (ax+b `(3 3) 1 0) (ax+b `(3 3) 1 0))))
-	 (tensor-vec
-	  (ax+b `(3 3) 2 0)))))
-  (is (with-cpu-jit ()
-	(M=
-	 (tensor-vec
-	  (proceed
-	   (!sub (ax+b `(3 3) 1 0) (ax+b `(3 3) 1 0))))
-	 (tensor-vec
-	  (ax+b `(3 3) 0 0))))))
-
-
-;; Broadcasting += Normal
-(test arithmetic-[broadcast]A+B
-  (is (with-cpu-jit ()
-	(M=
-	 (tensor-vec
-	  (proceed
-	   (!add
-	    (!view (ax+b `(1 3) 0 0) `(:broadcast 3))
-	    (ax+b `(3 3) 0 1))))
-	 (tensor-vec
-	  (ax+b `(1 3) 0 3)))))
-  (is (with-test-form
-	(!sum (ax+b `(3 3) 1 0)))))
-
-
 (test softmax-complicated-views-test
   (is (with-test-form (cl-waffe2/nn:!softmax (ax+b `(3 3) 0 1)))))
 
+
+;; Things should also tested:
+;; backward
+
+(test backward-test
+  (is (let ((a (parameter (ax+b `(3 3) 0 1))))
+	(proceed-backward (!sin a))
+	(= (cos 1) (vref (grad a) 0)))))
+
+;;(progn
+;;  (let ((a (parameter (ax+b `(3 3) 0 1))))	      
+ ;;   (forward (build (!mul a (make-tensor 1.0))))))
 

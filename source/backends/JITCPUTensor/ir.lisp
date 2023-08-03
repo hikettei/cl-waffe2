@@ -84,8 +84,10 @@ an list of AST_Variable
   ;; Explore JITAble Nodes deeper:
   (apply #'make-opAST toplevel
 	 (loop for called-var in (tensor-variables toplevel)
-	       if (or (apply-compile-p called-var toplevel)
+	       if (or ;;(apply-compile-p called-var toplevel) ;; !Mul 0
+		      ;;(apply-compile-p toplevel called-var) ;;!softmax
 		      (not (typep (tensor-backward called-var) 'CPUJIT-Blueprint))
+		      (tensor-projected-p called-var)
 		      (detach-p called-var))
 		 collect (make-ast-variable called-var)
 	       else
@@ -123,7 +125,6 @@ an list of AST_Variable
 
   (when (null (tensor-backward (opAST-car opAST)))
     (return-from ir->C))
-  
   
   (loop for var in (opAST-args opAST)
 	if (eql (ast-variable-type var) :opAST)
