@@ -1,7 +1,6 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-
 ;; On compiling, we gather tensors which envolved in compiling to *compiled-tensor*.
 (defvar *compiled-tensors* nil "An list of variables used in the computation node.")
 
@@ -56,7 +55,17 @@ an list of AST_Variable
 	(cdr variables)
 	variables)))
 
-;; Confirm-compiling-areaで正しい範囲の計算ノードを切り取れていない・・・
+;; [FixME]: Circulation of !copy
+;;  sin(x)
+;;
+;;     a
+;;   /   \
+;; sin  copy ... <- copy should be detached from nodes.
+;;  | <- |
+;;  |
+;; out
+;;
+
 (defun confirm-compiling-area (toplevel)
   "Tracing the previous variables, returns AST of compiling region."
   (declare (type (or JITCPUScalarTensor JITCPUTensor) toplevel))
@@ -75,11 +84,20 @@ an list of AST_Variable
   ;; Explore JITAble Nodes deeper:
   (apply #'make-opAST toplevel
 	 (loop for called-var in (tensor-variables toplevel)
-	       if (apply-compile-p toplevel called-var)
+	       for i upfrom 0
+	       if (or (apply-compile-p toplevel called-var)
+		      (detach-p called-var))
 		 collect (make-ast-variable called-var)
 	       else
 		 collect (make-ast-variable
 			  (confirm-compiling-area called-var)))))
+
+(defun viz-ast (top &key (indent 0))
+  (dotimes (i indent) (princ " "))
+  (format t "~a~%" (blueprint-opecode (tensor-backward (opAST-car top))))
+  (dolist (arg (opAST-args top))
+    (when (eql (ast-variable-type arg) :opAST)
+      (viz-ast (ast-variable-content arg) :indent (+ 2 indent)))))
 
 ;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Fuse operations ... would be realised by composing ops  (e.g.: apply(apply(x)))
@@ -102,6 +120,8 @@ an list of AST_Variable
 (defun ir->c (opAST)
   "Recursively this function explores opAST, generating and writing C code to buffer."
   (declare (type opAST opAST))
+  ;;(print (viz-ast opAST))
+  ;;(format t "~%")
 
   (progn;let ((code (blueprint-opecode (tensor-backward (opAST-car opAST)))))
     (loop for var in (opAST-args opAST)
@@ -124,11 +144,14 @@ an list of AST_Variable
 	   (modify-ignore-flag
 	     ;; A1 = A2
 	     ;; A1 = AX
+	     ;; ->
+	     ;; A1 = AX
 	     (and (equal (instruction-fname form) "=")
 		  (some
 		   #'(lambda (next-inst)
 		       (and next-inst
-			    ;;(equal (instruction-fname next-inst) "=")
+			    (or (eql :apply (instruction-type form))
+				(equal "=" (instruction-fname form)))
 			    (equal (tensor-id (instruction-displace-to form))
 				   (tensor-id (instruction-displace-to next-inst)))))
 		   (map 'list #'(lambda (x) (when (eql (ast-variable-type x) :opAST) (op->inst (ast-variable-content x)))) (opAST-args opAST))))))
