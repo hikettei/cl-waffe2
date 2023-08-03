@@ -1,0 +1,203 @@
+  seconds  |     gc     |    consed   |  calls  |  sec/call  |  name  
+-----------------------------------------------------------
+     0.627 |      0.098 | 161,909,312 |       1 |   0.626500 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPILE-BACKWARD-KERNEL
+     0.523 |      0.069 | 109,358,432 |      13 |   0.040228 | CL-WAFFE2/VM.GENERIC-TENSOR:COMPILE-FORWARD-KERNEL
+     0.004 |      0.000 |   4,689,824 |   3,674 |   0.000001 | CL-WAFFE2/VM.GENERIC-TENSOR::SYMB
+     0.001 |      0.000 |           0 |     309 |   0.000002 | CL-WAFFE2/VM.GENERIC-TENSOR::REGISTER-VARIABLES
+     0.000 |      0.000 |       1,936 |   1,515 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MOVETENSOR-P
+     0.000 |      0.000 |      78,976 |     114 |   0.000003 | CL-WAFFE2/BASE-IMPL:MOVETENSORNODE
+     0.000 |      0.000 |       4,496 |      20 |   0.000011 | CL-WAFFE2/BASE-IMPL::VIEWTENSORNODE
+     0.000 |      0.000 |      38,176 |      20 |   0.000011 | CL-WAFFE2/BASE-IMPL:MOVESCALARTENSORNODE
+     0.000 |      0.000 |           0 |     873 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::PREPROCESS-SUBSCRIPT
+     0.000 |      0.000 |         544 |       9 |   0.000016 | CL-WAFFE2/BASE-IMPL:SCALARMUL
+     0.000 |      0.000 |           0 |     308 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::SHAPE-EQUAL-LIST
+     0.000 |      0.000 |      33,920 |      12 |   0.000011 | CL-WAFFE2/BASE-IMPL::FLEXIBLE-RANK-NODE
+     0.000 |      0.000 |      89,456 |     318 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-GENSYM-LIST
+     0.000 |      0.000 |       1,760 |      12 |   0.000010 | CL-WAFFE2/BASE-IMPL::PERMUTE-NODE
+     0.000 |      0.000 |      32,512 |     476 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::PERMUTED-P
+     0.000 |      0.000 |           0 |      64 |   0.000001 | CL-WAFFE2/VM.GENERIC-TENSOR::FIND-SCALAR-TENSOR
+     0.000 |      0.000 |         608 |       7 |   0.000010 | CL-WAFFE2/BASE-IMPL::RESHAPETENSORNODE
+     0.000 |      0.000 |           0 |     489 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-ATTRIBUTE
+     0.000 |      0.000 |           0 |     882 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::STEP-SUBSCRIPT
+     0.000 |      0.000 |       2,416 |       6 |   0.000009 | CL-WAFFE2/BASE-IMPL::LAZYTRANSPOSENODE
+     0.000 |      0.000 |           0 |     245 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MAKE-COMPILED-KERNEL
+     0.000 |      0.000 |           0 |     412 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COLUMN-MAJOR-CALC-STRIDES
+     0.000 |      0.000 |           0 |     233 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::ORDER-REDUCTABLE-P
+     0.000 |      0.000 |           0 |   3,171 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:SCALAR-P
+     0.000 |      0.000 |           0 |     514 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:DTYPE->LISP-TYPE
+     0.000 |      0.000 |         368 |       4 |   0.000012 | CL-WAFFE2/BASE-IMPL:SCALARDIV
+     0.000 |      0.000 |       1,792 |       7 |   0.000007 | CL-WAFFE2/BASE-IMPL:MULNODE
+     0.000 |      0.000 |     131,056 |   1,678 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-SUBSCRIPT
+     0.000 |      0.000 |           0 |     195 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::UPDATE-CALLING-ROUTE
+     0.000 |      0.000 |       1,872 |      11 |   0.000003 | CL-WAFFE2/BASE-IMPL:ADDNODE
+     0.000 |      0.000 |           0 |     112 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::SAVE-FOR-BACKWARD-SPACE
+     0.000 |      0.000 |           0 |     493 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:SHAPE-EQUAL
+     0.000 |      0.000 |      65,024 |     186 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::NO-PERMUTE-P
+     0.000 |      0.000 |           0 |      81 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-TRACED-P
+     0.000 |      0.000 |           0 |       4 |   0.000007 | CL-WAFFE2/BASE-IMPL::SCALARANDSCALARMUL
+     0.000 |      0.000 |      32,720 |     246 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MAKE-STATECONTAINER
+     0.000 |      0.000 |           0 |     831 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::LAZY*
+     0.000 |      0.000 |           0 |     243 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-ID)
+     0.000 |      0.000 |           0 |       3 |   0.000009 | CL-WAFFE2/VM.GENERIC-TENSOR::ADDROW!
+     0.000 |      0.000 |       1,904 |      24 |   0.000001 | CL-WAFFE2/BASE-IMPL:TRANSPOSED-P
+     0.000 |      0.000 |           0 |   1,206 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:ANCESTOR-PARAM-P
+     0.000 |      0.000 |       2,448 |       9 |   0.000002 | CL-WAFFE2/BASE-IMPL:MATMULNODE
+     0.000 |      0.000 |           0 |      81 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-TRACED-P)
+     0.000 |      0.000 |           0 |     873 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPUTE-VISIBLE-END-IDX
+     0.000 |      0.000 |           0 |     308 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:OFFSET-OF
+     0.000 |      0.000 |           0 |     518 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:ORDER
+     0.000 |      0.000 |       1,584 |       2 |   0.000008 | CL-WAFFE2/BASE-IMPL:WHERE-OPERATION-NODE
+     0.000 |      0.000 |           0 |     718 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-STRIDE)
+     0.000 |      0.000 |           0 |       7 |   0.000002 | CL-WAFFE2/BASE-IMPL::PARSE-RESHAPE-ARGS
+     0.000 |      0.000 |           0 |     718 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-VIEW)
+     0.000 |      0.000 |           0 |     112 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:SYSTEM-LAZY-READ-SAVE-FOR-BACKWARD
+     0.000 |      0.000 |           0 |       1 |   0.000012 | CL-WAFFE2/VM.GENERIC-TENSOR::RENDER-TABLE
+     0.000 |      0.000 |           0 |      39 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::EXPAND-VIEW-STRIDE-ADDER
+     0.000 |      0.000 |           0 |      81 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::EXPAND-FIRST-OFFSET-ADDER
+     0.000 |      0.000 |           0 |      40 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-VEC)
+     0.000 |      0.000 |           0 |   1,440 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-N-REF
+     0.000 |      0.000 |         256 |       1 |   0.000010 | CL-WAFFE2/BASE-IMPL:SCALAR-SQUARENODE
+     0.000 |      0.000 |           0 |       1 |   0.000010 | CL-WAFFE2/BASE-IMPL::MAT->SCALARNODE
+     0.000 |      0.000 |           0 |      67 |   0.000000 | CL-WAFFE2/BASE-IMPL::EXTEND-STATES
+     0.000 |      0.000 |           0 |      25 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::SAVE-FOR-BACKWARD-SPACE)
+     0.000 |      0.000 |           0 |     246 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-STATE)
+     0.000 |      0.000 |           0 |     246 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-VARIABLES)
+     0.000 |      0.000 |           0 |     475 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-VISIBLE-SHAPE)
+     0.000 |      0.000 |           0 |      27 |   0.000000 | CL-WAFFE2/BASE-IMPL:MOVETENSOR-IGNORE-ME
+     0.000 |      0.000 |           0 |     246 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:ANCESTOR-PARAM-P)
+     0.000 |      0.000 |           0 |     346 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::VEC
+     0.000 |      0.000 |           0 |       3 |   0.000002 | CL-WAFFE2/VM.GENERIC-TENSOR::UPDATE-ROW-INFO!
+     0.000 |      0.000 |           0 |     309 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:DETACH-P
+     0.000 |      0.000 |           0 |     192 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:SIZE-OF
+     0.000 |      0.000 |           0 |      15 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COERCE-LAZY
+     0.000 |      0.000 |           0 |      12 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::GRADIENT-RESETTER)
+     0.000 |      0.000 |           0 |      12 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::GRADIENT-ADDER)
+     0.000 |      0.000 |           0 |      12 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-VISIBLE-SHAPE
+     0.000 |      0.000 |           0 |       6 |   0.000001 | CL-WAFFE2/VM.GENERIC-TENSOR::GRADIENT-ADDER
+     0.000 |      0.000 |           0 |   2,846 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-VIEW
+     0.000 |      0.000 |           0 |     119 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-FLEXIBLE-P
+     0.000 |      0.000 |           0 |     712 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-NAME
+     0.000 |      0.000 |           0 |       9 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::APPLY-FLEXIBLE-SUBSCRIPT
+     0.000 |      0.000 |           0 |       6 |   0.000001 | (SETF CL-WAFFE2/BASE-IMPL::RAW-TENSOR)
+     0.000 |      0.000 |           0 |       9 |   0.000000 | CL-WAFFE2/BASE-IMPL:TRANS-A?
+     0.000 |      0.000 |           0 |      14 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPILE-OPTION-FORM
+     0.000 |      0.000 |           0 |       2 |   0.000001 | CL-WAFFE2/BASE-IMPL:LOGICAL-FALSE-THEN
+     0.000 |      0.000 |           0 |       1 |   0.000001 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPILED-BACKWARD
+     0.000 |      0.000 |           0 |       1 |   0.000001 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-VARIABLE-TABLE
+     0.000 |      0.000 |           0 |      27 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-FACET)
+     0.000 |      0.000 |           0 |   1,260 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::ORIGINAL-SHAPE
+     0.000 |      0.000 |           0 |       9 |   0.000000 | CL-WAFFE2/BASE-IMPL:TRANS-B?
+     0.000 |      0.000 |           0 |       9 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-ALLOC-STATE
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/BASE-IMPL::FLEX-AT
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/BASE-IMPL::RAW-TENSOR
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::SET-GRAD
+     0.000 |      0.000 |           0 |       3 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-ROW
+     0.000 |      0.000 |           0 |      12 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::SYNC-PERMUTE!
+     0.000 |      0.000 |           0 |       2 |   0.000000 | (SETF CL-WAFFE2/BASE-IMPL:MOVETENSOR-IGNORE-ME)
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::PARSE-ABSOLUTE
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:COMPILED-VARIABLES
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPILED-FORWARD
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-LAZY-VARIABLE
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-PRINT-TABLE
+     0.000 |      0.000 |           0 |     246 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-OUT-N)
+     0.000 |      0.000 |           0 |      12 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::PERMUTE-COMPUTABLE-P
+     0.000 |      0.000 |           0 |       3 |   0.000000 | CL-WAFFE2/BASE-IMPL::PERMUTE-OLD
+     0.000 |      0.000 |           0 |       3 |   0.000000 | CL-WAFFE2/BASE-IMPL::RESHAPENODE-SHAPE
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:A>SCAL
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:LOGICAL-CONDITION
+     0.000 |      0.000 |     293,904 |      12 |   0.000000 | CL-WAFFE2/BASE-IMPL:!PERMUTE
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/BASE-IMPL:!SCALAR-MUL
+     0.000 |      0.000 |           0 |       9 |   0.000000 | CL-WAFFE2/BASE-IMPL:!T
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:A+=B
+     0.000 |      0.000 |           0 |       3 |   0.000000 | CL-WAFFE2/BASE-IMPL:!ADD
+     0.000 |      0.000 |     424,000 |      20 |   0.000000 | CL-WAFFE2/BASE-IMPL:!VIEW
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:!WHERE
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:LOGICAL-TRUE-THEN
+     0.000 |      0.000 |           0 |       3 |   0.000000 | CL-WAFFE2/BASE-IMPL:->CONTIGUOUS
+     0.000 |      0.000 |           0 |      58 |   0.000000 | CL-WAFFE2/BASE-IMPL:!COPY
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:!MEAN
+     0.000 |      0.000 |     227,584 |     134 |   0.000000 | CL-WAFFE2/BASE-IMPL:!MOVE
+     0.000 |      0.000 |      32,464 |       3 |   0.000000 | CL-WAFFE2/BASE-IMPL:!MATRIX-ADD
+     0.000 |      0.000 |      32,512 |      12 |   0.000000 | CL-WAFFE2/BASE-IMPL:!FLEXIBLE
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/BASE-IMPL:READ-UNTRANSPOSED
+     0.000 |      0.000 |      32,512 |       9 |   0.000000 | CL-WAFFE2/BASE-IMPL:!MATMUL
+     0.000 |      0.000 |           0 |      12 |   0.000000 | CL-WAFFE2/BASE-IMPL:!MUL
+     0.000 |      0.000 |           0 |     313 |   0.000000 | CL-WAFFE2/BASE-IMPL:MOVETENSOR-SAVE-FOR-BACKWARD
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/BASE-IMPL:!SQUARE
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:A*=SCAL
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/BASE-IMPL:->SCAL
+     0.000 |      0.000 |           0 |       4 |   0.000000 | CL-WAFFE2/BASE-IMPL:!SCALAR-DIV
+     0.000 |      0.000 |           0 |       3 |   0.000000 | CL-WAFFE2/BASE-IMPL:!RANKUP
+     0.000 |      0.000 |      64,800 |       7 |   0.000000 | CL-WAFFE2/BASE-IMPL:!RESHAPE
+     0.000 |      0.000 |           0 |       2 |   0.000000 | CL-WAFFE2/BASE-IMPL:!SUM
+     0.000 |      0.000 |           0 |       7 |   0.000000 | CL-WAFFE2/BASE-IMPL:!MATRIX-MUL
+     0.000 |      0.000 |           0 |       4 |   0.000000 | CL-WAFFE2/BASE-IMPL:!DIV
+     0.000 |      0.000 |           0 |       4 |   0.000000 | CL-WAFFE2/BASE-IMPL:!SAS-MUL
+     0.000 |      0.000 |           0 |      30 |   0.000000 | CL-WAFFE2/BASE-IMPL::TENSOR-PERMUTED-P
+     0.000 |      0.000 |           0 |      51 |   0.000000 | CL-WAFFE2/BASE-IMPL::NUMBER->STENSOR
+     0.000 |      0.000 |           0 |      12 |   0.000000 | CL-WAFFE2/BASE-IMPL::LIST-DIFF
+     0.000 |      0.000 |      91,328 |      28 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MAKE-TENSOR
+     0.000 |      0.000 |           0 |      94 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MAKE-CLONE
+     0.000 |      0.000 |           0 |      39 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-VEC
+     0.000 |      0.000 |      32,512 |     475 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:COMPUTE-VISIBLE-SHAPE
+     0.000 |      0.000 |     746,928 |     477 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MAKE-INPUT
+     0.000 |      0.000 |           0 |     107 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-FLEXIBLE-P)
+     0.000 |      0.000 |           0 |      25 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:SYSTEM-LAZY-SET-SAVE-FOR-BACKWARD
+     0.000 |      0.000 |           0 |     313 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-PROTECT-ME
+     0.000 |      0.000 |           0 |     309 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-OUT-N
+     0.000 |      0.000 |           0 |   1,155 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:ACTUAL-SHAPE
+     0.000 |      0.000 |           0 |     281 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:STRIDE-OF
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:BUILD
+     0.000 |      0.000 |       7,680 |      22 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:VIEW
+     0.000 |      0.000 |           0 |      18 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:GRAD
+     0.000 |      0.000 |           0 |      69 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:DIMS
+     0.000 |      0.000 |           0 |     962 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-STATE
+     0.000 |      0.000 |           0 |   8,229 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-ID
+     0.000 |      0.000 |     422,512 |     674 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:COMPILE-FORWARD-CHAIN
+     0.000 |      0.000 |           0 |      10 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-PROJECTED-P
+     0.000 |      0.000 |           0 |   7,963 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:VIEWTYPE
+     0.000 |      0.000 |           0 |   3,754 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-VARIABLES
+     0.000 |      0.000 |           0 |   7,374 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:FORCE-LIST
+     0.000 |      0.000 |           0 |     171 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:DETACH-P)
+     0.000 |      0.000 |           0 |     246 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-BACKWARD)
+     0.000 |      0.000 |           0 |   2,655 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-BACKWARD
+     0.000 |      0.000 |           0 |   3,992 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:SHAPE
+     0.000 |      0.000 |           0 |      12 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:PERMUTE*
+     0.000 |      0.000 |      98,736 |     156 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:CALL-WITH-VIEW
+     0.000 |      0.000 |           0 |      68 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:MAKE-VM-FUNCTION
+     0.000 |      0.000 |           0 |     830 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-FACET
+     0.000 |      0.000 |           0 |   2,489 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:DTYPE
+     0.000 |      0.000 |           0 |     624 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR:TENSOR-STRIDE
+     0.000 |      0.000 |      32,752 |     335 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-VIEWINSTRUCTION
+     0.000 |      0.000 |           0 |     320 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::USER-INPUT-P
+     0.000 |      0.000 |       5,104 |      12 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::DETACH-AND-CLONE1
+     0.000 |      0.000 |           0 |   5,904 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::READ-SYMBOL
+     0.000 |      0.000 |           0 |      14 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::PLACE-CACHED-KERNELS
+     0.000 |      0.000 |           0 |     551 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-PERMUTE-ORDER)
+     0.000 |      0.000 |           0 |   3,054 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-PERMUTE-ORDER
+     0.000 |      0.000 |           0 |      40 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::WRITE-VEC
+     0.000 |      0.000 |           0 |      34 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-INPUT-SHAPE
+     0.000 |      0.000 |           0 |       9 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::GET-FROM-MEMORY-POOL
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-GRADIENT-RESETTER
+     0.000 |      0.000 |           0 |      81 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TRACE-AND-OPTIMIZE-NODE!
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-GRADIENT-ADDER
+     0.000 |      0.000 |           0 |   1,366 |   0.000000 | (SETF CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR-N-REF)
+     0.000 |      0.000 |      32,512 |     475 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::PARSE-VIEW-SUBSCRIPTS
+     0.000 |      0.000 |           0 |       6 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::INIT-OPTIMIZER-UTILS!
+     0.000 |      0.000 |           0 |       1 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::CONSTRUCT-VARIABLES-TABLE
+     0.000 |      0.000 |           0 |     218 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::LAZY-MULUP
+     0.000 |      0.000 |      32,512 |      42 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::EXPAND-FUNCALL-WITH-VIEW
+     0.000 |      0.000 |           0 |   2,079 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPUTE-VISIBLE-END-IDX-ACTUAL
+     0.000 |      0.000 |           0 |      81 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::OPTIMIZE-COMPUTATION-NODE!
+     0.000 |      0.000 |      97,504 |     114 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::EXPAND-CALL-WITH-VIEW-FLATTEN
+     0.000 |      0.000 |           0 |     412 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::CALC-STRIDES
+     0.000 |      0.000 |      64,992 |     992 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::WRAP-X
+     0.000 |      0.000 |           0 |     285 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TENSOR->ID
+     0.000 |      0.000 |           0 |   2,952 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPUTE-VISIBLE-START-IDX
+     0.000 |      0.000 |           0 |     178 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::CACHE-KERNEL-FORM
+     0.000 |      0.000 |     552,704 |  34,899 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAP-TREE
+     0.000 |      0.000 |     163,376 |      65 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::COMPILE-BACKWARD-CHAIN
+     0.000 |      0.000 |           0 |      81 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::TRACE-AND-EXPLORE-NODES!
+     0.000 |      0.000 |   4,070,880 |   1,038 |   0.000000 | CL-WAFFE2/VM.GENERIC-TENSOR::MAKE-KERNEL-NAME
+-----------------------------------------------------------
+     1.157 |      0.167 | 284,041,200 | 131,545 |            | Total
