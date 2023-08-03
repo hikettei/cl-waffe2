@@ -436,12 +436,9 @@ inputs      ... inputs called with
 	      (cons
 	       out
 	       `(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
-		  ;;(print "=======")
-		  ;;(print ,dout)
 		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
 		   ,dout
 		   ,dout-place)
-		  ;;(print ,dout)
 		  
 		  ,(with-no-grad
 		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))

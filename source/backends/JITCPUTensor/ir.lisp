@@ -85,6 +85,7 @@ an list of AST_Variable
   (apply #'make-opAST toplevel
 	 (loop for called-var in (tensor-variables toplevel)
 	       if (or (apply-compile-p called-var toplevel)
+		      (not (typep (tensor-backward called-var) 'CPUJIT-Blueprint))
 		      (detach-p called-var))
 		 collect (make-ast-variable called-var)
 	       else
