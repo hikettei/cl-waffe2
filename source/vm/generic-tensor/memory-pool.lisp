@@ -50,7 +50,10 @@
   "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
 (defvar       *thread-pool-lock*   (make-lock "thread cache lock"))
 
-(defvar *adjustable-shape-table* nil "An hash-table: Symbol -> Size.") ;; (A -> 10, B -> 10)
+;; It was originally (defvar *adjustable-shape-table* nil)
+;; If there's any shape-error related to static composite functions, doubt this:
+(defparameter *adjustable-shape-table* (make-hash-table) "An hash-table: Symbol -> Size.") ;; (A -> 10, B -> 10)
+
 (defvar *current-shape-state*    nil) ;; Global Adjustable-Shape-State
 
 (defstruct Memory-Pool
