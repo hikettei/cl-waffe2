@@ -84,8 +84,7 @@ an list of AST_Variable
   ;; Explore JITAble Nodes deeper:
   (apply #'make-opAST toplevel
 	 (loop for called-var in (tensor-variables toplevel)
-	       for i upfrom 0
-	       if (or (apply-compile-p toplevel called-var)
+	       if (or (apply-compile-p called-var toplevel)
 		      (detach-p called-var))
 		 collect (make-ast-variable called-var)
 	       else
@@ -120,105 +119,112 @@ an list of AST_Variable
 (defun ir->c (opAST)
   "Recursively this function explores opAST, generating and writing C code to buffer."
   (declare (type opAST opAST))
-  ;;(print (viz-ast opAST))
-  ;;(format t "~%")
 
-  (progn;let ((code (blueprint-opecode (tensor-backward (opAST-car opAST)))))
-    (loop for var in (opAST-args opAST)
-	  if (eql (ast-variable-type var) :opAST)
-	    do (ir->C (ast-variable-content var)))
+  (when (null (tensor-backward (opAST-car opAST)))
+    (return-from ir->C))
+  
+  
+  (loop for var in (opAST-args opAST)
+	if (eql (ast-variable-type var) :opAST)
+	  do (ir->C (ast-variable-content var)))
+  
+  (let* ((form (op->inst opAST))
+	 ;; Identify the usage of "=" in the computation node
+	 (save-for-backward-p ;; "=" is intended to make save4bw?
+	   (and (equal "=" (instruction-fname form))
+		(system-lazy-read-save-for-backward (opAST-car opAST))))
+	 (copy-for-safety ;; "=" is intended to avoid side effects on ExistTensor?
+	   (and (equal "=" (instruction-fname form))
+		;; (axpy! 1.0 ExistTensor ExistTensor) isn't allowed
+		;; instead, (axpy! 1.0 ExistTensor (copy ExistTensor))
+		(eql (tensor-attribute (car (instruction-args form))) :input)))
 
+	 ;; TODO: Test modify-ignore-flag is working well.
+	 (modify-ignore-flag
+	   ;; A1 = A2
+	   ;; A1 = AX
+	   ;; ->
+	   ;; A1 = AX
+	   (and (equal (instruction-fname form) "=")
+		nil
+		(every (compose #'not #'null #'tensor-backward #'ast-variable-content)
+		       (opAST-args opAST))
+		(some
+		 #'(lambda (next-inst)
+		     (and next-inst
+			  (or (eql :apply (instruction-type form))
+			      (equal "=" (instruction-fname form)))
+			  (equal (tensor-id (instruction-displace-to form))
+				 (tensor-id (instruction-displace-to next-inst)))))
+		 (map 'list
+		      #'(lambda (x)
+			  (when (eql (ast-variable-type x) :opAST)
+			    (op->inst (ast-variable-content x))))
+		      (opAST-args opAST))))))
     
-    (let* ((form (op->inst opAST))
-	   ;; Identify the usage of "=" in the computation node
-	   (save-for-backward-p ;; "=" is intended to make save4bw?
-	     (and (equal "=" (instruction-fname form))
-		  (system-lazy-read-save-for-backward (opAST-car opAST))))
-	   (copy-for-safety ;; "=" is intended to avoid side effects on ExistTensor?
-	     (and (equal "=" (instruction-fname form))
-		  ;; (axpy! 1.0 ExistTensor ExistTensor) isn't allowed
-		  ;; instead, (axpy! 1.0 ExistTensor (copy ExistTensor))
-		  (eql (tensor-attribute (car (instruction-args form))) :input)))
 
-	   ;; TODO: Test modify-ignore-flag is working well.
-	   (modify-ignore-flag
-	     ;; A1 = A2
-	     ;; A1 = AX
-	     ;; ->
-	     ;; A1 = AX
-	     (and (equal (instruction-fname form) "=")
-		  (some
-		   #'(lambda (next-inst)
-		       (and next-inst
-			    (or (eql :apply (instruction-type form))
-				(equal "=" (instruction-fname form)))
-			    (equal (tensor-id (instruction-displace-to form))
-				   (tensor-id (instruction-displace-to next-inst)))))
-		   (map 'list #'(lambda (x) (when (eql (ast-variable-type x) :opAST) (op->inst (ast-variable-content x)))) (opAST-args opAST))))))
-      
-
-      (write-c-line "~%")
-      (case (Instruction-type form)
-	(:modify
-	 ;; A[...] += A[...]; // comments if any
-	 (when modify-ignore-flag
-	   (write-c-line "// [modify] A = B is ignored.~%"))
-	 
-	 (when (not modify-ignore-flag)
-	   (write-c-line "// [modify] A ~a B~%"
-			 (instruction-fname form))
-	   (write-c-line "~a ~a ~a;~a~%"
-			 (cAref (instruction-displace-to form) :pointer t)
-			 (instruction-fname form)
-			 (cAref (car (instruction-args form)) :pointer t)
-			 (cond
-			   ;; The operation "=" is placed for saving for backward
-			   (save-for-backward-p " // saving for backward")
-			   ;; The operation "=" is placed for protecting tensors
-			   ;; (i.e.: ExistTensor isn't allowed to be in-place)
-			   (copy-for-safety     " // in-place guard for :exist tensors")
-			   ((equal (instruction-fname form) "=") " // intended copy")
-			   (T "")))))
-	(:apply
-	 ;; A[...] = f(A[...], B[...]);
-	 (write-c-line "// [apply]  ~a~%"
+    (write-c-line "~%")
+    (case (Instruction-type form)
+      (:modify
+       ;; A[...] += A[...]; // comments if any
+       (when modify-ignore-flag
+	 (write-c-line "// [modify] A = B is ignored.~%"))
+       
+       (when (not modify-ignore-flag)
+	 (write-c-line "// [modify] A ~a B~%"
 		       (instruction-fname form))
-	 (write-c-line "~a = ~a(~a);~%"
+	 (write-c-line "~a ~a ~a;~a~%"
 		       (cAref (instruction-displace-to form) :pointer t)
 		       (instruction-fname form)
-		       (with-output-to-string (out)
-			 (loop for arg in (instruction-args form)
-			       for i upfrom 0
-			       do (princ (cAref arg :pointer t) out)
-			       unless (= i (1- (length (instruction-args form))))
-				 do (princ  ", " out)))))
-	
-	(:set
-	 ;;         type* variable = value
-	 ;; moves variable -> value with no copies.
-	 (if (equal "=" (instruction-fname form))
-	     (progn
-	       ;;
-	       ;; float* XXX1 = XXX2;
-	       ;;
+		       (cAref (car (instruction-args form)) :pointer t)
+		       (cond
+			 ;; The operation "=" is placed for saving for backward
+			 (save-for-backward-p " // saving for backward")
+			 ;; The operation "=" is placed for protecting tensors
+			 ;; (i.e.: ExistTensor isn't allowed to be in-place)
+			 (copy-for-safety     " // in-place guard for :exist tensors")
+			 ((equal (instruction-fname form) "=") " // intended copy")
+			 (T "")))))
+      (:apply
+       ;; A[...] = f(A[...], B[...]);
+       (write-c-line "// [apply]  ~a~%"
+		     (instruction-fname form))
+       (write-c-line "~a = ~a(~a);~%"
+		     (cAref (instruction-displace-to form) :pointer t)
+		     (instruction-fname form)
+		     (with-output-to-string (out)
+		       (loop for arg in (instruction-args form)
+			     for i upfrom 0
+			     do (princ (cAref arg :pointer t) out)
+			     unless (= i (1- (length (instruction-args form))))
+			       do (princ  ", " out)))))
+      
+      (:set
+       ;;         type* variable = value
+       ;; moves variable -> value with no copies.
+       (if (equal "=" (instruction-fname form))
+	   (progn
+	     ;;
+	     ;; float* XXX1 = XXX2;
+	     ;;
 
-	       ;; register in-place mutation at toplevel, so compiler can synchronize them later without copying.
-	       (register-in-place-mutation
-		;; Sync: opAST-car <- car args
-		(opAST-car opAST) (car (instruction-args form)))
-	       
-	       (write-c-line "// [set]    in-place mutation~%")
-	       (write-c-line "int32_t ~a_STRIDE = ~a_STRIDE;~%"
-			     (tensor-id (opAST-car opAST))
-			     (tensor-id (car (instruction-args form)))))
-	     (write-c-line "// [set]    A = B~%"))
-	 
-	 (write-c-line "~a* ~a ~a ~a;~%"
-		       (dtype->ctype (dtype (opAST-car opAST)))
-	 	       (tensor-id (opAST-car opAST))
-	 	       "="
-		       (tensor-id (car (instruction-args form)))))
-	(:ignore
-	 
-	 )))))
+	     ;; register in-place mutation at toplevel, so compiler can synchronize them later without copying.
+	     (register-in-place-mutation
+	      ;; Sync: opAST-car <- car args
+	      (opAST-car opAST) (car (instruction-args form)))
+	     
+	     (write-c-line "// [set]    in-place mutation~%")
+	     (write-c-line "int32_t ~a_STRIDE = ~a_STRIDE;~%"
+			   (tensor-id (opAST-car opAST))
+			   (tensor-id (car (instruction-args form)))))
+	   (write-c-line "// [set]    A = B~%"))
+       
+       (write-c-line "~a* ~a ~a ~a;~%"
+		     (dtype->ctype (dtype (opAST-car opAST)))
+	 	     (tensor-id (opAST-car opAST))
+	 	     "="
+		     (tensor-id (car (instruction-args form)))))
+      (:ignore
+       
+       ))))
 

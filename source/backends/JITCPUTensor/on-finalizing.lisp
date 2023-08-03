@@ -21,30 +21,38 @@
 ;;  Event Handlers
 ;; ===============================================================================
 
-;; End <-> Top
-;;             / variable
-;; next-variable
-;;             \ variable
+
+;; apply-compile-p:
+;;
+;; A(3, 3)   ----------\
+;;                     | --- out
+;; B(3, 1*3) --[COPY] -/      ^apply-compile-p=t
+;;               ^apply-compile-p=t
+;;
+;; detected one of: end of nodes, the argument is broadcasted, the change of devices
+
+;;
+;; variable \
+;;           next-variable 
+;; variable /
+;;
 
 (defun apply-compile-p (variable next-variable)
   "Following the defition of 3., return t if there's a need to run compiling."
 
   ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
   ;;       ^ :device=t
+  (declare (ignore variable))
   (or
    ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
    (null next-variable)
    ;;(not (typep next-variable 'JITAbleTensors))
    (not (typep (tensor-backward next-variable) 'CPUJIT-Blueprint))
-
+   ;;(not (eql (tensor-projected-p variable) (tensor-projected-p next-variable)))
+   
    ;; Composing element-wise operations with the same iteration.
    ;; Split iteraton:
-   
-   (null (tensor-variables next-variable))
-   ;; この条件つければ動くけど
-   ;; コンパイルされたコードが細切りになってしまう・・・
    (some #'tensor-projected-p (tensor-variables next-variable))
-   
    ))
 
 (defparameter *compiling-ntime-count* 0)
@@ -109,9 +117,6 @@
 	       (setf ,@(loop for scal in scalars
 			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
 	       ,call-form
-
-	       ,@(loop for tensor in tensors
-		       collect `(tensor-vec (read-result ,tensor)))
 	       
 	       ;; Synchronize ScalarTensors
 	       (setf ,@(loop for scal in scalars
