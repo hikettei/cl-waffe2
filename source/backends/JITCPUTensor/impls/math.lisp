@@ -22,23 +22,21 @@
 			      :device JITCPUScalarTensor
 			      :extends (CPUJIT-Scalar-Blueprint))
 			     :forward ((self X out)
-				       (declare (ignore out))
 				       (progn
 					 (setf (blueprint-use-var self) `(,X))
 					 (setf (blueprint-opecode self) ',name)
 					 nil)
-				       `(progn ,X)))		
+				       `(progn ,out)))		
 
 		(define-impl (,node
 			      :device JITCPUTensor
 			      :extends (CPUJIT-Blueprint))
 			     :forward ((self X out)
-				       (declare (ignore out))
 				       (progn
 					 (setf (blueprint-use-var self) `(,X))
 					 (setf (blueprint-opecode self) ',name)
 					 nil)
-				       `(progn ,X))))))
+				       `(progn ,out))))))
   (define-math-impl AbsNode abs       "abs")
   (define-math-impl SignNode signum   "sign" :cast t)
 

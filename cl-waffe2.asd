@@ -78,6 +78,7 @@
 	       (:file "backends/lisp/arithmetic")
 	       (:file "backends/lisp/mathematics")
 	       (:file "backends/lisp/logical")
+	       (:file "backends/lisp/matrix-ops")
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
@@ -102,6 +103,7 @@
 	       (:file "backends/JITLispTensor/jit")
 	       (:file "backends/JITLispTensor/delayed-node-impls")
 
+	       (:file "package")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
 	       (:file "backends/JITCPUTensor/blueprint")
@@ -116,9 +118,7 @@
 	       (:file "backends/JITCPUTensor/impls/math")
 	       
 	       (:file "optimizers/defoptimizer")
-
-
-	       (:file "package")
+	       
 	       (:file "array-converter")
 	       (:file "utils")
 	       (:file "network")
@@ -183,6 +183,7 @@
 	       (:file "backends/lisp/t/package")
 
 	       (:file "backends/JITCPUTensor/t/package")
+	       (:file "backends/JITCPUTensor/t/jit")
 	       
 	       (:file "backends/JITLispTensor/t/package")
 	       (:file "backends/JITLispTensor/t/compiler")
@@ -227,4 +228,25 @@
 	       (:file "apis/optimizers")
 	       ))
 
+
+
+(defpackage :cl-waffe2-bench-asdf
+  (:use :cl :asdf :uiop))
+
+(in-package :cl-waffe2-bench-asdf)
+
+(defsystem :cl-waffe2/benchmark
+  :author "hikettei"
+  :licence "MIT"
+  :description "Benchmark on cl-waffe2"
+  :serial t
+  :pathname "benchmarks"
+  :depends-on (:cl-ppcre)
+  :components ((:file "package")
+	       (:file "benchmark")
+	       (:file "element-wise")
+	       (:file "compose")
+	       (:file "model")
+	       (:file "reverse")
+	       (:file "profile")))
 

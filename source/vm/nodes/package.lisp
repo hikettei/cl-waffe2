@@ -42,6 +42,7 @@
 		#:scalar-p)
   (:export
    #:on-finalizing-compiling
+   #:on-finished-compiling
    #:node-output-shape
    #:create-subscript-p
    #:composite-where

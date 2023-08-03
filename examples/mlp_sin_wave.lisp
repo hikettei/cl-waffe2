@@ -10,7 +10,11 @@
    :cl-waffe2/base-impl
    :cl-waffe2/vm.generic-tensor
    :cl-waffe2/vm.nodes
-   :cl-waffe2/optimizers))
+   :cl-waffe2/optimizers
+
+   :cl-waffe2/backends.jit.cpu
+   :cl-waffe2/backends.cpu
+   ))
 
 (in-package :cl-waffe2-example1)
 
@@ -38,30 +42,29 @@
 	     :minimize! ((self)
 			 (zero-grads! (model self))
 			 (let ((loss (forward (model self))))
-			   ;;(format t "Training Loss: ~a~%" (tensor-vec loss))
-			   )
+			   (format t "Training Loss: ~a~%" (tensor-vec loss)))
 			 (backward  (model self))
-			 (optimize! (model self))
-			 )
+			 (optimize! (model self)))
 	     :predict ((self x)
 		       (call (model self) x))))
-			 
-			 
-		     
-			 
-	   
+
+
 ;; Training sin wave from random noises
 ;; If we forget to call proceed when making training data?
 ;; -> set-input must return error.
 (defun train (&key
 		(batch-size 100)
-		(iter-num 1))
+		(iter-num 3000))
   (let* ((X (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
  	 (Y (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
 	 (trainer (MLPTrainer 100 10 :lr 1e-3)))
-
+    
+    (set-inputs trainer X Y)
     (time
      (loop for nth-epoch fixnum upfrom 0 below iter-num
-	   do (set-inputs trainer X Y)
-	      (minimize! trainer)))))
+	   do (minimize! trainer)))))
+
+(with-devices (JITCPUTensor JITCPUScalarTensor CPUTensor)
+  (train)) 
+
 

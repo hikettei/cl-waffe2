@@ -661,7 +661,7 @@ The variable names (e.g.: `A`) are exactly the name of the variable used by the 
 
 ### Syntax
 
-Following the rules below, `%transform` calls appropriate functions.
+Following the rules below, `%transform` calls appropriate functions. If `~` were used after `->`, the macro is expanded into `!flexible ...`, or call `!permute` as long as all symbols appeared before `->` were also used after `->`. Otherwise, call `!view`.
 
 ### Adding an broadcastable axis.
 
@@ -697,8 +697,6 @@ If symbols used before `->` are also appeared in after `->`, the corresponding s
 ### Make a view of tensors.
 
 Set symbols (which aren't used before `->`) or fixnum to make a index. `(start end)` also creates a slice. Setting characters like `*10` `*a` broadcasts the axis.
-
-If `~` were used after `->`, the macro is expanded into `!flexible ...`, or call `!permute` as long as all symbols appeared before `->` were also used after `->`. Otherwise, call `!view`.
 
 ## [function] !flexible
 

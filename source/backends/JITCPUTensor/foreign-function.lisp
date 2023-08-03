@@ -2,15 +2,26 @@
 (in-package :cl-waffe2/backends.jit.cpu)
 
 (defparameter *default-c-compiler* "gcc" "
-## [parameter] *default-c-compiler*
+## [parameter] `*default-c-compiler*`
 
-Specify the command to compile the generated c codes. In default, \"gcc\"
+Specify the command to compile the generated c codes. In default, \"gcc\".
+")
+
+(defparameter *compiler-flags* '("-fPIC" "-O3" "-march=native") "
+## [parameter] `*compiler-flags*`
+
+In default, `*compielr-flags*` = `'(\"-fPIC\" \"-O3\" \"-march=native\")`
+")
+
+(defparameter *viz-compiled-code* nil "
+## [parameter] `*viz-compiled-code*`
+
+Set t to display the compiled c code to terminal. In default, `nil`
 ")
 
 ;; Ref: https://stackoverflow.com/questions/6612169/compile-a-stream-of-data-in-c
 (defun load-foreign-function (source
 			      &key
-				;; (disassemble t)
 				(compiler *default-c-compiler*)
 				(lang "c"))
   (declare (type string source compiler))
@@ -19,11 +30,12 @@ Specify the command to compile the generated c codes. In default, \"gcc\"
     :close-stream
     (let* ((cmd
 	     ;; gcc -shared -o sharedlib
-	     (list
-	      compiler "-shared"
-	      "-x" lang
-	      "-fPIC" "-O3" "-march=native"
-	      "-o" (uiop:native-namestring sharedlib) "-"))
+	     (append
+	      (list
+	       compiler "-shared"
+	       "-x" lang)
+	      *compiler-flags*
+	      (list "-o" (uiop:native-namestring sharedlib) "-")))
 	   (process-info (uiop:launch-program
 			  cmd
 			  :input :stream
@@ -49,7 +61,9 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
   (let ((view-count 0))
     (flet ((read-view (nth)
 	     (let ((out (nth nth views)))
-	       out)))
+	       (if (null out)
+		   (error "cl-waffe2/backends.cpu.jit:expand-funcall-form view exhausted")
+		   out))))
       `(cffi:foreign-funcall
 	,function-name
 	,@(if (null views)
@@ -65,10 +79,9 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
 		  (JITCPUTensor
 		   (prog1
 		       ;; tensor_ptr tensor_stride ...
-		       ;; (dtype val)
 		       `(:pointer
 			 (tensor-ptr (read-result ,arg) :offset ,(offset-of (read-view view-count) 0))
-			 :int32;;(:pointer :int32)
+			 :int32
 			 ,(stride-of (read-view view-count) 0))
 		     (incf view-count)))
 		  (T (error "unknown type of arguments: ~a" arg))))

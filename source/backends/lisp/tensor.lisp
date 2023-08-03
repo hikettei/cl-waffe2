@@ -1,7 +1,9 @@
 
 (in-package :cl-waffe2/backends.lisp)
 
-(defclass LispTensor (AbstractTensor) nil)
+(defclass LispTensor (AbstractTensor) nil
+  (:documentation "
+## [AbstractTensor] LispTensor"))
 
 (defmethod initialize-instance :before ((tensor LispTensor)
 					&rest initargs

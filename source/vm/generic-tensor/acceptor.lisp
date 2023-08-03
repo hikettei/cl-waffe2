@@ -339,8 +339,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
     (when (compiled-kernel-cache-p fw-compiled)
       (push fw-compiled *kernel-storeroom*))
     
-    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me :called-with-vars toplevel)) vars))
-	  (out-places  (map 'list #'tensor-id vars)))
+    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me :called-with-vars toplevel)) vars)))
       
       ;;
       ;; f(x, y)
@@ -351,42 +350,38 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
       ;; Tensors to use is determined when compiled
       ;; InputTensor ... Symbols(A, B) is changed, alloc is changed.
 
-      (register-variables out-places)
+      
       (register-variables (tensor-variables toplevel))
 
-      ;; Declare undetermined shapes
-      `(let*-ignorable (,@(loop for s in next-states ;; p <- s
-				for p in out-places
-				collect `(,p ,s))
-			(,(tensor-id toplevel) (progn ,toplevel)))
-
+      `(progn
+	 
 	 ;; The Operation hasn't done yet:
 	 ;; The code below seems ugly...
-	 
-	 (when (or (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))
+	 (when (or (null (statecontainer-forward-result (tensor-state ,toplevel)))
 		   (when *calling-backward-mode*
-		     (let ((out (statecontainer-backward-result (tensor-state ,(tensor-id toplevel)))))
+		     (let ((out (statecontainer-backward-result (tensor-state ,toplevel))))
 		       (car out))))
 
 	   ;; Seems ugly:
 	   ;; Judge the tensor is created when forward time or backward time
 	   (when (and *calling-backward-mode*
-		      (not (car (statecontainer-backward-result (tensor-state ,(tensor-id toplevel))))))
-	     (setf (statecontainer-backward-result (tensor-state ,(tensor-id toplevel)))
-		   (list (null (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))
+		      (not (car (statecontainer-backward-result (tensor-state ,toplevel)))))
+	     (setf (statecontainer-backward-result (tensor-state ,toplevel))
+		   (list (null (statecontainer-forward-result (tensor-state ,toplevel))))))
 
 
 	   ;; Calls an event: on-finalizing-compiling
 	   ;; If JIT is implemented by user, expand user defined forms
 	   
-	   (setf (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))
-		 (multiple-value-list (call-kernel ,fw-compiled ,@(map 'list #'tensor-id vars)))))
+	   (setf (statecontainer-forward-result (tensor-state ,toplevel))
+		 (multiple-value-list (call-kernel ,fw-compiled ,@(loop for arg in next-states collect arg)))))
 
 	 ,(when (tensor-backward toplevel)
 	    (cl-waffe2/vm.nodes:on-finalizing-compiling
 	     (tensor-backward toplevel)
 	     toplevel
-	     called-with-vars))
+	     called-with-vars
+	     nil))
 	 
 
 	 ;; TODO UPDATE
@@ -396,7 +391,7 @@ Tracing until one of variables reached a toplevel tensor (detach-p is t or no ba
 	       (assert
 		(runtime-shape-inspection
 		 (nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node)) ;; Declared output shape
-		 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))) ;; Output shape compiled
+		 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,toplevel)))) ;; Output shape compiled
 		nil
 		"Assertion Failed.: Detected Shape-Error in runtime.
 At      : ~a
@@ -406,9 +401,9 @@ Declared: ~a
 The definition/implementation of nodes could be invaild."
 		,node
 		(nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
-		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel)))))))) ;; Output shape compiled
+		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,toplevel))))))) ;; Output shape compiled
 	 
-	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,(tensor-id toplevel))))))))
+	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,toplevel)))))))
 
 (defun compile-backward-chain (toplevel past-dy)
   "Constructs the computation node for backwards recursively."
@@ -455,7 +450,9 @@ The definition/implementation of nodes could be invaild."
 		  (tensor-variables toplevel)))
 	   (next-dys   (map 'list #'car outs))
 	   (outs       (map 'list #'cdr outs)))
-      
+
+      ;; tensor-id used here never conflicts
+      ;; because each time backward goes deeper, the new tensor-id is generated.
       `(let (,@(loop for kernel in outs
 		     for out in next-dys
 		     for var in (tensor-variables toplevel)
@@ -702,14 +699,17 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
   (declare (type AbstractTensor toplevel))
   
   (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
+
     ;; Vars - All Variables (including ChainTMP) used in forward.
-    (values (make-instance 'Compiled-Composite
-			   :variables  (construct-variables-table vars)
-			   :compiled-forward forward-kernel
-			   :compiled-backward (when construct-backward?
-						(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
-	    
-	    (when use-setinput-form set-input-forms))))
+    (prog1
+	(values (make-instance 'Compiled-Composite
+			       :variables  (construct-variables-table vars)
+			       :compiled-forward forward-kernel
+			       :compiled-backward (when construct-backward?
+						    (compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
+		
+		(when use-setinput-form set-input-forms))
+      (mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*))))
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite

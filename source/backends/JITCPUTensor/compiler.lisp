@@ -28,21 +28,22 @@
 
 (defun place-toplevel-form (cffi-call-name tensors)
   "Places headers, function definition and macros."
-  
-  (write-buff "~%#pragma SIMD~%")
-  ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
-  ;;(write-buff "#pragma GCC target \"avx2\"")
-  ;; #pragma GCC target "avx2" avx512 ...
-  
-  (loop for include in *includes*
-	do (write-buff "#include <~a>~%" include))
 
-  (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+  (when (null *caching-c-source*) 
+    (write-buff "~%#pragma SIMD~%")
+    ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
+    ;;(write-buff "#pragma GCC target \"avx2\"")
+    ;; #pragma GCC target "avx2" avx512 ...
+    
+    (loop for include in *includes*
+	  do (write-buff "#include <~a>~%" include))
 
-  ;; Utils
-  (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
-  (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
-  )
+    (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+
+    ;; Utils
+    (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
+    (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
+    ))
 
 (defun cAref (tensor &key (pointer nil))
   "Reading the given tensor's id, the function returns a string which corresponds to aref in C"
@@ -77,6 +78,13 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	    (write-buff ")"))))
     (format nil "void ~a~a~%" function-name arguments-form)))
 
+(defun insert-loop-for ()
+  (let ((back-indent-size (max 0 (- *indent-width* 4))))
+    (with-indent back-indent-size
+      (write-c-line "}~%~%")
+      (write-c-line "for(int i=0; i<size; i++) {~%"))))
+
+;; [TODO] Printing JIT Compiler Report
 (defun invoke-compiler! (function-name toplevel)
   "
 Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
@@ -85,22 +93,34 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 "
   (declare (type JITAbleTensors toplevel))
 
-  (let* ((*compiled-tensors* `(,toplevel))
+  (let* ((*compiled-tensors* `())
 	 (envolved-nodes (confirm-compiling-area toplevel))
 	 (function-form  (apply #'cFunction function-name *compiled-tensors*))
 	 (tensors (loop for tensor in *compiled-tensors*
 			if (typep tensor 'JITCPUTensor)
+			  collect tensor))
+	 (scalars (loop for tensor in *compiled-tensors*
+			if (typep tensor 'JITCPUScalarTensor)
 			  collect tensor)))
     (values
      *compiled-tensors*
      ;; Used for expanding call-with-view
      tensors
-     (loop for tensor in *compiled-tensors*
-	   if (typep tensor 'JITCPUScalarTensor)
-	     collect tensor)
+     scalars
      (with-compiling-mode
        (place-toplevel-form function-name *compiled-tensors*)
 
+       
+       (write-buff "~%// [~a Tensors]~%" (length tensors))
+       (dolist (tensor tensors)
+	 (write-buff "// ~a: ~a ~a~%"
+		     (tensor-id tensor)
+		     (shape tensor)
+		     (tensor-attribute tensor)))
+       (write-buff "~%// [~a Scalars]~%" (length scalars))
+       (dolist (tensor scalars)
+	 (write-buff "// ~a: ~a ~a~%" (tensor-id tensor) (shape tensor) (tensor-attribute tensor)))
+       
        ;; void function-name (...) { ...
        (write-buff "~a { ~%" function-form)
        (if (null tensors)
@@ -111,6 +131,5 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 	     (with-indent 8
 	       (ir->C envolved-nodes))
 	     (write-c-line "}~%")))
-       
        (write-c-line "}~%")))))
 
