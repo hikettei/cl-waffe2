@@ -1,0 +1,6 @@
+# Git
+.git/
+.github
+
+# Emacs backup files
+*/*~

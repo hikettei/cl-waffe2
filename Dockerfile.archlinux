@@ -1,0 +1,118 @@
+FROM archlinux:base-devel AS sbcl-builder
+SHELL ["/bin/bash", "-x", "-o", "pipefail", "-c"]
+
+ENV SBCL_VERSION=2.3.7
+
+ENV SBCL_SIGNING_KEY=D6839CA0A67F74D9DFB70922EBD595A9100D63CD
+
+ENV SBCL_DOWNLOADS_BASE_URL="https://downloads.sourceforge.net/project/sbcl/sbcl"
+
+ENV SBCL_HASH_FILE=sbcl-${SBCL_VERSION}-crhodes.asc
+ENV SBCL_HASH_URL=${SBCL_DOWNLOADS_BASE_URL}/${SBCL_VERSION}/${SBCL_HASH_FILE}
+
+ENV SBCL_SRC_TBZ2_FILE=sbcl-${SBCL_VERSION}-source.tar.bz2
+ENV SBCL_SRC_TBZ2_URL=${SBCL_DOWNLOADS_BASE_URL}/${SBCL_VERSION}/${SBCL_SRC_TBZ2_FILE}
+
+WORKDIR /sbcl-build
+
+# Setup pacman
+RUN pacman-key --init
+RUN printf '%s\n%s\n%s\n' \
+    'Server = https://mirrors.cat.net/archlinux/$repo/os/$arch' \
+    'Server = https://ftp.jaist.ac.jp/pub/Linux/ArchLinux/$repo/os/$arch' \
+    'Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch' \
+    | tee /etc/pacman.d/mirrorlist
+
+# Install buildtime dependencies and SBCL from Arch
+RUN pacman -Syyu --noconfirm base-devel sbcl zstd
+
+# Fetch encrypted hash file
+RUN gpg --batch --recv-keys ${SBCL_SIGNING_KEY} \
+ && curl -fsSL -o ${SBCL_HASH_FILE} ${SBCL_HASH_URL} \
+ && gpg --batch --verify ${SBCL_HASH_FILE}
+
+# Fetch source tarball
+RUN curl -fsSL -o ${SBCL_SRC_TBZ2_FILE} ${SBCL_SRC_TBZ2_URL} \
+ && bunzip2 ${SBCL_SRC_TBZ2_FILE} \
+ && (gpg --batch --decrypt ${SBCL_HASH_FILE} | grep ${SBCL_SRC_TBZ2_FILE%.bz2} | tee src-checksum) \
+ && sha256sum --check src-checksum
+
+# Extract source tarball
+RUN tar -xf ${SBCL_SRC_TBZ2_FILE%.bz2}
+
+WORKDIR /sbcl-build/sbcl-${SBCL_VERSION}
+
+# Build SBCL
+RUN source /etc/makepkg.conf \
+ && export CFLAGS="${CFLAGS} -D_GNU_SOURCE -fno-omit-frame-pointer" \
+ && export LINKFLAGS="${LDFLAGS}" \
+ && unset LDFLAGS \
+ && unset MAKEFLAGS \
+ && sh make.sh --prefix=/usr/local --fancy
+
+# Install SBCL
+RUN sh install.sh
+
+
+FROM sbcl-builder AS sbcl-test
+SHELL ["/bin/bash", "-x", "-o", "pipefail", "-c"]
+
+# Install testing dependencies
+RUN pacman -Syu --noconfirm strace
+
+WORKDIR /sbcl-build/sbcl-${SBCL_VERSION}/tests
+
+RUN sh run-tests.sh
+
+
+FROM archlinux:base AS sbcl-ready
+SHELL ["/bin/bash", "-x", "-o", "pipefail", "-c"]
+
+ENV QUICKLISP_SIGNING_KEY=D7A3489DDEFE32B7D0E7CC61307965AB028B5FF7
+
+# Setup pacman
+RUN pacman-key --init
+RUN printf '%s\n%s\n%s\n' \
+    'Server = https://mirrors.cat.net/archlinux/$repo/os/$arch' \
+    'Server = https://ftp.jaist.ac.jp/pub/Linux/ArchLinux/$repo/os/$arch' \
+    'Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch' \
+    | tee /etc/pacman.d/mirrorlist
+
+# Install runtime dependencies
+RUN pacman -Syyu --noconfirm rlwrap zstd
+
+COPY --from=sbcl-builder /usr/local /usr/local
+
+# Download Quicklisp
+RUN curl -fsSL -o quicklisp.lisp     "https://beta.quicklisp.org/quicklisp.lisp" \
+ && curl -fsSL -o quicklisp.lisp.asc "https://beta.quicklisp.org/quicklisp.lisp.asc" \
+ && gpg --batch --recv-keys ${QUICKLISP_SIGNING_KEY} \
+ && gpg --batch --verify quicklisp.lisp.asc quicklisp.lisp \
+ && rm quicklisp.lisp.asc
+
+# Install Quicklisp
+RUN /usr/local/bin/sbcl --non-interactive \
+    --load quicklisp.lisp \
+    --eval '(quicklisp-quickstart:install)' \
+    --eval '(ql-util:without-prompting (ql:add-to-init-file))' \
+ && rm quicklisp.lisp
+
+ENTRYPOINT ["rlwrap", "/usr/local/bin/sbcl", "--noinform"]
+
+
+# Install cl-waffe2
+FROM sbcl-ready AS cl-waffe2
+SHELL ["/bin/bash", "-x", "-o", "pipefail", "-c"]
+
+EXPOSE 4005
+
+# Install cl-waffe2 dependencies
+RUN pacman -Syu --noconfirm make blas-openblas
+
+COPY . /root/common-lisp/cl-waffe2
+
+WORKDIR /root/common-lisp/cl-waffe2
+
+RUN printf '(defparameter *cl-waffe-config* `((:libblas "libblas.so")))\n' | tee -a /root/.sbclrc
+
+ENTRYPOINT ["make"]
