@@ -14,8 +14,12 @@
 
 
 (defun build-mlp ()
-  (build
-   (!mean (softmax-cross-entropy
-	   (call (MLP-Sequence 100 10 5) (make-input `(batch-size 100) :X))
-	   (make-input `(batch-size ,5) :Y)))))
+  (time
+   (build
+    (!mean
+     (softmax-cross-entropy
+      (call
+       (MLP-Sequence 100 10 5)
+       (make-input `(batch-size 100) :X))
+      (make-input `(batch-size ,5) :Y))))))
 

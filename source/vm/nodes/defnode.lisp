@@ -48,11 +48,33 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 See also: `the implementation of JITLispTensor`.
 "))
 
+(defgeneric on-finished-compiling (current-node)
+  (:documentation "
+## [generic] on-finished-compiling
+
+```lisp
+(on-finished-compiling current-node)
+```
+
+The method on-finished-compiling is once called when the node was reached the end.
+
+### Example
+
+```lisp
+(defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))
+   ...
+   )
+```
+"))
+
 (defmethod on-finalizing-compiling ((current-node AbstractNode) variable next-variables compile-me)
   (declare (ignore variable next-variables))
   (when (next-method-p)
     (call-next-method)))
 
+(defmethod on-finished-compiling ((current-node t))
+  (when (next-method-p)
+    (call-next-method)))
 
 (defun node-compatible-p (node-name inputs)
   (declare (type list inputs))
