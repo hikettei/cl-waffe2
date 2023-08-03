@@ -68,10 +68,11 @@
 
 (defparameter *caching-c-source* nil)
 (defun maybe-load-foreign-function (source end-of-node-p)
-  (setf *caching-c-source* (concatenate 'string
-					(or *caching-c-source* "")
-					(format nil "~%")
-					source))
+  (when source
+    (setf *caching-c-source* (concatenate 'string
+					  (or *caching-c-source* "")
+					  (format nil "~%")
+					  source)))
   
   (when (and end-of-node-p *caching-c-source*)
     (load-foreign-function *caching-c-source*)
@@ -94,7 +95,7 @@
 
 	  ;; [TODO]: multiple call of gcc may result low performance
 	  ;; Cache it
-	  (maybe-load-foreign-function source (or compile-me (null next-variable)))
+	  (maybe-load-foreign-function source compile-me)
 	  (when *viz-compiled-code*
 	    (format t "== [Log: JITCPUTensor] ===============~%~a~%" source))
 	  
@@ -137,4 +138,10 @@
 		  (when latest-result
 		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))))))
       nil))
+
+(defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))
+  (maybe-load-foreign-function nil t))
+
+(defmethod on-finished-compiling ((current-node (eql 'JITCPUScalarTensor)))
+  (maybe-load-foreign-function nil t))
 

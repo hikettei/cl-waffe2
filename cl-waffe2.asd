@@ -229,3 +229,24 @@
 	       ))
 
 
+
+(defpackage :cl-waffe2-bench-asdf
+  (:use :cl :asdf :uiop))
+
+(in-package :cl-waffe2-bench-asdf)
+
+(defsystem :cl-waffe2/benchmark
+  :author "hikettei"
+  :licence "MIT"
+  :description "Benchmark on cl-waffe2"
+  :serial t
+  :pathname "benchmarks"
+  :depends-on (:cl-ppcre)
+  :components ((:file "package")
+	       (:file "benchmark")
+	       (:file "element-wise")
+	       (:file "compose")
+	       (:file "model")
+	       (:file "reverse")
+	       (:file "profile")))
+

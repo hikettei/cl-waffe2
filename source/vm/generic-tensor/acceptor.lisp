@@ -699,14 +699,17 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
   (declare (type AbstractTensor toplevel))
   
   (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
+
     ;; Vars - All Variables (including ChainTMP) used in forward.
-    (values (make-instance 'Compiled-Composite
-			   :variables  (construct-variables-table vars)
-			   :compiled-forward forward-kernel
-			   :compiled-backward (when construct-backward?
-						(compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
-	    
-	    (when use-setinput-form set-input-forms))))
+    (prog1
+	(values (make-instance 'Compiled-Composite
+			       :variables  (construct-variables-table vars)
+			       :compiled-forward forward-kernel
+			       :compiled-backward (when construct-backward?
+						    (compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
+		
+		(when use-setinput-form set-input-forms))
+      (mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*))))
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite

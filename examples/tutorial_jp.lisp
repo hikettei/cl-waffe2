@@ -107,7 +107,8 @@
    
    :cl-waffe2/backends.lisp     ;; cl-waffe2実装の一つ 全てCommon Lispで記述され、環境に依存しない。汎用性第一
    :cl-waffe2/backends.cpu      ;; cl-waffe2実装の一つ OpenBLAS等外部ライブラリを呼び出す。速度第一
-   :cl-waffe2/backends.jit.lisp ;; cl-waffe2実装の一つ cl-waffe2プログラムをCommon LispプログラムにJITするサンプルと実装を提供 (まだバグが多い・・・) with-no-grad宣言かじゃないと動かないです。
+   :cl-waffe2/backends.jit.cpu  ;; cl-waffe2 -> C/C++へのJITコンパイラ
+   :cl-waffe2/backends.jit.lisp ;; (将来廃止にする予定) cl-waffe2実装の一つ cl-waffe2プログラムをCommon LispプログラムにJITするサンプルと実装を提供 (まだバグが多い・・・) with-no-grad宣言かじゃないと動かないです。
 
    ))
 
@@ -828,6 +829,7 @@ Previous dout:
 ;; 5. ->scal ->mat
 ;; ->scal ->mat関数は要素数が1の行列をスカラーに、スカラーを行列にするための関数です
 
+
 (print (->scal (randn `(1 1))))
 
 (print (->mat  (make-tensor 1.0)))
@@ -861,6 +863,7 @@ Previous dout:
 ;; :backward <Node: FLEXIBLE-RANK-NODE-T (A[~] -> A[~])>}
 
 (print (!flexible (ax+b `(3 3) 1 0) :at 1))
+
 
 ;;{CPUTENSOR[float] :shape (3 <1 x N> 3) :named ChainTMP5932 
 ;;  :vec-state [maybe-not-computed]
@@ -1074,10 +1077,10 @@ Previous dout:
 ;;  更なるJIT
 ;; ==========================
 
-;; :cl-waffe2/backends.jit.lispパッケージが提供するJITLispTensorは
+;; :cl-waffe2/backends.jit.cpuパッケージが提供するJITCPUTensorは
 ;; 同一形状の四則演算及び数学関数で構築される計算ノードをまとめてLispのコードにJITし、不要なコピーを更に減らし、(TO BE: lparallelで並列化する)などの手法で、さらなる高速化のためのバックエンドを提供します。
 
-;; 例えばLispTensorバックエンドであれば：
+;; 例えばCPUTensorバックエンドであれば：
 ;;
 ;; (!sin (!sin tensor))
 ;;
@@ -1088,15 +1091,14 @@ Previous dout:
 ;;
 ;; のように内部で実行されます。(move!や!sinはOpenBLASやSLEEFの関数だと思ってください)
 
-;; これがJITLispTensorバックエンドでは:
+;; これがJITCPUTensorバックエンドでは:
 
 ;;
 ;; (!sin (!sin tensor))
 ;; [イメージ]
 ;; OUT = (loop-with-view i ... do (sin (sin tensor i)))
 
-;; のように動的にLispコードが生成されます
-;; 将来的にcl-waffe2からC++/CUDA/Metalへのコンパイラを作りたいと考えていて、JITLispTensorはそのモデルとして作成した簡素なものですが、十分高速に動作します。（時間がなくてまだ不安定です、特にViewが）
+;; のように動的にCコードが生成されます (FuseOPs)
 
 
 ;; 簡易的なベンチマーク: CPUTensor + LispTensorの場合
@@ -1112,39 +1114,48 @@ Previous dout:
 
 ;;Evaluation took:
 ;;  0.000 seconds of real time
-;;  0.000796 seconds of total run time (0.000780 user, 0.000016 system)
+;;  0.000877 seconds of total run time (0.000860 user, 0.000017 system)
 ;;  100.00% CPU
-;;  1,780,164 processor cycles
-;;  256,880 bytes consed
+;;  2,016,762 processor cycles
+;;  250,192 bytes consed
   
 ;;Proceed-Time: Without allocation time:
 ;;Evaluation took:
 ;;  0.000 seconds of real time
-;;  0.000691 seconds of total run time (0.000691 user, 0.000000 system)
+;;  0.000008 seconds of total run time (0.000008 user, 0.000000 system)
 ;;  100.00% CPU
-;;  1,586,838 processor cycles
+;;  16,988 processor cycles
 ;;  0 bytes consed
-  
 
-;; JITLispTensor
-(with-devices (JITLispTensor)
+;; JITCPUTensor
+(with-cpu-jit ()
   (with-no-grad
-    (proceed-time (target-op) :compile-mode :fastest)))
+    (let ((model (build (target-op))))
+      ;; コンパイル時間を除外して計測するためにBuild関数を用います
+      (time (forward model))
+      (time (forward model)))))
 
 ;;Evaluation took:
 ;;  0.001 seconds of real time
-;;  0.001021 seconds of total run time (0.000983 user, 0.000038 system)
+;;  0.001326 seconds of total run time (0.001149 user, 0.000177 system)
 ;;  100.00% CPU
-;;  2,538,578 processor cycles
-;;  322,912 bytes consed
+;;  3,190,462 processor cycles
+;;  219,904 bytes consed
   
-;;Proceed-Time: Without allocation time:
 ;;Evaluation took:
 ;;  0.000 seconds of real time
-;;  0.000775 seconds of total run time (0.000775 user, 0.000000 system)
+;;  0.000978 seconds of total run time (0.000963 user, 0.000015 system)
 ;;  100.00% CPU
-;;  1,783,772 processor cycles
-;; 0 bytes consed
+;;  2,269,020 processor cycles
+;;  0 bytes consed
+
+;; (P.S.: 数学関数のSIMD化が正しくできてるかまだ確認してません まだ、大規模な行列に関して並列化の処理はまだ実装れていません。これらは今後追加します。)
+
+
+;;
+;; (enable-cpu-jit-toplevel :viz-compiled-code t)
+;; をトップレベルで宣言するとJITコンパイルされたCのコードがPrintされます
+;;
 
 ;; ちなみにJITLispTensorバックエンドは開発者が2~3時間ほど適当にLispのコードを書くだけで実装できました。実際300行程度のコードになってるはずです。
 ;; いつかチュートリアルに任意のデバイスのJITコンパイラを書く方法みたいなのも追記します :)
