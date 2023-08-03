@@ -246,6 +246,7 @@
 	       (:file "benchmark")
 	       (:file "element-wise")
 	       (:file "compose")
-	       (:file "reverse")))
-
+	       (:file "model")
+	       (:file "reverse")
+	       (:file "profile")))
 
