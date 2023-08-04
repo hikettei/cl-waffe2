@@ -701,7 +701,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 							  ,tmp
 							  ,(car let))
 							 ,all-conditions)
-							,(car let)))))))
+							,tmp))))))
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
 			

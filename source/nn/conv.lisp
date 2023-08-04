@@ -37,13 +37,18 @@
 	   :documentation "
 Applies a 2D convolution over an input signal composed of several input planes."
 	   :slots ((weight :accessor weight-of)
-		   (bias   :accessor bias-of))
+		   (bias   :accessor bias-of)
+		   (stride   :initarg :stride)
+		   (padding  :initarg :padding)
+		   (dilation :initarg :dilation)
+		   (groups   :initarg :groups))
+	   ;; Memo: C_in H_in W_in ... should be determined before computing.
 	   :where (Input[~ C_in H_in W_in] -> Output[~ C_out H_out W_out]
 			   where
 			   C_in  = in-channels
 			   C_out = out-channels
 			   ;; H_out = floor(((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]) + 1)
-			   H_out = (if (numberp H_in)
+			   H_out = (if (numberp H_in) ;; If H_in is a symbol, return -1 (=undetermined, later determined.)
 				       (floor (+ 1 (/ (+ H_in (* 2 (car padding)) (* (- (car dilation)) (- (car kernel-size) 1)) -1)
 						      (car stride))))
 				       -1)
@@ -52,10 +57,8 @@ Applies a 2D convolution over an input signal composed of several input planes."
 				       (floor (+ 1 (/ (+ W_in (* 2 (second padding)) (* (- (second dilation)) (- (second kernel-size) 1)) -1)
 						      (second stride))))
 				       -1))
-	   :on-call-> ((self x)
-		       (declare (ignore self))
-		       x
-		       ))
+	   :on-call-> apply-conv2d)
+		       
   (assert (typep kernel-size 'list)
 	  nil
 	  "Conv2D: Assertion Failed because kernel-size should be given as list. but got: ~a" kernel-size)
@@ -73,4 +76,26 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	    ;; Biases are (out-channels) tensor which sampled from U(-sqrt(k), sqrt(k))
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
+;; 
+;; 
+;; Workload
+;; Implement: Padding
+;; 
+;; 
+
+(defmethod apply-conv2d ((self Conv2D) input)
+  (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias)) self
+    (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
+      (multiple-value-bind (C-out icg k-h k-w) (apply #'values (shape weight))
+	(let* ((~     (butlast (shape input) 3))
+	       (pY-ex )
+	       (h-out (floor (+ 1 (/ (+ h-in (* 2 (car padding)) (* (- (car dilation)) (- k-h 1)) -1)
+				     (car stride)))))
+	       (w-out (floor (+ 1 (/ (+ w-in (* 2 (second padding)) (* (- (second dilation)) (- k-w 1)) -1)
+				     (second stride))))))
+
+	  (print h-out)
+	  (print w-out)
+	  input
+	  )))))
 

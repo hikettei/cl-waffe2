@@ -28,6 +28,7 @@
   (:export
    #:%transform
    #:->contiguous
+   #:padding
    #:!sum
    #:!mean
    #:!move
