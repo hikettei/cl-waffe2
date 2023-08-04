@@ -19,6 +19,9 @@
     (t
      (error "Conv2D: ~a should be given as fixnum or list(with length=2), but got ~a" name value))))
 
+(defun im2col (tensor)
+  )
+
 (defmodel (Conv2D (self in-channels out-channels kernel-size
 			&key
 			(stride 1)
@@ -35,22 +38,28 @@
 Applies a 2D convolution over an input signal composed of several input planes."
 	   :slots ((weight :accessor weight-of)
 		   (bias   :accessor bias-of))
-	   :where (Input[~ C_in H_in W_in] -> Output[C_out H_out W_out]
+	   :where (Input[~ C_in H_in W_in] -> Output[~ C_out H_out W_out]
 			   where
 			   C_in  = in-channels
 			   C_out = out-channels
 			   ;; H_out = floor(((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]) + 1)
-			   H_out = (floor (1+ (/ (+ H_in (* 2 (car padding)) (* (- (car dilation)) (- (car kernel-size) 1)) -1)
-						 (car stride))))
+			   H_out = (if (numberp H_in)
+				       (floor (+ 1 (/ (+ H_in (* 2 (car padding)) (* (- (car dilation)) (- (car kernel-size) 1)) -1)
+						      (car stride))))
+				       -1)
 			   ;; W_out = floor(((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]) + 1)
-			   W_out = (floor (1+ (/ (+ W_in (* 2 (second padding)) (* (- (second dilation)) (- (second kernel-size) 1)) -1)
-						 (second stride)))))
+			   W_out = (if (numberp W_in)
+				       (floor (+ 1 (/ (+ W_in (* 2 (second padding)) (* (- (second dilation)) (- (second kernel-size) 1)) -1)
+						      (second stride))))
+				       -1))
 	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       x
 		       ))
   (assert (typep kernel-size 'list)
 	  nil
 	  "Conv2D: Assertion Failed because kernel-size should be given as list. but got: ~a" kernel-size)
-  (let ((k (/ groups (* in-channels (apply #'* kernel-size)))))
+  (let ((k (/ groups (* in-channels (apply #'* kernel-size)))))    
     (setf (weight-of self)
 	  ;; Weights are (out-channels, in-channels / groups, kernel-size[0], kernel-size[1]) tensor
 	  ;; which sampled from U(-sqrt(k), sqrt(k)) dist.
