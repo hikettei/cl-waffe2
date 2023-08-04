@@ -39,10 +39,13 @@ Applies a 2D convolution over an input signal composed of several input planes."
 			   where
 			   C_in  = in-channels
 			   C_out = out-channels
-			   H_out = (* 2 H_in)
-			   W_out = 1)
+			   ;; H_out = floor(((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]) + 1)
+			   H_out = (floor (1+ (/ (+ H_in (* 2 (car padding)) (* (- (car dilation)) (- (car kernel-size) 1)) -1)
+						 (car stride))))
+			   ;; W_out = floor(((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]) + 1)
+			   W_out = (floor (1+ (/ (+ W_in (* 2 (second padding)) (* (- (second dilation)) (- (second kernel-size) 1)) -1)
+						 (second stride)))))
 	   :on-call-> ((self x)
-
 		       ))
   (assert (typep kernel-size 'list)
 	  nil

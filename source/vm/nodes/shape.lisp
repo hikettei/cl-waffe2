@@ -545,7 +545,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					    `(,x)))
 			      common-symbols) ;; Tables: 'a 'b 'c ...
 		       ;;,@let-binding ;; initial element to 'a 'b 'c...
-
 		       ,@(loop for let in let-binding
 			       collect `(,(car let) ',(car let)))
 		       ;; ~ = `(nil nil nil) at first.
@@ -680,7 +679,29 @@ Accordingly, the argument must satisfy: dimensions = ~a
 				    shapes
 				    names)))
 			     out)))
-		    (let* (,@let-binding)
+		    (let* (,@(loop for let in let-binding
+				   collect
+				   `(,(car let) (let* ((tmp (progn ,@(cdr let)))
+						       (tmp (if (listp ,(car let))
+								(list tmp)
+								tmp))
+						       (,(car let) (if (listp tmp)
+								       (list ,(car let))
+								       ,(car let))))
+						  (if (if (listp tmp)
+							  (cl-waffe2/vm.generic-tensor::shape-equal-list tmp ,(car let))
+							  (shape-equal tmp ,(car let)))
+						      tmp
+						      (progn
+							(push
+							 (format
+							  nil
+							  "~a is declared as ~a, but determined as ~a"
+							  ',(car let)
+							  tmp
+							  ,(car let))
+							 ,all-conditions)
+							tmp))))))
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
 			
