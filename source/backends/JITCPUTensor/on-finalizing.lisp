@@ -37,6 +37,10 @@
 ;; variable /
 ;;
 
+(defun tensor-broadcasted-p (tensor)
+  (let ((view (tensor-view tensor)))
+    (some #'(lambda (x) (eql (viewtype (force-list x)) :broadcast)) view)))
+
 (defun apply-compile-p (variable next-variable)
   "Following the defition of 3., return t if there's a need to run compiling."
 
@@ -52,7 +56,8 @@
    ;; Composing element-wise operations with the same iteration.
    ;; Split iteraton:
    (detach-p variable)
-   (some #'tensor-projected-p (tensor-variables next-variable))
+   ;; [TODO] tensor-projected-p -> tensor-broadcasted-p for Conv2D
+   (some #'tensor-broadcasted-p (tensor-variables next-variable))
    ))
 
 (defparameter *compiling-ntime-count* 0)

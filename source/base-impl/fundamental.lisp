@@ -362,7 +362,7 @@ Before and after the operation, the total elements of tensors must correspond.
     (assert (= (apply #'* (shape tensor))
 	       (apply #'* shapes))
 	    nil
-	    "Reshaping failed because total size doesn't match.")
+	    "Reshaping failed because the total size do not match.")
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
     (let ((result

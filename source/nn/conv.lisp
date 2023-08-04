@@ -19,9 +19,6 @@
     (t
      (error "Conv2D: ~a should be given as fixnum or list(with length=2), but got ~a" name value))))
 
-(defun im2col (tensor)
-  )
-
 (defmodel (Conv2D (self in-channels out-channels kernel-size
 			&key
 			(stride 1)
@@ -76,26 +73,111 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	    ;; Biases are (out-channels) tensor which sampled from U(-sqrt(k), sqrt(k))
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
-;; 
-;; 
-;; Workload
-;; Implement: Padding
-;; 
-;; 
+(lazy-reshape
+ (apply #'lazy #'+
+        (loop for offsets in stencil
+              for index from 0
+              collect
+              (lazy #'*
+                    (lazy-slice filters index)
+                    (lazy-reshape
+                     lazy-array
+                     (make-transformation
+                      :offsets
+                      (append
+                       (make-list (- rank d) :initial-element 0)
+                       (mapcar #'- offsets)))
+                     result-shape))))
+ (collapsing-reshaper))
 
+;; Ref: https://github.com/chainer/chainer/blob/master/chainer/functions/connection/convolution_2d.py#L253
+;; https://qiita.com/nishiha/items/8c204a0778e182ee4328
 (defmethod apply-conv2d ((self Conv2D) input)
-  (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias)) self
+  (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups)) self
     (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
       (multiple-value-bind (C-out icg k-h k-w) (apply #'values (shape weight))
 	(let* ((~     (butlast (shape input) 3))
-	       (pY-ex )
+	       (p-y (mod
+		     (-
+		      (second stride)
+		      (mod
+		       (+ h-in (* 2 (second padding))
+			  (- (* (second dilation) (- k-h 1))))
+		       (second stride)))
+		     (second stride))) ;; (sY - (iH + pY * 2 - (kH - 1) * dY) % sY) % sY
+	       (p-x (mod
+		     (-
+		      (car stride)
+		      (mod
+		       (+ w-in (* 2 (car padding))
+			  (- (* (car dilation) (- k-w 1))))
+		       (car stride)))
+		     (car stride))) ;; (sX - (iW + pX * 2 - (kW - 1) * dX) % sX) % sX
 	       (h-out (floor (+ 1 (/ (+ h-in (* 2 (car padding)) (* (- (car dilation)) (- k-h 1)) -1)
 				     (car stride)))))
 	       (w-out (floor (+ 1 (/ (+ w-in (* 2 (second padding)) (* (- (second dilation)) (- k-w 1)) -1)
-				     (second stride))))))
+				     (second stride)))))
+	       (input (padding input
+			       (if ~ ;; If batched
+				   `(,@(loop for i in ~ collect t)
+				     t
+				     (,(second padding)
+				      ,(+ (second padding) p-y))
+				     (,(car padding)
+				      (+  (car padding)    p-x)))
+				   `(t
+				     (,(second padding)
+				      ,(+ (second padding) p-y))
+				     (,(car padding)
+				      ,(+ (car padding) p-x)))))))
 
-	  (print h-out)
-	  (print w-out)
-	  input
-	  )))))
+	  ;; out(N_i, C_out_j) = bias + Σcross-correlation(weight(C_out_j, k), input(N_i, k)) where k = 0 ... C_in - 1
+	  ;; Input =  (~ C_in H-in+pY W-in+pX)
+	  ;; Weight = (C_out (/ C_in groups) kernel_size[0] kernel_size[1])
+
+	  ;; Conv2D(Input[0], Weight[0]) (C_in=1 -> C_out=8) (Channel)
+	  ;; Input[1]とWeight[1]
+	  ;;        ..
+	  ;;  最後にsum
+	  ;; (8 H-out W-out)が帰ってくる
+
+	  ;; Conv(X, W)
+	  ;; X ... (~ 1 H_in W_in)
+	  ;; Y ... (C_out groups=1 kernel_size_x kenel_size_y)
+	  ;;
+
+	  
+	  ;; Input (~ C_in H-in W-in)
+	  ;;
+	  ;;            v kernel_n
+	  ;; -> (~ C_in ~ 1 k-h k-w)  Reshape
+	  ;;
+	  ;;              v broadcast
+	  ;; -> (~ C_in ~ 1 k-h k-w)  |
+	  ;;    (~ C_in ~ 1 k-h k-w)  | broadcast for C_in
+	  ;;            ...           |
+
+	  ;; Ref: https://github.com/marcoheisig/Petalisp/blob/master/examples/machine-learning.lisp
+	  ;; gemm使わないようにしてJITCPUTensorでまとめてカーネル生成したい
+	  (print (shape input))
+	  (let* ((out (loop for channel-n upfrom 0 below in-channels
+			    collect
+			    (let ((filter (!view weight t channel-n t t))
+				  (cols   ))
+			      (!mul filter cols)
+			      ))))
+		       
+
+	    (print input)
+	    (print input)
+	    (print p-x)
+	    (print p-y)
+
+	    (print h-out)
+	    (print w-out)
+	    input
+	    
+	    (if nil
+		(!add input (%transform bias[i] -> bias[~ i]))
+		input)))))))
 

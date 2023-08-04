@@ -70,7 +70,7 @@
 	       (:file "base-impl/logical")
 	       (:file "base-impl/transform")
 	       (:file "base-impl/ir")
-	       (:file "base-impl/padding")
+	       
 	       
 
 	       (:file "backends/lisp/package")
@@ -98,6 +98,8 @@
 	       (:file "distributions/ziggurat")
 	       (:file "distributions/weights")
 
+	       (:file "base-impl/utils")
+	       
 	       (:file "backends/JITLispTensor/package")
 	       (:file "backends/JITLispTensor/compiler")
 	       (:file "backends/JITLispTensor/tensor")
