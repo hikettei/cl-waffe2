@@ -1,0 +1,64 @@
+
+(in-package :cl-waffe2/nn)
+
+;; Implement them as sample Codes:
+;; TODO: ImageProcessing:       AvgPool/MaxPool/Conv2D
+;; TODO: Sequentially Modeling: RNNCell/RNN LSTMCell/LSTM GRUCell/GRU
+;; TODO: Transformer Models:    MHA, LayerNorm, Dropout ...
+;; TODO: Saving Model Weights
+;; TODO: Optimizers: Adam RAdam
+
+
+(defun maybe-tuple (value name)
+  (typecase value
+    (number `(,value ,value))
+    (list
+     (if (= (length value) 2)
+	 value
+	 (error "Conv2D: ~a should be given as list with length = 2, but got ~a" name value)))
+    (t
+     (error "Conv2D: ~a should be given as fixnum or list(with length=2), but got ~a" name value))))
+
+(defmodel (Conv2D (self in-channels out-channels kernel-size
+			&key
+			(stride 1)
+			(padding 0)
+			(dilation 1)
+			(groups 1)
+			(bias t)
+			&aux
+			(stride (maybe-tuple stride 'stride))
+			(kernel-size (maybe-tuple kernel-size 'kernel-size))
+			(padding (maybe-tuple padding 'padding))
+			(dilation (maybe-tuple dilation 'dilation)))
+	   :documentation "
+Applies a 2D convolution over an input signal composed of several input planes."
+	   :slots ((weight :accessor weight-of)
+		   (bias   :accessor bias-of))
+	   :where (Input[~ C_in H_in W_in] -> Output[C_out H_out W_out]
+			   where
+			   C_in  = in-channels
+			   C_out = out-channels
+			   H_out = (* 2 H_in)
+			   W_out = 1)
+	   :on-call-> ((self x)
+
+		       ))
+  (assert (typep kernel-size 'list)
+	  nil
+	  "Conv2D: Assertion Failed because kernel-size should be given as list. but got: ~a" kernel-size)
+  (let ((k (/ groups (* in-channels (apply #'* kernel-size)))))
+    (setf (weight-of self)
+	  ;; Weights are (out-channels, in-channels / groups, kernel-size[0], kernel-size[1]) tensor
+	  ;; which sampled from U(-sqrt(k), sqrt(k)) dist.
+	  (uniform-random
+	   `(,out-channels ,(/ in-channels groups) ,(car kernel-size) ,(second kernel-size))
+	   (- (sqrt k))
+	   (sqrt k)
+	   :requires-grad t)
+	  (bias-of self)
+	  (when bias
+	    ;; Biases are (out-channels) tensor which sampled from U(-sqrt(k), sqrt(k))
+	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
+
+

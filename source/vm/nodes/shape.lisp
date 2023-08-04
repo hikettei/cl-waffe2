@@ -544,8 +544,10 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					    `(,x ,x)
 					    `(,x)))
 			      common-symbols) ;; Tables: 'a 'b 'c ...
-		       ,@let-binding ;; initial element to 'a 'b 'c...
+		       ;;,@let-binding ;; initial element to 'a 'b 'c...
 
+		       ,@(loop for let in let-binding
+			       collect `(,(car let) ',(car let)))
 		       ;; ~ = `(nil nil nil) at first.
 		       (,undetermined-shape-tmp
 			 (loop for s
@@ -675,9 +677,10 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					       ,all-conditions)
 					      t)
 					    '~)))
-				      shapes
-				      names)))
-			       out)))
+				    shapes
+				    names)))
+			     out)))
+		    (let* (,@let-binding)
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
 			
@@ -693,7 +696,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			 ,rank-error-p
 			 (list ,@(map 'list #'(lambda (arg)
 						`(flatten (list ,@arg)))
-				      first-state)))))))))
+				      first-state))))))))))
       (when macroexpand
 	(print body))
 
