@@ -536,7 +536,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		 ,previous-subscripts)
 
 		;; Initializing Tables
-		
 		(let* (,@(map 'list #'(lambda (x)
 					;; If the symbol is declared as localvar
 					;; Use it as initial value
@@ -679,29 +678,30 @@ Accordingly, the argument must satisfy: dimensions = ~a
 				    shapes
 				    names)))
 			     out)))
-		    (let* (,@(loop for let in let-binding
+		    (let* (,@(loop with tmp = (gensym)
+			           for let in let-binding
 				   collect
-				   `(,(car let) (let* ((tmp (progn ,@(cdr let)))
-						       (tmp (if (listp ,(car let))
-								(list tmp)
-								tmp))
-						       (,(car let) (if (listp tmp)
-								       (list ,(car let))
+				   `(,(car let) (let* ((,tmp (progn ,@(cdr let)))
+						       (,tmp (if (listp ,(car let))
+								 (flatten (list ,tmp))
+								 ,tmp))
+						       (,(car let) (if (listp ,tmp)
+								       (flatten (list ,(car let)))
 								       ,(car let))))
-						  (if (if (listp tmp)
-							  (cl-waffe2/vm.generic-tensor::shape-equal-list tmp ,(car let))
-							  (shape-equal tmp ,(car let)))
-						      tmp
+						  (if (if (listp ,tmp)
+							  (cl-waffe2/vm.generic-tensor::shape-equal-list ,tmp ,(car let))
+							  (shape-equal ,tmp ,(car let)))
+						      ,tmp
 						      (progn
 							(push
 							 (format
 							  nil
 							  "~a is declared as ~a, but determined as ~a"
 							  ',(car let)
-							  tmp
+							  ,tmp
 							  ,(car let))
 							 ,all-conditions)
-							tmp))))))
+							,(car let)))))))
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
 			
