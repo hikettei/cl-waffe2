@@ -74,15 +74,7 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	    ;; Biases are (out-channels) tensor which sampled from U(-sqrt(k), sqrt(k))
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
-;;
-;; メモ
-;;  call-with-viewとその内部のデータ構造を分離する
-;;  nodeを合成可能にする
-;;  FuseOPs
-;;
 
-;; Ref: https://github.com/chainer/chainer/blob/master/chainer/functions/connection/convolution_2d.py#L253
-;; https://qiita.com/nishiha/items/8c204a0778e182ee4328
 (defmethod apply-conv2d ((self Conv2D) input)
   (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups) (kernel-size kernel-size)) self
     (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
@@ -115,7 +107,7 @@ Applies a 2D convolution over an input signal composed of several input planes."
 				     (,(second padding)
 				      ,(+ (second padding) p-y))
 				     (,(car padding)
-				      (+  (car padding)    p-x)))
+				      ,(+  (car padding)    p-x)))
 				   `(t
 				     (,(second padding)
 				      ,(+ (second padding) p-y))
@@ -129,8 +121,7 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	  ;; Conv2D(Input[0], Weight[0]) (C_in=1 -> C_out=8) (Channel)
 	  ;; Input[1]とWeight[1]
 	  ;;        ..
-	  ;;  最後にsum
-	  ;; (8 H-out W-out)が帰ってくる
+	  ;; (8 H-out W-out)
 
 	  ;; Conv(X, W)
 	  ;; X ... (~ 1 H_in W_in)
@@ -148,67 +139,7 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	  ;;    (~ C_in ~ 1 k-h k-w)  | broadcast for C_in
 	  ;;            ...           |
 
-	  ;; Ref: https://github.com/marcoheisig/Petalisp/blob/master/examples/machine-learning.lisp
-	  ;; gemm使わないようにしてJITCPUTensorでまとめてカーネル生成したい
-	  ;; !viewを使ってカーネルを直接切り取る -> !Mulする-> collect -> !addで実装する
-	  ;; 積極的にloop forを使ってみる
+	  ;; im2col + gemm
+	  (let ((out (call-im2col-kernel (proceed input) (or (car ~) 1) in-channels k-h k-w h-out w-out (car stride) (second stride))))
 
-	  (print weight)
-	  (print input)
-
-	  ;; https://github.com/Woodi-dev/LispNet/blob/main/layers/conv2d.lisp
-	  ;; 方針:
-	  ;; 1. im2colを実装する
-	  ;; im2colのstrideを直接いじる実装
-
-	  ;; 2. later, gemmを呼び出す
-	  
-	  ;; reshape/broadcasting使ってうまくまとめたい
-	  (let* ((batch-view (make-list (length ~) :initial-element t))
-		 (kernel-pieces
-		   (loop for channel-n upfrom 0 below in-channels
-			 append
-			 (loop for h upfrom 0 below h-out
-			       append
-			       (loop for w upfrom 0 below w-out
-				     collect
-				     (let* ((c-start (* channel-n groups))
-					    (c-end   (+ c-start groups))
-					    (h-start (* (car stride) h))
-					    (h-end   (+ h-start (car kernel-size)))
-					    (w-start (* (second stride) w))
-					    (w-end   (+ w-start (second kernel-size)))
-					    (repeat  (- c-end c-start)))					
-				       (!mul (%transform (!view weight t channel-n t t)[C_out C_groups k1 k2] -> [t *repeat t t]) ;; (C_out C_in kernel-size1 kernel_size2)
-					     (!flexible
-					      (apply
-					       #'!view
-					       input
-					       ;; c_in h_in w_in
-					       (append batch-view
-					       `((,c-start ,c-end)
-						 (,h-start ,h-end)
-						 (,w-start ,w-end)))))))))))
-		 (kernel-pieces
-		   (loop for channel-n upfrom 0 below in-channels
-			 collect
-			 (let ((c-start (* channel-n groups))
-			       (c-end   (+ c-start groups)))
-			   (!mul
-			    ;; (C_out group k_x K_y)
-			    ;; -> (group C_out k_x k_y)
-			    (!permute
-			     (!view weight t `(,c-start ,c-end) t t)
-			     2 3 1 0)
-			    ;; (C_in h y)
-			    (!view input 
-
-
-	    ;; mapviewを追加
-	    ;;最後に(!sum (!add out))みたいな
-	    ;; groupでBroadcastingが必須だなぁ
-	    ;; compile-forward-chainが末尾関数最適化できてない・・・
-	    ;; 四則演算のCopy 計算ノードの量爆発しないか大丈夫？
-
-	    (print kernel-pieces)
-	    input))))))
+	    out))))))
