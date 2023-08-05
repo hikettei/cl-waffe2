@@ -1494,6 +1494,7 @@ The function !mean return a node which computes the average of tensor along the 
 ### Return
 
 `->`[AbstractTensor] the result.
+
 ## [function] !argmax
 
 ```
@@ -1512,7 +1513,11 @@ The function !argmax computes the indices of maximum values of all elements belo
 
 ### Returns
 
-AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.## [function] !argmin
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+
+
+
+## [function] !argmin
 
 ```
 (!argmin tensor &key (axis -1) (out nil))
@@ -1531,6 +1536,47 @@ The function !argmin computes the indices of minimum values of all elements belo
 ### Returns
 
 AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+
+## [function] !max
+
+```
+(!max tensor &key (axis -1) (out nil))
+```
+
+The function `!max` finds largest values of all elements below the **axis** rank in the given tensor.
+
+### Inputs
+
+`tensor`
+
+`axis`
+
+`out`
+
+### Returns
+
+`AbstractTensor` with dimensions behind `axis` is replaced with 1.
+
+## [function] !min
+
+```
+(!min tensor &key (axis -1) (out nil))
+```
+
+The function `!min` finds the smallest values of all elements below the **axis** rank in the given tensor.
+
+### Inputs
+
+`tensor`
+
+`axis`
+
+`out`
+
+### Returns
+
+`AbstractTensor` with dimensions behind `axis` is replaced with 1.
+
 ## [function] !t
 
 ```

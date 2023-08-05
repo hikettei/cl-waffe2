@@ -235,6 +235,7 @@ A is a target to find a minimum value, and OUT is a place to set the index.
 
 (defun !argmax (tensor &key (axis -1) (out nil))
   "
+
 ## [function] !argmax
 
 ```
@@ -253,7 +254,9 @@ The function !argmax computes the indices of maximum values of all elements belo
 
 ### Returns
 
-AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+
+"
   (declare (type AbstractTensor tensor)
 	   (type fixnum axis))
   (let* ((axis (if (< axis 0)
@@ -267,7 +270,9 @@ AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
     (forward (ArgMax-Node (shape out)) x out)))
 
 (defun !argmin (tensor &key (axis -1) (out nil))
-  "## [function] !argmin
+  "
+
+## [function] !argmin
 
 ```
 (!argmin tensor &key (axis -1) (out nil))
@@ -285,7 +290,8 @@ The function !argmin computes the indices of minimum values of all elements belo
 
 ### Returns
 
-AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+"
   (declare (type AbstractTensor tensor)
 	   (type fixnum axis))
   (let* ((axis (if (< axis 0)
@@ -340,7 +346,8 @@ A is a target to find a minimum value, and OUT is a place to set the index.
 
 
 (defun !max (tensor &key (axis -1) (out nil))
-  "## [function] !max
+  "
+## [function] !max
 
 ```
 (!max tensor &key (axis -1) (out nil))
@@ -358,7 +365,8 @@ The function `!max` finds largest values of all elements below the **axis** rank
 
 ### Returns
 
-`AbstractTensor` with dimensions behind `axis` is replaced with 1."
+`AbstractTensor` with dimensions behind `axis` is replaced with 1.
+"
   (declare (type AbstractTensor tensor)
 	   (type fixnum axis))
   (let* ((axis (if (< axis 0)
@@ -372,7 +380,8 @@ The function `!max` finds largest values of all elements below the **axis** rank
     (forward (MaxValue-Node (shape out)) x out)))
 
 (defun !min (tensor &key (axis -1) (out nil))
-  "## [function] !min
+  "
+## [function] !min
 
 ```
 (!min tensor &key (axis -1) (out nil))
@@ -390,7 +399,8 @@ The function `!min` finds the smallest values of all elements below the **axis**
 
 ### Returns
 
-`AbstractTensor` with dimensions behind `axis` is replaced with 1."
+`AbstractTensor` with dimensions behind `axis` is replaced with 1.
+"
   (declare (type AbstractTensor tensor)
 	   (type fixnum axis))
   (let* ((axis (if (< axis 0)
