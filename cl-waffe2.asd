@@ -141,6 +141,7 @@
 
 	       (:file "nn/im2col")
 	       (:file "nn/conv")
+	       (:file "nn/pool")
 
 	       (:file "optimizers/impls/sgd")
 	       (:file "optimizers/impls/adam")
