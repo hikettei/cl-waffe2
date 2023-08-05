@@ -17,8 +17,12 @@
 
 (defun blas-function-name (name ctype)
   (let ((*package* (find-package :cl-waffe2/backends.cpu)))
-    (read-from-string (format nil "blas-~A~A" (ctype-blas-prefix ctype)
-                              name))))
+    (read-from-string
+     (if (listp name)
+	 (format nil "blas-~A" (funcall (eval name) (ctype-blas-prefix ctype)))
+	 (format nil "blas-~A~A"
+		 (ctype-blas-prefix ctype)
+		 name)))))
 
 (defvar *mat-param-type*)
 
@@ -70,8 +74,10 @@
 
 
 (defun blas-foreign-function-name (name ctype)
-  (format nil "~A~A_" (ctype-blas-prefix ctype)
-          (string-downcase (symbol-name name))))
+  (if (listp name)
+      (format nil "~a_" (funcall (eval name) (ctype-blas-prefix ctype)))
+      (format nil "~A~A_" (ctype-blas-prefix ctype)
+	      (string-downcase (symbol-name name)))))
 
 (defun blas-funcall-form (name ctype params return-type args)
   (let ((cname (blas-foreign-function-name name ctype)))
@@ -120,7 +126,7 @@
          (params    (mapcar #'ensure-pointer-param params))
          (in-params (remove-if #'non-mat-output-param-p params))
          (lisp-parameters (mapcar #'param-name in-params)))
-    
+
     `(progn
        ,@(loop for ctype in ctypes
                collect `(defun ,(blas-function-name name ctype)

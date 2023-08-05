@@ -192,15 +192,15 @@ Finds a dot product of x and y. Unlike `numpy.dot`, `!dot` intentionally only su
 ```"
     (!sum (!mul (!flatten x) (!flatten y)))))
 
-;; (defun einsum)
+;; ~~ ArgMax/Argmin ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-(export '(ArgMax-Node ArgMin-Node !argmax !argmin))
+(export '(ArgMax-Node ArgMin-Node !argmax !argmin MaxValue-Node MinValue-Node !max !min))
 (defnode (ArgMax-Node (myself out-size)
 	  :where (A[~] OUT[out-size] -> OUT[out-size])
 	  :backward ((self dout da do)
 		     (declare (ignore dout da do))
 		     (values nil nil))
-	  :documentation "ArgMax-Node finds a maximum value of all elements in A. `OUT` is overwritten with the result.
+	  :documentation "ArgMax-Node finds an index of maximum value of all elements in A. `OUT` is overwritten with the result.
 
 A is a target to find a maximum value, and OUT is a place to set the index.
 
@@ -219,7 +219,7 @@ A is a target to find a maximum value, and OUT is a place to set the index.
 	  :backward ((self dout da do)
 		     (declare (ignore dout da do))
 		     (values nil nil))
-	  :documentation "ArgMin-Node finds a minimum value of all elements in A. `OUT` is overwritten with the result.
+	  :documentation "ArgMin-Node finds an index of minimum value of all elements in A. `OUT` is overwritten with the result.
 
 A is a target to find a minimum value, and OUT is a place to set the index.
 
@@ -235,6 +235,7 @@ A is a target to find a minimum value, and OUT is a place to set the index.
 
 (defun !argmax (tensor &key (axis -1) (out nil))
   "
+
 ## [function] !argmax
 
 ```
@@ -253,7 +254,9 @@ The function !argmax computes the indices of maximum values of all elements belo
 
 ### Returns
 
-AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+
+"
   (declare (type AbstractTensor tensor)
 	   (type fixnum axis))
   (let* ((axis (if (< axis 0)
@@ -267,7 +270,9 @@ AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
     (forward (ArgMax-Node (shape out)) x out)))
 
 (defun !argmin (tensor &key (axis -1) (out nil))
-  "## [function] !argmin
+  "
+
+## [function] !argmin
 
 ```
 (!argmin tensor &key (axis -1) (out nil))
@@ -285,7 +290,8 @@ The function !argmin computes the indices of minimum values of all elements belo
 
 ### Returns
 
-AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
+AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
+"
   (declare (type AbstractTensor tensor)
 	   (type fixnum axis))
   (let* ((axis (if (< axis 0)
@@ -298,7 +304,150 @@ AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1."
 				  :order (order tensor)))))
     (forward (ArgMin-Node (shape out)) x out)))
 
-;; (defun !argmax)
-;; (defun !argmin)
-;; (defun !max)
-;; (defun !min)
+
+;; ~  Max/Min ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(defnode (MaxValue-Node (myself out-size)
+	  :where (A[~] OUT[out-size] -> OUT[out-size])
+	  :save-for-backward (t nil)
+	  :backward ((self dout da do)
+		     (declare (ignore do))
+		     ;; only max values are propagated
+
+		     ;; [forward]
+		     ;;     a       out   argmax(a)
+		     ;;   0 3 1      3       1
+		     ;;   3 4 5   -> 5       2
+
+		     ;; [backward]
+		     ;;    dout        result
+		     ;;   dout_1     0 dout_1 0
+		     ;;   dout_2  -> 0 0 dout_2
+		     ;;
+
+		     ;; mask
+		     ;; 0 1 0
+		     ;; 0 0 1
+		     (let ((mask (A=B da (!view (!max da) (broadcast-to da)))))
+		       (values (!mul mask (!view dout (broadcast-to mask))) nil)))
+	  :documentation "MaxValue-Node finds a maximum value of all elements in A. `OUT` is overwritten with the result.
+
+A is a target to find a maximum value, and OUT is a place to set the index.
+
+### Constructor
+
+```
+(MaxValue-Node out-size)
+```
+
+`out-size` the reducted shape of `out`.
+")
+  (setf (ignore-shape-error myself) t))
+
+;; MinValue-Node isn't working well?
+(defnode (MinValue-Node (myself out-size)
+	  :where (A[~] OUT[out-size] -> OUT[out-size])
+	  :save-for-backward (t nil)
+	  :backward ((self dout da do)
+		     (declare (ignore do))
+		     ;; only max values are propagated
+
+		     ;; [forward]
+		     ;;     a       out   argmax(a)
+		     ;;   0 3 1      3       1
+		     ;;   3 4 5   -> 5       2
+
+		     ;; [backward]
+		     ;;    dout        result
+		     ;;   dout_1     0 dout_1 0
+		     ;;   dout_2  -> 0 0 dout_2
+		     ;;
+
+		     ;; mask
+		     ;; 0 1 0
+		     ;; 0 0 1
+		     (let ((mask (A=B da (!view (!min da) (broadcast-to da)))))
+		       (values (!mul mask (!view dout (broadcast-to mask))) nil)))
+	  :documentation "MinValue-Node finds a minimum value of all elements in A. `OUT` is overwritten with the result.
+
+A is a target to find a minimum value, and OUT is a place to set the index.
+
+### Constructor
+
+```
+(MinValue-Node out-size)
+```
+
+`out-size` the reducted shape of `out`.")
+  (setf (ignore-shape-error myself) t))
+
+
+(defun !max (tensor &key (axis -1) (out nil))
+  "
+## [function] !max
+
+```
+(!max tensor &key (axis -1) (out nil))
+```
+
+The function `!max` finds largest values of all elements below the **axis** rank in the given tensor.
+
+### Inputs
+
+`tensor`
+
+`axis`
+
+`out`
+
+### Returns
+
+`AbstractTensor` with dimensions behind `axis` is replaced with 1.
+"
+  (declare (type AbstractTensor tensor)
+	   (type fixnum axis))
+  (let* ((axis (if (< axis 0)
+		   (+ (length (shape tensor)) axis)
+		   axis))
+	 (out-shape (butlast (shape tensor) axis))
+	 (x   (apply #'!reshape tensor `(,@out-shape t)))
+	 (out (or out (make-input `(,@out-shape 1) nil
+				  :dtype (dtype tensor)
+				  :order (order tensor)))))
+    (forward (MaxValue-Node (shape out)) x out)))
+
+(defun !min (tensor &key (axis -1) (out nil))
+  "
+## [function] !min
+
+```
+(!min tensor &key (axis -1) (out nil))
+```
+
+The function `!min` finds the smallest values of all elements below the **axis** rank in the given tensor.
+
+### Inputs
+
+`tensor`
+
+`axis`
+
+`out`
+
+### Returns
+
+`AbstractTensor` with dimensions behind `axis` is replaced with 1.
+"
+  (declare (type AbstractTensor tensor)
+	   (type fixnum axis))
+  (let* ((axis (if (< axis 0)
+		   (+ (length (shape tensor)) axis)
+		   axis))
+	 (out-shape (butlast (shape tensor) axis))
+	 (x   (apply #'!reshape tensor `(,@out-shape t)))
+	 (out (or out (make-input `(,@out-shape 1) nil
+				  :dtype (dtype tensor)
+				  :order (order tensor)))))
+    (forward (MinValue-Node (shape out)) x out)))
+
+

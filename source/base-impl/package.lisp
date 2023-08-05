@@ -45,7 +45,10 @@
    #:lazy-print)
   (:export
    :node-x
-   :node-y))
+   :node-y)
+  ;; Reshapers
+  (:export
+   #:broadcast-to))
 
 (in-package :cl-waffe2/base-impl)
 	

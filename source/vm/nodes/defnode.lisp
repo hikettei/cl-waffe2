@@ -318,8 +318,8 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 			    slots)))
     ;; where-static-p -> T,   the phase where isn't used
     ;; where-static-p -> NIL, the phase where is used
+    
     `(eval-when (:compile-toplevel :load-toplevel :execute)
-       (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
        (defclass ,abstract-name (AbstractNode ,@extends)
 	 (,@slots
 	  (save-for-backward-space1 :initform ',save-for-backward :reader node-save-for-backward1)
@@ -432,6 +432,8 @@ Return nil -> ok
 	 (fw-name-vm     (symb abstract-name device '-vm-function)))
     
     (eval-when (:compile-toplevel :load-toplevel :execute)
+      ;; [TODO] If not deleting all caches, find the impl and remove it.
+      (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
 	      nil
 	      "Assertion Failed because the number of arguments of forward and backward, doesn't correspond.: ~a At ~a"

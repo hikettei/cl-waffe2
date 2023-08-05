@@ -91,6 +91,9 @@
     (nodedoc ArgMax-Node)
     (nodedoc ArgMin-Node)
 
+    (nodedoc MaxValue-Node)
+    (nodedoc MinValue-Node)
+
     (nodedoc MatmulNode)
 
     (nodedoc Where-Operation-Node)
@@ -179,6 +182,9 @@
     (caller-doc !argmax)
     (caller-doc !argmin)
 
+    (caller-doc !max)
+    (caller-doc !min)
+
     (caller-doc !t)
     (caller-doc !matmul)
     (caller-doc !dot)
@@ -191,13 +197,16 @@
     (caller-doc A<scal)
     (caller-doc A>=scal)
     (caller-doc A<=scal)
+    (caller-doc A=scal)
 
     (caller-doc A>B)
     (caller-doc A<B)
     (caller-doc A>=B)
     (caller-doc A<=B)
+    (caller-doc A=B)
 
     (caller-doc padding)
+    (caller-doc broadcast-to)
     ))
 
 

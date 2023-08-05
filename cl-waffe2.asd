@@ -70,6 +70,7 @@
 	       (:file "base-impl/logical")
 	       (:file "base-impl/transform")
 	       (:file "base-impl/ir")
+	       (:file "base-impl/reshapers")
 	       
 	       
 
@@ -141,6 +142,7 @@
 
 	       (:file "nn/im2col")
 	       (:file "nn/conv")
+	       (:file "nn/pool")
 
 	       (:file "optimizers/impls/sgd")
 	       (:file "optimizers/impls/adam")

@@ -304,6 +304,7 @@ Return: (values offsets-place form)"
 		       tensors
 		       &key
 			 (at-least-dim 1)
+			 (force-order nil)
 		       &aux
 			 (shape (shape (car tensors)))
 			 (dims  (length shape)))
@@ -323,6 +324,7 @@ Return: (values offsets-place form)"
 `tensors` [list of abstracttensor] tensors to be called with.
 `at-least-dim` [fixnum] ... kernel-size
 
+`force-order[boolean]` If t, iterates over matrices of ranks below the kernel size, preserving their shape.
 See also:
 
 `size-of`
@@ -348,6 +350,7 @@ butgot ~a."
 
 	     ;; When The Rest Form Can be flatten
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
+			(not force-order)
 			(no-permute-p tensors)
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
