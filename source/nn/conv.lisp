@@ -37,7 +37,7 @@ Applies a 2D convolution over an input signal composed of several input planes.
 
 ### Inputs
 
-`in-channels[fixnum]` `out-channels[fixnum]` the number of channels. For example, if the input image is RGC, `in-channels=3`.
+`in-channels[fixnum]` `out-channels[fixnum]` the number of channels. For example, if the input image is RGB, `in-channels=3`.
 
 `kernel-size[list (kernel-x kernel-y)]` controls the size of kernel (e.g.: `'(3 3)`).
 

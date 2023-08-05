@@ -13,13 +13,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1740 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP704 
   :vec-state [computed]
-  ((0.36703286  -0.0        1.7522626   ~ -0.0        -0.0        -0.0)                   
-   (-0.0        2.0839996   -0.0        ~ 1.1435975   -0.0        -0.0)   
-                ...
-   (1.0785233   -0.0        -0.0        ~ -0.0        -0.0        0.7540661)
-   (0.0835697   1.1692092   0.11656446  ~ -0.0        2.1753807   -0.0))
+  ((-0.0         2.0355937    0.87400746   ~ 0.5758207    0.32484004   -0.0)                    
+   (1.1069025    -0.0         0.9794315    ~ -0.0         0.6054693    -0.0)   
+                 ...
+   (-0.0         0.14430979   1.6049826    ~ 0.66292197   -0.0         -0.0)
+   (-0.0         -0.0         -0.0         ~ -0.0         -0.0         -0.0))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -42,13 +42,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1901 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP865 
   :vec-state [computed]
-  ((0.71474916  0.5147265   0.43981186  ~ 0.52759     0.7727495   0.85379267)                   
-   (0.5236434   0.69857574  0.09652317  ~ 0.51632696  0.80563885  0.53765744)   
-                ...
-   (0.12418704  0.5162964   0.4790535   ~ 0.40099338  0.29518947  0.36718118)
-   (0.23341432  0.6434672   0.4201172   ~ 0.4040754   0.69619596  0.11914415))
+  ((0.59221524 0.49752915 0.45874146 ~ 0.33162943 0.3568413  0.26439044)                  
+   (0.519481   0.7583395  0.31405032 ~ 0.55313486 0.48576716 0.62167424)   
+               ...
+   (0.8074486  0.17289545 0.40895566 ~ 0.5744591  0.66711944 0.48927152)
+   (0.7403083  0.42706847 0.89801675 ~ 0.5560996  0.42497367 0.7186789))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -75,9 +75,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2130 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1094 
   :vec-state [computed]
-  ((1.079849))
+  ((1.2354927))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -102,9 +102,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2327 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1291 
   :vec-state [computed]
-  ((1.4253877))
+  ((1.423828))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -196,7 +196,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W2331}(
+<Composite: LINEARLAYER{W1295}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -255,7 +255,7 @@ Applies a 2D convolution over an input signal composed of several input planes.
 
 ### Inputs
 
-`in-channels[fixnum]` `out-channels[fixnum]` the number of channels. For example, if the input image is RGC, `in-channels=3`.
+`in-channels[fixnum]` `out-channels[fixnum]` the number of channels. For example, if the input image is RGB, `in-channels=3`.
 
 `kernel-size[list (kernel-x kernel-y)]` controls the size of kernel (e.g.: `'(3 3)`).
 
@@ -284,7 +284,7 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (LinearLayer 3 5 '(3 3))
 
-<Composite: LINEARLAYER{W2337}(
+<Composite: LINEARLAYER{W1301}(
     <Input : ((~ BATCH-SIZE 3)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 3)
