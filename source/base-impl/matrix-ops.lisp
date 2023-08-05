@@ -325,8 +325,11 @@ AbstractTensor[uint32] with dimensions behind `axis` is replaced with 1.
 		     ;;   dout_2  -> 0 0 dout_2
 		     ;;
 
-		     (let ((mask (A>=scal da (!view (!max da) (broadcast-to da)))))
-		       (values mask nil)))
+		     ;; mask
+		     ;; 0 1 0
+		     ;; 0 0 1
+		     (let ((mask (A=B da (!view (!max da) (broadcast-to da)))))
+		       (values (!mul mask (!view dout (broadcast-to mask))) nil)))
 	  :documentation "MaxValue-Node finds a maximum value of all elements in A. `OUT` is overwritten with the result.
 
 A is a target to find a maximum value, and OUT is a place to set the index.
@@ -341,11 +344,30 @@ A is a target to find a maximum value, and OUT is a place to set the index.
 ")
   (setf (ignore-shape-error myself) t))
 
+;; MinValue-Node isn't working well?
 (defnode (MinValue-Node (myself out-size)
 	  :where (A[~] OUT[out-size] -> OUT[out-size])
+	  :save-for-backward (t nil)
 	  :backward ((self dout da do)
-		     (declare (ignore dout da do))
-		     (values nil nil))
+		     (declare (ignore do))
+		     ;; only max values are propagated
+
+		     ;; [forward]
+		     ;;     a       out   argmax(a)
+		     ;;   0 3 1      3       1
+		     ;;   3 4 5   -> 5       2
+
+		     ;; [backward]
+		     ;;    dout        result
+		     ;;   dout_1     0 dout_1 0
+		     ;;   dout_2  -> 0 0 dout_2
+		     ;;
+
+		     ;; mask
+		     ;; 0 1 0
+		     ;; 0 0 1
+		     (let ((mask (A=B  da (!view (!min da) (broadcast-to da)))))
+		       (values (!mul mask (!view dout (broadcast-to mask))) nil)))
 	  :documentation "MinValue-Node finds a minimum value of all elements in A. `OUT` is overwritten with the result.
 
 A is a target to find a minimum value, and OUT is a place to set the index.

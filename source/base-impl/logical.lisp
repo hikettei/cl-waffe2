@@ -190,7 +190,8 @@ The function ~(~a~) sets `true-then` if the equation: `element ~a scal` is t, ot
   (define-cmp-scal-operation A>scal >)
   (define-cmp-scal-operation A<scal <)
   (define-cmp-scal-operation A>=scal >=)
-  (define-cmp-scal-operation A<=scal <=))
+  (define-cmp-scal-operation A<=scal <=)
+  (define-cmp-scal-operation A=scal =))
 
 (macrolet ((define-cmp-mat-operation (name operator)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
@@ -220,6 +221,7 @@ The function ~(~a~) sets `true-then` if the equation: `A ~a B` is t, otherwise s
   (define-cmp-mat-operation A>B >)
   (define-cmp-mat-operation A<B <)
   (define-cmp-mat-operation A>=B >=)
-  (define-cmp-mat-operation A<=B <=))
+  (define-cmp-mat-operation A<=B <=)
+  (define-cmp-mat-operation A=B =))
 		       
 
