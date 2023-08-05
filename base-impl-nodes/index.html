@@ -525,7 +525,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#node-matmulnode">[node] MATMULNODE</a>
+    <li class="toctree-l2"><a class="reference internal" href="#node-maxvalue-node">[node] MAXVALUE-NODE</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_53">Description</a>
     </li>
@@ -535,7 +535,7 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#node-where-operation-node">[node] WHERE-OPERATION-NODE</a>
+    <li class="toctree-l2"><a class="reference internal" href="#node-minvalue-node">[node] MINVALUE-NODE</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_54">Description</a>
     </li>
@@ -545,13 +545,33 @@
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#node-compare-operation-node">[node] COMPARE-OPERATION-NODE</a>
+    <li class="toctree-l2"><a class="reference internal" href="#node-matmulnode">[node] MATMULNODE</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_55">Description</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#constructor_14">Constructor</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#backward_55">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-where-operation-node">[node] WHERE-OPERATION-NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_56">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_15">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_56">Backward</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#node-compare-operation-node">[node] COMPARE-OPERATION-NODE</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_57">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_16">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#backward_57">Backward</a>
     </li>
         </ul>
     </li>
@@ -1441,7 +1461,7 @@ save-for-backward: (T NIL)</p>
 <pre><code>(A[~] OUT[OUT-SIZE] -&gt; OUT[OUT-SIZE])
 </code></pre>
 <h3 id="description_51">Description</h3>
-<p>ArgMax-Node finds a maximum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
+<p>ArgMax-Node finds an index of maximum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
 <p>A is a target to find a maximum value, and OUT is a place to set the index.</p>
 <h3 id="constructor_10">Constructor</h3>
 <pre><code>(ArgMax-Node out-size)
@@ -1456,7 +1476,7 @@ save-for-backward: (T NIL)</p>
 <pre><code>(A[~] OUT[OUT-SIZE] -&gt; OUT[OUT-SIZE])
 </code></pre>
 <h3 id="description_52">Description</h3>
-<p>ArgMin-Node finds a minimum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
+<p>ArgMin-Node finds an index of minimum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
 <p>A is a target to find a minimum value, and OUT is a place to set the index.</p>
 <h3 id="constructor_11">Constructor</h3>
 <pre><code>(ArgMin-Node out-size)
@@ -1467,20 +1487,54 @@ save-for-backward: (T NIL)</p>
 <pre><code class="language-lisp">((self dout da do) (declare (ignore dout da do)) (values nil nil))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-maxvalue-node">[node] MAXVALUE-NODE</h2>
+<pre><code>(A[~] OUT[OUT-SIZE] -&gt; OUT[OUT-SIZE])
+</code></pre>
+<h3 id="description_53">Description</h3>
+<p>MaxValue-Node finds a maximum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
+<p>A is a target to find a maximum value, and OUT is a place to set the index.</p>
+<h3 id="constructor_12">Constructor</h3>
+<pre><code>(MaxValue-Node out-size)
+</code></pre>
+<p><code>out-size</code> the reducted shape of <code>out</code>.</p>
+<h3 id="backward_53">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da do) (declare (ignore do))
+ (let ((mask (a=b da (!view (!max da) (broadcast-to da)))))
+   (values (!mul mask (!view dout (broadcast-to mask))) nil)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
+<h2 id="node-minvalue-node">[node] MINVALUE-NODE</h2>
+<pre><code>(A[~] OUT[OUT-SIZE] -&gt; OUT[OUT-SIZE])
+</code></pre>
+<h3 id="description_54">Description</h3>
+<p>MinValue-Node finds a minimum value of all elements in A. <code>OUT</code> is overwritten with the result.</p>
+<p>A is a target to find a minimum value, and OUT is a place to set the index.</p>
+<h3 id="constructor_13">Constructor</h3>
+<pre><code>(MinValue-Node out-size)
+</code></pre>
+<p><code>out-size</code> the reducted shape of <code>out</code>.</p>
+<h3 id="backward_54">Backward</h3>
+<p>✅ Already defined. </p>
+<pre><code class="language-lisp">((self dout da do) (declare (ignore do))
+ (let ((mask (a=b da (!view (!min da) (broadcast-to da)))))
+   (values (!mul mask (!view dout (broadcast-to mask))) nil)))
+</code></pre>
+<p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-matmulnode">[node] MATMULNODE</h2>
 <pre><code>(A[~ I J] B[~ J K] C[~ I K] -&gt; C[~ I K])
 </code></pre>
-<h3 id="description_53">Description</h3>
+<h3 id="description_55">Description</h3>
 <p>MatmulNode Computes a matrix multiplication of given A and B, set the result to C.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>C</mi><mo>←</mo><mrow><mi>g</mi><mi>e</mi><mi>m</mi><mi>m</mi><mo stretchy="false">(</mo><mn>1.0</mn><mo separator="true">,</mo><mi>A</mi><mo separator="true">,</mo><mi>B</mi><mo separator="true">,</mo><mn>0.0</mn><mo separator="true">,</mo><mi>C</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
 C\gets{gemm(1.0, A, B, 0.0, C)}
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mord mathnormal">mm</span><span class="mopen">(</span><span class="mord">1.0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">A</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mclose">)</span></span></span></span></span></span></p>
-<h3 id="constructor_12">Constructor</h3>
+<h3 id="constructor_14">Constructor</h3>
 <pre><code>(MatMulNode dtype &amp;key transpose-a transpose-b)
 </code></pre>
 <p><code>dtype</code> dtype to use.</p>
 <p><code>transpose-a transpose-b[boolean]</code> becomes t if the given <code>a</code> or <code>b</code> needs to be transposed respectively. call <code>(read-untransposed tensor)</code> to read untransposed tensor.</p>
-<h3 id="backward_53">Backward</h3>
+<h3 id="backward_55">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout da db do) (declare (ignore do))
  (values (!matmul dout (!t db)) (!matmul (!t da) dout) nil))
@@ -1489,14 +1543,14 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 <h2 id="node-where-operation-node">[node] WHERE-OPERATION-NODE</h2>
 <pre><code>(A[~] OUT[~] -&gt; OUT[~])
 </code></pre>
-<h3 id="description_54">Description</h3>
+<h3 id="description_56">Description</h3>
 <p>Where-Operation-Node is a node which set <code>true-then</code>, if the result of calling <code>condition</code> with each element of A, is t and if it is NIL, set <code>false-then</code> at corresponding position.</p>
-<h3 id="constructor_13">Constructor</h3>
+<h3 id="constructor_15">Constructor</h3>
 <pre><code>(Where-Operation-Node condition true-then false-then)
 </code></pre>
 <p><code>true-then</code> and <code>false-then</code> is a number.</p>
 <p><code>condition</code> a single argument function, each element of A is argument. (e.g.: this could be <code>#'evenp</code> <code>#'oddp</code> etc...)</p>
-<h3 id="backward_54">Backward</h3>
+<h3 id="backward_56">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout da do) (declare (ignore dout da do)) ;; todo: :no-grad t
  (values nil nil))
@@ -1505,14 +1559,14 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 <h2 id="node-compare-operation-node">[node] COMPARE-OPERATION-NODE</h2>
 <pre><code>(A[~] B[~] OUT[~] -&gt; OUT[~])
 </code></pre>
-<h3 id="description_55">Description</h3>
+<h3 id="description_57">Description</h3>
 <p>Compare-Operation-Node is a node which set <code>true-then</code>, if the result of calling <code>condition</code> with each element of A and B, if it is NIl set <code>false-then</code> at corresponding position.</p>
-<h3 id="constructor_14">Constructor</h3>
+<h3 id="constructor_16">Constructor</h3>
 <pre><code>(Compare-Operation-Node condition true-then false-then)
 </code></pre>
 <p><code>true-then</code> and <code>false-then</code> is a number.</p>
 <p><code>condition</code> a two arguments function, each element of A and B is argument. (e.g.: this could be <code>#'&gt;</code> or <code>#'&lt;</code> etc...)</p>
-<h3 id="backward_55">Backward</h3>
+<h3 id="backward_57">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout da db do) (declare (ignore dout da db do)) ;; todo: :no-grad t
  (values nil nil nil))

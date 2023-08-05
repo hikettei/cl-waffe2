@@ -491,7 +491,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP624 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1671 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -504,10 +504,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53A248DB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {538CE17B}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5366587B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5392662B}&gt;
 
 += [Tensors in the computation node] =======+
 
@@ -557,7 +557,8 @@ Variables:
 <p><code>function</code> [lambda] an lambda function which receives <code>variable1.view variable2.view ...</code> as arguments, returning an list being compiled.</p>
 <p><code>tensors</code> [list of abstracttensor] tensors to be called with.
 <code>at-least-dim</code> [fixnum] ... kernel-size</p>
-<p>See also:</p>
+<p><code>force-order[boolean]</code> If t, iterates over matrices of ranks below the kernel size, preserving their shape.
+See also:</p>
 <p><code>size-of</code>
 <code>stride-of</code>
 <code>offset-of</code>
