@@ -1441,7 +1441,7 @@ No need to implement backwards at `define-impl`. (they'd be ignored.)
 
 ### Description
 
-ArgMax-Node finds a maximum value of all elements in A. `OUT` is overwritten with the result.
+ArgMax-Node finds an index of maximum value of all elements in A. `OUT` is overwritten with the result.
 
 A is a target to find a maximum value, and OUT is a place to set the index.
 
@@ -1471,7 +1471,7 @@ No need to implement backwards at `define-impl`. (they'd be ignored.)
 
 ### Description
 
-ArgMin-Node finds a minimum value of all elements in A. `OUT` is overwritten with the result.
+ArgMin-Node finds an index of minimum value of all elements in A. `OUT` is overwritten with the result.
 
 A is a target to find a minimum value, and OUT is a place to set the index.
 
@@ -1479,6 +1479,65 @@ A is a target to find a minimum value, and OUT is a place to set the index.
 
 ```
 (ArgMin-Node out-size)
+```
+
+`out-size` the reducted shape of `out`.
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout da do) (declare (ignore dout da do)) (values nil nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] MAXVALUE-NODE
+
+```
+(A[~] OUT[OUT-SIZE] -> OUT[OUT-SIZE])
+```
+
+### Description
+
+MaxValue-Node finds a maximum value of all elements in A. `OUT` is overwritten with the result.
+
+A is a target to find a maximum value, and OUT is a place to set the index.
+
+### Constructor
+
+```
+(MaxValue-Node out-size)
+```
+
+`out-size` the reducted shape of `out`.
+
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout da do) (declare (ignore dout da do)) (values nil nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] MINVALUE-NODE
+
+```
+(A[~] OUT[OUT-SIZE] -> OUT[OUT-SIZE])
+```
+
+### Description
+
+MinValue-Node finds a minimum value of all elements in A. `OUT` is overwritten with the result.
+
+A is a target to find a minimum value, and OUT is a place to set the index.
+
+### Constructor
+
+```
+(MinValue-Node out-size)
 ```
 
 `out-size` the reducted shape of `out`.
