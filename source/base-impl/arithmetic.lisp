@@ -616,8 +616,15 @@ A\\gets{A ~a scalar}
 		  ,(format nil "
 ## [function] ~a
 
-Is the equivalent to just doing `(reduce ~a numbers)`"
+Is the equivalent to just doing `(reduce ~a numbers)`
+
+### Example
+
+```
+(~a 1 2 3 4 5)
+```"
 			   lisp-op
+			   waffe-func
 			   waffe-func)
 		  (reduce ,waffe-func numbers)))))
   (define-arith-op #'!add !+)

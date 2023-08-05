@@ -125,6 +125,11 @@
     (caller-doc !mul)
     (caller-doc !div)
 
+    (caller-doc !+)
+    (caller-doc !-)
+    (caller-doc !*)
+    (caller-doc !/)
+
     (caller-doc !move)
     (caller-doc !copy)
     (caller-doc !copy-force)
@@ -191,6 +196,8 @@
     (caller-doc A<B)
     (caller-doc A>=B)
     (caller-doc A<=B)
+
+    (caller-doc padding)
     ))
 
 

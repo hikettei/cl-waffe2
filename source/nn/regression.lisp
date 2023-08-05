@@ -54,6 +54,11 @@ y = xA^\\intercal + b
     (let ((k (sqrt (/ 1 out-features))))
       (setf (linear-bias self) (uniform-random `(,out-features) (- k) k :requires-grad t)))))
 
+;; [TODO] Rename: linear-weight -> linear-bias
+;; They're alias, deleted in the future release.
+(defmethod weight-of ((model LinearLayer))
+  (linear-weight model))
 
-
+(defmethod bias-of ((model LinearLayer))
+  (linear-bias model))
 

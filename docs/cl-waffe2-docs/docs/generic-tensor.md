@@ -15,7 +15,7 @@ The class provides the fundamental and necessary features for tensors.
 2. `View APIs` multi-dimensional offsets
 
 3. To construct backward, AbstractTensor records variables called with.
-
+'
 4. `vec` container.
 
 5. an space for saving gradients, copies for backward.
@@ -359,7 +359,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP830 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1649 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -375,10 +375,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {539EEF9B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53AA916B}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {539D46CB}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {53AAA7CB}>
 
 += [Tensors in the computation node] =======+
 
@@ -395,8 +395,7 @@ Variables:
  - The number of tmp variables : 6
  - The number of parameters    : 0
 +========================================+
->
- NIL)
+>)
 ```
 
 ## [method] set-input

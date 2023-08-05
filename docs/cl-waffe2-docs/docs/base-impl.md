@@ -324,6 +324,42 @@ Given type of tensors, this function dispatches these functions automatically:
 
 None
 
+## [function] !+
+
+Is the equivalent to just doing `(reduce #'!ADD numbers)`
+
+### Example
+
+```
+(#'!ADD 1 2 3 4 5)
+```
+## [function] !-
+
+Is the equivalent to just doing `(reduce #'!SUB numbers)`
+
+### Example
+
+```
+(#'!SUB 1 2 3 4 5)
+```
+## [function] !*
+
+Is the equivalent to just doing `(reduce #'!MUL numbers)`
+
+### Example
+
+```
+(#'!MUL 1 2 3 4 5)
+```
+## [function] !/
+
+Is the equivalent to just doing `(reduce #'!DIV numbers)`
+
+### Example
+
+```
+(#'!DIV 1 2 3 4 5)
+```
 ## [function] !move
 
 ```lisp
@@ -435,6 +471,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
+Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor #'reverse)` to reverse all permution for example.
 
 ## [function] !reshape
 
@@ -453,6 +490,11 @@ Before and after the operation, the total elements of tensors must correspond.
 
 `shapes` could be one of: fixnum `t`. `t` can be used at one, but the value of t is automatically inferenced.
 
+Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
+
+```lisp
+(!reshape (ax+b `(5 3 2) 1 0) #'reverse) ;; => (2 3 5) Tensor
+```
 
 ## [function] !view
 
@@ -503,6 +545,8 @@ Subscripts are following:
 `(values sliced-tensor broadcast-reverser)`
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
+
+Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function (tensor-view tensor))` can be used like: `(!view tensor #'reverse)`.
 
 ## [function] !flatten
 
@@ -1691,3 +1735,87 @@ The function a<=b sets `true-then` if the equation: `A <= B` is t, otherwise set
 ### Inputs
 
 `A` `B` AbstractTensor to be compared.
+
+## [function] padding
+
+```lisp
+(padding tensor pad-width &key (pad-maker #'ax+b) (initargs `(0 0)))
+```
+
+Creating a new InputTensor with shape after padding, the function `padding` moves the given tensor into a new area.
+
+### Implementation
+
+```lisp
+
+(padding (ax+b `(1 3) 0 1) `((1 1) (1 1)))
+
+[Corresponds with...]
+
+                    00000
++++ -> [padding] -> 0+++0
+                    00000
+```
+
+The operation is performed in the following steps:
+
+First, creates a new tensor with the shape of after padded which is initialized via the `pad-maker` function, where `pad-maker` is an initializer function, that is, functions defined by `define-initializer-function` or exported from the `:cl-waffe2/distribution` package.
+
+
+```lisp
++++++
++++++
++++++
+```
+
+The function `padding` uses the form below to initialize tensors.
+
+```lisp
+(apply pad-maker initargs)
+```
+
+In default, `(apply #'ax+b `(0 0))`.
+
+Second, makes a view of the new tensor and match its shape to the base tensor. the argument `pad-width` is used to determine offsets of each axis. `pad-width` is the number of values to the edges of each axis. and given as: `((before_1 after_1) (before_2 after_2) ...)`. `0~before_n` and `before_n~last` are the subject to be padded.
+
+```lisp
++++++              -----
++++++ -> [view] -> -+++-
++++++              -----
+                       ^ after_2
++ ... visible area
+- ... hide area by view
+```
+
+Finally, moves all elements in the base tensor into viewed tensor, and later reset the view.
+
+### Inputs
+
+`tensor[AbstractTensor]` tensor to be padded.
+
+`pad-width[list]` the number of the edges and given as: `((before_1 after_1) (before_2 after_2) ...)`. the forward is the same as [np.pad](https://numpy.org/doc/stable/reference/generated/numpy.pad.html). Set t instead of `(before_n after_n)` and ignores the corresponding position of axis.
+ 
+`pad-maker[function]` an initializer-function
+
+`initargs[list]` a list of arguments for `pad-maker`
+
+Note that: the axes to be padded, must be fixnum. not a symbol.
+
+If the shapes does not change before/after padding, returns the given tensor as it is.
+
+### Example
+
+```lisp
+(proceed (padding (ax+b `(3 3) 0 1) `((1 1) (1 1))))
+
+{CPUTENSOR[float] :shape (5 5) -> :view (<T> <T>) -> :visible-shape (5 5) :named ChainTMP1104579 
+  :vec-state [computed]
+  ((0.0 0.0 0.0 0.0 0.0)           
+   (0.0 1.0 1.0 1.0 0.0)   
+        ...
+   (0.0 1.0 1.0 1.0 0.0)
+   (0.0 0.0 0.0 0.0 0.0))
+  :facet :input
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
