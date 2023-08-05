@@ -10,6 +10,11 @@
    #:Linear-weight
    #:Linear-bias)
 
+  (:export
+   #:Conv2D
+   #:apply-conv2d
+   #:!im2col-cpu)
+
   ;; Criterions
   (:export
    #:L1Norm

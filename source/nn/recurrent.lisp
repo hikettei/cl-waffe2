@@ -62,6 +62,10 @@
 				      h1)))
 			 h1))))
 
+;; TODO: Add MapNode with defnode
+;; (1 1 1) -> (1 1 * iter_num 1)
+
+
 #|
 I have no idea how to iterate RNNCell...
 (defmodel (RNN (self input-size hidden-size

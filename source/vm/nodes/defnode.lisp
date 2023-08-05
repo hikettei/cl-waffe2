@@ -48,6 +48,7 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 See also: `the implementation of JITLispTensor`.
 "))
 
+;; [TODO] Add to docs.
 (defgeneric on-finished-compiling (current-node)
   (:documentation "
 ## [generic] on-finished-compiling
