@@ -94,7 +94,7 @@ The class provides the fundamental and necessary features for tensors.
 2. `View APIs` multi-dimensional offsets
 
 3. To construct backward, AbstractTensor records variables called with.
-
+'
 4. `vec` container.
 
 5. an space for saving gradients, copies for backward.
@@ -252,6 +252,7 @@ Tensors has a two state:
 "))
 
 (defun sync-permute! (tensor)
+  (declare (type AbstractTensor tensor))
   (macrolet ((apply-permute (accessor tensor)
 	       `(loop with copy = (copy-list ,accessor)
 		      with rank = (1- (length (shape ,tensor)))
@@ -264,9 +265,12 @@ Tensors has a two state:
     (apply-permute (tensor-view tensor) tensor)
     (apply-permute (slot-value tensor 'visible-shape) tensor)
     (apply-permute (slot-value tensor 'orig-shape) tensor)
-    (when (slot-value tensor 'input-shape)
-      (apply-permute (slot-value tensor 'input-shape) tensor)
-      )))	
+    
+    (when (and (slot-value tensor 'input-shape)
+	       ;; [Bug] Sometime, The rank of InputShape and its actual shape does not match. However in that case, input shape is no longer needed. so ignore it.
+	       (= (dims tensor) (length (tensor-input-shape tensor))))
+      (apply-permute (slot-value tensor 'input-shape) tensor))
+    nil))
 
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
