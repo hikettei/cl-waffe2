@@ -133,11 +133,35 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#model-conv2d">[model] CONV2D</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_1">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#parameters_1">Parameters</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../lisp-tensor-backend/">cl-waffe2/backends.lisp</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-tensor-backend/">cl-waffe2/backends.cpu</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-jit-tensor-backend/">cl-waffe2/backends.jit.cpu</a>
                 </li>
               </ul>
       </div>
@@ -187,13 +211,13 @@ ReLU(x) = max(x, 0)
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP3228 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP704 
   :vec-state [computed]
-  ((-0.0        -0.0        -0.0        ~ 0.49666062  0.9852601   -0.0)                   
-   (-0.0        1.8804568   0.986707    ~ -0.0        0.51464295  -0.0)   
-                ...
-   (2.1753807   -0.0        0.91856265  ~ 0.9379178   2.05032     0.11047221)
-   (1.2239017   1.7646626   0.09464423  ~ 1.1347765   0.59245276  0.06533106))
+  ((-0.0         2.0355937    0.87400746   ~ 0.5758207    0.32484004   -0.0)                    
+   (1.1069025    -0.0         0.9794315    ~ -0.0         0.6054693    -0.0)   
+                 ...
+   (-0.0         0.14430979   1.6049826    ~ 0.66292197   -0.0         -0.0)
+   (-0.0         -0.0         -0.0         ~ -0.0         -0.0         -0.0))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -208,13 +232,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 <h3 id="example_1">Example</h3>
 <pre><code class="language-lisp">(proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP3541 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP865 
   :vec-state [computed]
-  ((0.80563885  0.53765744  0.77151203  ~ 0.9643239   0.6706047   0.71123135)                   
-   (0.2943471   0.23736556  0.32364336  ~ 0.5261212   0.7566072   0.22855598)   
-                ...
-   (0.69619596  0.11914415  0.6037336   ~ 0.8480662   0.39654222  0.36058164)
-   (0.54149055  0.47243506  0.503598    ~ 0.26494858  0.40712014  0.7131819))
+  ((0.59221524 0.49752915 0.45874146 ~ 0.33162943 0.3568413  0.26439044)                  
+   (0.519481   0.7583395  0.31405032 ~ 0.55313486 0.48576716 0.62167424)   
+               ...
+   (0.8074486  0.17289545 0.40895566 ~ 0.5744591  0.66711944 0.48927152)
+   (0.7403083  0.42706847 0.89801675 ~ 0.5560996  0.42497367 0.7186789))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -231,9 +255,9 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = abs(x_n - y_n)
 <h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP3981 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1094 
   :vec-state [computed]
-  ((1.0332493))
+  ((1.2354927))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -250,9 +274,9 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
 <h3 id="example_3">Example</h3>
 <pre><code class="language-lisp">(proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP4395 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1291 
   :vec-state [computed]
-  ((1.6465957))
+  ((1.423828))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -308,10 +332,72 @@ y = xA^\intercal + b
 <h3 id="example_4">Example</h3>
 <pre><code class="language-lisp">(LinearLayer 10 5)
 
-&lt;Composite: LINEARLAYER{W4399}(
+&lt;Composite: LINEARLAYER{W1295}(
     &lt;Input : ((~ BATCH-SIZE 10)) -&gt; Output: ((~ BATCH-SIZE 5))&gt;
 
     WEIGHTS -&gt; (5 10)
+    BIAS    -&gt; (5)
+)&gt;
+</code></pre>
+<h2 id="model-conv2d">[model] CONV2D</h2>
+<pre><code>(conv2d IN-CHANNELS OUT-CHANNELS KERNEL-SIZE &amp;KEY (STRIDE 1) (PADDING 0) (DILATION 1) (GROUPS
+                                                                                1) (BIAS
+                                                                                    T) &amp;AUX (STRIDE
+                                                                                             (MAYBE-TUPLE
+                                                                                              STRIDE
+                                                                                              'STRIDE)) (KERNEL-SIZE
+                                                                                                         (MAYBE-TUPLE
+                                                                                                          KERNEL-SIZE
+                                                                                                          'KERNEL-SIZE)) (PADDING
+                                                                                                                          (MAYBE-TUPLE
+                                                                                                                           PADDING
+                                                                                                                           'PADDING)) (DILATION
+                                                                                                                                       (MAYBE-TUPLE
+                                                                                                                                        DILATION
+                                                                                                                                        'DILATION)))
+</code></pre>
+<p>which transformation of shapes are defined as:</p>
+<pre><code>(INPUT[N C_IN H_IN W_IN] -&gt; OUTPUT[N C_OUT H_OUT W_OUT] WHERE C_IN =
+ IN-CHANNELS C_OUT = OUT-CHANNELS H_OUT =
+ (IF (NUMBERP H_IN)
+     (FLOOR
+      (+ 1
+         (/
+          (+ H_IN (* 2 (CAR PADDING))
+             (* (- (CAR DILATION)) (- (CAR KERNEL-SIZE) 1)) -1)
+          (CAR STRIDE))))
+     -1)
+ W_OUT =
+ (IF (NUMBERP W_IN)
+     (FLOOR
+      (+ 1
+         (/
+          (+ W_IN (* 2 (SECOND PADDING))
+             (* (- (SECOND DILATION)) (- (SECOND KERNEL-SIZE) 1)) -1)
+          (SECOND STRIDE))))
+     -1))
+</code></pre>
+<h3 id="description_1">Description</h3>
+<p>Applies a 2D convolution over an input signal composed of several input planes.</p>
+<h3 id="inputs_3">Inputs</h3>
+<p><code>in-channels[fixnum]</code> <code>out-channels[fixnum]</code> the number of channels. For example, if the input image is RGB, <code>in-channels=3</code>.</p>
+<p><code>kernel-size[list (kernel-x kernel-y)]</code> controls the size of kernel (e.g.: <code>'(3 3)</code>).</p>
+<p><code>padding[fixnum or list]</code> controls the amount of padding applies to the coming input. pads in X and Y direction when an integer value is entered. set a list of <code>(pad-x pad-y)</code> and pads in each direction.</p>
+<p><code>stride[fixnum or list]</code> controls the stride for cross-correlation. As with <code>padding</code>, this parameter can be applied for each x/y axis.</p>
+<p><code>dilation[fixnum or list]</code> controls the connections between inputs and outputs. in_channels and out_channels must both be divisible by groups. (currently not working, please set 1.)</p>
+<p><code>bias[boolean]</code> Set t to use bias.</p>
+<h3 id="parameters_1">Parameters</h3>
+<p>Let k be <code>(/ groups (* in-channels (apply #'* kernel-size)))</code>.</p>
+<p><code>weight</code> is a trainable parameter of <code>(out-channels, in-channels / groups, kernel-size[0] kernel-size[1])</code> sampled from <code>U(-sqrt(k), sqrt(k))</code> distribution, and can be accessed with <code>weight-of</code>.</p>
+<p><code>bias</code> is a trainable parameter of <code>(out-channels)</code> sampled from <code>U(-sqrt(k), sqrt(k))</code> distribution, and can be accessed with <code>bias-of</code>.</p>
+<p>Note: When <code>Conv2D</code> is initialised, the output is displayed as -1. This is because the calculation of the output is complicated and has been omitted. Once call is invoked, the output is recorded.</p>
+<h3 id="example_5">Example</h3>
+<pre><code class="language-lisp">(LinearLayer 3 5 '(3 3))
+
+&lt;Composite: LINEARLAYER{W1301}(
+    &lt;Input : ((~ BATCH-SIZE 3)) -&gt; Output: ((~ BATCH-SIZE 5))&gt;
+
+    WEIGHTS -&gt; (5 3)
     BIAS    -&gt; (5)
 )&gt;
 </code></pre>

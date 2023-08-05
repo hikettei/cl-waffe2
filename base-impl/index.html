@@ -189,6 +189,30 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function">[function] !+</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-">[function] !-</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function_1">[function] !*</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function_2">[function] !/</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-move">[function] !move</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#nodes">nodes</a>
@@ -205,7 +229,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-permute">[function] !permute</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_18">Inputs</a>
     </li>
@@ -239,7 +263,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-contiguous">[function] -&gt;contiguous</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
     </li>
         </ul>
     </li>
@@ -273,7 +297,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-flexible">[function] !flexible</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
     </li>
         </ul>
     </li>
@@ -615,6 +639,16 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-padding">[function] padding</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#implementation">Implementation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_56">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                 </li>
               </ul>
@@ -632,6 +666,18 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../lisp-tensor-backend/">cl-waffe2/backends.lisp</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-tensor-backend/">cl-waffe2/backends.cpu</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-jit-tensor-backend/">cl-waffe2/backends.jit.cpu</a>
                 </li>
               </ul>
       </div>
@@ -878,6 +924,26 @@ x_{copy}\gets{x / y}
 <p><code>x</code> <code>y</code> could be one of <code>AbstractTensor</code> <code>number</code> <code>ScalarTensor</code></p>
 <h3 id="sideeffects_7">SideEffects</h3>
 <p>None</p>
+<h2 id="function">[function] !+</h2>
+<p>Is the equivalent to just doing <code>(reduce #'!ADD numbers)</code></p>
+<h3 id="example">Example</h3>
+<pre><code>(#'!ADD 1 2 3 4 5)
+</code></pre>
+<h2 id="function-">[function] !-</h2>
+<p>Is the equivalent to just doing <code>(reduce #'!SUB numbers)</code></p>
+<h3 id="example_1">Example</h3>
+<pre><code>(#'!SUB 1 2 3 4 5)
+</code></pre>
+<h2 id="function_1">[function] !*</h2>
+<p>Is the equivalent to just doing <code>(reduce #'!MUL numbers)</code></p>
+<h3 id="example_2">Example</h3>
+<pre><code>(#'!MUL 1 2 3 4 5)
+</code></pre>
+<h2 id="function_2">[function] !/</h2>
+<p>Is the equivalent to just doing <code>(reduce #'!DIV numbers)</code></p>
+<h3 id="example_3">Example</h3>
+<pre><code>(#'!DIV 1 2 3 4 5)
+</code></pre>
 <h2 id="function-move">[function] !move</h2>
 <pre><code class="language-lisp">(!move place tensor)
 </code></pre>
@@ -940,7 +1006,7 @@ Stride     :   4  1  2
 ------------------------
 </code></pre>
 <p>The operation could be applied to transpose matrices.</p>
-<h3 id="example">Example</h3>
+<h3 id="example_4">Example</h3>
 <pre><code class="language-lisp">(defun transpose-revisit (tensor)
     ;; A[i j] -&gt; A[j i]
     (!permute tensor :~ 0 1))
@@ -949,6 +1015,7 @@ Stride     :   4  1  2
 <h3 id="inputs_18">Inputs</h3>
 <p><code>tensor[AbstractTensor]</code> tensor to be permuted.</p>
 <p><code>order[list&lt;Fixnum&gt;]</code> An list of permutation. Note that <code>:~</code> could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as <code>:~</code> is provided.</p>
+<p>Tips: If the first element of <code>order</code> arguments is a function, the rest arguments of <code>order</code> is overwritten with its result. that is, <code>order</code> become the value of <code>(funcall (car order) (tensor-permute-order tensor))</code> and can be used like: <code>(!permute tensor #'reverse)</code> to reverse all permution for example.</p>
 <h2 id="function-reshape">[function] !reshape</h2>
 <pre><code>(!reshape tensor &amp;rest shapes)
 </code></pre>
@@ -957,6 +1024,9 @@ Stride     :   4  1  2
 <h3 id="inputs_19">Inputs</h3>
 <p><code>tensor</code> <code>AbstractTensor</code> but must not includes <code>symbol</code> in the shape.</p>
 <p><code>shapes</code> could be one of: fixnum <code>t</code>. <code>t</code> can be used at one, but the value of t is automatically inferenced.</p>
+<p>Note: If the first element of <code>shapes</code> is a function, <code>shapes</code> are overwritten with the function's value.</p>
+<pre><code class="language-lisp">(!reshape (ax+b `(5 3 2) 1 0) #'reverse) ;; =&gt; (2 3 5) Tensor
+</code></pre>
 <h2 id="function-view">[function] !view</h2>
 <pre><code class="language-lisp">(!view tensor &amp;rest subscripts)
 </code></pre>
@@ -1007,6 +1077,7 @@ Stride     :   4  1  2
 <h3 id="return">Return</h3>
 <p><code>(values sliced-tensor broadcast-reverser)</code></p>
 <p>Tips: Applying <code>!view</code> again to the returned <code>sliced-tensor</code> with <code>broadcast-reverser</code> will remove broadcasts from the tensor.</p>
+<p>Tips: If a function is passed as the first element of <code>subscript</code>, the subscript is overwritten based on the return value of the function. The function is called like: <code>(funcall function (tensor-view tensor))</code> can be used like: <code>(!view tensor #'reverse)</code>.</p>
 <h2 id="function-flatten">[function] !flatten</h2>
 <pre><code>(!flatten tensor)
 </code></pre>
@@ -1052,7 +1123,7 @@ CL-WAFFE2-REPL&gt;
 <h2 id="function-contiguous">[function] -&gt;contiguous</h2>
 <p>Returns a copy of the given tensor if is is permuted. Otherwise returns the argumement as it is.</p>
 <p>A memory-layout of returned copies are arranged into the same array as the array seen on the REPL.</p>
-<h3 id="example_1">Example</h3>
+<h3 id="example_5">Example</h3>
 <pre><code class="language-lisp">(!t (ax+b `(3 3) 1 0))
 
 {CPUTENSOR[float] :shape (3 3) -&gt; :view (&lt;T&gt; &lt;T&gt;) -&gt; :visible-shape (3 3) :named ChainTMP110110 
@@ -1114,7 +1185,7 @@ CL-WAFFE2-REPL&gt;
     (%transform tensor[~ i j] -&gt; [j i]))
 </code></pre>
 <h3 id="syntax">Syntax</h3>
-<p>Following the rules below, <code>%transform</code> calls appropriate functions.</p>
+<p>Following the rules below, <code>%transform</code> calls appropriate functions. If <code>~</code> were used after <code>-&gt;</code>, the macro is expanded into <code>!flexible ...</code>, or call <code>!permute</code> as long as all symbols appeared before <code>-&gt;</code> were also used after <code>-&gt;</code>. Otherwise, call <code>!view</code>.</p>
 <h3 id="adding-an-broadcastable-axis">Adding an broadcastable axis.</h3>
 <p>The <code>broadcastable axis</code> is the range in which <code>1</code> of the shape of tensors can be added if needed, and at most one exists in one matrix.</p>
 <p>If the subscripts of the tensor after <code>-&gt;</code> includes <code>~</code>, the corresponding position of the shape becomes <code>broadcastable</code>.</p>
@@ -1134,7 +1205,6 @@ CL-WAFFE2-REPL&gt;
 </code></pre>
 <h3 id="make-a-view-of-tensors">Make a view of tensors.</h3>
 <p>Set symbols (which aren't used before <code>-&gt;</code>) or fixnum to make a index. <code>(start end)</code> also creates a slice. Setting characters like <code>*10</code> <code>*a</code> broadcasts the axis.</p>
-<p>If <code>~</code> were used after <code>-&gt;</code>, the macro is expanded into <code>!flexible ...</code>, or call <code>!permute</code> as long as all symbols appeared before <code>-&gt;</code> were also used after <code>-&gt;</code>. Otherwise, call <code>!view</code>.</p>
 <h2 id="function-flexible">[function] !flexible</h2>
 <pre><code>(!flexible tensor)
 </code></pre>
@@ -1144,7 +1214,7 @@ CL-WAFFE2-REPL&gt;
                                                  ^ &lt;1 x N&gt;
 </code></pre>
 <p>Note that added axes could be broadcasted automatically when the operation called with multiple arguments.</p>
-<h3 id="example_2">Example</h3>
+<h3 id="example_6">Example</h3>
 <p><code>!flexible</code> is a fundamental operation when using broadcasting in cl-waffe2. And usually called via <code>%transform</code> macro for readability.</p>
 <pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))
 
@@ -1694,6 +1764,60 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <p>The function a&lt;=b sets <code>true-then</code> if the equation: <code>A &lt;= B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
 <h3 id="inputs_55">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
+<h2 id="function-padding">[function] padding</h2>
+<pre><code class="language-lisp">(padding tensor pad-width &amp;key (pad-maker #'ax+b) (initargs `(0 0)))
+</code></pre>
+<p>Creating a new InputTensor with shape after padding, the function <code>padding</code> moves the given tensor into a new area.</p>
+<h3 id="implementation">Implementation</h3>
+<pre><code class="language-lisp">
+(padding (ax+b `(1 3) 0 1) `((1 1) (1 1)))
+
+[Corresponds with...]
+
+                    00000
++++ -&gt; [padding] -&gt; 0+++0
+                    00000
+</code></pre>
+<p>The operation is performed in the following steps:</p>
+<p>First, creates a new tensor with the shape of after padded which is initialized via the <code>pad-maker</code> function, where <code>pad-maker</code> is an initializer function, that is, functions defined by <code>define-initializer-function</code> or exported from the <code>:cl-waffe2/distribution</code> package.</p>
+<pre><code class="language-lisp">+++++
++++++
++++++
+</code></pre>
+<p>The function <code>padding</code> uses the form below to initialize tensors.</p>
+<pre><code class="language-lisp">(apply pad-maker initargs)
+</code></pre>
+<p>In default, <code>(apply #'ax+b</code>(0 0))`.</p>
+<p>Second, makes a view of the new tensor and match its shape to the base tensor. the argument <code>pad-width</code> is used to determine offsets of each axis. <code>pad-width</code> is the number of values to the edges of each axis. and given as: <code>((before_1 after_1) (before_2 after_2) ...)</code>. <code>0~before_n</code> and <code>before_n~last</code> are the subject to be padded.</p>
+<pre><code class="language-lisp">+++++              -----
++++++ -&gt; [view] -&gt; -+++-
++++++              -----
+                       ^ after_2
++ ... visible area
+- ... hide area by view
+</code></pre>
+<p>Finally, moves all elements in the base tensor into viewed tensor, and later reset the view.</p>
+<h3 id="inputs_56">Inputs</h3>
+<p><code>tensor[AbstractTensor]</code> tensor to be padded.</p>
+<p><code>pad-width[list]</code> the number of the edges and given as: <code>((before_1 after_1) (before_2 after_2) ...)</code>. the forward is the same as <a href="https://numpy.org/doc/stable/reference/generated/numpy.pad.html">np.pad</a>. Set t instead of <code>(before_n after_n)</code> and ignores the corresponding position of axis.</p>
+<p><code>pad-maker[function]</code> an initializer-function</p>
+<p><code>initargs[list]</code> a list of arguments for <code>pad-maker</code></p>
+<p>Note that: the axes to be padded, must be fixnum. not a symbol.</p>
+<p>If the shapes does not change before/after padding, returns the given tensor as it is.</p>
+<h3 id="example_7">Example</h3>
+<pre><code class="language-lisp">(proceed (padding (ax+b `(3 3) 0 1) `((1 1) (1 1))))
+
+{CPUTENSOR[float] :shape (5 5) -&gt; :view (&lt;T&gt; &lt;T&gt;) -&gt; :visible-shape (5 5) :named ChainTMP1104579 
+  :vec-state [computed]
+  ((0.0 0.0 0.0 0.0 0.0)           
+   (0.0 1.0 1.0 1.0 0.0)   
+        ...
+   (0.0 1.0 1.0 1.0 0.0)
+   (0.0 0.0 0.0 0.0 0.0))
+  :facet :input
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
               
             </div>
           </div><footer>

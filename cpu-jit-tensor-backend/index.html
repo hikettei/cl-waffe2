@@ -5,15 +5,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Tips - cl-waffe2 Documentation</title>
+    <title>cl-waffe2/backends.jit.cpu - cl-waffe2 Documentation</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Tips";
-        var mkdocs_page_input_path = "Tips.md";
+        var mkdocs_page_name = "cl-waffe2/backends.jit.cpu";
+        var mkdocs_page_input_path = "cpu-jit-tensor-backend.md";
         var mkdocs_page_url = null;
       </script>
     
@@ -52,20 +52,8 @@
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
                 </li>
               </ul>
-              <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="./">Tips</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#mnist">MNIST</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#kernel-abstraction">Kernel Abstraction</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#adding-a-new-backend">Adding a new backend</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#adding-a-new-operation">Adding a new operation</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#make-a-input">Make a Input</a>
-    </li>
-    </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
                 </li>
               </ul>
               <ul>
@@ -108,8 +96,28 @@
                 <li class="toctree-l1"><a class="reference internal" href="../cpu-tensor-backend/">cl-waffe2/backends.cpu</a>
                 </li>
               </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../cpu-jit-tensor-backend/">cl-waffe2/backends.jit.cpu</a>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/backends.jit.cpu</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#parameter-default-c-compiler">[parameter] *default-c-compiler*</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter-compiler-flags">[parameter] *compiler-flags*</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter-viz-compiled-code">[parameter] *viz-compiled-code*</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#abstracttensor-jitcputensor">[AbstractTensor] JITCPUTensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#abstracttensor-jitcpuscalartensor">[AbstractTensor] JITCPUScalarTensor</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-enable-cpu-jit-toplevel">[function] enable-cpu-jit-toplevel</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-with-cpu-jit">[macro] with-cpu-jit</a>
+    </li>
+    </ul>
                 </li>
               </ul>
       </div>
@@ -126,7 +134,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
-      <li>Tips</li>
+      <li>cl-waffe2/backends.jit.cpu</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -135,18 +143,34 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="tips-example">Tips -&gt; Example?</h1>
-<h2 id="mnist">MNIST</h2>
-<h2 id="kernel-abstraction">Kernel Abstraction</h2>
-<h2 id="adding-a-new-backend">Adding a new backend</h2>
-<h2 id="adding-a-new-operation">Adding a new operation</h2>
-<h2 id="make-a-input">Make a Input</h2>
+                <h1 id="package-cl-waffe2backendsjitcpu">[package] :cl-waffe2/backends.jit.cpu</h1>
+<p>The package <code>:cl-waffe2/backends.jit.cpu</code> provides an AbstractTensor <code>JITCPUTensor</code> which accelerated by JIT Compiling to C code dynamically, (so this backend will require <code>gcc</code> as an additional requirement.)</p>
+<h2 id="parameter-default-c-compiler">[parameter] <code>*default-c-compiler*</code></h2>
+<p>Specify the command to compile the generated c codes. In default, "gcc".</p>
+<h2 id="parameter-compiler-flags">[parameter] <code>*compiler-flags*</code></h2>
+<p>In default, <code>*compielr-flags*</code> = <code>'("-fPIC" "-O3" "-march=native")</code></p>
+<h2 id="parameter-viz-compiled-code">[parameter] <code>*viz-compiled-code*</code></h2>
+<p>Set t to display the compiled c code to terminal. In default, <code>nil</code></p>
+<h2 id="abstracttensor-jitcputensor">[AbstractTensor] JITCPUTensor</h2>
+<h2 id="abstracttensor-jitcpuscalartensor">[AbstractTensor] JITCPUScalarTensor</h2>
+<h2 id="function-enable-cpu-jit-toplevel">[function] enable-cpu-jit-toplevel</h2>
+<pre><code class="language-lisp">(enable-cpu-jit-toplevel (&amp;key
+              (more-devices)
+              (compiler &quot;gcc&quot;)
+              (viz-compiled-code nil)
+              (flags '(&quot;-fPIC&quot; &quot;-O3&quot; &quot;-march=native&quot;))))
+</code></pre>
+<p>Sets <code>JITCPUTensor</code> and <code>JITCPUScalarTensor</code> to the top priority of backends. Place this function at the top of your code where JIT Compiling is needed. Of course, <code>JITCPUTensor</code> is developed as a one of <code>external backends</code> in cl-waffe2, therefore Local JIT compilation with the <code>with-devices</code> macro is another valid option.</p>
+<h3 id="inputs">Inputs</h3>
+<p><code>more-devices[List]</code> specify the list of device names. they have lower priority than <code>JITCPUTensor</code></p>
+<p><code>viz-compiled-code[boolean]</code> Set t to display the compiled c codes.</p>
+<h2 id="macro-with-cpu-jit">[macro] with-cpu-jit</h2>
+<p>Under this macro, two backends (<code>JITCPUTensor</code> and <code>JITCPUScalarTensor</code>) are installed at the top of the priority list.</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../overview/" class="btn btn-neutral float-left" title="Tutorials"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../utils/" class="btn btn-neutral float-right" title="cl-waffe2">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../cpu-tensor-backend/" class="btn btn-neutral float-left" title="cl-waffe2/backends.cpu"><span class="icon icon-circle-arrow-left"></span> Previous</a>
     </div>
 
   <hr/>
@@ -169,10 +193,8 @@
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href="../overview/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../cpu-tensor-backend/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
-    
-      <span><a href="../utils/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

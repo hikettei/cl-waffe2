@@ -206,6 +206,18 @@
                 <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../lisp-tensor-backend/">cl-waffe2/backends.lisp</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-tensor-backend/">cl-waffe2/backends.cpu</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-jit-tensor-backend/">cl-waffe2/backends.jit.cpu</a>
+                </li>
+              </ul>
       </div>
     </div>
     </nav>
@@ -242,7 +254,8 @@
 <p><code>View APIs</code> multi-dimensional offsets</p>
 </li>
 <li>
-<p>To construct backward, AbstractTensor records variables called with.</p>
+<p>To construct backward, AbstractTensor records variables called with.
+'</p>
 </li>
 <li>
 <p><code>vec</code> container.</p>
@@ -478,7 +491,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP3106 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP624 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -491,10 +504,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53959FFB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53A248DB}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53AB99DB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5366587B}&gt;
 
 += [Tensors in the computation node] =======+
 
@@ -511,8 +524,7 @@ Variables:
  - The number of tmp variables : 6
  - The number of parameters    : 0
 +========================================+
-&gt;
- NIL)
+&gt;)
 </code></pre>
 <h2 id="method-set-input">[method] set-input</h2>
 <pre><code>(set-input (model Compiled-Composite) input-name actual-value)

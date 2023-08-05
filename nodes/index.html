@@ -171,6 +171,12 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#generic-on-finished-compiling">[generic] on-finished-compiling</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#class-composite">[class] Composite</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#extend-composite-class-slightly-complicated">Extend Composite Class (Slightly Complicated)</a>
@@ -214,6 +220,18 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../lisp-tensor-backend/">cl-waffe2/backends.lisp</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-tensor-backend/">cl-waffe2/backends.cpu</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-jit-tensor-backend/">cl-waffe2/backends.jit.cpu</a>
                 </li>
               </ul>
       </div>
@@ -1004,7 +1022,7 @@ input-form = (variable-place save-for-backward-name)
 </code></pre>
 <p>Reading the save-for-backward of currently working node, the macro binds each <code>variable-place</code> the stored tensor.</p>
 <h2 id="generic-on-finalizing-compiling">[generic] on-finalizing-compiling</h2>
-<pre><code class="language-lisp">(on-finalizing-compiling current-node variable next-variable)
+<pre><code class="language-lisp">(on-finalizing-compiling current-node variable next-variable compile-me)
 </code></pre>
 <p>The generic function <code>on-finalizing-compiling</code> is invoked after the body of <code>define-impl</code> is expanded when performing <code>compile-chain-forward</code>.</p>
 <p>Return S expression to be embodied in the compiled code if needed, especially, devices which support jit-compiling will need this, because you can get information before and after the node.</p>
@@ -1026,7 +1044,17 @@ input-form = (variable-place save-for-backward-name)
 <p><code>current-node (i.e.: SinNode1)</code> used to dispatch methods.</p>
 <p><code>variable (i.e.: corresponding variable of SinNode1)</code> returns the corresponding var of current node.</p>
 <p><code>next-variables (i.e.: corresponding variable of MoveTensorNode2)</code> returns corresponding variable of next node.</p>
+<p><code>compile-me[boolean]</code> If t, cl-waffe2 needs compiled code that works instantly.</p>
 <p>See also: <code>the implementation of JITLispTensor</code>.</p>
+<h2 id="generic-on-finished-compiling">[generic] on-finished-compiling</h2>
+<pre><code class="language-lisp">(on-finished-compiling current-node)
+</code></pre>
+<p>The method on-finished-compiling is once called when the node was reached the end.</p>
+<h3 id="example_5">Example</h3>
+<pre><code class="language-lisp">(defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))
+   ...
+   )
+</code></pre>
 <h2 id="class-composite">[class] Composite</h2>
 <p>[class] Composite</p>
 <p>Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.</p>
