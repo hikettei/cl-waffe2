@@ -7,8 +7,7 @@
 ;; 
 ;;
 
-
-;; TODO: diff !max/!min
+;; TODO: Bugfix of !permute
 
 (defun conv-out-size (in padding dilation kernel-size stride)
   (floor
@@ -34,6 +33,18 @@
 		   (dilation :initarg :dilation))
 	   :documentation "
 Applies a 2D max pooling over an input signal composed of several input planes.
+
+### Inputs
+
+`kernel-size[list]` the size of window
+
+`stride[fixnum or list]` the stride of window
+
+`padding[fixnum or list]` adds 0 padding
+
+`dilation[fixnum or list]` a parameter that controls the stride of elements in the window.
+
+Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 "
 	   ;; [TODO]: Delete (if (numberp ...))
 	   :where (Input[N C H_in W_in] -> Output[N C H_out W_out]
@@ -61,6 +72,18 @@ Applies a 2D max pooling over an input signal composed of several input planes.
 		   (dilation :initarg :dilation))
 	   :documentation "
 Applies a 2D average pooling over an input signal composed of several input planes.
+
+### Inputs
+
+`kernel-size[list]` the size of window
+
+`stride[fixnum or list]` the stride of window
+
+`padding[fixnum or list]` adds 0 padding
+
+`dilation[fixnum or list]` a parameter that controls the stride of elements in the window.
+
+Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 "
 	   ;; [TODO]: Delete (if (numberp ...))
 	   :where (Input[N C H_in W_in] -> Output[N C H_out W_out]

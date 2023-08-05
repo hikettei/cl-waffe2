@@ -471,7 +471,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
-Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor #'reverse)` to reverse all permution for example.
+Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor (compose #'reverse #'tensor-permute-order))` to reverse all permution for example.
 
 ## [function] !reshape
 
@@ -493,7 +493,7 @@ Before and after the operation, the total elements of tensors must correspond.
 Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
 
 ```lisp
-(!reshape (ax+b `(5 3 2) 1 0) #'reverse) ;; => (2 3 5) Tensor
+(!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; => (2 3 5) Tensor
 ```
 
 ## [function] !view
@@ -546,7 +546,7 @@ Subscripts are following:
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
 
-Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function (tensor-view tensor))` can be used like: `(!view tensor #'reverse)`.
+Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function tensor)` can be used like: `(!view tensor (compose #'reverse #'tensor-view))`.
 
 ## [function] !flatten
 
@@ -1734,6 +1734,20 @@ The function a<=scal sets `true-then` if the equation: `element <= scal` is t, o
 `scal` number (not a ScalarTensor)
 
 (TODO: ScalarTensor as scal)
+## [function] a=scal
+
+```
+(a=scal A scal &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a=scal sets `true-then` if the equation: `element = scal` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` AbstractTensor
+`scal` number (not a ScalarTensor)
+
+(TODO: ScalarTensor as scal)
 ## [function] a>b
 
 ```
@@ -1777,6 +1791,18 @@ The function a>=b sets `true-then` if the equation: `A >= B` is t, otherwise set
 ```
 
 The function a<=b sets `true-then` if the equation: `A <= B` is t, otherwise set `false-then` at the corresponding positions.
+
+### Inputs
+
+`A` `B` AbstractTensor to be compared.
+
+## [function] a=b
+
+```
+(a=b A B &key (out nil) (true-then 1) (false-then 0))
+```
+
+The function a=b sets `true-then` if the equation: `A = B` is t, otherwise set `false-then` at the corresponding positions.
 
 ### Inputs
 
@@ -1864,4 +1890,18 @@ If the shapes does not change before/after padding, returns the given tensor as 
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+## [function] broadcast-to
+
+Returns the subscript of the `!view` that is broadcasting to be the same shape as the `object-tensor`.
+
+For example:
+
+```lisp
+;; x                ... ( 3 3 ) Tensor
+;; (!sum x :axis 1) ... ( 3 1 ) Tensor
+
+;; broadcast-to will return: (t `(:broadcast 3))
+(!mul x (!view (!sum x :axis 1) (broadcast-to x)))
 ```

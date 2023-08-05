@@ -366,7 +366,7 @@ A is a target to find a maximum value, and OUT is a place to set the index.
 		     ;; mask
 		     ;; 0 1 0
 		     ;; 0 0 1
-		     (let ((mask (A=B  da (!view (!min da) (broadcast-to da)))))
+		     (let ((mask (A=B da (!view (!min da) (broadcast-to da)))))
 		       (values (!mul mask (!view dout (broadcast-to mask))) nil)))
 	  :documentation "MinValue-Node finds a minimum value of all elements in A. `OUT` is overwritten with the result.
 

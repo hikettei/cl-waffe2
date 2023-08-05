@@ -197,13 +197,16 @@
     (caller-doc A<scal)
     (caller-doc A>=scal)
     (caller-doc A<=scal)
+    (caller-doc A=scal)
 
     (caller-doc A>B)
     (caller-doc A<B)
     (caller-doc A>=B)
     (caller-doc A<=B)
+    (caller-doc A=B)
 
     (caller-doc padding)
+    (caller-doc broadcast-to)
     ))
 
 
