@@ -274,10 +274,10 @@ Subscripts are following:
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
 
-Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function (tensor-view tensor))` can be used like: `(!view tensor #'reverse)`.
+Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function tensor)` can be used like: `(!view tensor (compose #'reverse #'tensor-view))`.
 "
   (let* ((subscripts (if (functionp (car subscripts))
-			 (funcall (car subscripts) (tensor-view tensor))
+			 (funcall (car subscripts) tensor)
 			 subscripts))
 	 (out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
 	 (broadcast-reverser
@@ -359,13 +359,13 @@ Before and after the operation, the total elements of tensors must correspond.
 Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
 
 ```lisp
-(!reshape (ax+b `(5 3 2) 1 0) #'reverse) ;; => (2 3 5) Tensor
+(!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; => (2 3 5) Tensor
 ```
 "
   (declare (type AbstractTensor tensor))
   
   (let* ((shapes (if (functionp (car shapes))
-		     (funcall (car shapes) (shape tensor))
+		     (funcall (car shapes) tensor)
 		     shapes))
 	 (shapes (parse-reshape-args (shape tensor) shapes))
 	 (result (make-input shapes nil
@@ -887,7 +887,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
-Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor #'reverse)` to reverse all permution for example.
+Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor (compose #'reverse #'tensor-permute-order))` to reverse all permution for example.
 "
   ;; If only the last two axes are subject to swapped.
   ;; Return a special node LazyTranspose instead.
@@ -898,7 +898,7 @@ Tips: If the first element of `order` arguments is a function, the rest argument
   ;;		  a)
   ;;
   (let* ((orders (if (functionp (car orders))
-		     (funcall (car orders) (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
+		     (funcall (car orders) tensor)
 		     orders))
 	 (new-tensor (apply #'permute* tensor orders))
 	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)

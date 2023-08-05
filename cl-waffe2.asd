@@ -70,6 +70,7 @@
 	       (:file "base-impl/logical")
 	       (:file "base-impl/transform")
 	       (:file "base-impl/ir")
+	       (:file "base-impl/reshapers")
 	       
 	       
 
