@@ -75,10 +75,14 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
 
+;; 色々と迷走したので実装がごちゃごちゃしてる・・・
+;; [TODO] Refactor conv2d for future impls of Conv3D, ConvND.
+
 (defmethod apply-conv2d ((self Conv2D) input)
   (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups) (kernel-size kernel-size)) self
     (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
       (multiple-value-bind (C-out icg k-h k-w) (apply #'values (shape weight))
+	(declare (ignore icg))
 	(let* ((~     (butlast (shape input) 3))
 	       (p-y (mod
 		     (-
@@ -140,6 +144,17 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	  ;;            ...           |
 
 	  ;; im2col + gemm
-	  (let ((out (!im2col-cpu input 1 in-channels k-h k-w h-out w-out (car stride) (second stride))))
 
-	    out))))))
+	  ;; weight (C_out (/ C_in groups) kx ky)
+	  
+	  ;; col = im2col(input) ;; (N * h-out w-out, C * kx * ky)
+	  
+	  (let* ((col   (!im2col-cpu input 1 in-channels k-h k-w h-out w-out (car stride) (second stride)))
+		 (col-w (!reshape weight t c-out))
+		 (out   (!matmul col col-w))
+		 (out   (if bias
+			    (!add out (%transform bias[i] -> [~ i]))
+			    out)))
+	    
+	    (!permute (!reshape out (car ~) h-out w-out C-out) 0 3 1 2)))))))
+

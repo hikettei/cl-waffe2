@@ -197,7 +197,7 @@ stride-x stride-y - stride[0], stride[1] respectively.
 		    :order (order padded-x)
 		    :dtype (dtype padded-x)))
 	 (img-out (ax+b `(,N ,C ,h-out ,w-out) 0 0
-			:dtype (order padded-x)
+			:order (order padded-x)
 			:dtype (dtype padded-x)))
 	 (result (call (Im2ColNode N C k-h k-w h-out w-out stride-x stride-y img-out) padded-x col)))
     (!reshape
