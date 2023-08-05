@@ -608,3 +608,27 @@ A\\gets{A ~a scalar}
   (define-darith-function  A*=scal ScalarMul "*")
   (define-darith-function1 A/=scal A*=scal / !div 1 "*"))
 
+
+(macrolet ((define-arith-op (waffe-func lisp-op)
+	     `(progn
+		(export ',lisp-op)
+		(defun ,lisp-op (&rest numbers)
+		  ,(format nil "
+## [function] ~a
+
+Is the equivalent to just doing `(reduce ~a numbers)`
+
+### Example
+
+```
+(~a 1 2 3 4 5)
+```"
+			   lisp-op
+			   waffe-func
+			   waffe-func)
+		  (reduce ,waffe-func numbers)))))
+  (define-arith-op #'!add !+)
+  (define-arith-op #'!sub !-)
+  (define-arith-op #'!mul !*)
+  (define-arith-op #'!div !/))
+

@@ -71,6 +71,7 @@
 	       (:file "base-impl/transform")
 	       (:file "base-impl/ir")
 	       
+	       
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")
@@ -97,6 +98,8 @@
 	       (:file "distributions/ziggurat")
 	       (:file "distributions/weights")
 
+	       (:file "base-impl/utils")
+	       
 	       (:file "backends/JITLispTensor/package")
 	       (:file "backends/JITLispTensor/compiler")
 	       (:file "backends/JITLispTensor/tensor")
@@ -135,6 +138,9 @@
 	       (:file "nn/regression")
 	       (:file "nn/criterion")
 	       (:file "nn/recurrent")
+
+	       (:file "nn/im2col")
+	       (:file "nn/conv")
 
 	       (:file "optimizers/impls/sgd")
 	       (:file "optimizers/impls/adam")

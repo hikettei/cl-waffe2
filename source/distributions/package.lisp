@@ -3,7 +3,7 @@
 
 (defpackage :cl-waffe2/distributions
   (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/threads :cl-waffe2/base-impl)
-  (:export #:define-tensor-initializer))
+  (:export #:define-tensor-initializer #:define-with-typevar :define-with-typevar-dense #:define-with-typevar-sparse))
 
 (in-package :cl-waffe2/distributions)
 

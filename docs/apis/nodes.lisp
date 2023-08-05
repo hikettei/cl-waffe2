@@ -16,6 +16,7 @@ This package can be divided into three main parts.
 	       `(with-section (format nil "~(~a~)" (symbol-name ,name))
 		  (placedoc ,name ,type)
 		  ,@body)))
+
     (with-section "Shaping API"
       (insert "
 
@@ -595,6 +596,7 @@ The moment `forward` is called, the computation node is constructed for building
     (insert "~a" (documentation (macro-function 'with-reading-save4bw) 'function))
 
     (insert "~a" (documentation #'on-finalizing-compiling 't))
+    (insert "~a" (documentation #'on-finished-compiling 't))
 
 
     (with-section "[class] Composite"

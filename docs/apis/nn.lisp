@@ -27,5 +27,8 @@
     (with-nn-doc (find-class 'LinearLayer) 't
       (with-example
 	"(LinearLayer 10 5)"))
-    ))
+
+    (with-nn-doc (find-class 'Conv2D) 't
+      (with-example
+	"(LinearLayer 3 5 '(3 3))"))))
 

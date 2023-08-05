@@ -539,10 +539,11 @@ a=1, b=2 => NIL
 ..."
   (if (and (numberp a)
 	   (numberp b))
-      (= (the fixnum a) (the fixnum b))
+      (= a b)
       (if (and (symbolp a)
 	       (symbolp b))
 	  (eql a b)
+	  ;; Symbol + Number or Number + Symbol
 	  t)))
 
 (defun shape-equal-list (list1 list2)

@@ -536,7 +536,6 @@ Accordingly, the argument must satisfy: dimensions = ~a
 		 ,previous-subscripts)
 
 		;; Initializing Tables
-		
 		(let* (,@(map 'list #'(lambda (x)
 					;; If the symbol is declared as localvar
 					;; Use it as initial value
@@ -544,8 +543,9 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					    `(,x ,x)
 					    `(,x)))
 			      common-symbols) ;; Tables: 'a 'b 'c ...
-		       ,@let-binding ;; initial element to 'a 'b 'c...
-
+		       ;;,@let-binding ;; initial element to 'a 'b 'c...
+		       ,@(loop for let in let-binding
+			       collect `(,(car let) ',(car let)))
 		       ;; ~ = `(nil nil nil) at first.
 		       (,undetermined-shape-tmp
 			 (loop for s
@@ -675,9 +675,33 @@ Accordingly, the argument must satisfy: dimensions = ~a
 					       ,all-conditions)
 					      t)
 					    '~)))
-				      shapes
-				      names)))
-			       out)))
+				    shapes
+				    names)))
+			     out)))
+		    (let* (,@(loop with tmp = (gensym)
+			           for let in let-binding
+				   collect
+				   `(,(car let) (let* ((,tmp (progn ,@(cdr let)))
+						       (,tmp (if (listp ,(car let))
+								 (flatten (list ,tmp))
+								 ,tmp))
+						       (,(car let) (if (listp ,tmp)
+								       (flatten (list ,(car let)))
+								       ,(car let))))
+						  (if (if (listp ,tmp)
+							  (cl-waffe2/vm.generic-tensor::shape-equal-list ,tmp ,(car let))
+							  (shape-equal ,tmp ,(car let)))
+						      ,tmp
+						      (progn
+							(push
+							 (format
+							  nil
+							  "~a is declared as ~a, but determined as ~a"
+							  ',(car let)
+							  ,tmp
+							  ,(car let))
+							 ,all-conditions)
+							,tmp))))))
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
 			
@@ -693,7 +717,7 @@ Accordingly, the argument must satisfy: dimensions = ~a
 			 ,rank-error-p
 			 (list ,@(map 'list #'(lambda (arg)
 						`(flatten (list ,@arg)))
-				      first-state)))))))))
+				      first-state))))))))))
       (when macroexpand
 	(print body))
 

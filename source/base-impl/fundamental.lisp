@@ -273,8 +273,13 @@ Subscripts are following:
 `(values sliced-tensor broadcast-reverser)`
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
+
+Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function (tensor-view tensor))` can be used like: `(!view tensor #'reverse)`.
 "
-  (let* ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
+  (let* ((subscripts (if (functionp (car subscripts))
+			 (funcall (car subscripts) (tensor-view tensor))
+			 subscripts))
+	 (out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
 	 (broadcast-reverser
 	   (loop for s in (tensor-view out)
 		 if (and (listp (force-list s))
@@ -331,7 +336,7 @@ shapes can contain t at once, this function also infers t."
 	  else
 	    collect s)))
 
-(declaim (ftype (function (AbstractTensor &rest (and (not null) (or boolean fixnum))) AbstractTensor) !reshape))
+(declaim (ftype (function (AbstractTensor &rest (and (not null) (or function boolean fixnum))) AbstractTensor) !reshape))
 (defun !reshape (tensor &rest shapes)
   "
 ## [function] !reshape
@@ -351,10 +356,18 @@ Before and after the operation, the total elements of tensors must correspond.
 
 `shapes` could be one of: fixnum `t`. `t` can be used at one, but the value of t is automatically inferenced.
 
+Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
+
+```lisp
+(!reshape (ax+b `(5 3 2) 1 0) #'reverse) ;; => (2 3 5) Tensor
+```
 "
   (declare (type AbstractTensor tensor))
   
-  (let* ((shapes (parse-reshape-args (shape tensor) shapes))
+  (let* ((shapes (if (functionp (car shapes))
+		     (funcall (car shapes) (shape tensor))
+		     shapes))
+	 (shapes (parse-reshape-args (shape tensor) shapes))
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
@@ -362,7 +375,7 @@ Before and after the operation, the total elements of tensors must correspond.
     (assert (= (apply #'* (shape tensor))
 	       (apply #'* shapes))
 	    nil
-	    "Reshaping failed because total size doesn't match.")
+	    "Reshaping failed because the total size do not match.")
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
     (let ((result
@@ -813,7 +826,6 @@ dout   ... dout values"
 	for l2 in listb
 	collect (= l1 l2)))
 
-;; TODO: Test
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute
@@ -875,6 +887,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
+Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor #'reverse)` to reverse all permution for example.
 "
   ;; If only the last two axes are subject to swapped.
   ;; Return a special node LazyTranspose instead.
@@ -884,7 +897,10 @@ Note that the case when only the last two aces are subject to be swapped, we ret
   ;;		  (proceed-backward (!matmul a (randn `(10 3))))
   ;;		  a)
   ;;
-  (let* ((new-tensor (apply #'permute* tensor orders))
+  (let* ((orders (if (functionp (car orders))
+		     (funcall (car orders) (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
+		     orders))
+	 (new-tensor (apply #'permute* tensor orders))
 	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
 	 (lazy-p (and (every #'(lambda (x) x) (butlast diff 2))

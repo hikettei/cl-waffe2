@@ -192,7 +192,6 @@ Predicts next output given inputs.
 	       (state1 linter-state1)
 	       (state2 linter-state2))
       model
-    
     (if linter-function
 	(multiple-value-bind (sym1 state1) (preprocess-batch-symbol (car state1))
 	  (multiple-value-bind (res in) (funcall linter-function model inputs state1 state1)
