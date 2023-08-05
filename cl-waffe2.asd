@@ -139,6 +139,9 @@
 	       (:file "nn/criterion")
 	       (:file "nn/recurrent")
 
+	       (:file "nn/im2col")
+	       (:file "nn/conv")
+
 	       (:file "optimizers/impls/sgd")
 	       (:file "optimizers/impls/adam")
 	       

@@ -38,7 +38,8 @@ Applies a 2D convolution over an input signal composed of several input planes."
 		   (stride   :initarg :stride)
 		   (padding  :initarg :padding)
 		   (dilation :initarg :dilation)
-		   (groups   :initarg :groups))
+		   (groups   :initarg :groups)
+		   (kernel-size :initarg :kernel-size))
 	   ;; Memo: C_in H_in W_in ... should be determined before computing.
 	   :where (Input[~ C_in H_in W_in] -> Output[~ C_out H_out W_out]
 			   where
@@ -73,27 +74,17 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	    ;; Biases are (out-channels) tensor which sampled from U(-sqrt(k), sqrt(k))
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
-(lazy-reshape
- (apply #'lazy #'+
-        (loop for offsets in stencil
-              for index from 0
-              collect
-              (lazy #'*
-                    (lazy-slice filters index)
-                    (lazy-reshape
-                     lazy-array
-                     (make-transformation
-                      :offsets
-                      (append
-                       (make-list (- rank d) :initial-element 0)
-                       (mapcar #'- offsets)))
-                     result-shape))))
- (collapsing-reshaper))
+;;
+;; メモ
+;;  call-with-viewとその内部のデータ構造を分離する
+;;  nodeを合成可能にする
+;;  FuseOPs
+;;
 
 ;; Ref: https://github.com/chainer/chainer/blob/master/chainer/functions/connection/convolution_2d.py#L253
 ;; https://qiita.com/nishiha/items/8c204a0778e182ee4328
 (defmethod apply-conv2d ((self Conv2D) input)
-  (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups)) self
+  (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups) (kernel-size kernel-size)) self
     (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
       (multiple-value-bind (C-out icg k-h k-w) (apply #'values (shape weight))
 	(let* ((~     (butlast (shape input) 3))
@@ -159,25 +150,65 @@ Applies a 2D convolution over an input signal composed of several input planes."
 
 	  ;; Ref: https://github.com/marcoheisig/Petalisp/blob/master/examples/machine-learning.lisp
 	  ;; gemm使わないようにしてJITCPUTensorでまとめてカーネル生成したい
-	  (print (shape input))
-	  (let* ((out (loop for channel-n upfrom 0 below in-channels
-			    collect
-			    (let ((filter (!view weight t channel-n t t))
-				  (cols   ))
-			      (!mul filter cols)
-			      ))))
-		       
+	  ;; !viewを使ってカーネルを直接切り取る -> !Mulする-> collect -> !addで実装する
+	  ;; 積極的にloop forを使ってみる
 
-	    (print input)
-	    (print input)
-	    (print p-x)
-	    (print p-y)
+	  (print weight)
+	  (print input)
 
-	    (print h-out)
-	    (print w-out)
-	    input
-	    
-	    (if nil
-		(!add input (%transform bias[i] -> bias[~ i]))
-		input)))))))
+	  ;; https://github.com/Woodi-dev/LispNet/blob/main/layers/conv2d.lisp
+	  ;; 方針:
+	  ;; 1. im2colを実装する
+	  ;; im2colのstrideを直接いじる実装
 
+	  ;; 2. later, gemmを呼び出す
+	  
+	  ;; reshape/broadcasting使ってうまくまとめたい
+	  (let* ((batch-view (make-list (length ~) :initial-element t))
+		 (kernel-pieces
+		   (loop for channel-n upfrom 0 below in-channels
+			 append
+			 (loop for h upfrom 0 below h-out
+			       append
+			       (loop for w upfrom 0 below w-out
+				     collect
+				     (let* ((c-start (* channel-n groups))
+					    (c-end   (+ c-start groups))
+					    (h-start (* (car stride) h))
+					    (h-end   (+ h-start (car kernel-size)))
+					    (w-start (* (second stride) w))
+					    (w-end   (+ w-start (second kernel-size)))
+					    (repeat  (- c-end c-start)))					
+				       (!mul (%transform (!view weight t channel-n t t)[C_out C_groups k1 k2] -> [t *repeat t t]) ;; (C_out C_in kernel-size1 kernel_size2)
+					     (!flexible
+					      (apply
+					       #'!view
+					       input
+					       ;; c_in h_in w_in
+					       (append batch-view
+					       `((,c-start ,c-end)
+						 (,h-start ,h-end)
+						 (,w-start ,w-end)))))))))))
+		 (kernel-pieces
+		   (loop for channel-n upfrom 0 below in-channels
+			 collect
+			 (let ((c-start (* channel-n groups))
+			       (c-end   (+ c-start groups)))
+			   (!mul
+			    ;; (C_out group k_x K_y)
+			    ;; -> (group C_out k_x k_y)
+			    (!permute
+			     (!view weight t `(,c-start ,c-end) t t)
+			     2 3 1 0)
+			    ;; (C_in h y)
+			    (!view input 
+
+
+	    ;; mapviewを追加
+	    ;;最後に(!sum (!add out))みたいな
+	    ;; groupでBroadcastingが必須だなぁ
+	    ;; compile-forward-chainが末尾関数最適化できてない・・・
+	    ;; 四則演算のCopy 計算ノードの量爆発しないか大丈夫？
+
+	    (print kernel-pieces)
+	    input))))))

@@ -158,7 +158,7 @@ See also: `with-facets`
 "
   `(let ((,var (convert-tensor-facet ,object-from ,direction)))
      (prog1
-	 (progn ,@body)
+	 (locally ,@body)
        ,(when sync
 	  `(progn
 	     (when (not (typep ,object-from 'AbstractTensor))
@@ -192,7 +192,7 @@ with-facet but input-forms are several.
 	     (if rest-forms
 		 `(with-facet ,(car rest-forms)
 		    ,(expand-forms (cdr rest-forms)))
-		 `(progn ,@body))))
+		 `(locally ,@body))))
     (expand-forms input-forms)))
 
 
