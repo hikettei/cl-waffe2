@@ -13,7 +13,7 @@
 ;;
 
 
-(define-with-typevar-dense
+(define-with-typevar
     (im2col-caller u) (padded-x col N C filter-h filter-w out-h out-w stride-x stride-y)
   (declare (optimize (speed 3))
            (type AbstractTensor padded-x col)
@@ -62,13 +62,9 @@
 					   (%* c-i c-stride-o)
 					   (%* y-pos h-stride-o)
 					   (%* x-pos w-stride-o)))))))))))))
-      (proceed
-       (!reshape
-	(->contiguous (permute* col 0 4 5 1 2 3))
-	(%* n (%* out-h out-w))
-	t)))))
+      col)))
 
-(defun call-im2col-kernel (padded-x N C filter-h filter-w out-h out-w stride-x stride-y)
+(defun call-im2col-kernel (padded-x col N C filter-h filter-w out-h out-w stride-x stride-y)
   "
 ## [function] call-im2col-kernel
 
@@ -77,9 +73,6 @@ C ... in-channels
 filter-h/filter-w kernel-size[0], kernel-size[1]
 out-h out-w
 stride-x stride-y"
-  (let ((col (ax+b `(,N ,C ,filter-h ,filter-w ,out-h ,out-w) 0 0
-		   :dtype (dtype padded-x)
-		   :order (order padded-x))))
   (funcall (im2col-caller (dtype padded-x))
 	   padded-x
 	   col
@@ -90,13 +83,56 @@ stride-x stride-y"
 	   out-h
 	   out-w
 	   stride-x
-	   stride-y)))
+	   stride-y))
 
 
 (defun col2im-kernel (x k-h k-w stride padding)
 
   )
 
+(define-static-node (Im2ColNode (self N C k-h k-w h-out w-out stride-x stride-y)
+		     :slots ((N :initarg :N)
+			     (C :initarg :C)
+			     (k-h :initarg :k-h)
+			     (k-w :initarg :k-w)
+			     (h-out :initarg :h-out)
+			     (w-out :initarg :w-out)
+			     (stride-x :initarg :stride-x)
+			     (stride-y :initarg :stride-y))
+		     :where (X[N C H W] Col[N C k-h k-w h-out w-out] -> Col[N C k-h k-w h-out w-out])
+		     :forward ((self x col)
+			       (with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) self
+				 (call-im2col-kernel
+				  x
+				  col
+				  n
+				  c
+				  k-h
+				  k-w
+				  h-out
+				  w-out
+				  stride-x
+				  stride-y)))
+		     :backward ((self dout)
+				(values dout nil))))			    
 
-(defun !im2col-cpu ())
+
+(defun !im2col-cpu (padded-x N C k-h k-w h-out w-out stride-x stride-y)
+  "
+## [function] !im2col-cpu
+
+N - batch-size
+C - in-channels
+k-h/k-w kernel-size[0], kernel-size[1] respectively.
+h-out w-out
+stride-x stride-y - stride[0], stride[1] respectively.
+"
+  (let* ((col (ax+b `(,N ,C ,k-h ,k-w ,h-out ,w-out) 0 0
+		    :order (order padded-x)
+		    :dtype (dtype padded-x)))
+	 (result (call (Im2ColNode N C k-h k-w h-out w-out stride-x stride-y) padded-x col)))
+    (!reshape
+     (->contiguous (!permute result 0 4 5 1 2 3))
+     (* n h-out w-out)
+     t)))
 

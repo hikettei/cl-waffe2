@@ -41,7 +41,7 @@ Applies a 2D convolution over an input signal composed of several input planes."
 		   (groups   :initarg :groups)
 		   (kernel-size :initarg :kernel-size))
 	   ;; Memo: C_in H_in W_in ... should be determined before computing.
-	   :where (Input[~ C_in H_in W_in] -> Output[~ C_out H_out W_out]
+	   :where (Input[N C_in H_in W_in] -> Output[N C_out H_out W_out]
 			   where
 			   C_in  = in-channels
 			   C_out = out-channels
@@ -140,6 +140,6 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	  ;;            ...           |
 
 	  ;; im2col + gemm
-	  (let ((out (call-im2col-kernel (proceed input) (or (car ~) 1) in-channels k-h k-w h-out w-out (car stride) (second stride))))
+	  (let ((out (!im2col-cpu input 1 in-channels k-h k-w h-out w-out (car stride) (second stride))))
 
 	    out))))))
