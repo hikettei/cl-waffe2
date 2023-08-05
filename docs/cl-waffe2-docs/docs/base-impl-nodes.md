@@ -1518,7 +1518,9 @@ A is a target to find a maximum value, and OUT is a place to set the index.
 ✅ Already defined. 
 
 ```lisp
-((self dout da do) (declare (ignore dout da do)) (values nil nil))
+((self dout da do) (declare (ignore do))
+ (let ((mask (a=b da (!view (!max da) (broadcast-to da)))))
+   (values (!mul mask (!view dout (broadcast-to mask))) nil)))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -1547,7 +1549,9 @@ A is a target to find a minimum value, and OUT is a place to set the index.
 ✅ Already defined. 
 
 ```lisp
-((self dout da do) (declare (ignore dout da do)) (values nil nil))
+((self dout da do) (declare (ignore do))
+ (let ((mask (a=b da (!view (!min da) (broadcast-to da)))))
+   (values (!mul mask (!view dout (broadcast-to mask))) nil)))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)

@@ -30,5 +30,8 @@
 
     (with-nn-doc (find-class 'Conv2D) 't
       (with-example
-	"(LinearLayer 3 5 '(3 3))"))))
+	"(Conv2D 3 5 '(3 3))"))
+
+    (with-nn-doc (find-class 'MaxPool2D) 't)
+    (with-nn-doc (find-class 'AvgPool2D) 't)))
 
