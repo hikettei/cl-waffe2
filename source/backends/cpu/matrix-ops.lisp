@@ -133,3 +133,49 @@ Please consider using another backends." dtype)))))
 		  ;; But proceeds with no errors...
 		  ,out))))
 
+(defun expand-arg-maxmin-form (x out type &aux (index (gensym)))
+  (declare (type (and keyword (member :max :min)) type))
+  `(let (;;(x-vec (tensor-vec ,x))
+	 (o-vec (tensor-vec ,out))
+	 (,index 0))
+     (declare (type (unsigned-byte 32) ,index)
+	     ;; (type (simple-array ,(dtype->lisp-type (dtype x)) (*)) x-vec)
+	      (type (simple-array ,(dtype->lisp-type (dtype out)) (*)) o-vec))
+	      
+     ,(call-with-view
+       #'(lambda (x-view o-view)
+	   `(progn
+	      (setf (aref o-vec ,index)
+		    ;; (blas-iXmax size ptr stride) -> max/min value
+		    ;; indices start from 1, if 0, there's any errors
+		    (1-
+		     (the fixnum
+			  (,(case (dtype x)
+			      (:double
+			       (case type
+				 (:max 'blas-idmax)
+				 (:min 'blas-idmin)))
+			      (:float
+			       (case type
+				 (:max 'blas-ismax)
+				 (:min 'blas-ismin)))
+			      (t (error "CPUTensor: argmax/argmin/max/min do not support ~a. only :float and :double" (dtype x))))
+			   ,(size-of x-view 0)
+			   (tensor-ptr ,x :offset ,(offset-of x-view 0))
+			   ,(stride-of x-view 0)))))
+	      (incf ,index ,(stride-of o-view 0))))
+       `(,x ,out)
+       :at-least-dim 1
+       :force-order t)))
+
+(define-impl (ArgMax-Node :device CPUTensor)
+	     :forward ((self x out)
+		       `(progn
+			  ,(expand-arg-maxmin-form x out :max)
+			  ,out)))
+
+(define-impl (ArgMin-Node :device CPUTensor)
+	     :forward ((self x out)
+		       `(progn
+			  ,(expand-arg-maxmin-form x out :min)
+			  ,out)))
