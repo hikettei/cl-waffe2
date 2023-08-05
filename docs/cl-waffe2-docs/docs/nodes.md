@@ -899,7 +899,7 @@ Reading the save-for-backward of currently working node, the macro binds each `v
 ## [generic] on-finalizing-compiling
 
 ```lisp
-(on-finalizing-compiling current-node variable next-variable)
+(on-finalizing-compiling current-node variable next-variable compile-me)
 ```
 
 The generic function `on-finalizing-compiling` is invoked after the body of `define-impl` is expanded when performing `compile-chain-forward`.
@@ -930,7 +930,25 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 
 `next-variables (i.e.: corresponding variable of MoveTensorNode2)` returns corresponding variable of next node.
 
+`compile-me[boolean]` If t, cl-waffe2 needs compiled code that works instantly.
+
 See also: `the implementation of JITLispTensor`.
+
+## [generic] on-finished-compiling
+
+```lisp
+(on-finished-compiling current-node)
+```
+
+The method on-finished-compiling is once called when the node was reached the end.
+
+### Example
+
+```lisp
+(defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))
+   ...
+   )
+```
 
 ## [class] Composite
 

@@ -6,6 +6,10 @@
 
   ;; LinearLayer
   (:export
+   #:weight-of
+   #:bias-of)
+  
+  (:export
    #:LinearLayer
    #:Linear-weight
    #:Linear-bias)

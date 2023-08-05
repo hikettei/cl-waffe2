@@ -13,13 +13,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP904 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP704 
   :vec-state [computed]
-  ((0.29877836  0.30390057  -0.0        ~ 0.6570857   -0.0        0.15569116)                   
-   (1.1628566   -0.0        2.0688279   ~ 0.54795235  1.6235474   0.5676201)   
-                ...
-   (-0.0        -0.0        1.1347765   ~ 1.2168686   0.3889897   0.769078)
-   (0.63483995  -0.0        3.296946    ~ -0.0        -0.0        -0.0))
+  ((-0.0         2.0355937    0.87400746   ~ 0.5758207    0.32484004   -0.0)                    
+   (1.1069025    -0.0         0.9794315    ~ -0.0         0.6054693    -0.0)   
+                 ...
+   (-0.0         0.14430979   1.6049826    ~ 0.66292197   -0.0         -0.0)
+   (-0.0         -0.0         -0.0         ~ -0.0         -0.0         -0.0))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -42,13 +42,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1069 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP865 
   :vec-state [computed]
-  ((0.3750325   0.6441993   0.5261212   ~ 0.47457588  0.583279    0.24978025)                   
-   (0.6561655   0.17466956  0.3052983   ~ 0.3162559   0.87631273  0.5881605)   
-                ...
-   (0.71782446  0.197881    0.26494858  ~ 0.61031026  0.25143313  0.29950982)
-   (0.2488928   0.7665214   0.783482    ~ 0.2109514   0.23612864  0.69080406))
+  ((0.59221524 0.49752915 0.45874146 ~ 0.33162943 0.3568413  0.26439044)                  
+   (0.519481   0.7583395  0.31405032 ~ 0.55313486 0.48576716 0.62167424)   
+               ...
+   (0.8074486  0.17289545 0.40895566 ~ 0.5744591  0.66711944 0.48927152)
+   (0.7403083  0.42706847 0.89801675 ~ 0.5560996  0.42497367 0.7186789))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -75,9 +75,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1302 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1094 
   :vec-state [computed]
-  ((0.97527266))
+  ((1.2354927))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -102,9 +102,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1503 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1291 
   :vec-state [computed]
-  ((1.8007393))
+  ((1.423828))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -196,10 +196,98 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W1507}(
+<Composite: LINEARLAYER{W1295}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
+    BIAS    -> (5)
+)>
+```
+
+## [model] CONV2D
+
+```
+(conv2d IN-CHANNELS OUT-CHANNELS KERNEL-SIZE &KEY (STRIDE 1) (PADDING 0) (DILATION 1) (GROUPS
+                                                                                1) (BIAS
+                                                                                    T) &AUX (STRIDE
+                                                                                             (MAYBE-TUPLE
+                                                                                              STRIDE
+                                                                                              'STRIDE)) (KERNEL-SIZE
+                                                                                                         (MAYBE-TUPLE
+                                                                                                          KERNEL-SIZE
+                                                                                                          'KERNEL-SIZE)) (PADDING
+                                                                                                                          (MAYBE-TUPLE
+                                                                                                                           PADDING
+                                                                                                                           'PADDING)) (DILATION
+                                                                                                                                       (MAYBE-TUPLE
+                                                                                                                                        DILATION
+                                                                                                                                        'DILATION)))
+```
+
+
+which transformation of shapes are defined as:
+```
+(INPUT[N C_IN H_IN W_IN] -> OUTPUT[N C_OUT H_OUT W_OUT] WHERE C_IN =
+ IN-CHANNELS C_OUT = OUT-CHANNELS H_OUT =
+ (IF (NUMBERP H_IN)
+     (FLOOR
+      (+ 1
+         (/
+          (+ H_IN (* 2 (CAR PADDING))
+             (* (- (CAR DILATION)) (- (CAR KERNEL-SIZE) 1)) -1)
+          (CAR STRIDE))))
+     -1)
+ W_OUT =
+ (IF (NUMBERP W_IN)
+     (FLOOR
+      (+ 1
+         (/
+          (+ W_IN (* 2 (SECOND PADDING))
+             (* (- (SECOND DILATION)) (- (SECOND KERNEL-SIZE) 1)) -1)
+          (SECOND STRIDE))))
+     -1))
+```
+### Description
+
+
+Applies a 2D convolution over an input signal composed of several input planes.
+
+
+### Inputs
+
+`in-channels[fixnum]` `out-channels[fixnum]` the number of channels. For example, if the input image is RGB, `in-channels=3`.
+
+`kernel-size[list (kernel-x kernel-y)]` controls the size of kernel (e.g.: `'(3 3)`).
+
+`padding[fixnum or list]` controls the amount of padding applies to the coming input. pads in X and Y direction when an integer value is entered. set a list of `(pad-x pad-y)` and pads in each direction.
+
+`stride[fixnum or list]` controls the stride for cross-correlation. As with `padding`, this parameter can be applied for each x/y axis.
+
+`dilation[fixnum or list]` controls the connections between inputs and outputs. in_channels and out_channels must both be divisible by groups. (currently not working, please set 1.)
+
+`bias[boolean]` Set t to use bias.
+
+### Parameters
+
+Let k be `(/ groups (* in-channels (apply #'* kernel-size)))`.
+
+
+`weight` is a trainable parameter of `(out-channels, in-channels / groups, kernel-size[0] kernel-size[1])` sampled from `U(-sqrt(k), sqrt(k))` distribution, and can be accessed with `weight-of`.
+
+`bias` is a trainable parameter of `(out-channels)` sampled from `U(-sqrt(k), sqrt(k))` distribution, and can be accessed with `bias-of`.
+
+Note: When `Conv2D` is initialised, the output is displayed as -1. This is because the calculation of the output is complicated and has been omitted. Once call is invoked, the output is recorded.
+
+
+### Example
+
+```lisp
+(LinearLayer 3 5 '(3 3))
+
+<Composite: LINEARLAYER{W1301}(
+    <Input : ((~ BATCH-SIZE 3)) -> Output: ((~ BATCH-SIZE 5))>
+
+    WEIGHTS -> (5 3)
     BIAS    -> (5)
 )>
 ```

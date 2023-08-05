@@ -32,7 +32,34 @@
 			(padding (maybe-tuple padding 'padding))
 			(dilation (maybe-tuple dilation 'dilation)))
 	   :documentation "
-Applies a 2D convolution over an input signal composed of several input planes."
+Applies a 2D convolution over an input signal composed of several input planes.
+
+
+### Inputs
+
+`in-channels[fixnum]` `out-channels[fixnum]` the number of channels. For example, if the input image is RGB, `in-channels=3`.
+
+`kernel-size[list (kernel-x kernel-y)]` controls the size of kernel (e.g.: `'(3 3)`).
+
+`padding[fixnum or list]` controls the amount of padding applies to the coming input. pads in X and Y direction when an integer value is entered. set a list of `(pad-x pad-y)` and pads in each direction.
+
+`stride[fixnum or list]` controls the stride for cross-correlation. As with `padding`, this parameter can be applied for each x/y axis.
+
+`dilation[fixnum or list]` controls the connections between inputs and outputs. in_channels and out_channels must both be divisible by groups. (currently not working, please set 1.)
+
+`bias[boolean]` Set t to use bias.
+
+### Parameters
+
+Let k be `(/ groups (* in-channels (apply #'* kernel-size)))`.
+
+
+`weight` is a trainable parameter of `(out-channels, in-channels / groups, kernel-size[0] kernel-size[1])` sampled from `U(-sqrt(k), sqrt(k))` distribution, and can be accessed with `weight-of`.
+
+`bias` is a trainable parameter of `(out-channels)` sampled from `U(-sqrt(k), sqrt(k))` distribution, and can be accessed with `bias-of`.
+
+Note: When `Conv2D` is initialised, the output is displayed as -1. This is because the calculation of the output is complicated and has been omitted. Once call is invoked, the output is recorded.
+"
 	   :slots ((weight :accessor weight-of)
 		   (bias   :accessor bias-of)
 		   (stride   :initarg :stride)
