@@ -13,6 +13,13 @@
     (:void ((n :int) (x :mat :input) (incx :int) (y :mat :output) (incy :int))))
 
 
+;; imax imin
+(define-blas-function (#'(lambda (ctype) (format nil "i~amax" ctype)))
+    (:uint32 ((n :int) (x :mat :input) (incx :int))))
+
+(define-blas-function (#'(lambda (ctype) (format nil "i~amin" ctype)))
+    (:uint32 ((n :int) (x :mat :input) (incx :int))))
+
 ;; ===============================================================
 ;; Level2
 ;; ===============================================================
