@@ -331,7 +331,7 @@ shapes can contain t at once, this function also infers t."
 	  else
 	    collect s)))
 
-(declaim (ftype (function (AbstractTensor &rest (and (not null) (or boolean fixnum))) AbstractTensor) !reshape))
+(declaim (ftype (function (AbstractTensor &rest (and (not null) (or function boolean fixnum))) AbstractTensor) !reshape))
 (defun !reshape (tensor &rest shapes)
   "
 ## [function] !reshape
@@ -351,10 +351,18 @@ Before and after the operation, the total elements of tensors must correspond.
 
 `shapes` could be one of: fixnum `t`. `t` can be used at one, but the value of t is automatically inferenced.
 
+Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
+
+```lisp
+(!reshape (ax+b `(5 3 2) 1 0) #'reverse) ;; => (2 3 5) Tensor
+```
 "
   (declare (type AbstractTensor tensor))
   
-  (let* ((shapes (parse-reshape-args (shape tensor) shapes))
+  (let* ((shapes (if (functionp (car shapes))
+		     (funcall (car shapes) (shape tensor))
+		     shapes))
+	 (shapes (parse-reshape-args (shape tensor) shapes))
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
