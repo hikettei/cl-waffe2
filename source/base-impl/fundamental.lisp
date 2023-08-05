@@ -273,8 +273,13 @@ Subscripts are following:
 `(values sliced-tensor broadcast-reverser)`
 
 Tips: Applying `!view` again to the returned `sliced-tensor` with `broadcast-reverser` will remove broadcasts from the tensor.
+
+Tips: If a function is passed as the first element of `subscript`, the subscript is overwritten based on the return value of the function. The function is called like: `(funcall function (tensor-view tensor))` can be used like: `(!view tensor #'reverse)`.
 "
-  (let* ((out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
+  (let* ((subscripts (if (functionp (car subscripts))
+			 (funcall (car subscripts) (tensor-view tensor))
+			 subscripts))
+	 (out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
 	 (broadcast-reverser
 	   (loop for s in (tensor-view out)
 		 if (and (listp (force-list s))
@@ -821,7 +826,6 @@ dout   ... dout values"
 	for l2 in listb
 	collect (= l1 l2)))
 
-;; TODO: Test
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute
@@ -883,6 +887,7 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
+Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor #'reverse)` to reverse all permution for example.
 "
   ;; If only the last two axes are subject to swapped.
   ;; Return a special node LazyTranspose instead.
@@ -892,7 +897,10 @@ Note that the case when only the last two aces are subject to be swapped, we ret
   ;;		  (proceed-backward (!matmul a (randn `(10 3))))
   ;;		  a)
   ;;
-  (let* ((new-tensor (apply #'permute* tensor orders))
+  (let* ((orders (if (functionp (car orders))
+		     (funcall (car orders) (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor))
+		     orders))
+	 (new-tensor (apply #'permute* tensor orders))
 	 (diff       (list-diff (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 				(cl-waffe2/vm.generic-tensor::tensor-permute-order new-tensor)))
 	 (lazy-p (and (every #'(lambda (x) x) (butlast diff 2))

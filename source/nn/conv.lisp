@@ -75,9 +75,8 @@ Applies a 2D convolution over an input signal composed of several input planes."
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
 
-;; 色々と迷走したので実装がごちゃごちゃしてる・・・
+;; The implementation is messy because we tried so many different ways to implement it.
 ;; [TODO] Refactor conv2d for future impls of Conv3D, ConvND.
-
 (defmethod apply-conv2d ((self Conv2D) input)
   (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups) (kernel-size kernel-size)) self
     (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
