@@ -13,7 +13,8 @@
    #:maybe-with-lparallel
 
    #:maybe-pfuncall
-   #:maybe-pdotimes))
+   #:maybe-pdotimes
+   #:maybe-ploop))
 
 (in-package :cl-waffe2/threads)
 
@@ -96,4 +97,8 @@ Set *num-core*=num-core under the body execution.
 		  ,multi-thread-part
 		  (the index ,count)))))))))
 
+(defmacro maybe-ploop ((var &key (upfrom 0) (below 0) (by 1)) &body body)
+  `(maybe-pdotimes (,var (- (the index ,below) (the index ,upfrom)))
+     (let ((,var (* ,by (+ ,below ,var))))
+       ,@body)))
 
