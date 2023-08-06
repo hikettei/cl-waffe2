@@ -741,8 +741,9 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   ;;  (warn "embody-actual-tensor is gonna destruct ExistTensor: ~a" (shape input-tensor)))
 
   (let ((actual-tensor
-	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
-		   (permuted-p input-tensor))
+	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))		   
+		   (permuted-p input-tensor)
+		   (not (equal (shape input-tensor) (shape actual-tensor))))
 	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
 	      actual-tensor)))
     

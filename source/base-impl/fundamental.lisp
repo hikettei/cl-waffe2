@@ -306,8 +306,8 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
 	     :forward ((self x y)
 		       `(progn
-			  (cl-waffe2/vm.generic-tensor::transfer-vec-information ,y ,x)
-			  ,x)))
+			  (setf (tensor-vec ,y) (tensor-vec ,x))
+			  ,y)))
 
 ;; ===============================================================
 ;; Reshaping APIs
@@ -608,7 +608,7 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 "
   (let* ((node (ProceedNode :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
-	 (out (forward node tensor)))
+	 (out  (forward node tensor)))
     
     ;; Cut off previous backwards
     (setf (tensor-backward tensor) nil)
