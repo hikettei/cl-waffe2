@@ -7,8 +7,6 @@
 ;; 
 ;;
 
-;; TODO: AvgPoolをCopyPasteして書き直す！！
-
 (defun conv-out-size (in padding dilation kernel-size stride)
   (floor
    (+ 1 (/ (+ in
