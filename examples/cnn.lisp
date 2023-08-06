@@ -13,18 +13,31 @@
 
 (in-package :cl-waffe2-cnn-example)
 
-(defsequence CNN ()
+(defsequence Cifar10-CNN ()
 	     (Conv2D 3 6 `(5 5))
 	     (asnode #'!relu)
-	     (Conv2D 6 12 `(5 5))
+	     (MaxPool2D `(2 2))
+	     (Conv2D 6 16 `(5 5))
 	     (asnode #'!relu)
-	     (asnode #'!reshape t (* 16 5 5))
-	     (LinearLayer (* 16 5 5) 120)
+	     (MaxPool2D `(2 2))
+	     (asnode #'!reshape t (* 16 22 22))
+	     (LinearLayer (* 16 22 22) 120)
 	     (asnode #'!relu)
 	     (LinearLayer 120 84)
 	     (asnode #'!relu)
 	     (LinearLayer 84 10))
 
-(print (CNN))
+;; [TODO]
+;; BugFix on !permute backward.
+;; cl-waffe2/threads:scheduled-pdotimes (i 100) macro
+;;
+
+(defmethod train ((model Cifar10-CNN) x y)
+  (!mean
+   (softmax-cross-entropy
+    (call model x)
+    y)))
+
+(print (Cifar10-CNN))
 
 
