@@ -2,7 +2,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/vm.generic-tensor
-  (:use :cl :lparallel :bordeaux-threads)
+  (:use :cl :lparallel :bordeaux-threads :cl-waffe2/threads)
 
   (:export
    ;;#:*cache-directory*
