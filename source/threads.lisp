@@ -19,13 +19,16 @@
 
 ;; MultiThreading configs
 
+(deftype index () `(unsigned-byte 64))
+
+(defvar *cl-waffe2-kernel* nil)
 (defparameter *num-cores* 1 "
 ## [parameter] *num-cores*
 
 Indicates the number of cpu cores. Set 1 to disable all multithreading in cl-waffe2.")
 
 (defparameter *multithread-threshold* 80000)
-(declaim (type (unsigned-byte 64) *num-cores* *multithread-threshold*))
+(declaim (type index *num-cores* *multithread-threshold*))
 
 (defparameter *under-multi-thread* nil)
 
@@ -47,9 +50,10 @@ Set *num-core*=num-core under the body execution.
   (not (<= (the fixnum *num-cores*) 1)))
 
 (defmacro maybe-with-lparallel (&body body)
-  `(let ((*kernel* (or *kernel* (if (multithread-p)
-				    (make-kernel *num-cores*)
-				    nil))))
+  `(let* ((*cl-waffe2-kernel* (or *cl-waffe2-kernel* (if (multithread-p)
+							 (make-kernel *num-cores*)
+							 nil)))
+	  (*kernel* *cl-waffe2-kernel*))
      ,@body))
 
 (defmacro maybe-pfuncall (function &rest args)
@@ -60,7 +64,7 @@ Set *num-core*=num-core under the body execution.
 ;; kaettara test
 ;; optimize compared to pure dotimes.
 ;; gemm ... (with-num-cores (1) ...) is must.
-;; gensym name conflicts?
+
 (defmacro maybe-pdotimes ((var count) &body body &aux (thread-idx (gensym)))
   "
 ## [macro] maybe-pdotimes
@@ -68,28 +72,28 @@ Set *num-core*=num-core under the body execution.
   (let ((*under-multi-thread* t))
     (alexandria:with-gensyms (multi-thread-subject count-per-thread multi-thread-part from to)
       `(flet ((,multi-thread-subject (,from ,to)
-		(declare (type (unsigned-byte 64) ,from ,to))
+		(declare (type index ,from ,to))
 		(loop with *under-multi-thread* = t
-		      for ,var fixnum upfrom ,from below ,to
+		      for ,var of-type index upfrom ,from below ,to
 		      do ,@body)))
 	 (if (or *under-multi-thread*
-		 (= *num-cores* 1)
-		 (< (the fixnum ,count) *multithread-threshold*)
+		 (= (the fixnum *num-cores*) 1)
+		 (< (the index ,count) *multithread-threshold*)
 		 ;; [todo] benchmark
-		 (< (the fixnum ,count) *num-cores*))
+		 (< (the index ,count) *num-cores*))
 	     ;; If *num-cores* = 1 or count is enough small. ignore parallelize.
-	     (,multi-thread-subject 0 ,count)
+	     (,multi-thread-subject 0 (the index ,count))
 	     (maybe-with-lparallel
-	       (let* ((,count-per-thread  (floor (/ (the fixnum ,count) *num-cores*)))
-		      (,multi-thread-part (* *num-cores* ,count-per-thread)))
-		 (declare (type (unsigned-byte 64) ,count-per-thread ,multi-thread-part))
+	       (let* ((,count-per-thread  (floor (the fixnum ,count) (the index *num-cores*)))
+		      (,multi-thread-part (* (the index *num-cores*) ,count-per-thread)))
+		 (declare (type index ,count-per-thread ,multi-thread-part))
 		 (pdotimes (,thread-idx *num-cores*)
-		   (locally (declare (type (unsigned-byte 64) ,thread-idx))
+		   (locally (declare (type index ,thread-idx))
 		     (,multi-thread-subject
-		      (the fixnum (* ,thread-idx ,count-per-thread))
-		      (the fixnum (* (1+ ,thread-idx) ,count-per-thread)))))
+		      (the index (* ,thread-idx ,count-per-thread))
+		      (the index (* (1+ ,thread-idx) ,count-per-thread)))))
 		 (,multi-thread-subject
 		  ,multi-thread-part
-		  ,count))))))))
+		  (the index ,count)))))))))
 
 
