@@ -31,3 +31,27 @@ For example:
 			  (error "broadcast-to: Couldn't broadcast two axes, ~a and ~a" (shape tensor) (shape object-tensor)))
 			`(:broadcast ,shape-object)))))
 
+(defun rev-last-two ()
+  "
+## [function] rev-last-two
+"
+
+  #'(lambda (tensor)
+      `(,@(butlast (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor) 2)
+	,@(reverse (last (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor) 2)))))
+
+(defun torch-order (&rest orders)
+  "
+## [function] torch-order
+Translates the given orders into PyTorch's notation
+
+`(!permute a (torch-order 2 1 0))` is the equivalent to `(!permute a 0 1 2)`.
+"
+  #'(lambda (tensor)
+      (let ((dims (1- (dims tensor))))
+	(loop for o in orders
+	      if (eql o :~)
+		collect o
+	      else
+		collect (- dims o)))))
+            

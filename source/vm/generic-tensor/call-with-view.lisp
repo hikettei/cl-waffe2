@@ -283,7 +283,6 @@ Return: (values offsets-place form)"
 (defun update-calling-route (value)
   (push value cl-waffe2/vm.nodes::*call-with-view-route*))
 
-
 (defmacro with-bind-shape (&body body)
   `(flet ((original-shape (tensor)
 	    (translate-adjustable-shape (original-shape tensor)))
