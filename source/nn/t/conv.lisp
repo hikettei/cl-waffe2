@@ -11,24 +11,11 @@
 (defun conv-2d-fw-bw-test ()
   (let ((model (Conv2D 3 6 `(2 2))))
     (let ((compiled-model
-	    (build (!mean (call model (ax+b `(3 3 10 10) 0.001 0))))))
+	    (build
+	     (!mean (call model (ax+b `(3 3 10 10) 0.001 0))))))
       (forward compiled-model)
       (backward compiled-model)
-      (let ((ch1)
-	    (f t))
-	#|
-	(print (progn;change-facet
-		(proceed
-		 ;; (N H W C) 3 2 1 0 3 0 1 2
-
-		 ;; (0 1 2 3) kamo
-		 ;; ( 1 0 2 3)
-		 ;; (!permute 2 0 3 1)で(C_out C_in k-h k-w)になる？
-		 ;; (W H N C)
-		 (!reshape (->contiguous (!permute (grad (weight-of model)) 1 0 2 3))
-	6 3 2 2))))
-	|#
-	(print (grad (weight-of model)))
+      (let ((f t))
 	(dotimes (i 6)
 	  (dotimes (k 3)
 	    (let ((out (proceed (->contiguous (!view (grad (weight-of model)) i k)))))
@@ -39,12 +26,8 @@
 	      ;; .. ..)
 	      ;; ...
 	      
-	      (when (and ch1 f)
-		(setq f (= (vref out 0) ch1)))
-	      (when (every #'= (tensor-vec out))
-		;; bug related to permution? im2col?
-		(setq f nil))
-	      (setq ch1 (vref out 0)))))
+	      (when (and f (every #'(lambda (x) (= x (vref out 0))) (tensor-vec out)))
+		(setq f nil)))))
 	f))))
 
 (defun conv-2d-fw-bw-test-1 ()

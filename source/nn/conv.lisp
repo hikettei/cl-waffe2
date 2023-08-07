@@ -176,8 +176,8 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 	  ;; col = im2col(input) ;; (N * h-out w-out, C * kx * ky)
 	  
 	  (let* ((col   (!im2col-cpu input (car ~) in-channels k-h k-w h-out w-out (car stride) (second stride)))
-		 (col-w (!reshape weight t c-out))
-		 (out   (!matmul col col-w))
+		 (col-w (!reshape weight c-out t))
+		 (out   (!matmul col (!t col-w)))
 		 (out   (if bias
 			    (!add out (%transform bias[i] -> [~ i]))
 			    out)))
