@@ -378,11 +378,8 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
 	    "Reshaping failed because the total size do not match.")
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
-    (let ((result
-	    (if (tensor-projected-p tensor)
-		(forward (ReshapeTensorNode (shape tensor) shapes) (!copy tensor) result)
-		(forward (ReshapeTensorNode (shape tensor) shapes) tensor result))))
-      result)))
+    (let ((out (forward (ReshapeTensorNode (shape tensor) shapes) (->contiguous tensor) result)))
+      out)))
 
 ;; !squeeze/!unsqueeze
 
@@ -815,9 +812,10 @@ dout   ... dout values"
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
 				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
-				    (embody-actual-tensor
-				     out1
-				     ,a)
+				    ;;(embody-actual-tensor
+				    ;; out1
+				    ;; ,a)
+				    (setf (tensor-vec out1) (tensor-vec ,a))
 				    out1))
 		       :backward ((self dout a out)
 				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order a))
@@ -825,7 +823,7 @@ dout   ... dout values"
 				  (let* ((result
 					   (apply #'!permute
 						  dout
-						  ;; dout.order and a.order -> out.order						     
+						  ;; dout.order and a.order -> out.order
 						  (permute-backward-order
 						   (loop for i fixnum downfrom (dims a) to 1 collect (1- i))
 						   (cl-waffe2/vm.generic-tensor::tensor-permute-order out)))))

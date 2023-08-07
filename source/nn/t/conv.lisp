@@ -16,6 +16,18 @@
       (backward compiled-model)
       (let ((ch1)
 	    (f t))
+	#|
+	(print (progn;change-facet
+		(proceed
+		 ;; (N H W C) 3 2 1 0 3 0 1 2
+
+		 ;; (0 1 2 3) kamo
+		 ;; ( 1 0 2 3)
+		 ;; (!permute 2 0 3 1)で(C_out C_in k-h k-w)になる？
+		 ;; (W H N C)
+		 (!reshape (->contiguous (!permute (grad (weight-of model)) 1 0 2 3))
+	6 3 2 2))))
+	|#
 	(print (grad (weight-of model)))
 	(dotimes (i 6)
 	  (dotimes (k 3)

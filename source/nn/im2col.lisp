@@ -222,12 +222,12 @@ stride-x stride-y - stride[0], stride[1] respectively.
 			:order (order padded-x)
 			:dtype (dtype padded-x)))
 	 (result (call (Im2ColNode N C k-h k-w h-out w-out stride-x stride-y img-out) padded-x col)))
-    (!reshape
-     ;;    [N C k-h k-w h-out w-out]
-     ;; -> N C k-h k-w h-out w-out
-     (!permute result (torch-order 0 4 5 1 2 3))
-     (* n h-out w-out)
-     t)))
+    
+    ;;    [N C k-h k-w h-out w-out]
+    ;; -> N C k-h k-w h-out w-out
+    (call-> result
+	    (asnode #'!permute (torch-order 0 4 5 1 2 3))
+	    (asnode #'!reshape (* N H-out W-out) t))))
 
 (defun unfold (input dilation kernel-size stride padding)
   "

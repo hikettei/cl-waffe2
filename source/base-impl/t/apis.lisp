@@ -218,4 +218,16 @@
 	   (!permute (!sin (!permute a (torch-order 2 1 0))) 0 1 2))
 	  (grad a)))))
 
+(test permute-composed-bw-test
+  (is (every #'=
+	     (let ((a (parameter (ax+b `(3 3) 1 0))))
+	       (proceed-backward
+		;;           v
+		(!mul (!t (!add 1.0 a)) (ax+b `(3 3) 1 0)))
+	       (tensor-vec (grad a)))
+	     (let ((a (parameter (ax+b `(3 3) 1 0))))
+	       (proceed-backward
+		;;      v
+		(!mul (!t a) (ax+b `(3 3) 1 0)))
+	       (tensor-vec (grad a))))))
 
