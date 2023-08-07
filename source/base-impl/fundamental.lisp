@@ -807,7 +807,7 @@ dout   ... dout values"
 
 (defun permute-backward-order (old-order new-order)
   (loop with rank = (1- (length old-order))
-        for tgt in old-order
+	for tgt in old-order
 	collect (- rank (position tgt new-order))))
 
 (define-and-impl-node (Permute-Node (self before after permute-old)
@@ -820,12 +820,14 @@ dout   ... dout values"
 				     ,a)
 				    out1))
 		       :backward ((self dout a out)
+				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order a))
+				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order dout))
 				  (let* ((result
 					   (apply #'!permute
 						  dout
 						  ;; dout.order and a.order -> out.order						     
 						  (permute-backward-order
-						   (cl-waffe2/vm.generic-tensor::tensor-permute-order a)
+						   (loop for i fixnum downfrom (dims a) to 1 collect (1- i))
 						   (cl-waffe2/vm.generic-tensor::tensor-permute-order out)))))
 				    (values result nil))))
   (setf (ignore-shape-error self) t))
