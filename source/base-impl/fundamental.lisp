@@ -805,6 +805,10 @@ dout   ... dout values"
 ;; Permute APIs
 ;; ===============================================================
 
+(defun permute-backward-order (old-order new-order)
+  (loop with rank = (1- (length old-order))
+        for tgt in old-order
+	collect (- rank (position tgt new-order))))
 
 (define-and-impl-node (Permute-Node (self before after permute-old)
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
@@ -816,9 +820,14 @@ dout   ... dout values"
 				     ,a)
 				    out1))
 		       :backward ((self dout a out)
-				  (declare (ignore a out))
-				  (let ((out (apply #'!permute dout (permute-old self))))
-				    (values out nil))))
+				  (let* ((result
+					   (apply #'!permute
+						  dout
+						  ;; dout.order and a.order -> out.order						     
+						  (permute-backward-order
+						   (cl-waffe2/vm.generic-tensor::tensor-permute-order a)
+						   (cl-waffe2/vm.generic-tensor::tensor-permute-order out)))))
+				    (values result nil))))
   (setf (ignore-shape-error self) t))
 
 (defun list-diff (lista listb)
@@ -826,6 +835,7 @@ dout   ... dout values"
 	for l2 in listb
 	collect (= l1 l2)))
 
+;; [Fix] Update description
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute

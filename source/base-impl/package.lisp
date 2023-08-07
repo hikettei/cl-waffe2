@@ -48,7 +48,9 @@
    :node-y)
   ;; Reshapers
   (:export
-   #:broadcast-to))
+   #:broadcast-to
+   #:rev-last-two
+   #:torch-order))
 
 (in-package :cl-waffe2/base-impl)
 	

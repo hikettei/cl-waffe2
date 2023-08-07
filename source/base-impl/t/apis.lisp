@@ -191,4 +191,31 @@
   (is (proceed-continue-test 0))
   (is (proceed-continue-test 1)) ;; 
   (is (proceed-continue-test 2)))
-  
+
+
+(test reshape-permute-test
+  (is (equal `(5 1 5) (shape (proceed (!t (!reshape (ax+b `(5 5) 1 0) 5 5 1))))))
+  (is
+   (let ((a (parameter (ax+b `(3 4 5) 1 0))))
+     (proceed-backward
+      (!sum (!permute (!reshape a 10 3 2 1) 0 3 2 1)))
+     (grad a)))
+  (is
+   (let ((a (parameter (ax+b `(3 4 5) 1 0))))
+     (proceed-backward
+      (!sum (!permute a 1 0 2)))
+     (grad a))))
+
+(test permute-test
+  (is (progn
+	(let ((a (parameter (ax+b `(3 4 5) 1 0))))
+	  (equal (shape (proceed (!permute a 1 0 2))) `(4 5 3))))))
+
+(test permute-composed-test
+  (is (progn
+	(let ((a (parameter (ax+b `(3 4 5) 1 0))))
+	  (proceed-backward
+	   (!permute (!sin (!permute a (torch-order 2 1 0))) 0 1 2))
+	  (grad a)))))
+
+

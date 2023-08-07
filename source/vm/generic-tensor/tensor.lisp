@@ -259,8 +259,8 @@ Tensors has a two state:
 		      for o in (tensor-permute-order ,tensor)
 		      for kth upfrom 0
 		      do (let ((pos (- rank o)))
-			   (setf (nth pos ,accessor)
-				 (nth kth copy))))))
+			   (setf (nth kth ,accessor)
+				 (nth pos copy))))))
     (apply-permute (tensor-stride tensor) tensor)
     (apply-permute (tensor-view tensor) tensor)
     (apply-permute (slot-value tensor 'visible-shape) tensor)
@@ -933,7 +933,7 @@ See also: `!permute`
     (error "permute*: The keyword :~~ must be appeared at once.: ~a" orders))
 
   (let* ((tensor-new  (detach-and-clone1 tensor)) ;; Detaching from computation nodes by making a view of T T T....
-	 (old-orders  (tensor-permute-order tensor))
+	 (old-orders (tensor-permute-order tensor))
 	 (pure-orders (remove :~ orders)) ;; order consisted of fixnum
 	 (new-orders
 	   (loop for rank fixnum upfrom 0 below (length (shape tensor))
