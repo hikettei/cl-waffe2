@@ -16,9 +16,9 @@
   :depends-on (:cl-waffe2 :numpy-file-format)
   :components ((:file "package")
 	       (:file "data-loader")
+	       
+	       (:file "mlp")
 	       (:file "cnn")
-	       (:file "mlp")))
-
-
+	       ))
 
 
