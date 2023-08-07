@@ -119,3 +119,4 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 		(asnode #'!mean       :axis 1)
 		(asnode #'!reshape    N h-out w-out C)
 		(asnode #'!permute    3 0 1 2))))))
+

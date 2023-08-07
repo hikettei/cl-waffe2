@@ -124,18 +124,21 @@ stride-x stride-y"
 		(loop for y-pos fixnum upfrom y below y-max by stride-y for y-pos-abs fixnum upfrom 0 do
 		  (loop for x-pos fixnum upfrom x below x-max by stride-x for x-pos-abs fixnum upfrom 0 do
 		    (dotimes (n-i N)
-		      (dotimes (c-i C)		      
-			(setf
-			 (aref i* (%+ (%* n-i n-stride-o)
-				      (%* c-i c-stride-o)
-				      (%* y-pos h-stride-o)
-				      (%* x-pos w-stride-o)))
-			 (aref ∂* (%+ (%* n-i n-stride)
-				      (%* c-i c-stride)
-				      (%* y   kh-stride)
-				      (%* x   kw-stride)
-				      (%* y-pos-abs oh-stride)
-				      (%* x-pos-abs ow-stride)))))))))))))
+		      (dotimes (c-i C)
+			(dotimes (a h-out)
+			  (dotimes (b w-out)
+			    ;; img[:, :, y~y_max by stride_y, :, :] += dout[:, :, y, x, :, :]
+			    (incf
+			     (aref i* (%+ (%* n-i n-stride-o)
+					  (%* c-i c-stride-o)
+					  (%* y-pos h-stride-o)
+					  (%* x-pos w-stride-o)))
+			     (aref ∂* (%+ (%* n-i n-stride)
+					  (%* c-i c-stride)
+					  (%* y kh-stride)
+					  (%* x kw-stride)
+					  (%* a oh-stride)
+					  (%* b ow-stride)))))))))))))))
       img-out)))
 
 
@@ -152,35 +155,50 @@ stride-x stride-y"
 	   stride-x
 	   stride-y))
 
-(define-static-node (Im2ColNode (self N C k-h k-w h-out w-out stride-x stride-y img-out)
-		     :slots ((N :initarg :N)
-			     (C :initarg :C)
-			     (k-h :initarg :k-h)
-			     (k-w :initarg :k-w)
-			     (h-out :initarg :h-out)
-			     (w-out :initarg :w-out)
-			     (stride-x :initarg :stride-x)
-			     (stride-y :initarg :stride-y)
-			     (img-out :initarg :img-out :reader img-out-of))
-		     :where (X[N C H W] Col[N C k-h k-w h-out w-out] -> Col[N C k-h k-w h-out w-out])
-		     :forward ((self x col)
-			       (with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) self
-				 (call-im2col-kernel
-				  x
-				  col
-				  n
-				  c
-				  k-h
-				  k-w
-				  h-out
-				  w-out
-				  stride-x
-				  stride-y)))
-		     :backward ((self dout)
-				;; dout ... [N C k-h k-w h-out w-out]
-				;; dout -> [col2im] -> [N C H W]
-				(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) self
-				  (values (∂im2col/∂out dout (img-out-of self) N C k-h k-w h-out w-out stride-x stride-y) nil)))))
+(define-and-impl-node
+    (Im2ColNode (self N C k-h k-w h-out w-out stride-x stride-y img-out)
+     :slots ((N :initarg :N)
+	     (C :initarg :C)
+	     (k-h :initarg :k-h)
+	     (k-w :initarg :k-w)
+	     (h-out :initarg :h-out)
+	     (w-out :initarg :w-out)
+	     (stride-x :initarg :stride-x)
+	     (stride-y :initarg :stride-y)
+	     (img-out :initarg :img-out :reader img-out-of)
+	     (h :accessor h-of)
+	     (w :accessor w-of))
+     :cache-when-compiled nil
+     ;; Backward: Col[N C k-h k-w h-out w-out] -> X[N C H W] Col[N C k-h k-w h-out w-out]
+     :where (X[N C H W] Col[N C k-h k-w h-out w-out] -> Col[N C k-h k-w h-out w-out])
+     :forward ((self x col)
+	       (setf (h-of self) (nth 2 (shape x))
+		     (w-of self) (nth 3 (shape x)))
+	       `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
+		  (call-im2col-kernel ,x ,col n c k-h k-w h-out w-out stride-x stride-y)))
+     :backward ((self dout x col)
+		(declare (ignore x col))
+		(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) self
+		  (values
+		   (call (Col2ImNode N C (h-of self) (w-of self) k-h k-w h-out w-out stride-x stride-y (img-out-of self)) dout)
+		   nil)))))
+
+(define-and-impl-node (Col2ImNode (self N C H W k-h k-w h-out w-out stride-x stride-y img-out)
+		       :slots ((N :initarg :N)
+			       (C :initarg :C)
+			       (k-h :initarg :k-h)
+			       (k-w :initarg :k-w)
+			       (h-out :initarg :h-out)
+			       (w-out :initarg :w-out)
+			       (stride-x :initarg :stride-x)
+			       (stride-y :initarg :stride-y)
+			       (img-out :initarg :img-out :reader img-out-of))
+		       :cache-when-compiled nil
+		       :where (Col[N C k-h k-w h-out w-out] -> X[N C H W])
+		       :forward ((self dout)
+				 `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
+				    (values (∂im2col/∂out ,dout (img-out-of ,self) N C k-h k-w h-out w-out stride-x stride-y) nil)))))
+
 
 
 (defun !im2col-cpu (padded-x N C k-h k-w h-out w-out stride-x stride-y)
@@ -196,12 +214,33 @@ stride-x stride-y - stride[0], stride[1] respectively.
   (let* ((col (ax+b `(,N ,C ,k-h ,k-w ,h-out ,w-out) 0 0
 		    :order (order padded-x)
 		    :dtype (dtype padded-x)))
-	 (img-out (ax+b `(,N ,C ,h-out ,w-out) 0 0
+	 (img-out (ax+b `(,N ,C
+			     ;; H + 2*pad + stride -1
+			     ,(nth 2 (shape padded-x))
+			     ,(nth 3 (shape padded-x)))
+			0 0
 			:order (order padded-x)
 			:dtype (dtype padded-x)))
 	 (result (call (Im2ColNode N C k-h k-w h-out w-out stride-x stride-y img-out) padded-x col)))
     (!reshape
-     (->contiguous (!permute result 0 4 5 1 2 3))
+     (!permute result 0 4 5 1 2 3)
      (* n h-out w-out)
      t)))
+
+(defun unfold (input dilation kernel-size stride padding)
+  "
+## [function] unfold
+
+"
+
+  (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
+    (let* ((H-out (cl-waffe2/nn::conv-out-size H-in (car padding)    (car dilation) (car kernel-size) (car stride)))
+	   (W-out (cl-waffe2/nn::conv-out-size W-in (second padding) (car dilation) (second kernel-size) (second stride)))
+	   (p-y (mod H-out (second stride)))
+	   (p-x (mod W-out (car stride))))
+
+      (call-> input
+	      (asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
+	      (asnode #'!im2col-cpu N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))))))
+
 
