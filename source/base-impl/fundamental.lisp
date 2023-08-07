@@ -306,8 +306,8 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
 	     :forward ((self x y)
 		       `(progn
-			  (cl-waffe2/vm.generic-tensor::transfer-vec-information ,y ,x)
-			  ,x)))
+			  (setf (tensor-vec ,y) (tensor-vec ,x))
+			  ,y)))
 
 ;; ===============================================================
 ;; Reshaping APIs
@@ -378,11 +378,8 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
 	    "Reshaping failed because the total size do not match.")
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
-    (let ((result
-	    (if (tensor-projected-p tensor)
-		(forward (ReshapeTensorNode (shape tensor) shapes) (!copy tensor) result)
-		(forward (ReshapeTensorNode (shape tensor) shapes) tensor result))))
-      result)))
+    (let ((out (forward (ReshapeTensorNode (shape tensor) shapes) (->contiguous tensor) result)))
+      out)))
 
 ;; !squeeze/!unsqueeze
 
@@ -608,7 +605,7 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 "
   (let* ((node (ProceedNode :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
-	 (out (forward node tensor)))
+	 (out  (forward node tensor)))
     
     ;; Cut off previous backwards
     (setf (tensor-backward tensor) nil)
@@ -805,20 +802,32 @@ dout   ... dout values"
 ;; Permute APIs
 ;; ===============================================================
 
+(defun permute-backward-order (old-order new-order)
+  (loop with rank = (1- (length old-order))
+	for tgt in old-order
+	collect (- rank (position tgt new-order))))
 
 (define-and-impl-node (Permute-Node (self before after permute-old)
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
 				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
-				    (embody-actual-tensor
-				     out1
-				     ,a)
+				    ;;(embody-actual-tensor
+				    ;; out1
+				    ;; ,a)
+				    (setf (tensor-vec out1) (tensor-vec ,a))
 				    out1))
 		       :backward ((self dout a out)
-				  (declare (ignore a out))
-				  (let ((out (apply #'!permute dout (permute-old self))))
-				    (values out nil))))
+				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order a))
+				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order dout))
+				  (let* ((result
+					   (apply #'!permute
+						  dout
+						  ;; dout.order and a.order -> out.order
+						  (permute-backward-order
+						   (loop for i fixnum downfrom (dims a) to 1 collect (1- i))
+						   (cl-waffe2/vm.generic-tensor::tensor-permute-order out)))))
+				    (values result nil))))
   (setf (ignore-shape-error self) t))
 
 (defun list-diff (lista listb)
@@ -826,6 +835,7 @@ dout   ... dout values"
 	for l2 in listb
 	collect (= l1 l2)))
 
+;; [Fix] Update description
 (defun !permute (tensor &rest orders)
   "
 ## [function] !permute
@@ -888,6 +898,8 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 `order[list<Fixnum>]` An list of permutation. Note that `:~` could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as `:~` is provided.
 
 Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor (compose #'reverse #'tensor-permute-order))` to reverse all permution for example.
+
+Tips: `(!permute tensor (torch-order 2 1 0))` to use the same notation to pytorch.
 "
   ;; If only the last two axes are subject to swapped.
   ;; Return a special node LazyTranspose instead.
