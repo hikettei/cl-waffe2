@@ -1,5 +1,5 @@
 
-(in-package :mnist-example)
+(in-package :mnist-sample)
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!relu))
@@ -19,11 +19,11 @@
 	     :compile-mode :fastest
 	     :optimizer (cl-waffe2/optimizers:SGD :lr lr)
 	     :build ((self)
-		     (!mean (softmax-cross-entropy
-			     (call
-			      (model self)
-			      (make-input `(batch-size ,in-class)  :X))
-			     (make-input  `(batch-size ,out-class) :Y))))
+		     (!sum (softmax-cross-entropy
+			    (call
+			     (model self)
+			     (make-input `(batch-size ,in-class)  :X))
+			    (make-input  `(batch-size ,out-class) :Y))))
 	     :minimize! ((self)
 			 (zero-grads! (compiled-model self))
 			 (let ((loss (forward     (compiled-model self))))
@@ -36,22 +36,16 @@
 	     :predict ((self x)
 		       (!argmax (call (model self) x)))))
 
+(defmethod accuracy ((self MLPTrainer) x y)
+  (let* ((out   (!argmax (call (model self) x)))
+	 (label (!argmax y))
+	 (total (proceed (->scal (!sum (A=B out label))))))
+    (float (/ (tensor-vec total) (nth 0 (shape out))))))
 
-(defun train (&key
-		(batch-size 100)
-		(iter-num 3000))
-  (let* ((X (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
- 	 (Y (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
-	 (trainer (MLPTrainer 100 10 :lr 1e-3)))
-    
-    (set-inputs trainer X Y)
-    (time
-     (loop for nth-epoch fixnum upfrom 0 below iter-num
-	   do (minimize! trainer)))))
-
+;; Goal: MNIST 96~7% with MLP.
 (defun train-and-valid-mlp (&key
 			      (epoch-num 10))
-  (let* ((model (MLPTrainer 784 10 :lr 1e-2))
+  (let* ((model (MLPTrainer 784 10 :lr 1e-3)) ;; lr = 1e-2
 	 ;; Flatten Inputs
 	 (train-img  (proceed (!div (!reshape *train-data*  t (* 28 28)) 255.0)))
 	 (test-img   (proceed (!div (!reshape *test-data*   t (* 28 28)) 255.0)))
@@ -68,9 +62,11 @@
 	  (set-inputs model
 		      (view train-img   `(,batch ,end) t)
 		      (view train-label `(,batch ,end) t)))
-
 	(minimize! model)))
 
     ;; TODO: Validate, Trying Adam
+    (print "Accuracy:...")
+    (with-no-grad
+      (print (accuracy model test-img test-label)))
     model))
 

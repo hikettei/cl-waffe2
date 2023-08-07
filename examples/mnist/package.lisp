@@ -1,7 +1,7 @@
 
 (in-package :cl-user)
 
-(defpackage :mnist-example
+(defpackage :mnist-sample
   (:use
    :cl
    :numpy-file-format
@@ -11,8 +11,10 @@
    :cl-waffe2/base-impl
    :cl-waffe2/distributions
    :cl-waffe2/nn
-   :cl-waffe2/optimizers))
+   :cl-waffe2/optimizers
 
-(in-package :mnist-example)
+   :cl-waffe2/backends.lisp))
+
+(in-package :mnist-sample)
 
 

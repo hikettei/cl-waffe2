@@ -1,5 +1,5 @@
 
-(in-package :mnist-example)
+(in-package :mnist-sample)
 
 (defun load-npy (path)
   (change-facet (load-array path) :direction 'AbstractTensor))
