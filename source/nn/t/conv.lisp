@@ -72,3 +72,39 @@
 
 ;; Building CNN and proceed it.
 
+;; AvgPool: 0.0208
+;; maxminの逆伝播のテストを挟んだほうがいい
+;; + CNN/MLP学習して最適化のテスト
+
+(defun non-zerop (x) (not (zerop x)))
+
+(defun 2d-pool-test (avg)
+  (let* ((model (if avg
+		    (AvgPool2D `(4 4))
+		    (MaxPool2D `(4 4))))
+	 (prev (parameter (randn `(1 3 16 16))))
+	 (out  (build (!mean (call model prev))))
+	 (f t))
+    (forward  out)
+    (backward out)
+    (dotimes (i 1)
+      (dotimes (k 3)
+	(let ((window (proceed
+		       (->contiguous
+			(!view (grad prev) i k)))))
+	  (if avg
+	      (setq f (and f (every #'(lambda (x) (= 0.020833334 x)) (tensor-vec window))))
+	      (setq f (and f
+			   (let ((grad-n (count-if #'non-zerop (tensor-vec window)))
+				 (grad-item (find-if #'non-zerop (tensor-vec window))))
+			     (print grad-n)
+			     (and
+			      (= grad-n 1)
+			      (= grad-item 0.020833334)))))))))
+    
+    f))
+
+(test 2d-pool-test
+  (is (2d-pool-test nil))
+  (is (2d-pool-test t)))
+
