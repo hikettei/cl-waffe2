@@ -197,6 +197,7 @@
 	       (:file "backends/JITLispTensor/t/compiler")
 
 	       (:file "nn/t/package")
+	       (:file "nn/t/conv")
 	       (:file "nn/t/activation")
 	       (:file "nn/t/criterion")
 	       (:file "nn/t/regression")
