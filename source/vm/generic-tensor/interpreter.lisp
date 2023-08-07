@@ -201,6 +201,8 @@
 "
   (declare (type AbstractTensor toplevel))
 
+  ;;(reset-compiled-function-cache!) 
+
   (when *force-use-build*
     (return-from vm-build
       (build toplevel :construct-backward? construct-backward? :compile-mode compile-mode)))

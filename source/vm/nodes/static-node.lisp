@@ -56,13 +56,14 @@
 	  (setf (slot-value self name) place)))
 
       ;; Move: Existing Save-For-Backward-Place <- The target tensor.
-      (move-and-save-for-backward-static (slot-value self name) tensor)
+      ;;(move-and-save-for-backward-static (slot-value self name) tensor)
+      (cl-waffe2/base-impl:proceed (cl-waffe2/base-impl:!move (slot-value self name) tensor :force t))
+
       nil)))
 
 (defun apply-read-save-for-backward (self name)
   (declare (type AbstractNode self)
 	   (type symbol name))
-
   (let ((place (slot-value self name)))
     (typecase place
       (AbstractTensor place)
@@ -285,6 +286,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 	(forward-flet-name (symb name '-forward-body))
 	(backward-flet-name (symb name '-backward-body))
 	(result-tmp (gensym))
+
 	(save-for-backward-slots
 	  (loop for s in save-for-backward-names
 		collect `(,s :initform nil :type (or null AbstractTensor)))))
@@ -294,6 +296,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
        (define-and-impl-node (,backward-node-name (self forward-self)
 			      :device t
 			      ;; Temporary Restores Nodes used in forward.
+			      :cache-when-compiled nil
 			      :slots ((forward-self :initarg :forward-self :reader read-forward-self))
 			      ;; forward -> backward => backward -> forward
 			      :where ,(where->backward where)
@@ -340,6 +343,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 				      (backward-result :initform nil :accessor backward-result))
 			      :out-scalar-p ,out-scalar-p
 			      :documentation ,documentation
+			      :cache-when-compiled nil
 			      :forward ((,@forward-args)
 					(flet ((,forward-flet-name (,@forward-args)
 						 (declare (ignorable ,(car forward-args)))

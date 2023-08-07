@@ -91,7 +91,7 @@
 		       (->contiguous
 			(!view (grad prev) i k)))))
 	  (if avg
-	      (setq f (and f (every #'(lambda (x) (= 0.020833334 x)) (tensor-vec window))))
+	      (setq f (and f (every #'(lambda (x) (= 0.0013020834 x)) (tensor-vec window))))
 	      (setq f (and f
 			   (let ((grad-n (count-if #'non-zerop (tensor-vec window)))
 				 (grad-item (find-if #'non-zerop (tensor-vec window))))

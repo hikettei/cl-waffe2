@@ -104,11 +104,12 @@ reject-when=nil, or (apply reject-when inputs)=t"
   `(let ((*call-with-view-route*))
      ,@body))
 
-(defun vm-kernel-lambda (traceable? name args &rest body)
+(defun vm-kernel-lambda (traceable? name args self &rest body)
   (make-compiled-kernel
    :name name
    :body body
    :args args
+   :self self
    :cache-when-compiled traceable?
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)
@@ -467,7 +468,7 @@ Return nil -> ok
 		      ,@(second forward-body)
 		      (with-tracing-call-with-view
 			(vm-kernel-lambda
-			 ,cache-when-compiled ',fw-name-vm ,inputs
+			 ,cache-when-compiled ',fw-name-vm ,inputs ,forward-self-name
 			 `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
 			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
 			    ,,@(car forward-body)))))))
