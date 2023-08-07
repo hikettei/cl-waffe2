@@ -184,5 +184,6 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 
 	    ;; 3 2 1 0 N h-out w-out C_out
 	    ;; 3 0 2 1 N C-out h-out w-out
-	    (!permute (!reshape out (car ~) h-out w-out C-out) 3 0 1 2)))))))
+	    ;; (N h-out w-out c-out) -> (N c-out h-out w-out)
+	    (!permute (!reshape out (car ~) h-out w-out C-out) 3 0 2 1)))))))
 

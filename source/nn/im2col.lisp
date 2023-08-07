@@ -223,7 +223,9 @@ stride-x stride-y - stride[0], stride[1] respectively.
 			:dtype (dtype padded-x)))
 	 (result (call (Im2ColNode N C k-h k-w h-out w-out stride-x stride-y img-out) padded-x col)))
     (!reshape
-     (!permute result 0 4 5 1 2 3)
+     ;;    [N C k-h k-w h-out w-out]
+     ;; -> N C k-h k-w h-out w-out
+     (!permute result (torch-order 0 4 5 1 2 3))
      (* n h-out w-out)
      t)))
 
