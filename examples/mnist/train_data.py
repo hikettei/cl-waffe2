@@ -1,4 +1,6 @@
 
+# Usage: `python ./train_data.py`
+
 # This script downloads MNIST datum and saves as npy format
 # cl-waffe2 loads the file later.
 
@@ -26,11 +28,12 @@ print(one_hot(test_label).shape)
 
 import os
 
-os.mkdir("./data")
+if not os.path.isdir("./data"):
+    os.mkdir("./data")
 
-np.save("./data/train_data.npy", train_set)
-np.save("./data/test_data.npy",  test_set)
+np.save("./data/train_data.npy", train_set.astype('float32'))
+np.save("./data/test_data.npy",  test_set.astype('float32'))
 
-np.save("./data/train_label.npy", one_hot(train_label))
-np.save("./data/test_label.npy",  one_hot(test_label))
+np.save("./data/train_label.npy", one_hot(train_label).astype('float32'))
+np.save("./data/test_label.npy",  one_hot(test_label).astype('float32'))
 
