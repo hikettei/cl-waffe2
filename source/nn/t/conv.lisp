@@ -73,8 +73,6 @@
 ;; Building CNN and proceed it.
 
 ;; AvgPool: 0.0208
-;; maxminの逆伝播のテストを挟んだほうがいい
-;; + CNN/MLP学習して最適化のテスト
 
 (defun non-zerop (x) (not (zerop x)))
 
@@ -97,9 +95,9 @@
 	      (setq f (and f
 			   (let ((grad-n (count-if #'non-zerop (tensor-vec window)))
 				 (grad-item (find-if #'non-zerop (tensor-vec window))))
-			     (print grad-n)
+			     ;; randnで奇跡的に衝突する確率=0で計算??
 			     (and
-			      (= grad-n 1)
+			      (= grad-n 16)
 			      (= grad-item 0.020833334)))))))))
     
     f))
@@ -107,4 +105,6 @@
 (test 2d-pool-test
   (is (2d-pool-test nil))
   (is (2d-pool-test t)))
+
+;; Add: CNN/MLP Train tests
 

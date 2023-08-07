@@ -128,7 +128,8 @@ stride-x stride-y"
 			(dotimes (a h-out)
 			  (dotimes (b w-out)
 			    ;; img[:, :, y~y_max by stride_y, :, :] += dout[:, :, y, x, :, :]
-			    (incf
+			    ;; [FixME] setf? incf?
+			    (setf
 			     (aref i* (%+ (%* n-i n-stride-o)
 					  (%* c-i c-stride-o)
 					  (%* y-pos h-stride-o)
