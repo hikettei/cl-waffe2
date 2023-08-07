@@ -48,6 +48,8 @@
 
 ;; What I want to do?: the compiling time of (!sin (!sin (!sin x))) and (!sin x) should be approximately the same, because they're working on the same code ignoring indicating pointer.
 
+;; TODO: build/proceed must use the same algorithm to cache compiled functions
+
 
 (defparameter *compiled-function-cache* (make-hash-table))
 (defparameter *compiled-jit-function-cache* (make-hash-table))
@@ -71,7 +73,8 @@
   (cache-when-compiled nil :type boolean)
   (cache-p nil :type boolean)
   (args nil :type list)
-  (view-route nil :type list)) ;; 2D 3D Flatten ...
+  (view-route nil :type list)
+  (self nil)) ;; 2D 3D Flatten ...
 
 ;; the maximum length of symbol-name used in CL shoule be 512? i dont remember ...
 ;; Memo:
@@ -132,7 +135,9 @@ TensorViewNameN depicts the path call-with-view traced.
 (defun kernel-name (compiled-kernel)
   (symb
    (compiled-kernel-name compiled-kernel)
-   '-
+   (if (movetensor-p (compiled-kernel-self compiled-kernel))
+       (cl-waffe2/base-impl:movetensor-ignore-me (compiled-kernel-self compiled-kernel))
+       '-)
    (apply
     #'symb
     (map 'list #'(lambda (x) (make-kernel-name x (compiled-kernel-view-route compiled-kernel))) (compiled-kernel-args compiled-kernel)))))
@@ -213,16 +218,23 @@ Reading *kernel-storeroom*, the function expands the form below.
 (defun funcall-cached-function (kernel-function compile-option &rest args)
   (declare (type Compiled-Kernel kernel-function))
 
-  (let ((target (lut-search-function
-		 *compiled-function-cache*
-		 (compiled-kernel-name kernel-function)
-		 args)))
+  (let* ((function-name (compiled-kernel-name kernel-function))
+	 ;; MoveTensor is a special node that cl-waffe2 will dynamically ignore/use depending on the situation.
+	 ;; So, we dont wanna use :cache-when-compiled option.
+	 (movep (movetensor-p (compiled-kernel-self kernel-function)))
+	 (function-name (if movep
+			    (symb function-name '- (cl-waffe2/base-impl:movetensor-ignore-me (compiled-kernel-self kernel-function)))
+			    function-name))
+	 (target (lut-search-function
+		  *compiled-function-cache*
+		  function-name
+		  args)))
     (if (null target)
 	(let ((compiled-function (make-funcallable-kernel kernel-function compile-option)))
 	  (when (compiled-kernel-cache-when-compiled kernel-function)
 	    (lut-search-function
 	     *compiled-function-cache*
-	     (compiled-kernel-name kernel-function)
+	     function-name
 	     args
 	     :setme compiled-function))
 	  (apply compiled-function args))

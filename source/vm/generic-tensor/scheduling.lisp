@@ -30,8 +30,8 @@
       :non-deterministic))
 
 (defun movetensor-p (node)
-  (or (subtypep (class-of node) 'cl-waffe2/base-impl:MoveTensorNode)
-      (subtypep (class-of node) 'cl-waffe2/base-impl::MoveScalarTensorNode)))
+  (or (subtypep (class-of node) (find-class 'cl-waffe2/base-impl:MoveTensorNode))
+      (subtypep (class-of node) (find-class 'cl-waffe2/base-impl::MoveScalarTensorNode))))
 
 (defmacro ignore-me? (node)
   `(cl-waffe2/base-impl:movetensor-ignore-me ,node))
