@@ -47,7 +47,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ## Frontend and Backend Separation
 
-In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations, from each `cl-waffe2/backends` package, which gives its implementation. Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of the computation node to use. This allows users to implement backend re-implementations and extensions of instructions without any constraints.
+In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations (i.e.: the definition of `AbstractNode` by using the `defnode` macro), from each `cl-waffe2/backends` package, which gives its implementation (e.g.: `define-impl` macro). Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of `AbstractTensor` to use. This allows users to implement backend re-implementations and extensions of instructions without any constraints.
 
 ```lisp
 ;; MyTensor extends CPUTensor extends AbstractTensor
@@ -81,7 +81,7 @@ Which devices the function is to operate on can be declared along with its prior
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-This indicates not only is cl-waffe2 extensible to a wide variety of backends, but it also minimises the need to rewrite code to the greatest extent possible.
+This helps Common Lisp, a dynamically typed language, to use information such as matrix rank and shape in advance, to detect shape errors before performing operations, and as a common specification when users extend new backends.
 
 See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
 
