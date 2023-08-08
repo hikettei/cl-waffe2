@@ -18,6 +18,11 @@
 
 ;; Parameters: https://www10.cs.fau.de/publications/theses/2022/Master_HolzmannMichael.pdf
 
+;; TODO LIST:
+;; 1. fix !permute backward
+;; 2. confirm CNN forward/rev modes are working on build/proceed
+;; 3. include them in the test forms
+
 (defsequence CNN ()
 	     (Conv2D 3 16  `(3 3))
 	     (asnode #'!relu)     
@@ -30,8 +35,8 @@
 
 
 ;; [TODO]
-;; BugFix on !permute backward.
-;; cl-waffe2/threads:scheduled-pdotimes (i 100) macro
+;; Implement: Adam/RMSProps/SGD/Momentum
+;; Implement: Dropout
 ;;
 
 (defmethod train ((model CNN) x y)
@@ -42,6 +47,7 @@
 
 (defun test ()
   (let ((model (build (train (CNN) (randn `(10 3 32 32)) (randn `(10 10))))))
-    (time (forward model))))
+    (time (forward model))
+    (time (backward model))))
     
 (print (CNN))

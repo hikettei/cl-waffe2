@@ -59,7 +59,8 @@ Return:
     (let* ((out (or -> (make-input shape nil 
 				    :dtype (dtype tensor)
 				    :order (order tensor))))
-	   (out (A*=scal out 0))) ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill
+	   (out (A*=scal out (make-tensor 0 :dtype (dtype tensor)))))
+      ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill
 
       (assert (equal (shape out) shape)
 	      nil

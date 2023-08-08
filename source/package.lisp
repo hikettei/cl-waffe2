@@ -38,6 +38,7 @@
    #:optimize!
    #:zero-grads!
    #:model
+   #:compiled-model
    #:set-inputs
    #:minimize!
    #:predict)
