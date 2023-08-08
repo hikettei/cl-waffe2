@@ -6,7 +6,10 @@
    :cl
    :cl-waffe2/vm.generic-tensor
    :cl-waffe2/vm.nodes
-   :cl-waffe2/base-impl))
+   :cl-waffe2/base-impl)
+  (:export
+   #:accept-instructions
+   #:compile-forward-and-backward))
 
 (in-package :cl-waffe2/vm)
 

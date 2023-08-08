@@ -178,7 +178,7 @@
 	       leaves
 	       (if (scalar-p toplevel)
 		   (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-		   (make-tensor (shape toplevel) :dtype (dtype toplevel) :order (order toplevel)))))))
-
+		   (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel)))))))
+      
       (values (reverse iseq-forward) backward-iseq leaves))))
 

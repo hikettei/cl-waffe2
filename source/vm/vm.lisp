@@ -27,7 +27,7 @@
 	   (optimize (speed 3)))
   (multiple-value-list
    (apply
-    (wfop-op instruction)
+    (the function (wfop-op instruction))
     (map 'list #'maybe-read-result (wfop-args instruction)))))
 
 (defun accept-instructions (iseq)

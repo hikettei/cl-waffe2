@@ -4,18 +4,10 @@
 
 ;; TODO LIST
 ;; In-place mutation実装
-;;BackwardのIseq展開
-;;VMを作る
 ;;FW/BW Test
 ;;標準でこれを使う
 ;;JITCPUTensorを更新
 
-;; cl-waffe2は全てのIRをA <- B C Dの形で表現する 
-;;(defstruct InstructionSeq)
-
-;; build関数 ... 計算のーどを辿って 一次元であるInstructionSeqを生成する
-;; forward/backward用にそれぞれ作る
-;; forward/backward関数 ... InstructionSeqを辿って色々する
 
 ;; funcall多用する・・・
 
@@ -71,7 +63,6 @@ cl-waffe2 vm specializes on  the sequence of above format.
 ;;   ...
 ;; K <- A B
 
-;; ちゃんとテストしないと不安
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
   (let ((ref-table (make-hash-table)))
