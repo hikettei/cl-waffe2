@@ -120,7 +120,10 @@
 	      for grad in backward-kernels
 	      if grad
 		do (setf (gethash (tensor-id var) grad-table) grad)
-	      if (and grad (ancestor-param-p var))
+	      if (and grad
+		      (ancestor-param-p (wfop-self inst))
+		      ;;(ancestor-param-p var)
+		      )
 		do (setq set-of-backward-node
 			 `(,@set-of-backward-node
 			   ,@(reverse (node-compile-into-vm grad)))))
@@ -160,6 +163,7 @@
 (defun compile-forward-and-backward (toplevel &key
 						(need-backward t))
   ""
+  (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-forward leaves)
       (node-compile-into-vm toplevel)
 
@@ -174,5 +178,5 @@
 		   (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
 		   (make-tensor (shape toplevel) :dtype (dtype toplevel) :order (order toplevel)))))))
 
-      (values iseq-forward backward-iseq leaves))))
+      (values (reverse iseq-forward) backward-iseq leaves))))
 
