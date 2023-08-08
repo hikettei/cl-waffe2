@@ -15,7 +15,6 @@
 
 (defparameter *vm-compile-option* :default)
 
-
 (declaim (ftype (function (AbstractTensor) (or null WFInstruction)) ir->instruction))
 (defun ir->instruction (tensor)
   "Reading a IR of tensor, the function returns a corresponding instruction"
