@@ -13,7 +13,9 @@
    :cl-waffe2/nn
    :cl-waffe2/optimizers
 
-   :cl-waffe2/backends.lisp))
+   :cl-waffe2/backends.lisp
+   :cl-waffe2/backends.cpu
+   :cl-waffe2/backends.jit.cpu))
 
 (in-package :mnist-sample)
 
