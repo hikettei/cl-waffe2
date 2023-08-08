@@ -44,14 +44,34 @@
 ;;
 
 (defun node-compile-into-vm (toplevel)
-  (loop with sorted-node = (topological-sort toplevel)
-	for tensor in sorted-node
-	if (ir->instruction tensor)
-	  collect (ir->instruction tensor)))
+  (let ((instruction-seq)
+	(variable-leaves))
+    (loop with sorted-node = (topological-sort toplevel)
+	  for tensor in sorted-node
+	  if (null (tensor-backward tensor))
+	    do (push tensor variable-leaves) ;; Register as a variable
+	  else
+	    do (push (ir->instruction tensor) instruction-seq))
+    ;; Forward Mode ... (reverse instruction-seq)
+    ;; Reverse Mode ... Trace tensors in instruction-seq order.
+    (values instruction-seq variable-leaves)))
 
-(defun construct-backward-network (toplevel)
-  ;; ToplevelからBackwardを辿って計算のーどを取得
-  ;; -> 繋げてFlattenにする
-  ;; -> Sortしてcompile
+(defun trace-backward-network (instruction-seq leaves dout-toplevel)
+  (declare (type list instruction-seq leaves)
+	   (type AbstractTensor dout-toplevel))
 
-  )
+  (let ((set-of-backward-node)
+	(prev-dout dout-toplevel))
+
+    ;; set-of-backward-node ...
+    ;; an list of
+    ;; (!cos (!copy ..))
+    ;; (!sin (!copy ...)) <- each of them are the definition of backward.
+
+    ;; forwardモードの計算ノードの順番にInstructionSeqを辿る
+    
+    (loop for inst of-type WFInstruction in instruction-seq
+	  do (push
+	      (cl-waffe2/vm.nodes:expand-backward
+	       (tensor-backward (wfop-self inst))
+	      ))))
