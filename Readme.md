@@ -47,7 +47,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ## Frontend and Backend Separation
 
-All classes that are subtypes of `AbstractTensor` are tensors that cl-waffe2 can handle.
+In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations, from each `cl-waffe2/backends` package, which gives its implementation. Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of the computation node to use. This allows users to implement backend re-implementations and extensions of instructions without any constraints.
 
 ```lisp
 ;; MyTensor extends CPUTensor extends AbstractTensor
@@ -85,7 +85,7 @@ This indicates not only is cl-waffe2 extensible to a wide variety of backends, b
 
 See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
 
-## JIT Compiler
+## (Extensible) JIT Compiler
 
 Since `cl-waffe2` is a lazy-evaluation first framework, all operations need to be compiled at a certain point in time. It could be unintuitive for some users, however, at the same time, the cl-waffe2 compiler can obtain more information for optimisation.
 
@@ -104,7 +104,9 @@ There's more: `pre-computing of view offsets`  `generating optimal lisp code in 
 
 (TODO: Benchmarks on a different scales)
 
-## Tools for formulating networks
+## Powerful Network Description Features
+
+TODO: `defsequence/call->` `composite/node` `defmodel`
 
 `defmodel` defines a set of nodes.
 
@@ -177,7 +179,7 @@ Except that you need to call `proceed` or `build` at the end of the operation, c
 
 See also: https://hikettei.github.io/cl-waffe2/base-impl/
 
-## From the top level, it works simply.
+## All in the simple APIs
 
 The combination of delay evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
 
@@ -233,6 +235,11 @@ The combination of delay evaluation and node definition mechanisms allows all th
     #<FUNCTION CL-WAFFE2/NN:!SOFTMAX>
 )>)>
 ```
+
+# Experiments
+
+(TODO)
+Training time/accuracy with MNIST/Cifar-10 by MLP/CNN compared to Keras/Tensorflow/PyTorch.
 
 # References/Acknowledgments
 
