@@ -516,7 +516,8 @@ An constructor function for ~a."
 				 (scalar-p-list nil))
   "Returns an list of InputTensor which is used to trace the computation nodes."
   (declare (type Composite composite)
-	   (type list ~))
+	   (type list ~)
+	   (ignore ~))
   (flet ((read-state (state nth)
 	   (if (keywordp state)
 	       state
@@ -525,12 +526,14 @@ An constructor function for ~a."
 	   (if (listp (car ~))
 	       (nth nth ~)
 	       ~)))
+    #'read~
     
     (let ((input-shape (composite-input-size composite)))
       (loop for i upfrom 0
 	    for x in input-shape
 	    collect
-	    (let ((res (make-input (where-arg->shape (read~ ~ i) x)
+	    ;; Hmm, in order to reuse compiled kernel, (shape (nth i inputs)) isn'g the best choise...
+	    (let ((res (make-input (shape (nth i inputs));;(where-arg->shape (read~ ~ i) x)
 				   (->keyword (nth-subscript i))
 				   :create-from (nth i inputs)
 				   :scalar-p (read-state scalar-p-list i)

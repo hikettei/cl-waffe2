@@ -67,10 +67,12 @@ defines a new trainer.
 
   (let ((initargs (collect-initarg-slots slots constructor-arguments))
 	(model-gensym (gensym "model"))
-	(inputs      (gensym "inputs")))
+	(last-node    (gensym))
+	(inputs       (gensym "inputs")))
     `(progn
        (defclass ,name (AbstractTrainer)
 	 (,@slots
+	  (compiled-model :initarg :compiled-model :reader compiled-model)
 	  (model :initarg :model :reader model))
 	 (:documentation ,documentation))
 
@@ -81,12 +83,12 @@ defines a new trainer.
 
        (defmethod set-inputs ((self ,name) &rest ,inputs)
 	 (multiple-value-bind (,@(car set-inputs)) (apply #'values `(,self ,@,inputs))
-	   (declare (ignorable ,(caar minimize!)))
+	   (declare (ignorable ,(caar set-inputs)))
 	   ,@(cdr set-inputs)))
 
        (defmethod predict ((self ,name) &rest ,inputs)
 	 (multiple-value-bind (,@(car predict)) (apply #'values `(,self ,@,inputs))
-	   (declare (ignorable ,(caar minimize!)))
+	   (declare (ignorable ,(caar predict)))
 	   ,@(cdr predict)))
 
        (defun ,name (,@constructor-arguments)
@@ -103,11 +105,12 @@ defines a new trainer.
 						  collect (intern (symbol-name (nth (1+ (position :initarg slot)) slot)) "KEYWORD")
 						if slot
 						  collect (car slot))))
-		  (,model-gensym (build (,model-gensym ,self)
+		  (,last-node (,model-gensym ,self))
+		  (,model-gensym (build ,last-node
 					:compile-mode ,compile-mode))) ;; Build and compile models.
 	     
-	     (setf (slot-value ,self 'model) ,model-gensym) ;; Set Compiled-Model.
-	     (initialize-optimizers! (model ,self) #'create-optimizer)
+	     (setf (slot-value ,self 'compiled-model) ,model-gensym) ;; Set Compiled-Model.
+	     (initialize-optimizers! (compiled-model ,self) #'create-optimizer)
 	     ,@constructor-body
 	     ,self))))))
 

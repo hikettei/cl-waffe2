@@ -41,7 +41,6 @@ dtype/scalar-p-list = list is ok
 Return: defun form
 "
 
-
   (let* ((inputs (composite-input-tensor composite ~
 					 :inputs inputs
 					 :dtype dtype

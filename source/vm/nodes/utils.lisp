@@ -143,6 +143,8 @@ Return:
     
 
 
+;; [FixME] shouldn't include shape keyword...
+;; Fix in the future refactor of :cl-waffe2/vm
 (defun tensor-keyname (tensor)
   (symb ;; {BackendName[Dtype]<Permute-Order>}
    '{
@@ -151,7 +153,7 @@ Return:
    (intern (symbol-name (dtype tensor)))
    ']
    '<
-   (intern (format nil "~a" (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)))
+   (intern (format nil "~a~a" (actual-shape tensor) (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)))
    '>
    '}))
 
