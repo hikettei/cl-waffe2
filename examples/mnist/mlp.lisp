@@ -17,7 +17,7 @@
 			      (lr 1e-3))
 	     :model     (MLP-Sequence in-class hidden-size out-class :activation activation)
 	     :compile-mode :fastest
-	     :optimizer (cl-waffe2/optimizers:SGD :lr lr)
+	     :optimizer (cl-waffe2/optimizers:Adam :lr lr)
 	     :build ((self)
 		     (!sum (softmax-cross-entropy
 			    (call
@@ -65,8 +65,9 @@
 	(let ((end (+ batch 100)))
 	  ;; :X = Train[batch:batch+100, :]
 	  (set-inputs model
-		      (view train-img   `(,batch ,end) t)
-		      (view train-label `(,batch ,end) t)))
+		      ;; Instead, increase offset?
+		      (proceed (->contiguous (view train-img   `(,batch ,end) t)))
+		      (proceed (->contiguous (view train-label `(,batch ,end) t)))))
 	(incf total-loss (minimize! model)))
       (format t "Training Loss: ~a~%" (/ total-loss 600))
       (setq total-loss 0.0))
@@ -77,5 +78,7 @@
       (print (accuracy model test-img test-label)))
     model))
 
+;; PyTorch ... 7sec
+;; 1Epoch 13s(cl-waffe2) -> 6s (cl-waffe)
 (train-and-valid-mlp :epoch-num 10)
 
