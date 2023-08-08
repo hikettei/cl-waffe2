@@ -77,5 +77,5 @@
       (format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
     model))
 
-(train-and-valid-cnn :epoch-num 10)
+;;(train-and-valid-cnn :epoch-num 10)
 
