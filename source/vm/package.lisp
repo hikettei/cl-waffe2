@@ -2,7 +2,11 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/vm
-  (:use :cl))
+  (:use
+   :cl
+   :cl-waffe2
+   :cl-waffe2/vm.generic-tensor
+   :cl-waffe2/vm.nodes))
 
 (in-package :cl-waffe2/vm)
 
