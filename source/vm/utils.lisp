@@ -3,8 +3,10 @@
 
 ;; Ref: http://www.utkuevci.com/ml/autograd/
 (defun topological-sort (var)
+  (declare (type AbstractTensor var))
   (let ((seen nil)
 	(top-sort nil))
+    (declare (type list seen top-sort))
     (labels ((top-sort-helper (v is-leaf-p)
 	       (if (or (find (tensor-iid v) seen :key #'tensor-iid :test #'eql)
 		       ;;(null (tensor-backward v))

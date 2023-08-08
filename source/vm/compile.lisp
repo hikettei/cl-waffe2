@@ -13,6 +13,8 @@
 ;;    - Flatten
 ;;    - represetned by lambda expression
 
+;; JITCPUTensorの仕様は後で変更しよう...
+
 (defparameter *vm-compile-option* :default)
 
 (declaim (ftype (function (AbstractTensor) (or null WFInstruction)) ir->instruction))
@@ -41,28 +43,15 @@
 ;; (!sin x (!copy x))
 ;;
 
-(defun compile-into-vm (toplevel)
-  (let ((instruction-seq))
-    (labels ((explore-node (tensor &key (stop-me nil) (prev-var nil))
-	       (let ((out (ir->instruction tensor)))
-		 (when out
-		   (push out instruction-seq)))
-	       (when (not stop-me)
-		 (dolist (var (tensor-variables tensor))
-		   ;; 右側の計算ノードが左側を内包してるみたいな場合がある
-		   ;; それは場外したい・・・
-		   (explore-node var :stop-me (detach-p var) :prev-var tensor)))))
-      (explore-node toplevel :prev-var nil)
-      instruction-seq)))
+(defun node-compile-into-vm (toplevel)
+  (loop with sorted-node = (topological-sort toplevel)
+	for tensor in sorted-node
+	if (ir->instruction tensor)
+	  collect (ir->instruction tensor)))
 
+(defun construct-backward-network (toplevel)
+  ;; ToplevelからBackwardを辿って計算のーどを取得
+  ;; -> 繋げてFlattenにする
+  ;; -> Sortしてcompile
 
-;;(let ((a (!tan (randn `(3 3)))))
-;; (compile-into-vm
-;;  (!sin a :-> (!cos a))))
-
-;; tan must appeared at once in the compiled code..
-
-;; (let ((a (!tan (randn `(3 3)))))
-;;		(compile-into-vm
-;;		 (!sin (!sin a :-> a) :-> a))
-;;		)
+  )
