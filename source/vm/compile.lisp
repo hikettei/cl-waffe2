@@ -16,6 +16,8 @@
 ;; JITCPUTensorの仕様は後で変更しよう...
 ;; TODO:
 
+;; TODO: Optimizer Compiling time?
+
 ;; X <- Y
 ;; Y <- X optim: => Z <- Y
 ;; Z <- Y
