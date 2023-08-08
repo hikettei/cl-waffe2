@@ -25,7 +25,7 @@
 cl-waffe2 is an experimental Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime.
 As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a framework dedicated to solving optimizing/inferencing deep neural network models using AD, all in Common Lisp. This framework is decoupled from other existing libraries by design, but interoperating with other libraries by efficient use of other libraries via with-facet macros and Common Lisp standard arrays is strongly recommended. I'm just focusing on efficient AD.
 
-Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid options to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function `build` will generate codes which are fully optimized for training models.
+Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid functions to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function `build` will generate codes which are fully optimized for training models.
 
 Portability to other devices is a major concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.
 
@@ -43,9 +43,9 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 - [ ] Add basic computation nodes for controling nodes: `MapNode` `IfNode` etc...
 
-# Concepts/Features
+# Concepts
 
-## Multiple Backends Support
+## Frontend and Backend Separation
 
 All classes that are subtypes of `AbstractTensor` are tensors that cl-waffe2 can handle.
 
