@@ -25,6 +25,10 @@
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/package" :depends-on ("vm/generic-tensor/package" "vm/nodes/package" "base-impl/package"))
+	       (:file "vm/ir")
+	       (:file "vm/utils")
+	       (:file "vm/compile")
+	       (:file "vm/vm")
 	       (:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
 	       

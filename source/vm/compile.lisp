@@ -88,8 +88,8 @@
 
 ;; copy(sin(x, copy(x))) <- ???
 
-(defun trace-backward-network (instruction-seq dout-toplevel)
-  (declare (type list instruction-seq)
+(defun trace-backward-network (instruction-seq leaves dout-toplevel)
+  (declare (type list instruction-seq leaves)
 	   (type AbstractTensor dout-toplevel))
 
   (let ((set-of-backward-node)
@@ -153,17 +153,26 @@
     ;; TP Sort -> In-place mutation -> VM
     (multiple-value-bind (backward-iseq adders) (topological-sort-iseq set-of-backward-node)
       (let ((backward-iseq `(,@backward-iseq ,@adders)))
+	(apply-in-place-mutation! backward-iseq leaves)
 	backward-iseq))))
 
 ;; When doing forward: reverse it in advance
-(defun fw-and-bw-test (toplevel)
+(defun compile-forward-and-backward (toplevel &key
+						(need-backward t))
+  ""
   (multiple-value-bind (iseq-forward leaves)
       (node-compile-into-vm toplevel)
 
     (apply-in-place-mutation! iseq-forward leaves)
-    (trace-backward-network
-     iseq-forward
-     (if (scalar-p toplevel)
-	 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-	 (make-tensor (shape toplevel) :dtype (dtype toplevel) :order (order toplevel))))))
+
+    (let ((backward-iseq
+	    (when need-backward
+	      (trace-backward-network
+	       iseq-forward
+	       leaves
+	       (if (scalar-p toplevel)
+		   (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+		   (make-tensor (shape toplevel) :dtype (dtype toplevel) :order (order toplevel)))))))
+
+      (values iseq-forward backward-iseq leaves))))
 
