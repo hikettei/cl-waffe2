@@ -12,24 +12,23 @@
 
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op node args)))
+	    (:constructor make-wfop (op self node args)))
   "
 ## [struct] WFInstruction
 "
   (op   op   :type function)
-  (node node :type AbstractNode)
+  (node node :type (or null AbstractNode))
+  (self self :type AbstractTensor)
   (args args :type list))
+
+;; (defstruct (Composable-Operator <- separate call-with-view from body
+;; (defun .cop (cop1 cop2) ...)
 
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
-	  "<<WFInstruction
-    Op:~a
-    Node:~a
-    Args: ~a
->>"
-	  (wfop-op inst) 
-	  (wfop-node inst)
-	  (wfop-args inst)))
-
-
-
+	  "<WfInst[Compiled: ~a] : ~a => ~a>~%"
+	  (class-name (class-of (wfop-node inst)))
+	  (tensor-id (wfop-self inst))
+	  (with-output-to-string (out)
+	    (dolist (var (wfop-args inst))
+	      (format out "~a~a " (tensor-id var) (shape var))))))
