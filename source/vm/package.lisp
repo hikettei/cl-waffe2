@@ -5,7 +5,8 @@
   (:use
    :cl
    :cl-waffe2/vm.generic-tensor
-   :cl-waffe2/vm.nodes))
+   :cl-waffe2/vm.nodes
+   :cl-waffe2/base-impl))
 
 (in-package :cl-waffe2/vm)
 

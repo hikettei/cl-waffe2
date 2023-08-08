@@ -1,6 +1,16 @@
 
 (in-package :cl-waffe2/vm)
 
+(defun compose (&rest fns)
+  (if fns
+      (let ((fn1 (car (last fns)))
+            (fns (butlast fns)))
+        #'(lambda (&rest args)
+                   (reduce #'funcall fns
+                           :from-end t
+                           :initial-value (apply fn1 args))))
+      #'identity))
+
 ;; Ref: http://www.utkuevci.com/ml/autograd/
 (defun topological-sort (var)
   (declare (type AbstractTensor var))
@@ -18,5 +28,22 @@
 		       (top-sort-helper prev (detach-p v)))
 		     (push v top-sort)))))
       (top-sort-helper var nil)
-      top-sort)))
+      (reverse top-sort))))
+
+
+(defun topological-sort-iseq (iseq)
+  (declare (type list iseq))
+  (let ((seen nil)
+	(top-sort nil))
+    (declare (type list seen top-sort))
+    (labels ((top-sort-helper (i)
+	       (if (or (find (tensor-iid (wfop-self i)) seen :key (compose #'tensor-iid #'wfop-self) :test #'eql)
+		       ;;(wfop-bw-is-leaf-p i)
+		       )
+		   nil
+		   (progn
+		     (push i seen)
+		     (push i top-sort)))))
+      (mapc #'top-sort-helper iseq)
+      (reverse top-sort))))
 

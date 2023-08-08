@@ -56,22 +56,94 @@
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
     (values instruction-seq variable-leaves)))
 
-(defun trace-backward-network (instruction-seq leaves dout-toplevel)
-  (declare (type list instruction-seq leaves)
+(defun expand-gradient-adder (tensor grad)
+  ;; Tensor += Grad
+  (setf (detach-p grad) t)
+  
+  (prog1
+      (with-no-grad
+	(map
+	 'list
+	 #'(lambda (x)
+	     (setf (wfop-bw-is-leaf-p x) t)
+	     x)
+	 (node-compile-into-vm
+	  (cl-waffe2/base-impl:A+=B (grad tensor) grad))))
+    (setf (detach-p grad) nil)))
+
+(defun trace-backward-network (instruction-seq dout-toplevel)
+  (declare (type list instruction-seq)
 	   (type AbstractTensor dout-toplevel))
 
   (let ((set-of-backward-node)
-	(prev-dout dout-toplevel))
+	(grad-table (make-hash-table)))
+
+    ;; Starting from dout-toplevel
+    (setf (gethash (tensor-id (wfop-self (car instruction-seq))) grad-table) dout-toplevel)
 
     ;; set-of-backward-node ...
     ;; an list of
     ;; (!cos (!copy ..))
     ;; (!sin (!copy ...)) <- each of them are the definition of backward.
 
-    ;; forwardモードの計算ノードの順番にInstructionSeqを辿る
+    ;; ISeq (Forward mode)
+    ;; Inst [ADD-CPU] X <- X Y    ,@(BACKWARD Inst [ADD-CPU] X -> X Y)
+    ;; Inst [SUB-CPU] Z <- K X => ,@(BACKWARD Inst [ADD-CPU] X -> X Y)
+    ;;         ..
     
-    (loop for inst of-type WFInstruction in instruction-seq
-	  do (push
-	      (cl-waffe2/vm.nodes:expand-backward
+    (loop for inst of-type WFInstruction in instruction-seq do
+      (let ((backward-kernels
+	      (apply
+	       #'cl-waffe2/vm.nodes:compiler-expand-backward
 	       (tensor-backward (wfop-self inst))
-	      ))))
+	       (gethash (tensor-id (wfop-self inst)) grad-table)
+	       (wfop-args inst))))
+
+	(loop for var in (wfop-args inst)
+	      for grad in backward-kernels
+	      if grad
+		do (setf (gethash (tensor-id var) grad-table) grad)
+	      if (and grad (ancestor-param-p var))
+		do (setq set-of-backward-node
+			 `(,@set-of-backward-node
+			   ,@(reverse (node-compile-into-vm grad)))))
+
+	;; Accumulate gradients when reatched the end of nodes.
+
+	(loop for var in (wfop-args inst) do
+	  ;; The next node does not exist?
+	  (loop for maybe-param in (tensor-variables var)
+		if (and (null (tensor-backward maybe-param))
+			(null (tensor-variables maybe-param))
+			(slot-value maybe-param 'cl-waffe2/vm.generic-tensor::requires-grad))
+		  ;; Accumulate the gradients
+		  do (setq set-of-backward-node
+			   `(,@set-of-backward-node
+			     ;; Expand Gradient Adder
+			     ,@(expand-gradient-adder
+				maybe-param
+				(gethash (tensor-id var) grad-table))))))))
+    ;; Eliminate Duplicated Node
+    ;; [Created Backward Iseq]
+    ;; t
+    ;; 0 X <- X + Y
+    ;; 1 Y <- X + Y
+    ;; 2   ...
+    ;; ...
+
+    ;; TP Sort -> In-place mutation -> VM
+    (let ((pruned (topological-sort-iseq set-of-backward-node)))
+      pruned)))
+
+;; When doing forward: reverse it in advance
+(defun fw-and-bw-test (toplevel)
+  (multiple-value-bind (iseq-forward leaves)
+      (node-compile-into-vm toplevel)
+
+    (apply-in-place-mutation! iseq-forward leaves)
+    (trace-backward-network
+     iseq-forward
+     (if (scalar-p toplevel)
+	 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+	 (make-tensor (shape toplevel) :dtype (dtype toplevel) :order (order toplevel))))))
+

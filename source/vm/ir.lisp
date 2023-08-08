@@ -41,14 +41,15 @@ cl-waffe2 vm specializes on  the sequence of above format.
   (op   op   :type function)
   (node node :type (or null AbstractNode))
   (self self :type AbstractTensor)
-  (args args :type list))
+  (args args :type list)
+  (bw-is-leaf-p nil :type boolean))
 
 ;; (defstruct (Composable-Operator <- separate call-with-view from body
 ;; (defun .cop (cop1 cop2) ...)
 
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
-	  "<WfInst[Compiled: ~a] : ~a.state <= λ(~a)>~%"
+	  "<WfInst[Compiled: ~a] : ~a.state <= apply(~a)>~%"
 	  (if (movetensor-p (wfop-node inst))
 	      (if (movetensor-ignore-me (wfop-node inst))
 		  "<DELETED>"
@@ -57,7 +58,11 @@ cl-waffe2 vm specializes on  the sequence of above format.
 	  (tensor-id (wfop-self inst))
 	  (with-output-to-string (out)
 	    (dolist (var (wfop-args inst))
-	      (format out "~a~a " (tensor-id var) (shape var))))))
+	      (format out "~a~a~a "
+		      (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
+			  "<Param>"
+			  "")
+		      (tensor-id var) (shape var))))))
 
 ;; In-place mutation
 
@@ -65,6 +70,8 @@ cl-waffe2 vm specializes on  the sequence of above format.
 ;; A <- A B
 ;;   ...
 ;; K <- A B
+
+;; ちゃんとテストしないと不安
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
   (let ((ref-table (make-hash-table)))
@@ -91,7 +98,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		(if (gethash (tensor-id arg) ref-table)
 		    (incf (gethash (tensor-id arg) ref-table) 1)))
 	    (wfop-args instruction))))
-     (reverse iseq))
+     iseq)
 
     ;; Based on ref-table, we retribute whether MoveTensor should be ignored or not.
 
@@ -124,6 +131,6 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		 (setf (movetensor-ignore-me (wfop-node instruction)) t)
 		 (when (gethash (tensor-id target) ref-table)
 		   (decf (gethash (tensor-id target) ref-table)))))))
-     (reverse iseq))
+     iseq)
     nil))
 

@@ -460,6 +460,19 @@ inputs      ... inputs called with
 	  (when kernel
 	    (list dout kernel compile-option inputs-out)))))
 
+(defun compiler-expand-backward (node dout &rest inputs-out)
+  (let* ((inputs-in (loop for input in inputs-out
+			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
+	 ;; Tracing User-Defined-Backward, still not yet compiled.
+	 (out-kernels (apply #'backward node dout inputs-in))
+	 ;; out-kernels = (list x.g y.g)
+	 (out-kernels (loop with argn fixnum = (length inputs-in)
+			    for x in out-kernels
+			    for y in inputs-out
+			    for i upfrom 0
+			    collect (adjust-bw-place x y argn i))))
+    out-kernels))
+
 (defun call-instant-backward (outs)
   (multiple-value-bind (dout kernel compile-option inputs-out) (apply #'values outs)
     (with-no-grad

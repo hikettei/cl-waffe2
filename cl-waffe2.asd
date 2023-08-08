@@ -24,7 +24,7 @@
 	       :trivial-garbage)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
-	       (:file "vm/package" :depends-on ("vm/generic-tensor/package" "vm/nodes/package"))
+	       (:file "vm/package" :depends-on ("vm/generic-tensor/package" "vm/nodes/package" "base-impl/package"))
 	       (:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
 	       
