@@ -34,16 +34,25 @@
 (defun topological-sort-iseq (iseq)
   (declare (type list iseq))
   (let ((seen nil)
-	(top-sort nil))
+	(top-sort nil)
+	(grad-adders nil))
     (declare (type list seen top-sort))
     (labels ((top-sort-helper (i)
 	       (if (or (find (tensor-iid (wfop-self i)) seen :key (compose #'tensor-iid #'wfop-self) :test #'eql)
-		       ;;(wfop-bw-is-leaf-p i)
-		       )
-		   nil
+		       (wfop-bw-is-leaf-p i))
+		   (when (wfop-bw-is-leaf-p i)
+		     (push i grad-adders))
 		   (progn
 		     (push i seen)
 		     (push i top-sort)))))
       (mapc #'top-sort-helper iseq)
-      (reverse top-sort))))
+      (values
+       (reverse top-sort)
+       (remove-duplicates
+	grad-adders
+	:test #'equal
+	:key #'(lambda (x)
+		 (append
+		  (list (tensor-id (wfop-self x)))	 
+		  (map 'list #'tensor-id (wfop-args x)))))))))
 

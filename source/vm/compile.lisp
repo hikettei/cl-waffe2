@@ -14,6 +14,11 @@
 ;;    - represetned by lambda expression
 
 ;; JITCPUTensorの仕様は後で変更しよう...
+;; TODO:
+
+;; X <- Y
+;; Y <- X optim: => Z <- Y
+;; Z <- Y
 
 (defparameter *vm-compile-option* :default)
 
@@ -59,7 +64,6 @@
 (defun expand-gradient-adder (tensor grad)
   ;; Tensor += Grad
   (setf (detach-p grad) t)
-  
   (prog1
       (with-no-grad
 	(map
@@ -67,9 +71,22 @@
 	 #'(lambda (x)
 	     (setf (wfop-bw-is-leaf-p x) t)
 	     x)
-	 (node-compile-into-vm
-	  (cl-waffe2/base-impl:A+=B (grad tensor) grad))))
+	 (list
+	  (car
+	   (if (scalar-p tensor)
+	       (node-compile-into-vm
+		(forward
+		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
+		 (grad tensor)
+		 grad))
+	       (node-compile-into-vm
+		(forward
+		 (cl-waffe2/base-impl:AddNode (dtype tensor))
+		 (grad tensor)
+		 grad)))))))
     (setf (detach-p grad) nil)))
+
+;; copy(sin(x, copy(x))) <- ???
 
 (defun trace-backward-network (instruction-seq dout-toplevel)
   (declare (type list instruction-seq)
@@ -110,11 +127,13 @@
 
 	;; Accumulate gradients when reatched the end of nodes.
 
-	(loop for var in (wfop-args inst) do
+	(loop for var in (wfop-args inst)
+	      for grad in backward-kernels do
 	  ;; The next node does not exist?
 	  (loop for maybe-param in (tensor-variables var)
 		if (and (null (tensor-backward maybe-param))
 			(null (tensor-variables maybe-param))
+			grad
 			(slot-value maybe-param 'cl-waffe2/vm.generic-tensor::requires-grad))
 		  ;; Accumulate the gradients
 		  do (setq set-of-backward-node
@@ -132,8 +151,9 @@
     ;; ...
 
     ;; TP Sort -> In-place mutation -> VM
-    (let ((pruned (topological-sort-iseq set-of-backward-node)))
-      pruned)))
+    (multiple-value-bind (backward-iseq adders) (topological-sort-iseq set-of-backward-node)
+      (let ((backward-iseq `(,@backward-iseq ,@adders)))
+	backward-iseq))))
 
 ;; When doing forward: reverse it in advance
 (defun fw-and-bw-test (toplevel)
