@@ -11,7 +11,7 @@
   :licence "MIT"
   :description "Deep Learning Framework"
   :pathname "source"
-  :serial t
+  ;;:serial t
   :depends-on (:cl-ppcre
 	       :fiveam
 	       :alexandria
@@ -24,6 +24,7 @@
 	       :trivial-garbage)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
+	       (:file "vm/package" :depends-on ("vm/generic-tensor/package" "vm/nodes/package"))
 	       (:file "vm/generic-tensor/package")
 	       (:file "vm/generic-tensor/conditions")
 	       
