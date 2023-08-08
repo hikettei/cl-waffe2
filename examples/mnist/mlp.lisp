@@ -73,12 +73,15 @@
       (setq total-loss 0.0))
 
     ;; TODO: Validate, Trying Adam
-    (print "Accuracy:...")
     (with-no-grad
-      (print (accuracy model test-img test-label)))
+      (format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
     model))
 
 ;; PyTorch ... 7sec
 ;; 1Epoch 13s(cl-waffe2) -> 6s (cl-waffe)
-(train-and-valid-mlp :epoch-num 10)
+;;(progn;;with-cpu-jit (CPUTensor LispTensor)
+;;  (format t "MLP(hidden_size=256) optimizer=Adam batch-size=100~%")
+;;  (train-and-valid-mlp :epoch-num 10))
+
+
 
