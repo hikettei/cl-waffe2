@@ -42,7 +42,7 @@
 	     (return-from accept-instructions (maybe-read-result (wfop-self inst))))))
 
 
-(defun make-backward-instruction (toplevel dout-mock nth)
+(defun make-backward-instruction (toplevel dout-mock nth leaves)
   (let* ((dout-input (make-input (shape dout-mock) nil
 				 :create-from dout-mock
 				 :dtype (dtype dout-mock)
@@ -54,6 +54,7 @@
 		   dout-input
 		   (tensor-variables toplevel))))
 	 (iseq (reverse (node-compile-into-vm bw))))
+    (apply-in-place-mutation! iseq leaves)
     (setf (tensor-state dout-input)
 	  (make-statecontainer :forward-out-form (make-compiled-kernel)))
     (values

@@ -94,67 +94,11 @@
   (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
        (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
 
-(defun topological-sort-in-backward-direction (var dout-toplevel)
-  (declare (type AbstractTensor var dout-toplevel))
-  (let ((seen nil)
-	(top-sort nil))
-    (declare (type list seen top-sort))
-    (labels ((top-sort-helper (v prev-dout)
-	       (if (or (find (tensor-iid v) seen :key #'tensor-iid :test #'eql)		       
-		       (null (tensor-backward v))
-		       (null prev-dout))
-		   nil
-		   (let ((bw-directions		  
-			   (apply
-			    #'cl-waffe2/vm.nodes:compiler-expand-backward
-			    (tensor-backward v)
-			    prev-dout
-			    (tensor-variables v)))
-			 (prev-vars (tensor-variables v)))
-		     (push v seen)
-		     (loop for prev in (reverse prev-vars)
-			   for grad in (reverse bw-directions)
-			   if (and prev (ancestor-param-p prev))
-			     do (top-sort-helper prev grad))
-		     (when (ancestor-param-p v)
-		       (setf (detach-p prev-dout) t)
-		       (push `(,prev-dout ,v) top-sort))))))
-      (top-sort-helper var dout-toplevel)
-      (print top-sort))))
-
 
 (defun trace-backward-network (toplevel leaves dout-toplevel)
   (declare (type AbstractTensor toplevel dout-toplevel))
 
-  (let ((seen nil)
-	(compiled-code))
-    (labels ((explore-backward (var prev-dout ppdout)
-	       (if (or (find (tensor-iid var) seen :key #'tensor-iid :test #'eql)
-		       (null (tensor-backward var))
-		       (null prev-dout)
-		       (not (ancestor-param-p var)))
-		   nil
-		   (let ((sv4bw-p (not (sv4bw-p (tensor-backward var))))
-			 (bw-kernels
-			   (apply
-			    #'cl-waffe2/vm.nodes:compiler-expand-backward
-			    (tensor-backward var)
-			    prev-dout
-			    (tensor-variables var)))
-			 (prev-vars (tensor-variables var)))
-		     (push var seen)
-		     (loop for grad in (reverse bw-kernels)
-			   for prev in (reverse prev-vars)
-			   do (explore-backward prev grad prev-dout))
-		     ;; not toplevel?
-		     (when (and (not sv4bw-p) ppdout)
-		       (setf (detach-p ppdout) nil)
-		       (setq compiled-code
-			     `(,@compiled-code
-			       ,@(reverse (node-compile-into-vm prev-dout))))
-		       (setf (detach-p ppdout) nil))))))
-      (explore-backward toplevel dout-toplevel nil)
-      compiled-code)))
+  (sort-and-prune-for-backward toplevel dout-toplevel leaves))
 
 ;; When doing forward: reverse it in advance
 (defun compile-forward-and-backward (toplevel &key

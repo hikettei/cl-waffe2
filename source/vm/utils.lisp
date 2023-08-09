@@ -43,13 +43,7 @@
 ;;        |                 |
 ;;       out               out
 
-;; VarのVar方向のTop＿Sort＿Helperに、X変数があればTop -Sortをまとめて返す
-;; そうじゃなかったらnilで無視
-;; うまくいってる 残りの懸念てん: 何番目の引数を用いたかを記録させる
-;; Backward List構造を作る？(N番目の引数で。・。
-;; Listのまま一次元でBackwardする〜
-;; これじゃどの方向が必要でどの方向が入らないかわからない(選べてはいる)
-(defun sort-and-prune-for-backward (toplevel dout-toplevel)
+(defun sort-and-prune-for-backward (toplevel dout-toplevel leaves)
   (declare (type AbstractTensor toplevel))
   (let ((seen nil))
     (labels ((top-sort-helper (var prev-gradient)
@@ -76,12 +70,12 @@
 			     if grad do
 			       (let* ((result (top-sort-helper prev grad)))
 				 (when result
-				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth)
+				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth leaves)
 				     (setq above-sort
 					   `(,@above-sort
 					     ,(make-wfop
 					       bwnode
-					       var
+					       grad
 					       iseq-printer
 					       (list prev-gradient))			
 					     ,@result))))))
