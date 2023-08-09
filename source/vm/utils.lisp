@@ -30,29 +30,31 @@
       (top-sort-helper var nil)
       (reverse top-sort))))
 
-
-(defun topological-sort-iseq (iseq)
-  (declare (type list iseq))
+;; TODO: Delete Save4bw
+(defun topological-sort-in-backward-direction (var dout-toplevel)
+  (declare (type AbstractTensor var dout-toplevel))
   (let ((seen nil)
-	(top-sort nil)
-	(grad-adders nil))
+	(top-sort nil))
     (declare (type list seen top-sort))
-    (labels ((top-sort-helper (i)
-	       (if (or (find (tensor-iid (wfop-self i)) seen :key (compose #'tensor-iid #'wfop-self) :test #'eql)
-		       (wfop-bw-is-leaf-p i))
-		   (when (wfop-bw-is-leaf-p i)
-		     (push i grad-adders))
-		   (progn
-		     (push i seen)
-		     (push i top-sort)))))
-      (mapc #'top-sort-helper iseq)
-      (values
-       (reverse top-sort)
-       (remove-duplicates
-	grad-adders
-	:test #'equal
-	:key #'(lambda (x)
-		 (append
-		  (list (tensor-id (wfop-self x)))	 
-		  (map 'list #'tensor-id (wfop-args x)))))))))
+    (labels ((top-sort-helper (v prev-dout)
+	       (if (or (find (tensor-iid v) seen :key #'tensor-iid :test #'eql)		       
+		       (null (tensor-backward v))
+		       (null prev-dout))
+		   nil
+		   (let ((bw-directions		  
+			   (apply
+			    #'cl-waffe2/vm.nodes:compiler-expand-backward
+			    (tensor-backward v)
+			    prev-dout
+			    (tensor-variables v)))
+			 (prev-vars (tensor-variables v)))
+		     (push v seen)
+		     (loop for prev in (reverse prev-vars)
+			   for grad in (reverse bw-directions)
+			   if (and prev (ancestor-param-p prev))
+			     do (top-sort-helper prev grad))
+		     (when (ancestor-param-p v)
+		       (push `(,prev-dout ,v) top-sort))))))
+      (top-sort-helper var dout-toplevel)
+      (reverse top-sort))))
 

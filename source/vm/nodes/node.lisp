@@ -365,11 +365,13 @@ Use the define-impl macro to give definitions for the node and forward them.
       place))
 
 
-(defun adjust-bw-place (bw-node place argn nth-trying)
+(defun adjust-bw-place (bw-node place argn nth-trying &key (force-move nil))
   "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
   
   (when bw-node
-    (if (movetensor-p (tensor-backward bw-node))
+    (if (and
+	 (not force-move)
+	 (movetensor-p (tensor-backward bw-node)))
 	bw-node
 	(with-shape-checkpoint (:moving nil)
 	  (let ((out (cl-waffe2/base-impl:!move

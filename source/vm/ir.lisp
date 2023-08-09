@@ -36,7 +36,11 @@ cl-waffe2 vm specializes on  the sequence of above format.
 	  (if (movetensor-p (wfop-node inst))
 	      (if (movetensor-ignore-me (wfop-node inst))
 		  "<DELETED>"
-		  (class-name (class-of (wfop-node inst))))
+		  (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
+		      (if (scalar-p (wfop-self inst))
+			  "MoveScalarNode(SAVE_FOR_BACKWARD)"
+			  "MoveTensorNode(SAVE_FOR_BACKWARD)")
+		      (class-name (class-of (wfop-node inst)))))
 	      (class-name (class-of (wfop-node inst))))
 	  (tensor-id (wfop-self inst))
 	  (with-output-to-string (out)

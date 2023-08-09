@@ -1089,6 +1089,11 @@ The function parameter computes all the previous nodes of the given tensor if an
 
   (let ((space-tmp (make-clone tensor nil nil)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
+
+      ;; For compiler to use this info.
+      (setf (cl-waffe2/base-impl:mv-lazy-sv4bw
+	     (tensor-backward result))
+	    t)
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
       ;; Keep The Tensor Broadcastable!

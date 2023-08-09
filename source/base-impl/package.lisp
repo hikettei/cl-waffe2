@@ -9,6 +9,7 @@
    #:MoveTensorNode
    #:MoveScalarTensorNode
    #:movetensor-ignore-me
+   #:mv-lazy-sv4bw
    #:movetensor-save-for-backward)
   (:export
    #:AddNode

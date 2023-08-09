@@ -9,6 +9,7 @@
 (defnode (MoveTensorNode (myself dtype &key (save-for-backward nil))
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (internal-lazy-save-for-backward :initform nil :accessor mv-lazy-sv4bw :type boolean)
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
@@ -57,6 +58,7 @@ For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for ex
 (defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
 	  :out-scalar-p t
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (internal-lazy-save-for-backward :initform nil :accessor mv-lazy-sv4bw :type boolean)
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
