@@ -61,7 +61,8 @@
 	  if (null (tensor-backward tensor))
 	    do (push tensor variable-leaves) ;; Register as a variable
 	  else
-	    do (push (ir->instruction tensor) instruction-seq))
+	    do (if (not (detach-p tensor))
+		   (push (ir->instruction tensor) instruction-seq)))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
     (values instruction-seq variable-leaves)))
@@ -71,24 +72,20 @@
   (setf (detach-p grad) t)
   (prog1
       (let ((*no-grad* t))
-	(map
-	 'list
-	 #'(lambda (x)
-	     (setf (wfop-bw-is-leaf-p x) t)
-	     x)
-	 (list
-	  (car
-	   (if (scalar-p tensor)
-	       (node-compile-into-vm
-		(forward
-		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
-		 (grad tensor)
-		 grad))
-	       (node-compile-into-vm
-		(forward
-		 (cl-waffe2/base-impl:AddNode (dtype tensor))
-		 (grad tensor)
-		 grad)))))))
+	(car
+	 (if (scalar-p tensor)
+	     (progn
+	      (node-compile-into-vm
+	       (forward
+		(cl-waffe2/base-impl::ScalarAndScalarAdd)
+		(grad tensor)
+		grad)))
+	     (progn
+	      (node-compile-into-vm
+	       (forward
+		(cl-waffe2/base-impl:AddNode (dtype tensor))
+		(grad tensor)
+		grad))))))
     (setf (detach-p grad) nil)))
 
 ;; copy(sin(x, copy(x))) <- ???
@@ -97,28 +94,67 @@
   (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
        (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
 
+(defun topological-sort-in-backward-direction (var dout-toplevel)
+  (declare (type AbstractTensor var dout-toplevel))
+  (let ((seen nil)
+	(top-sort nil))
+    (declare (type list seen top-sort))
+    (labels ((top-sort-helper (v prev-dout)
+	       (if (or (find (tensor-iid v) seen :key #'tensor-iid :test #'eql)		       
+		       (null (tensor-backward v))
+		       (null prev-dout))
+		   nil
+		   (let ((bw-directions		  
+			   (apply
+			    #'cl-waffe2/vm.nodes:compiler-expand-backward
+			    (tensor-backward v)
+			    prev-dout
+			    (tensor-variables v)))
+			 (prev-vars (tensor-variables v)))
+		     (push v seen)
+		     (loop for prev in (reverse prev-vars)
+			   for grad in (reverse bw-directions)
+			   if (and prev (ancestor-param-p prev))
+			     do (top-sort-helper prev grad))
+		     (when (ancestor-param-p v)
+		       (setf (detach-p prev-dout) t)
+		       (push `(,prev-dout ,v) top-sort))))))
+      (top-sort-helper var dout-toplevel)
+      (print top-sort))))
+
+
 (defun trace-backward-network (toplevel leaves dout-toplevel)
   (declare (type AbstractTensor toplevel dout-toplevel))
 
-  (let ((sorted-fw-tensors (topological-sort-in-backward-direction toplevel dout-toplevel))
+  (let ((seen nil)
 	(compiled-code))
-
-    (loop for fw-instruction of-type list in sorted-fw-tensors do
-      (let* ((prev-dout   (car fw-instruction))
-	     (fw-tensor   (second fw-instruction))
-	     (backward-kernels
-	       (apply
-		#'cl-waffe2/vm.nodes:compiler-expand-backward
-		(tensor-backward fw-tensor)
-		prev-dout
-		(tensor-variables fw-tensor))))
-	(loop for grad in backward-kernels
-	      for var  in (tensor-variables fw-tensor)
-	      if (and grad (ancestor-param-p var))
-		do (setq compiled-code `(,@compiled-code ,@(reverse (node-compile-into-vm grad))))
-	      if (and grad (null (tensor-backward var)) (slot-value var 'cl-waffe2/vm.generic-tensor:requires-grad))
-		do (setq compiled-code `(,@compiled-code ,@(expand-gradient-adder var grad))))))
-    compiled-code))
+    (labels ((explore-backward (var prev-dout ppdout)
+	       (if (or (find (tensor-iid var) seen :key #'tensor-iid :test #'eql)
+		       (null (tensor-backward var))
+		       (null prev-dout)
+		       (not (ancestor-param-p var)))
+		   nil
+		   (let ((sv4bw-p (not (sv4bw-p (tensor-backward var))))
+			 (bw-kernels
+			   (apply
+			    #'cl-waffe2/vm.nodes:compiler-expand-backward
+			    (tensor-backward var)
+			    prev-dout
+			    (tensor-variables var)))
+			 (prev-vars (tensor-variables var)))
+		     (push var seen)
+		     (loop for grad in (reverse bw-kernels)
+			   for prev in (reverse prev-vars)
+			   do (explore-backward prev grad prev-dout))
+		     ;; not toplevel?
+		     (when (and (not sv4bw-p) ppdout)
+		       (setf (detach-p ppdout) nil)
+		       (setq compiled-code
+			     `(,@compiled-code
+			       ,@(reverse (node-compile-into-vm prev-dout))))
+		       (setf (detach-p ppdout) nil))))))
+      (explore-backward toplevel dout-toplevel nil)
+      compiled-code)))
 
 ;; When doing forward: reverse it in advance
 (defun compile-forward-and-backward (toplevel &key
@@ -128,7 +164,6 @@
   (multiple-value-bind (iseq-forward leaves)
       (node-compile-into-vm toplevel)
 
-    (print iseq-forward)
     (apply-in-place-mutation! iseq-forward leaves)
 
     (let* ((dout (if (scalar-p toplevel)
@@ -138,6 +173,5 @@
 	     (when need-backward
 	       (trace-backward-network toplevel leaves dout))))
 
-      (print backward-iseq)
       (values (reverse iseq-forward) backward-iseq leaves))))
 

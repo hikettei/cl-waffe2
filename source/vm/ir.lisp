@@ -22,7 +22,7 @@ Basically follows this format:
 cl-waffe2 vm specializes on  the sequence of above format.
 "
   (op   op   :type function)
-  (node node :type (or null AbstractNode))
+  (node node :type (or function string null AbstractNode))
   (self self :type AbstractTensor)
   (args args :type list)
   (bw-is-leaf-p nil :type boolean))
@@ -33,15 +33,17 @@ cl-waffe2 vm specializes on  the sequence of above format.
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
 	  "<WfInst[Compiled: ~a] : ~a.state <= apply( ~a)>~%"
-	  (if (movetensor-p (wfop-node inst))
-	      (if (movetensor-ignore-me (wfop-node inst))
-		  "<DELETED>"
-		  (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
-		      (if (scalar-p (wfop-self inst))
-			  "MoveScalarNode(SAVE_FOR_BACKWARD)"
-			  "MoveTensorNode(SAVE_FOR_BACKWARD)")
-		      (class-name (class-of (wfop-node inst)))))
-	      (class-name (class-of (wfop-node inst))))
+	  (if (functionp (wfop-node inst))
+	      (funcall (wfop-node inst))
+	      (if (movetensor-p (wfop-node inst))
+		  (if (movetensor-ignore-me (wfop-node inst))
+		      "<DELETED>"
+		      (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
+			  (if (scalar-p (wfop-self inst))
+			      "MoveScalarNode(SAVE_FOR_BACKWARD)"
+			      "MoveTensorNode(SAVE_FOR_BACKWARD)")
+			  (class-name (class-of (wfop-node inst)))))
+		  (class-name (class-of (wfop-node inst)))))
 	  (tensor-id (wfop-self inst))
 	  (with-output-to-string (out)
 	    (dolist (var (wfop-args inst))

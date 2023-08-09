@@ -42,3 +42,31 @@
 	     (return-from accept-instructions (maybe-read-result (wfop-self inst))))))
 
 
+(defun make-backward-instruction (toplevel dout-mock nth)
+  (let* ((dout-input (make-input (shape dout-mock) nil
+				 :create-from dout-mock
+				 :dtype (dtype dout-mock)
+				 :order (order dout-mock)))
+	 (bw (nth nth
+		  (apply
+		   #'compiler-expand-backward
+		   (tensor-backward toplevel)
+		   dout-input
+		   (tensor-variables toplevel))))
+	 (iseq (reverse (node-compile-into-vm bw))))
+    (setf (tensor-state dout-input)
+	  (make-statecontainer :forward-out-form (make-compiled-kernel)))
+    (values
+     #'(lambda (dout)
+	 (declare (type AbstractTensor dout))
+	 (write-result dout-input (list (maybe-read-result dout)))
+	 (accept-instructions iseq))
+     #'(lambda ()
+	 (format nil "Block -> ~a-BACKWARD {
+~a    }
+  "
+		 (class-name (class-of (tensor-backward toplevel)))
+		 (with-output-to-string (out)
+		   (dolist (i iseq)
+		     (format out "        ~a" i))))))))
+

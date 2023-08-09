@@ -27,34 +27,65 @@
 		     (dolist (prev (tensor-variables v))
 		       (top-sort-helper prev (detach-p v)))
 		     (push v top-sort)))))
-      (top-sort-helper var nil)
+      (top-sort-helper var (detach-p var))
       (reverse top-sort))))
 
-;; TODO: Delete Save4bw
-(defun topological-sort-in-backward-direction (var dout-toplevel)
-  (declare (type AbstractTensor var dout-toplevel))
-  (let ((seen nil)
-	(top-sort nil))
-    (declare (type list seen top-sort))
-    (labels ((top-sort-helper (v prev-dout)
-	       (if (or (find (tensor-iid v) seen :key #'tensor-iid :test #'eql)		       
-		       (null (tensor-backward v))
-		       (null prev-dout))
-		   nil
-		   (let ((bw-directions		  
-			   (apply
-			    #'cl-waffe2/vm.nodes:compiler-expand-backward
-			    (tensor-backward v)
-			    prev-dout
-			    (tensor-variables v)))
-			 (prev-vars (tensor-variables v)))
-		     (push v seen)
-		     (loop for prev in (reverse prev-vars)
-			   for grad in (reverse bw-directions)
-			   if (and prev (ancestor-param-p prev))
-			     do (top-sort-helper prev grad))
-		     (when (ancestor-param-p v)
-		       (push `(,prev-dout ,v) top-sort))))))
-      (top-sort-helper var dout-toplevel)
-      (reverse top-sort))))
+
+;; sort-and-prune-for-backward:
+;;     tp-sorted   => Pruned
+;;        X    x
+;;      copy(x)|
+;;          \ /             x
+;;     X    sin             |
+;;   copy(x) |     =>      sin
+;;      \   /               |
+;;       sin               sin
+;;        |                 |
+;;       out               out
+
+;; VarのVar方向のTop＿Sort＿Helperに、X変数があればTop -Sortをまとめて返す
+;; そうじゃなかったらnilで無視
+;; うまくいってる 残りの懸念てん: 何番目の引数を用いたかを記録させる
+;; Backward List構造を作る？(N番目の引数で。・。
+;; Listのまま一次元でBackwardする〜
+;; これじゃどの方向が必要でどの方向が入らないかわからない(選べてはいる)
+(defun sort-and-prune-for-backward (toplevel dout-toplevel)
+  (declare (type AbstractTensor toplevel))
+  (let ((seen nil))
+    (labels ((top-sort-helper (var prev-gradient)
+	       (let ((encounter-x (find (tensor-iid var) seen :test #'eql))
+		     (found-param  (or (null (tensor-backward var))
+				       (null (tensor-variables var)))))
+		 (if (or encounter-x found-param)
+		     (cond
+		       (encounter-x nil)
+		       (found-param
+			(when (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
+			  ;; Gradient Adder wo tukuru
+			  `(,(expand-gradient-adder var prev-gradient)))))
+		     (let ((bw (apply
+				#'cl-waffe2/vm.nodes:compiler-expand-backward
+				(tensor-backward var)
+				prev-gradient
+				(tensor-variables var)))
+			   (above-sort nil))
+		       (push (tensor-iid var) seen)
+		       (loop for prev in (tensor-variables var)
+			     for grad in bw
+			     for nth fixnum upfrom 0
+			     if grad do
+			       (let* ((result (top-sort-helper prev grad)))
+				 (when result
+				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth)
+				     (setq above-sort
+					   `(,@above-sort
+					     ,(make-wfop
+					       bwnode
+					       var
+					       iseq-printer
+					       (list prev-gradient))			
+					     ,@result))))))
+		       above-sort)))))
+      (top-sort-helper toplevel dout-toplevel))))
+
 
