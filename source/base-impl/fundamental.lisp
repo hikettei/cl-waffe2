@@ -18,15 +18,12 @@
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (if (tensor-permuted-p dout)
+				 (if (tensor-permuted-p dout)				     
 				     (let ((out (make-input (shape dx) nil
 							    :create-from dout
 							    :dtype (dtype dx)
 							    :order (order dx))))
-				       (with-instant-kernel out
-					 `(progn
-					    (setf (tensor-vec ,out) (tensor-vec ,dout))
-					    ,out)))
+				       (!move out dout :force t))
 				     (!copy dout :force t)))))
 		       (values nil dy-out)))
 	  :documentation "

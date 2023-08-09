@@ -17,6 +17,7 @@
 ;; Github Actionsではパラメーターを変えて二回テストしよう
 ;; JITCPUTensorの仕様は後で変更しよう...
 ;; TODO:
+;; forwardで用いたsave-for-backwardのーどの逆伝播のせいでクッソCopyが増える
 
 ;; TODO: Optimizer Compiling time?
 
@@ -66,6 +67,8 @@
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
     (values instruction-seq variable-leaves)))
 
+;; TPソートによって Gradient Adder 一番最後のノードが無視されてる
+;; (!t (!sin (param x))) is ok while (!t (param x)) is ng.
 (defun expand-gradient-adder (tensor grad)
   ;; Tensor += Grad
   (setf (detach-p grad) t)
@@ -108,13 +111,13 @@
     ;; (!cos (!copy ..))
     ;; (!sin (!copy ...)) <- each of them are the definition of backward.
 
-    ;; ISeq (Forward mode)
-    ;; Inst [ADD-CPU] X <- X Y    ,@(BACKWARD Inst [ADD-CPU] X -> X Y)
-    ;; Inst [SUB-CPU] Z <- K X => ,@(BACKWARD Inst [ADD-CPU] X -> X Y)
+    ;; ISeq (Forward mode)         ISeq (Reverse Mode)
+    ;; Inst [ADD-CPU] X <- X Y => ,@(BACKWARD Inst [ADD-CPU] X -> X Y)
+    ;; Inst [SUB-CPU] Z <- K X => ,@(BACKWARD Inst [SUB-CPU] X -> X Y)
     ;;         ..
     
     (loop for inst of-type WFInstruction in instruction-seq do
-      (let ((backward-kernels
+      (let ((backward-kernels ;; g(dout, x_in, y_in, ...) -> x_out, y_out, ... 
 	      (apply
 	       #'cl-waffe2/vm.nodes:compiler-expand-backward
 	       (tensor-backward (wfop-self inst))
@@ -126,15 +129,27 @@
 	      if grad
 		do (setf (gethash (tensor-id var) grad-table) grad)
 	      if (and grad
-		      (ancestor-param-p (wfop-self inst))
-		      ;;(ancestor-param-p var)
-		      )
+		      ;;(ancestor-param-p (wfop-self inst))
+		      (ancestor-param-p var))
 		do (setq set-of-backward-node
 			 `(,@set-of-backward-node
 			   ,@(reverse (node-compile-into-vm grad)))))
 
-	;; Accumulate gradients when reatched the end of nodes.
+	;; Reached the end of nodes?
+	;; well then, accumlated gradients if the variable is a parameter.
 
+	(loop for var  in (wfop-args inst) ;; variable
+	      for grad in backward-kernels ;; prev-dout variable.grad += prev-dout
+	      if (and (null (tensor-backward var))  ;; \
+		      (null (tensor-variables var)) ;; / < The tensor is created by (parameter ...) or init func with :require-grad=t
+		      grad ;; gradient exists in the direction?
+		      (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad))
+		do (setq set-of-backward-node
+			 `(,@set-of-backward-node
+			   ,@(expand-gradient-adder var (gethash (tensor-id var) grad-table)))))					      
+
+	#|
+	;; Accumulate gradients when reatched the end of nodes.
 	(loop for var in (wfop-args inst)
 	      for grad in backward-kernels do
 	  ;; The next node does not exist?
@@ -149,7 +164,9 @@
 			     ;; Expand Gradient Adder
 			     ,@(expand-gradient-adder
 				maybe-param
-				(gethash (tensor-id var) grad-table))))))))
+	(gethash (tensor-id var) grad-table))))))
+	|#
+	))
     ;; Eliminate Duplicated Node
     ;; [Created Backward Iseq]
     ;; t
@@ -162,7 +179,6 @@
     (multiple-value-bind (backward-iseq adders) (topological-sort-iseq set-of-backward-node)
       (let ((backward-iseq `(,@backward-iseq ,@adders)))
 	(apply-in-place-mutation! backward-iseq leaves)
-	;;(print backward-iseq)
 	backward-iseq))))
 
 ;; When doing forward: reverse it in advance
@@ -183,6 +199,6 @@
 	       (if (scalar-p toplevel)
 		   (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
 		   (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel)))))))
-      
+
       (values (reverse iseq-forward) backward-iseq leaves))))
 
