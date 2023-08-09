@@ -75,17 +75,17 @@
 	(car
 	 (if (scalar-p tensor)
 	     (progn
-	      (node-compile-into-vm
-	       (forward
-		(cl-waffe2/base-impl::ScalarAndScalarAdd)
-		(grad tensor)
-		grad)))
+	       (node-compile-into-vm
+		(forward
+		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
+		 (grad tensor)
+		 grad)))
 	     (progn
-	      (node-compile-into-vm
-	       (forward
-		(cl-waffe2/base-impl:AddNode (dtype tensor))
-		(grad tensor)
-		grad))))))
+	       (node-compile-into-vm
+		(forward
+		 (cl-waffe2/base-impl:AddNode (dtype tensor))
+		 (grad tensor)
+		 grad))))))
     (setf (detach-p grad) nil)))
 
 ;; copy(sin(x, copy(x))) <- ???

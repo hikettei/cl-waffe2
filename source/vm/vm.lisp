@@ -42,9 +42,11 @@
 	     (return-from accept-instructions (maybe-read-result (wfop-self inst))))))
 
 
+;; 最後のGradientがうまく足し合わせてない・・・
 (defun make-backward-instruction (toplevel dout-mock nth leaves)
   (let* ((dout-input (make-input (shape dout-mock) nil
 				 :create-from dout-mock
+				 :scalar-p (scalar-p dout-mock)
 				 :dtype (dtype dout-mock)
 				 :order (order dout-mock)))
 	 (bw (nth nth
