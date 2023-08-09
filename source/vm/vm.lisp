@@ -63,7 +63,9 @@
      #'(lambda (dout)
 	 (declare (type AbstractTensor dout))
 	 (write-result dout-input (list (maybe-read-result dout)))
-	 (accept-instructions iseq))
+	 (if iseq
+	     (accept-instructions iseq)
+	     dout))
      #'(lambda ()
 	 (format nil "Block -> ~a-BACKWARD {
 ~a    }

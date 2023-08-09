@@ -72,7 +72,7 @@
   (setf (detach-p grad) t)
   (prog1
       (let ((*no-grad* t))
-	(car
+	(reverse
 	 (if (scalar-p tensor)
 	     (progn
 	       (node-compile-into-vm

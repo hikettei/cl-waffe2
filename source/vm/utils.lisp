@@ -56,7 +56,7 @@
 		       (found-param
 			(when (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
 			  ;; Gradient Adder wo tukuru
-			  `(,(expand-gradient-adder var prev-gradient)))))
+			  `(,@(expand-gradient-adder var prev-gradient)))))
 		     (let ((bw (apply
 				#'cl-waffe2/vm.nodes:compiler-expand-backward
 				(tensor-backward var)
