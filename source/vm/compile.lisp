@@ -162,6 +162,7 @@
     (multiple-value-bind (backward-iseq adders) (topological-sort-iseq set-of-backward-node)
       (let ((backward-iseq `(,@backward-iseq ,@adders)))
 	(apply-in-place-mutation! backward-iseq leaves)
+	;;(print backward-iseq)
 	backward-iseq))))
 
 ;; When doing forward: reverse it in advance
