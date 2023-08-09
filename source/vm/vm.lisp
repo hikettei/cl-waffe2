@@ -8,12 +8,11 @@
   (let* ((state (tensor-state tensor))
 	 (res
 	   (or (when state
-		 (the AbstractTensor
-		      (nth
-		       (tensor-out-n tensor)
-		       (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))))
+		 (nth
+		  (tensor-out-n tensor)
+		  (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state)))
 	       tensor)))
-    res))
+    (the AbstractTensor res)))
 
 (declaim (ftype (function (AbstractTensor list) t) write-result))
 (defun write-result (tensor result)

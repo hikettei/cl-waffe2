@@ -13,6 +13,8 @@
 ;;    - Flatten
 ;;    - represetned by lambda expression
 
+;; TODO: 後で全て強制的にbuildを用いるモードでテストしないといけない
+;; Github Actionsではパラメーターを変えて二回テストしよう
 ;; JITCPUTensorの仕様は後で変更しよう...
 ;; TODO:
 
@@ -29,6 +31,7 @@
   "Reading a IR of tensor, the function returns a corresponding instruction"
   (declare (type AbstractTensor tensor))
 
+  ;;(reset-compiled-function-cache!)
   (cond
     ((null (tensor-backward tensor))
      ;; Has reached out the end of nodes.
