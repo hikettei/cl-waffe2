@@ -35,10 +35,11 @@
   (declare (type list iseq)
 	   (optimize (speed 3)))
 
-  (loop for inst of-type WFInstruction in iseq
-	;; TODO: Runtime Shape Inspection etc...
-	do (write-result (wfop-self inst) (apply-instruction inst))
-	finally
-	   (return-from accept-instructions (maybe-read-result (wfop-self inst)))))
+  (when iseq
+    (loop for inst of-type WFInstruction in iseq
+	  ;; TODO: Runtime Shape Inspection etc...
+	  do (write-result (wfop-self inst) (apply-instruction inst))
+	  finally
+	     (return-from accept-instructions (maybe-read-result (wfop-self inst))))))
 
 

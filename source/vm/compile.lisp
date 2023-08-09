@@ -67,7 +67,7 @@
   ;; Tensor += Grad
   (setf (detach-p grad) t)
   (prog1
-      (with-no-grad
+      (let ((*no-grad* t))
 	(map
 	 'list
 	 #'(lambda (x)

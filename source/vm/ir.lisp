@@ -2,19 +2,10 @@
 (in-package :cl-waffe2/vm)
 
 
-;; TODO LIST
-;; In-place mutation実装
-;;FW/BW Test
-;;標準でこれを使う
-;;JITCPUTensorを更新
-
-
-;; funcall多用する・・・
-
-;; In-place mutation ... Flattenにした後
-;; JITCPUTensor ... もっと単純にできる
-
-;; The goal: cl-waffe2 is a specializer on DAG nodes ... 数万のDAG回路を取り扱うことに特化している・・・
+;; 標準でこれを使うように
+;; JITCPUTensor?
+;; 大幅な仕様変更なしにProceed/Build両方の場合で動作するようにしたいが・・・
+;; 各JITでTP Sortをする？(その後時間があればJITCPUTensor/JITLispTensorをリファクタする)
 
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
@@ -41,7 +32,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
-	  "<WfInst[Compiled: ~a] : ~a.state <= apply(~a)>~%"
+	  "<WfInst[Compiled: ~a] : ~a.state <= apply( ~a)>~%"
 	  (if (movetensor-p (wfop-node inst))
 	      (if (movetensor-ignore-me (wfop-node inst))
 		  "<DELETED>"
