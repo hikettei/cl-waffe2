@@ -102,6 +102,7 @@
    :cl-waffe2/distributions     ;; 正規分布など、高速に確率分布をサンプリングするAPIを提供
    :cl-waffe2/nn                ;; 回帰モデルや誤差関数など、深層学習で用いるAPIを提供（開発中）
    :cl-waffe2/optimizers        ;; 数理最適化に関する実装を提供（開発中）
+   :cl-waffe2/vm                ;; cl-waffe2のIRを動作させるための仮想マシン
    :cl-waffe2/vm.generic-tensor ;; AbstractTensorとJITコンパイラに関するAPIを提供
    :cl-waffe2/vm.nodes          ;; AbstractNode, つまり計算ノードを構築する時に使う拡張的なAPIを提供
 
@@ -214,6 +215,9 @@
     (print (grad a))
     (print (grad b))
     ))
+
+;; Tips: disassemble-waffe2-ir関数を用いればcl-waffe2がどのように計算ノードをコンパイルしたのかを可視化できます
+(disassemble-waffe2-ir (!sum (!softmax (parameter (randn `(100 100))))))
 
 ;;<Compiled-Composite
 ;;    forward:  #<FUNCTION (LAMBDA () :IN "/private/var/tmp/slimeoTEyzi.fasl") {5397C39B}>
