@@ -90,6 +90,7 @@
 
 (load "./cl-waffe2.asd") ;; <- 見つからなかったらM-x slime-cdでディレクトリを変えてください
 
+;;(asdf:load-system :cl-waffe2) <- これでもcl-waffe2を読み込めます
 
 (defpackage :example-project
   (:use
@@ -756,6 +757,7 @@ Previous dout:
 ;; 手動Broadcasting: 1 x 3行列を3 x 3行列かのようにRepeatする
 (print (!view (ax+b `(1 3) 1 0) `(:broadcast 3)))
 
+
 ;;{CPUTENSOR[float] :shape (1 3) -> :view (<(BROADCAST 3)> <T>) -> :visible-shape (3 3) :named ChainTMP6216 
 ;;  :vec-state [maybe-not-computed]
 ;;  ((0.0 1.0 2.0)
@@ -764,6 +766,72 @@ Previous dout:
 ;;  :facet :input
 ;;  :requires-grad NIL
 ;;  :backward <Node: VIEWTENSORNODE-T (A[RESULT] B[BEFORE] -> A[RESULT])>}
+
+
+;; ~~~ Tips: Reshaper ~~~~~~~~~~~~~~~~~~
+;; !permute !reshape !viewの三つの関数は、第一引数にラムダ関数を取ることができます。
+;; その場合、第一引数以降の引数は無視され、第一引数のラムダ関数が返した値が、用いるSubscriptとなります。
+
+;; 例1. 自動Broadcasting (broadcast-to tensor)は、tensorの形状と一致するようにBroadcastingする引数を返す関数です。
+
+(let ((a (ax+b `(3 3) 0 0))
+      (b (ax+b `(3 1) 1 0)))
+  (print
+   (proceed
+    (!add
+     a
+     (!view b (broadcast-to a))))))
+
+;;{CPUTENSOR[float] :shape (3 3) :named ChainTMP4505 
+;;  :vec-state [computed]
+;;  ((0.0 0.0 0.0)
+;;   (1.0 1.0 1.0)
+;;   (2.0 2.0 2.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+
+;; 例2. reverse
+;; 与えられたTensorのShapeを逆順にする場合はこのように記述します
+;; 合成関数を作成するcomposeがあれば 単に(compose #'reverse #'shape)を渡せばOKです
+
+(print
+ (proceed
+  (!reshape (ax+b `(5 3 2) 1 0)
+	    #'(lambda (tensor)
+		(reverse (shape tensor))))))
+
+;;{CPUTENSOR[float] :shape (2 3 5) :named ChainTMP5019 
+;;  :vec-state [computed]
+;;  (((0.0  1.0  2.0  3.0  4.0)
+;;    (5.0  6.0  7.0  8.0  9.0)
+;;    (10.0 11.0 12.0 13.0 14.0))
+;;   ((15.0 16.0 17.0 18.0 19.0)
+;;    (20.0 21.0 22.0 23.0 24.0)
+;;    (25.0 26.0 27.0 28.0 29.0)))
+;;  :facet :input
+;;  :requires-grad NIL
+;;:backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+
+
+;; 例3. torch-order
+;; torch-orderはpermuteの引数の記法をNumpyやPyTorchと同じものにするReshaperです。(cl-waffe2のPermuteの記法はTorchと真逆です)
+
+(print
+ (proceed
+  (!permute (ax+b `(3 5) 1 0) (torch-order 1 0)))) ;; (!permute ... 0 1)と同値
+
+;;{CPUTENSOR[float] :shape (5 3) -> :view (<T> <T>) -> :visible-shape (5 3) :named;; ChainTMP5161 
+;;  :vec-state [computed]
+;;  ((0.0  5.0  10.0)            
+;;   (1.0  6.0  11.0)   
+;;         ...
+;;   (3.0  8.0  13.0)
+;;   (4.0  9.0  14.0))
+;;  :facet :input
+;;  :requires-grad NIL
+;;:backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 
 ;; etc... (TODO: slice-step tflist indices)
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1136,17 +1204,18 @@ Previous dout:
       (time (forward model)))))
 
 ;;Evaluation took:
-;;  0.001 seconds of real time
-;;  0.001326 seconds of total run time (0.001149 user, 0.000177 system)
+;;  0.002 seconds of real time
+;;  0.002096 seconds of total run time (0.000679 user, 0.001417 system)
 ;;  100.00% CPU
-;;  3,190,462 processor cycles
-;;  219,904 bytes consed
-  
+;;  4,864,946 processor cycles
+;;  256,976 bytes consed
+
+
 ;;Evaluation took:
 ;;  0.000 seconds of real time
-;;  0.000978 seconds of total run time (0.000963 user, 0.000015 system)
+;;  0.000504 seconds of total run time (0.000487 user, 0.000017 system)
 ;;  100.00% CPU
-;;  2,269,020 processor cycles
+;;  1,157,624 processor cycles
 ;;  0 bytes consed
 
 ;; (P.S.: 数学関数のSIMD化が正しくできてるかまだ確認してません まだ、大規模な行列に関して並列化の処理はまだ実装れていません。これらは今後追加します。)
