@@ -67,7 +67,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 	 ;; Set 100 as for ExistTensor, in order not to destruct training data/parameters
 
 	 (if (eql (tensor-attribute variable) :chain)
-	     (setf (gethash (tensor-id variable) ref-table) 0)
+	     (setf (gethash (tensor-id variable) ref-table) 1) ;; [FixME] Originally it was set to 0, but here's unexcepted side effects...
 	     (setf (gethash (tensor-id variable) ref-table) nil)))
      leaves)
 
