@@ -241,6 +241,8 @@ Training time/accuracy with MNIST/Cifar-10 by MLP/CNN compared to Keras/Tensorfl
 - [Previous research of Petalisp](https://www.european-lisp-symposium.org/static/2018/heisig.pdf)
     - https://github.com/marcoheisig/Petalisp/tree/master
 
+- [Automatic differentiation in machine learning: a survey](https://arxiv.org/abs/1502.05767)
+
 - Some of the algorithms implemented within the source code are referenced below:
 
     - https://arxiv.org/pdf/1201.6035.pdf
