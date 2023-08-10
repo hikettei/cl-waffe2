@@ -81,6 +81,7 @@
   
   (when (and end-of-node-p *caching-c-source*)
     (load-foreign-function *caching-c-source*)
+    (setf *seen* nil)
     (setf *caching-c-source* nil)))
 
 ;; Note: eval it when called with vm-build?

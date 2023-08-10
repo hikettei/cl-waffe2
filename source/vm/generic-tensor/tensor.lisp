@@ -60,8 +60,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (state     :initform nil :accessor tensor-state)
    (variables :initform nil :accessor tensor-variables)
 
-   (tensor-id :initform (gensym "TID") :accessor tensor-id)         ;; In-place extends TID
-   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid) ;; In-place never extends TID
+   (tensor-id :initform (gensym "TID") :accessor tensor-id)         ;; In-place extends TID (i.e.: indicates the pointer)
+   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid) ;; In-place never extends TID (i.e.: indicates the node/edge)
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
    (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
