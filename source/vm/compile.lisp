@@ -101,7 +101,9 @@
 
 ;; When doing forward: reverse it in advance
 (defun compile-forward-and-backward (toplevel &key (need-backward t))
-  ""
+  "Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables).
+
+`disassemble-waffe2-ir` to display compiled Instruction Sequence."
   (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-forward leaves)
       (node-compile-into-vm toplevel)
@@ -122,3 +124,24 @@
 
       (values (reverse iseq-forward) backward-iseq leaves))))
 
+
+(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t))
+  "
+## [function] disassemble-waffe2-ir
+
+Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `stream`. If `backward` was set to t, `backward` is also displayed."
+  (declare (type AbstractTensor toplevel))
+  (multiple-value-bind (iseq-fw iseq-bw leaves)
+      (compile-forward-and-backward toplevel :need-backward backward)
+    (declare (ignore leaves))
+    
+    (flet ((conc-iseq-str (iseq)
+	     (with-output-to-string (out)
+	       (dolist (i iseq)
+		 (princ i out)))))
+
+      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%" (conc-iseq-str iseq-fw))
+
+      (format stream "~%== [disassemble-waffe2-ir: Backward] ======~%~a~%" (conc-iseq-str iseq-bw))
+
+      t)))

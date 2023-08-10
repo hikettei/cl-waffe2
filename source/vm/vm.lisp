@@ -29,8 +29,15 @@
     (the function (wfop-op instruction))
     (map 'list #'maybe-read-result (wfop-args instruction)))))
 
+(declaim (ftype (function (list) (or null AbstractTensor)) accept-instructions))
 (defun accept-instructions (iseq)
-  ""
+  "
+## [function] accept-instructions
+
+Evaluates generated cl-waffe2 IR sequence.
+
+`iseq[list]` an list of `WFInstruction`
+"
   (declare (type list iseq)
 	   (optimize (speed 3)))
 
@@ -60,7 +67,9 @@
 	  (make-statecontainer :forward-out-form (make-compiled-kernel)))
     (values
      #'(lambda (dout)
-	 (declare (type AbstractTensor dout))
+	 (declare (optimize (speed 3))
+		  ;; inline accept-instructions?
+		  (type AbstractTensor dout))
 	 (write-result dout-input (list (maybe-read-result dout)))
 	 (if iseq
 	     (accept-instructions iseq)

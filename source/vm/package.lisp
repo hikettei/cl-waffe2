@@ -9,7 +9,8 @@
    :cl-waffe2/base-impl)
   (:export
    #:accept-instructions
-   #:compile-forward-and-backward))
+   #:compile-forward-and-backward
+   #:disassemble-waffe2-ir))
 
 (in-package :cl-waffe2/vm)
 
