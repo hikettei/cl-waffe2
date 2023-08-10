@@ -35,13 +35,13 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 - [x] Establish a baseline for generic matrix operations from zero for Common Lisp, as practised by Julia.
     - Four data structures used in deep learning: `AbstractNode` `AbstractTensor` `AbstractOptimizer`, and `AbstractTrainer`.
-    - Fundamental APIs: `View API/Broadcasting/Permution` `NDArrays with multidimensonal offsets` `build/proceed` `facet of tensors`
+    - Fundamental APIs: `View API/Broadcasting/Permution` `NDArrays with multidimensional offsets` `build/proceed` `facet of tensors`
     - Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)
     - For experiments, implement a backend that runs at minimum speed: `LispTensor`.
 
-- [ ] Construct JIT Compiler from cl-waffe2 to `C`. and fuse operations and loops. + Multi-Threading (work in progress)
+- [ ] Construct JIT Compiler from cl-waffe2 to `C` (OK). and fuse operations and loops. + Multi-Threading (work in progress)
 
-- [ ] Add basic computation nodes for controling nodes: `MapNode` `IfNode` etc...
+- [ ] Add basic computation nodes for controlling nodes: `MapNode` `IfNode` etc...
 
 # Concepts
 
@@ -187,15 +187,22 @@ Evaluation took:
 
 If you are not comfortable writing macros to create your own forward and backward propagation, there are various means, such as `define-static-node`. they're working by just wrapping the `define-impl` macro. For details, visit the docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
 
-## Numpy-like APIs
+## All in the simple APIs
 
-Except that you need to call `proceed` or `build` at the end of the operation, cl-waffe2 APIs was made to be similar to Numpy. In addition, cl-waffe2 is intended to work with REPL. (ease of debugging needs to be improved though...)
+Except that you need to call `proceed` or `build` when you need results, cl-waffe2 APIs are designed to be high-level and eazy to use likewise popular libraries: Numpy/PyTorch. Also, this is intended to work with REPL.
+
+```lisp
+(!add (randn `(3 3)) (randn `(3 3)))
+(!matmul (ax+b `(3 5) 1 0) (!t (ax+b `(3 5) 1 0)))
+(let ((a (parameter (ax+b `(3 5 2) 1 0))))
+    (proceed-backward
+        (!mean
+            (!permute a (torch-order 0 2 1))))) ;; the equivalent to (!permute a 2 0 1)
+```
 
 See also: https://hikettei.github.io/cl-waffe2/base-impl/
 
-## All in the simple APIs
-
-The combination of delay evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
+cl-waffe2 can trace the network everywhere. the combination of a lazy evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
 
 ```lisp
 (defsequence MLP-Sequence (in-features hidden-dim out-features
@@ -208,6 +215,8 @@ The combination of delay evaluation and node definition mechanisms allows all th
          (LinearLayer hidden-dim out-features)
          (asnode #'!softmax))
 ```
+
+will produce:
 
 ```lisp
 (MLP-Sequence 784 512 256)
@@ -253,7 +262,10 @@ The combination of delay evaluation and node definition mechanisms allows all th
 # Experiments
 
 (TODO)
+
 Training time/accuracy with MNIST/Cifar-10 by MLP/CNN compared to Keras/Tensorflow/PyTorch.
+
+Note that training speed still has room for improvement!
 
 # References/Acknowledgments
 
