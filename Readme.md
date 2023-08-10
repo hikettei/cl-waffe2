@@ -39,7 +39,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
     - Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)
     - For experiments, implement a backend that runs at minimum speed: `LispTensor`.
 
-- [ ] Construct JIT Compiler from cl-waffe2 to `C++`. and fuse operations and loops.
+- [ ] Construct JIT Compiler from cl-waffe2 to `C`. and fuse operations and loops. + Multi-Threading (work in progress)
 
 - [ ] Add basic computation nodes for controling nodes: `MapNode` `IfNode` etc...
 
@@ -47,14 +47,16 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ## Frontend and Backend Separation
 
-In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations (i.e.: the definition of `AbstractNode` by using the `defnode` macro), from each `cl-waffe2/backends` package, which gives its implementation (e.g.: `define-impl` macro). Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of `AbstractTensor` to use. This allows users to implement backend re-implementations and extensions of instructions without any constraints.
+In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations (i.e.: the definition of `AbstractNode` by using the `defnode` macro), from each `cl-waffe2/backends` package, which gives its implementation (e.g.: `define-impl` macro). Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of `AbstractTensor` to use. This allows users to implement existing backend (or create a new one) re-implementations and extensions of instructions without any constraints.
+
+For example, an AbstractTensor that works with Common Lisp standard arrays can be created as follows:
 
 ```lisp
 ;; MyTensor extends CPUTensor extends AbstractTensor
 (defclass MyTensor (CPUTensor) nil)
 ```
 
-Which devices the function is to operate on can be declared along with its priority using the `with-devices` macro.
+The `with-devices` macro is used to declare the devices to be used along with their priority, computation nodes build based on it.
 
 ```lisp
 (with-devices (MyTensor CPUTensor)
@@ -81,15 +83,19 @@ Which devices the function is to operate on can be declared along with its prior
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-This helps Common Lisp, a dynamically typed language, to use information such as matrix rank and shape in advance, to detect shape errors before performing operations, and as a common specification when users extend new backends.
+This helps Common Lisp, a dynamically typed language, to use valuable information such as matrix rank and shape in advance, to detect shape errors before performing operations, or to generate optimal codes.
 
 See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
 
-## (Extensible) JIT Compiler
+## Lazy-evaluation and Extensible JIT Compiler
 
-cl-waffe2, the lazy-evaluation first library, provides a `JITCPUTensor` backend which compiles to optimized C code just in time. It vectorizes codes and fuses several operations. User Extensible JIT Compilers are specified in the specification. Of course, cl-waffe2 also provides the graph-level optimization, for example: `In-place mutation`, `Computing View Offsets in Advance` `Inlining operations`, `no runtime allocations`, and `(TO BE) multithreading`.
+cl-waffe2 is a lazy-evaluation first framework in which each computation node is represented by `AbstractNode` and `S-expression` with the strong restrict of `A <- Op(B, C, ...)`. That is, cl-waffe2 specializes on computing DAGs in a efficient way (e.g.: in-place mutation, computing offsets in advance, no runtime allocation, and more...). In addition to that, it allows the creation of compilers to external languages by extending the device, making it easy to create compilers to C (provides as `JITCPUTensor` in standard) and CUDA.
 
-See also: https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
+See also:
+
+- https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
+- https://hikettei.github.io/cl-waffe2/vm/
+- https://hikettei.github.io/cl-waffe2/cpu-jit-tensor-backend/
 
 ## Powerful Network Description Features
 
