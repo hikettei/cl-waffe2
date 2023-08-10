@@ -31,7 +31,6 @@
   "Reading a IR of tensor, the function returns a corresponding instruction"
   (declare (type AbstractTensor tensor))
 
-  ;;(reset-compiled-function-cache!)
   (cond
     ((null (tensor-backward tensor))
      ;; Has reached out the end of nodes.
@@ -101,8 +100,7 @@
   (sort-and-prune-for-backward toplevel dout-toplevel leaves))
 
 ;; When doing forward: reverse it in advance
-(defun compile-forward-and-backward (toplevel &key
-						(need-backward t))
+(defun compile-forward-and-backward (toplevel &key (need-backward t))
   ""
   (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-forward leaves)
@@ -114,8 +112,13 @@
 		   (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
 		   (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
 	   (backward-iseq
-	     (when need-backward
+	     (when (and need-backward
+			(ancestor-param-p toplevel))
 	       (trace-backward-network toplevel leaves dout))))
+
+      ;; (print (reverse iseq-forward))
+      ;; (print backward-iseq)
+      ;; (print backward-iseq)
 
       (values (reverse iseq-forward) backward-iseq leaves))))
 

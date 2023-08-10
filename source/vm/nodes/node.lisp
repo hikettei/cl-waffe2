@@ -373,7 +373,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 	 (not force-move)
 	 (movetensor-p (tensor-backward bw-node)))
 	bw-node
-	(with-shape-checkpoint (:moving nil)
+	(with-shape-checkpoint (:moving (tensor-backward bw-node))
 	  (let ((out (cl-waffe2/base-impl:!move
 		      (select-return-place place argn nth-trying)
 		      bw-node

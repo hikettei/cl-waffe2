@@ -42,7 +42,6 @@
 ;;       sin               sin
 ;;        |                 |
 ;;       out               out
-
 (defun sort-and-prune-for-backward (toplevel dout-toplevel leaves)
   (declare (type AbstractTensor toplevel))
   (let ((seen nil))
@@ -59,7 +58,7 @@
 			  `(,@(expand-gradient-adder var prev-gradient)))))
 		     (let ((bw (apply
 				#'cl-waffe2/vm.nodes:compiler-expand-backward
-				(tensor-backward var)
+			        (tensor-backward var)
 				prev-gradient
 				(tensor-variables var)))
 			   (above-sort nil))
@@ -81,5 +80,4 @@
 					     ,@result))))))
 		       above-sort)))))
       (top-sort-helper toplevel dout-toplevel))))
-
 

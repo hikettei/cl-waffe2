@@ -214,10 +214,16 @@ This function is also used to adjust memory alignment of tensor."
 		 (setf (tensor-vec ,viewed-tensor) (tensor-vec ,old))
 		 ,viewed-tensor))
 	     :backward
+	     ;; [FixME] Slicing backward won't works
+	     ;; e.g.:
+	     ;; randn(3 3)[0:2, t].backward()
+	     ;; (1 1 1)
+	     ;; (1 1 1)
+	     ;; (0.1 0.2 0.3) <- should be filled with 0
 	     ((self dout dx dy) ;; (viewed-tensor old)
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
-		     (res (!move dx (apply #'!view dout inp-sub))))
+		     (res (!move dx (apply #'!view dout inp-sub))))		
 		(values nil (apply #'!view res out-sub)))))
 
 
