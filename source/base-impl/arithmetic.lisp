@@ -315,14 +315,36 @@ The function ~a computes following operation with calling `~a`, returning a new 
 ;; Scalar-And-Scalar Defnode And Functions.
 ;; ===============================================================
 
-(macrolet ((define-sas-node (name)
+(macrolet ((define-sas-node (name sv4bw backward)
 	     `(defnode (,name (myself)
 			:out-scalar-p t
-			:where (A[scal] B[scal] -> A[scal] where scal = 1)))))
-  (define-sas-node ScalarAndScalarAdd)
-  (define-sas-node ScalarAndScalarSub)
-  (define-sas-node ScalarAndScalarMul)
-  (define-sas-node ScalarAndScalarDiv))
+			:save-for-backward ',sv4bw
+			:where (A[scal] B[scal] -> A[scal] where scal = 1)
+			:backward ,backward))))
+  (define-sas-node ScalarAndScalarAdd
+      (nil nil)
+    ((self dout x y)
+     (declare (ignore x y))
+     (values dout dout)))
+  (define-sas-node ScalarAndScalarSub
+      (nil nil)
+    ((self dout x y)
+     (declare (ignore x y))
+     (values dout (!sas-mul -1 dout))))
+  (define-sas-node ScalarAndScalarMul
+      (t t)
+    ((self dout x y)
+     (values (!sas-mul y dout)
+	     (!sas-mul x dout))))
+  (define-sas-node ScalarAndScalarDiv
+      (t t)
+    ((self dout dx dy)
+     ;; ∂/∂x = 1/y
+     ;; ∂/∂y = -x/y^2
+     (values (!sas-div dout dy)
+	     (!sas-div
+	      (!sas-mul dx (!sas-mul -1 dout))
+	      (!square dy))))))
 
 (define-impl (ScalarAndScalarAdd :device ScalarTensor)
 	     :forward ((self x y)
@@ -332,10 +354,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
 			   (setf (the ,t1 (tensor-vec ,x))
 				 (+ (the ,t1 (tensor-vec ,x))
 				    (the ,t2 (tensor-vec ,y))))
-			   ,x)))
-	     :backward ((self dout dx dy)
-			(declare (ignore dx dy))
-			(values dout dout)))
+			   ,x))))
 
 (define-impl (ScalarAndScalarSub :device ScalarTensor)
 	     :forward ((self x y)
@@ -345,10 +364,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
 			   (setf (the ,t1 (tensor-vec ,x))
 				 (- (the ,t1 (tensor-vec ,x))
 				    (the ,t2 (tensor-vec ,y))))
-			   ,x)))
-	     :backward ((self dout dx dy)
-			(declare (ignore dx dy))
-			(values dout (!sas-mul -1 dout))))
+			   ,x))))
 
 (define-impl (ScalarAndScalarMul :device ScalarTensor)
 	     :save-for-backward (t t)
@@ -360,10 +376,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
 				 (the ,t1
 				      (* (the ,t1 (tensor-vec ,x))
 					 (the ,t2 (tensor-vec ,y)))))
-			   ,x)))
-	     :backward ((self dout dx dy)
-			(values (!sas-mul dy dout)
-				(!sas-mul dx dout))))
+			   ,x))))
 
 (define-impl (ScalarAndScalarDiv :device ScalarTensor)
 	     :save-for-backward (t t)
@@ -374,15 +387,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
 			   (setf (the ,t1 (tensor-vec ,x))
 				 (/ (the ,t1 (tensor-vec ,x))
 				    (the ,t2 (tensor-vec ,y))))
-			   ,x)))
-	     :backward ((self dout dx dy)
-			;;
-			;; ∂/∂x = 1/y
-			;; ∂/∂y = -x/y^2
-			(values (!sas-div dout dy)
-				(!sas-div
-				 (!sas-mul dx (!sas-mul -1 dout))
-				 (!square dy)))))
+			   ,x))))
 
 (macrolet ((define-sas-op (name node-name op)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)

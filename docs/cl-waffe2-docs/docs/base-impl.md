@@ -473,6 +473,8 @@ Note that the case when only the last two aces are subject to be swapped, we ret
 
 Tips: If the first element of `order` arguments is a function, the rest arguments of `order` is overwritten with its result. that is, `order` become the value of `(funcall (car order) (tensor-permute-order tensor))` and can be used like: `(!permute tensor (compose #'reverse #'tensor-permute-order))` to reverse all permution for example.
 
+Tips: `(!permute tensor (torch-order 2 1 0))` to use the same notation to pytorch.
+
 ## [function] !reshape
 
 ```

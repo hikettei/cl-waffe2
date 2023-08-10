@@ -3,6 +3,14 @@
 
 ;; node to apis ha wakeru?
 
+(with-page *vm* "cl-waffe2 VM"
+  (macrolet ((with-op-doc (name type &body body)
+	       `(progn
+		  (placedoc ,name ,type)
+		  ,@body)))
+    (with-op-doc #'cl-waffe2/vm:disassemble-waffe2-ir 'function)
+    (with-op-doc #'cl-waffe2/vm:compile-forward-and-backward 'function)
+    (with-op-doc #'cl-waffe2/vm:accept-instructions 'function)))
 
 (with-page *base-impl-nodes* "Standard Nodes"
   (macrolet ((nodedoc (name)

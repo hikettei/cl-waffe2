@@ -17,6 +17,10 @@
    #:MulNode
    #:DivNode
    #:ScalarMul
+   #:ScalarAndScalarAdd
+   #:ScalarAndScalarSub
+   #:ScalarAndScalarMul
+   #:ScalarAndScalarDiv
    #:MatmulNode
    #:InverseTensorNode
    #:trans-a?

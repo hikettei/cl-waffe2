@@ -81,6 +81,7 @@
   
   (when (and end-of-node-p *caching-c-source*)
     (load-foreign-function *caching-c-source*)
+    (setf *seen* nil)
     (setf *caching-c-source* nil)))
 
 ;; Note: eval it when called with vm-build?
@@ -141,7 +142,8 @@
 	       ,(let* ((all-tensors `(,@scalars ,@tensors))
 		       (latest-result (find (tensor-id variable) all-tensors :test #'eql :key #'tensor-id)))
 		  (when latest-result
-		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))))))
+		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))
+	       (read-result ,variable)))))
       nil))
 
 (defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))

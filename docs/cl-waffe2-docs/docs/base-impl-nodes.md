@@ -363,8 +363,7 @@ For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for ex
                 (let ((out
                        (make-input (shape dx) nil create-from dout dtype
                                    (dtype dx) order (order dx))))
-                  (with-instant-kernel out
-                    `(progn (setf (tensor-vec ,out) (tensor-vec ,dout)) ,out)))
+                  (!move out dout force t))
                 (!copy dout force t)))))
    (values nil dy-out)))
 ```
