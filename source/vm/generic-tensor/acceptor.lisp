@@ -686,7 +686,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 		  (when use-setinput-form set-input-forms))
 	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
-  (defmethod print-object ((model Compiled-Composite) stream)
+(defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a
     backward: ~a
@@ -698,4 +698,99 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 	  (compiled-backward model)
 	  (compiled-variables model)))
 
-;; set variable
+#|
+;; ================================================
+;;  cl-waffe2 VM(old)
+;;  should be removed in the future release...
+;;  This is a mix of three ways to accept cl-waffe2 nodes: proceed(interpreter), build(cl-waffe2 IR, compiling/working the fastest), build-inlined-proceed-form(old)
+;; ================================================
+
+(defun compile-inlined-forward-form (toplevel &key (compile-mode :default))
+  (declare (type compile-option-t compile-mode))
+  ;; Pruning unused nodes.
+  (optimize-computation-node! toplevel :speed 1)
+  
+  (let* ((*node-parameters-tmp*)
+	 (*kernel-storeroom*)
+	 (body (compile-forward-chain toplevel))
+	 (inputs (loop for var in *node-parameters-tmp*
+		       if (user-input-p var)
+			 collect var))
+	 (set-input-forms))
+
+    (mapc #'(lambda (input)
+	      (loop for shape in (shape input)
+		    for kth-dim upfrom 0
+		    if (symbolp shape)
+		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
+	  inputs)
+
+    (values
+     (compile nil
+	      `(lambda ()
+		 (declare ,(compile-option-form compile-mode))
+		 ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
+		 (state-reset! ,toplevel)
+		 ,(place-cached-kernels
+		   `(with-adjustable-symbols (,@set-input-forms)
+		      ,body))))
+     *node-parameters-tmp*
+     set-input-forms)))
+
+(defun compile-inlined-backward-form (toplevel &key (compile-mode :default) (set-input-forms))
+  (declare (type compile-option-t compile-mode))
+
+  
+  (when (some #'symbolp (shape toplevel))
+    (error "Can't construct backward, because the shape of tensor is undetermined: ~a
+
+Try again with: (with-no-grad ...) " (shape toplevel)))
+  
+  (let* ((*kernel-storeroom*)
+	 (*node-parameters-tmp*)
+	 (out (if (scalar-p toplevel)
+		  (make-tensor 1
+			       :dtype (dtype toplevel)
+			       :order (order toplevel))
+		  (make-tensor (shape toplevel)
+			       :dtype (dtype toplevel)
+			       :order (order toplevel)
+			       :initial-element 1)))
+	 (body `(let ((,(tensor-id out) ,out))
+		  (declare (ignorable ,(tensor-id out))
+			   ,(compile-option-form compile-mode))
+		  
+		  (let ((*no-grad* t)
+			(*calling-backward-mode* t))
+		    ,(if set-input-forms
+			 `(with-adjustable-symbols (,@set-input-forms)
+			    ,(compile-backward-chain toplevel out))
+			 (compile-backward-chain toplevel out)))
+		  t)))
+    (compile nil `(lambda ()
+		    ;(state-reset-bw! ,out)
+		    ;(state-reset-bw! ,toplevel)
+		    ;,@(map 'list #'(lambda (x) `(state-reset-bw! ,x)) *node-parameters-tmp*)
+		    ,(place-cached-kernels body)))))
+
+(defun build-inlined-proceed-form (toplevel
+				   &key
+				     (construct-backward? (not *no-grad*))
+				     (compile-mode :fastest)
+				     (use-setinput-form nil)) 
+  (declare (type AbstractTensor toplevel))
+  
+  (multiple-value-bind (forward-kernel vars set-input-forms) (compile-inlined-forward-form toplevel :compile-mode compile-mode)
+
+    ;; Vars - All Variables (including ChainTMP) used in forward.
+    (prog1
+	(values (make-instance 'Compiled-Composite
+			       :variables  (construct-variables-table vars)
+			       :compiled-forward forward-kernel
+			       :compiled-backward (when construct-backward?
+						    (compile-inlined-backward-form toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
+		(when use-setinput-form set-input-forms))
+      (mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*))))
+
+|#
+
