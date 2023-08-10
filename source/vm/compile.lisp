@@ -104,7 +104,7 @@
 
     ;; [TODO] Testing the line below carefully:
     ;; In-place mutation is working??
-    ;; (apply-in-place-mutation! iseq-forward leaves)
+    (apply-in-place-mutation! iseq-forward leaves)
 
     (let* ((dout (if (scalar-p toplevel)
 		     (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
