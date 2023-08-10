@@ -187,6 +187,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../vm/">cl-waffe2/vm</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
                 </li>
               </ul>
@@ -491,7 +495,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1671 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP987 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -504,10 +508,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {538CE17B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5358A03B}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5392662B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {537215CB}&gt;
 
 += [Tensors in the computation node] =======+
 
@@ -521,7 +525,7 @@ Variables:
    X   |  (A 10) | 
 
 
- - The number of tmp variables : 6
+ - The number of tmp variables : 3
  - The number of parameters    : 0
 +========================================+
 &gt;)
@@ -576,7 +580,7 @@ a=1, b=2 =&gt; NIL</p>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../nodes/" class="btn btn-neutral float-left" title="cl-waffe2/vm.nodes"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../base-impl/" class="btn btn-neutral float-right" title="[Functions] cl-waffe2/base-impl">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../vm/" class="btn btn-neutral float-right" title="cl-waffe2/vm">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -602,7 +606,7 @@ a=1, b=2 =&gt; NIL</p>
       <span><a href="../nodes/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../base-impl/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../vm/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

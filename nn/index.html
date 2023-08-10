@@ -69,6 +69,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../vm/">cl-waffe2/vm</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
                 </li>
               </ul>
@@ -227,13 +231,13 @@ ReLU(x) = max(x, 0)
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1762 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1070 
   :vec-state [computed]
-  ((0.54795235  1.6235474   0.5676201   ~ -0.0        0.052415702 0.592523)                   
-   (0.3905703   0.909697    -0.0        ~ 0.7793865   1.1814722   0.70569587)   
+  ((-0.0        -0.0        -0.0        ~ 0.40561935  0.115193695 0.66292197)                   
+   (-0.0        -0.0        -0.0        ~ -0.0        1.7522626   -0.0)   
                 ...
-   (-0.0        -0.0        -0.0        ~ -0.0        0.43317536  0.95860183)
-   (-0.0        0.33624887  -0.0        ~ 2.351149    -0.0        -0.0))
+   (-0.0        -0.0        0.9096082   ~ 0.7867626   -0.0        0.22214448)
+   (-0.0        -0.0        -0.0        ~ -0.0        -0.0        -0.0))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -248,13 +252,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 <h3 id="example_1">Example</h3>
 <pre><code class="language-lisp">(proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1923 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1314 
   :vec-state [computed]
-  ((0.3162559   0.87631273  0.5881605   ~ 0.18262608  0.42268223  0.11140414)                   
-   (0.30611554  0.73730034  0.44554135  ~ 0.660299    0.6358208   0.63479567)   
-                ...
-   (0.2109514   0.23612864  0.69080406  ~ 0.32275796  0.7881756   0.8983441)
-   (0.47323906  0.6907624   0.41804832  ~ 0.486416    0.71819955  0.7666125))
+  ((0.1272022  0.43307915 0.8074486  ~ 0.76300204 0.52910817 0.5744591)                  
+   (0.66711944 0.48927152 0.7403083  ~ 0.5147265  0.43981186 0.5560996)   
+               ...
+   (0.40799212 0.76683646 0.47810072 ~ 0.272411   0.6820497  0.36251238)
+   (0.37265834 0.9108884  0.33976826 ~ 0.5162964  0.4790535  0.4126613))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -271,9 +275,9 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = abs(x_n - y_n)
 <h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP2152 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1649 
   :vec-state [computed]
-  ((1.0249314))
+  ((1.1078815))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -290,9 +294,9 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
 <h3 id="example_3">Example</h3>
 <pre><code class="language-lisp">(proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP2349 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1926 
   :vec-state [computed]
-  ((1.9567565))
+  ((1.3670301))
   :facet :input
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
@@ -348,7 +352,7 @@ y = xA^\intercal + b
 <h3 id="example_4">Example</h3>
 <pre><code class="language-lisp">(LinearLayer 10 5)
 
-&lt;Composite: LINEARLAYER{W2353}(
+&lt;Composite: LINEARLAYER{W1933}(
     &lt;Input : ((~ BATCH-SIZE 10)) -&gt; Output: ((~ BATCH-SIZE 5))&gt;
 
     WEIGHTS -&gt; (5 10)
@@ -410,7 +414,7 @@ y = xA^\intercal + b
 <h3 id="example_5">Example</h3>
 <pre><code class="language-lisp">(Conv2D 3 5 '(3 3))
 
-&lt;Composite: CONV2D{W2359}(
+&lt;Composite: CONV2D{W1943}(
     &lt;Input : ((N 3 H_IN W_IN)) -&gt; Output: ((N 5 -1 -1))&gt;
 
     WEIGHT -&gt; (5 3 3 3)
@@ -418,26 +422,21 @@ y = xA^\intercal + b
 )&gt;
 </code></pre>
 <h2 id="model-maxpool2d">[model] MAXPOOL2D</h2>
-<pre><code>(maxpool2d KERNEL-SIZE &amp;KEY (STRIDE 1) (PADDING 0) (DILATION 1) &amp;AUX (STRIDE
-                                                            (MAYBE-TUPLE STRIDE
-                                                                         'STRIDE)) (PADDING
-                                                                                    (MAYBE-TUPLE
-                                                                                     PADDING
-                                                                                     'PADDING)) (DILATION
-                                                                                                 (MAYBE-TUPLE
-                                                                                                  DILATION
-                                                                                                  'DILATION)))
+<pre><code>(maxpool2d KERNEL-SIZE &amp;KEY (STRIDE KERNEL-SIZE) (PADDING 0) &amp;AUX (STRIDE
+                                                         (MAYBE-TUPLE STRIDE
+                                                                      'STRIDE)) (PADDING
+                                                                                 (MAYBE-TUPLE
+                                                                                  PADDING
+                                                                                  'PADDING)))
 </code></pre>
 <p>which transformation of shapes are defined as:</p>
 <pre><code>(INPUT[N C H_IN W_IN] -&gt; OUTPUT[N C H_OUT W_OUT] WHERE H_OUT =
  (IF (NUMBERP H_IN)
-     (CONV-OUT-SIZE H_IN (CAR PADDING) (CAR DILATION) (CAR KERNEL-SIZE)
-      (CAR STRIDE))
+     (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE))
      -1)
  W_OUT =
  (IF (NUMBERP W_OUT)
-     (CONV-OUT-SIZE W_IN (SECOND PADDING) (SECOND DILATION)
-      (SECOND KERNEL-SIZE) (SECOND STRIDE))
+     (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
      -1))
 </code></pre>
 <h3 id="description_2">Description</h3>
@@ -446,29 +445,23 @@ y = xA^\intercal + b
 <p><code>kernel-size[list]</code> the size of window</p>
 <p><code>stride[fixnum or list]</code> the stride of window</p>
 <p><code>padding[fixnum or list]</code> adds 0 padding</p>
-<p><code>dilation[fixnum or list]</code> a parameter that controls the stride of elements in the window.</p>
 <p>Likewise <code>Conv2D</code>, these parameters can be set for both X and Y axis directions.</p>
 <h2 id="model-avgpool2d">[model] AVGPOOL2D</h2>
-<pre><code>(avgpool2d KERNEL-SIZE &amp;KEY (STRIDE 1) (PADDING 0) (DILATION 1) &amp;AUX (STRIDE
-                                                            (MAYBE-TUPLE STRIDE
-                                                                         'STRIDE)) (PADDING
-                                                                                    (MAYBE-TUPLE
-                                                                                     PADDING
-                                                                                     'PADDING)) (DILATION
-                                                                                                 (MAYBE-TUPLE
-                                                                                                  DILATION
-                                                                                                  'DILATION)))
+<pre><code>(avgpool2d KERNEL-SIZE &amp;KEY (STRIDE KERNEL-SIZE) (PADDING 0) &amp;AUX (STRIDE
+                                                         (MAYBE-TUPLE STRIDE
+                                                                      'STRIDE)) (PADDING
+                                                                                 (MAYBE-TUPLE
+                                                                                  PADDING
+                                                                                  'PADDING)))
 </code></pre>
 <p>which transformation of shapes are defined as:</p>
 <pre><code>(INPUT[N C H_IN W_IN] -&gt; OUTPUT[N C H_OUT W_OUT] WHERE H_OUT =
  (IF (NUMBERP H_IN)
-     (CONV-OUT-SIZE H_IN (CAR PADDING) (CAR DILATION) (CAR KERNEL-SIZE)
-      (CAR STRIDE))
+     (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE))
      -1)
  W_OUT =
  (IF (NUMBERP W_OUT)
-     (CONV-OUT-SIZE W_IN (SECOND PADDING) (SECOND DILATION)
-      (SECOND KERNEL-SIZE) (SECOND STRIDE))
+     (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
      -1))
 </code></pre>
 <h3 id="description_3">Description</h3>
@@ -477,7 +470,6 @@ y = xA^\intercal + b
 <p><code>kernel-size[list]</code> the size of window</p>
 <p><code>stride[fixnum or list]</code> the stride of window</p>
 <p><code>padding[fixnum or list]</code> adds 0 padding</p>
-<p><code>dilation[fixnum or list]</code> a parameter that controls the stride of elements in the window.</p>
 <p>Likewise <code>Conv2D</code>, these parameters can be set for both X and Y axis directions.</p>
               
             </div>

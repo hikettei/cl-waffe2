@@ -69,6 +69,10 @@
                 </li>
               </ul>
               <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../vm/">cl-waffe2/vm</a>
+                </li>
+              </ul>
+              <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
                 </li>
               </ul>
@@ -840,8 +844,7 @@ A\gets{B}
                 (let ((out
                        (make-input (shape dx) nil create-from dout dtype
                                    (dtype dx) order (order dx))))
-                  (with-instant-kernel out
-                    `(progn (setf (tensor-vec ,out) (tensor-vec ,dout)) ,out)))
+                  (!move out dout force t))
                 (!copy dout force t)))))
    (values nil dy-out)))
 </code></pre>

@@ -68,6 +68,10 @@
                 <li class="toctree-l1"><a class="reference internal" href="../generic-tensor/">cl-waffe2/vm.generic-tensor</a>
                 </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../vm/">cl-waffe2/vm</a>
+                </li>
+              </ul>
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">[Functions] cl-waffe2/base-impl</a>
     <ul class="current">
@@ -1050,6 +1054,7 @@ Stride     :   4  1  2
 <p><code>tensor[AbstractTensor]</code> tensor to be permuted.</p>
 <p><code>order[list&lt;Fixnum&gt;]</code> An list of permutation. Note that <code>:~</code> could be used once in an order If needed. If the order and the number of dimensions of the entered tensor do not match, the part is automatically stored as long as <code>:~</code> is provided.</p>
 <p>Tips: If the first element of <code>order</code> arguments is a function, the rest arguments of <code>order</code> is overwritten with its result. that is, <code>order</code> become the value of <code>(funcall (car order) (tensor-permute-order tensor))</code> and can be used like: <code>(!permute tensor (compose #'reverse #'tensor-permute-order))</code> to reverse all permution for example.</p>
+<p>Tips: <code>(!permute tensor (torch-order 2 1 0))</code> to use the same notation to pytorch.</p>
 <h2 id="function-reshape">[function] !reshape</h2>
 <pre><code>(!reshape tensor &amp;rest shapes)
 </code></pre>
@@ -1900,7 +1905,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../generic-tensor/" class="btn btn-neutral float-left" title="cl-waffe2/vm.generic-tensor"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../vm/" class="btn btn-neutral float-left" title="cl-waffe2/vm"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../base-impl-nodes/" class="btn btn-neutral float-right" title="[Nodes] cl-waffe2/base-impl">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -1924,7 +1929,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href="../generic-tensor/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../vm/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../base-impl-nodes/" style="color: #fcfcfc">Next &raquo;</a></span>
