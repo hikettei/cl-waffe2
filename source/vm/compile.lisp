@@ -49,13 +49,39 @@
 (defun node-compile-into-vm (toplevel)
   (let ((instruction-seq)
 	(variable-leaves))
+
+    ;; sorted-node
+    ;; old
+    ;; ...
+    ;; new
     (loop with sorted-node = (topological-sort toplevel)
 	  for tensor in sorted-node
+	  for time fixnum upfrom 0
+	  
 	  if (null (tensor-backward tensor))
 	    do (push tensor variable-leaves) ;; Register as a variable
 	  else
-	    do (if (not (detach-p tensor))
-		   (push (ir->instruction tensor) instruction-seq)))
+	    do (when (not (detach-p tensor))
+		 (push (ir->instruction tensor) instruction-seq)
+
+		 ;; Ask each devices if applying JIT?
+		 (let ((result (cl-waffe2/vm.nodes::on-finalizing-compiling
+				(tensor-backward tensor)
+				tensor
+				(nth (1+ time) sorted-node)
+				nil)))
+		   (when result
+		     (push
+		      (make-wfop
+		       (compile
+			nil
+			`(lambda () ,result))
+		       tensor
+		       #'(lambda ()
+			   ;; Displaying the information
+			   (format nil "Foreign Function {~a}" (class-name (class-of tensor))))
+		       nil)
+		      instruction-seq)))))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
     (values instruction-seq variable-leaves)))

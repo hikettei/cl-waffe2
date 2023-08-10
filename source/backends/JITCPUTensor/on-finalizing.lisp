@@ -141,7 +141,8 @@
 	       ,(let* ((all-tensors `(,@scalars ,@tensors))
 		       (latest-result (find (tensor-id variable) all-tensors :test #'eql :key #'tensor-id)))
 		  (when latest-result
-		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))))))
+		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))
+	       (read-result ,variable)))))
       nil))
 
 (defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))
