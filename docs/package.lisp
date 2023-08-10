@@ -96,6 +96,7 @@
 (defparameter *base-impl* "")
 (defparameter *base-impl-nodes* "")
 
+(defparameter *vm* "")
 (defparameter *nn* "")
 (defparameter *optimizer* "")
 
@@ -117,6 +118,8 @@
 
   (write-scr "utils" *cl-waffe2-package*)
 
+  (write-scr "vm" *vm*)
+  
   (write-scr "lisp-tensor-backend"     *lisp-tensor-backend*)
   (write-scr "cpu-tensor-backend"      *cpu-tensor-backend*)
   (write-scr "cpu-jit-tensor-backend"  *cpu-jit-tensor-backend*)

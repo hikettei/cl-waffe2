@@ -34,6 +34,10 @@
   "
 ## [function] accept-instructions
 
+```lisp
+(accept-instructions iseq)
+```
+
 Evaluates generated cl-waffe2 IR sequence.
 
 `iseq[list]` an list of `WFInstruction`
