@@ -25,7 +25,7 @@
 cl-waffe2 is an experimental Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime.
 As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a framework dedicated to solving optimizing/inferencing deep neural network models using AD, all in Common Lisp. This framework is decoupled from other existing libraries by design, but interoperating with other libraries by efficient use of other libraries via with-facet macros and Common Lisp standard arrays is strongly recommended. I'm just focusing on efficient AD.
 
-Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid options to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function `build` will generate codes which are fully optimized for training models.
+Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid functions to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function `build` will generate codes which are fully optimized for training models.
 
 Portability to other devices is a major concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.
 
@@ -35,26 +35,28 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 - [x] Establish a baseline for generic matrix operations from zero for Common Lisp, as practised by Julia.
     - Four data structures used in deep learning: `AbstractNode` `AbstractTensor` `AbstractOptimizer`, and `AbstractTrainer`.
-    - Fundamental APIs: `View API/Broadcasting/Permution` `NDArrays with multidimensonal offsets` `build/proceed` `facet of tensors`
+    - Fundamental APIs: `View API/Broadcasting/Permution` `NDArrays with multidimensional offsets` `build/proceed` `facet of tensors`
     - Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)
     - For experiments, implement a backend that runs at minimum speed: `LispTensor`.
 
-- [ ] Construct JIT Compiler from cl-waffe2 to `C++`. and fuse operations and loops.
+- [ ] Construct JIT Compiler from cl-waffe2 to `C` (OK). and fuse operations and loops. + Multi-Threading (work in progress)
 
-- [ ] Add basic computation nodes for controling nodes: `MapNode` `IfNode` etc...
+- [ ] Add basic computation nodes for controlling nodes: `MapNode` `IfNode` etc...
 
-# Concepts/Features
+# Concepts
 
-## Multiple Backends Support
+## Frontend and Backend Separation
 
-All classes that are subtypes of `AbstractTensor` are tensors that cl-waffe2 can handle.
+In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations (i.e.: the definition of `AbstractNode` by using the `defnode` macro), from each `cl-waffe2/backends` package, which gives its implementation (e.g.: `define-impl` macro). Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of `AbstractTensor` to use. This allows users to implement existing backend (or create a new one) re-implementations and extensions of instructions without any constraints.
+
+For example, an AbstractTensor that works with Common Lisp standard arrays can be created as follows:
 
 ```lisp
 ;; MyTensor extends CPUTensor extends AbstractTensor
 (defclass MyTensor (CPUTensor) nil)
 ```
 
-Which devices the function is to operate on can be declared along with its priority using the `with-devices` macro.
+The `with-devices` macro is used to declare the devices to be used along with their priority, computation nodes build based on it.
 
 ```lisp
 (with-devices (MyTensor CPUTensor)
@@ -81,46 +83,60 @@ Which devices the function is to operate on can be declared along with its prior
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-This indicates not only is cl-waffe2 extensible to a wide variety of backends, but it also minimises the need to rewrite code to the greatest extent possible.
+This helps Common Lisp, a dynamically typed language, to use valuable information such as matrix rank and shape in advance, to detect shape errors before performing operations, or to generate optimal codes.
 
 See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
 
-## JIT Compiler
+## Lazy-evaluation and Extensible JIT Compiler
 
-Since `cl-waffe2` is a lazy-evaluation first framework, all operations need to be compiled at a certain point in time. It could be unintuitive for some users, however, at the same time, the cl-waffe2 compiler can obtain more information for optimisation.
+cl-waffe2 is a lazy-evaluation first framework in which each computation node is represented by `AbstractNode` and `S-expression` with the strong restrict of `A <- Op(B, C, ...)`. That is, cl-waffe2 specializes on computing DAGs in a efficient way (e.g.: in-place mutation, computing offsets in advance, no runtime allocation, and more...). In addition to that, it allows the creation of compilers to external languages by extending the device, making it easy to create compilers to C (provides as `JITCPUTensor` in standard) and CUDA.
 
-For example, the function `!add`  initially makes a copy of given arguments to avoid side effects, because `AddNode` is defined as in-place operation.
+See also:
+
+- https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
+- https://hikettei.github.io/cl-waffe2/vm/
+- https://hikettei.github.io/cl-waffe2/cpu-jit-tensor-backend/
+
+## Powerful Network Description Features
+
+The most fundamental unit of calculation in cl-waffe2 is `AbstractNode`, and it provides utilities such as combining and compositing them. For example, `call->` composes all given nodes while `call` can call a single node. Later, it can be named and defined by `defsequence`. Owing to the lazy evaluation of cl-waffe2, functions can be used like nodes via the `(asnode function &rest args)` macro.
 
 ```lisp
-(defun !add (x y)
-    (forward (AddNode) (!copy a) b))
+(call-> (randn `(1 32))
+        (LinearLayer 32 16)
+        (asnode #'!softmax)
+        (asnode #'!add 0.1))
 ```
 
-It is natural to think this !copy is just a waste of memory space in some conditions, but tracing nodes can detect unused copies and delete them.
+```lisp
+(defsequence CNN (&key
+            (out-channels1 4)
+	    (out-channels2 16))
+    (Conv2D 1 out-channels1 `(3 3))
+    (asnode #'!relu)     
+    (MaxPool2D `(2 2))
+    (Conv2D out-channels1 out-channels2 `(5 5))
+    (asnode #'!relu)
+    (MaxPool2D `(2 2))
+    (asnode #'!reshape t (* 16 4 4)) 
+    (LinearLayer (* 16 4 4) 10))
+```
 
-See also: https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
-
-There's more: `pre-computing of view offsets`  `generating optimal lisp code in real time for certain scalar operations` `memory-allocation in advance` `(TO BE) multi-threading`
-
-(TODO: Benchmarks on a different scales)
-
-## Tools for formulating networks
-
-`defmodel` defines a set of nodes.
+`Composite` is a data structure which binds several `AbstractNode`, defined by `defmodel`.
 
 ```lisp
 (defmodel (Softmax-Model (self)
        :where (X[~] -> OUT[~])
        :on-call-> ((self x)
-               (declare (ignore self))
-               (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
-                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
-                  (!div (!exp x1) z)))))
+                   (declare (ignore self))
+                   (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                          (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                      (!div (!exp x1) z)))))
 ```
 
-It can be used to lazily evaluate and compile later, or to define functions for immediate execution.
+`Composites` can be used not only as merely subroutines, but also for compiling several nodes in advance.
 
-`call` to keep using lazy-evaluation.
+For example, just use `call` to compile later.
 
 ```lisp
 (call (Softmax-Model) (randn `(10 10)))
@@ -145,12 +161,12 @@ It can be used to lazily evaluate and compile later, or to define functions for 
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-`define-composite-function` to define a function.
+Use the `define-composite-function` macro to define a function that works statically.
 
 ```lisp
 (define-composite-function (Softmax-Model) !softmax-static)
 
-(time (!softmax-static (randn `(10 10)))) ;; No compiling time for second and subsequent calls.
+(time (!softmax-static (randn `(10 10))))
 Evaluation took:
   0.000 seconds of real time
   0.000460 seconds of total run time (0.000418 user, 0.000042 system)
@@ -169,17 +185,24 @@ Evaluation took:
   :backward NIL}
 ```
 
-There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
+If you are not comfortable writing macros to create your own forward and backward propagation, there are various means, such as `define-static-node`. they're working by just wrapping the `define-impl` macro. For details, visit the docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
 
-## Numpy-like APIs
+## All in the simple APIs
 
-Except that you need to call `proceed` or `build` at the end of the operation, cl-waffe2 APIs was made to be similar to Numpy. In addition, cl-waffe2 is intended to work with REPL. (ease of debugging needs to be improved though...)
+Except that you need to call `proceed` or `build` when you need results, cl-waffe2 APIs are designed to be high-level and eazy to use likewise popular libraries: Numpy/PyTorch. Also, this is intended to work with REPL.
+
+```lisp
+(!add (randn `(3 3)) (randn `(3 3)))
+(!matmul (ax+b `(3 5) 1 0) (!t (ax+b `(3 5) 1 0)))
+(let ((a (parameter (ax+b `(3 5 2) 1 0))))
+    (proceed-backward
+        (!mean
+            (!permute a (torch-order 0 2 1))))) ;; the equivalent to (!permute a 2 0 1)
+```
 
 See also: https://hikettei.github.io/cl-waffe2/base-impl/
 
-## From the top level, it works simply.
-
-The combination of delay evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
+cl-waffe2 can trace the network everywhere. the combination of a lazy evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
 
 ```lisp
 (defsequence MLP-Sequence (in-features hidden-dim out-features
@@ -192,6 +215,8 @@ The combination of delay evaluation and node definition mechanisms allows all th
          (LinearLayer hidden-dim out-features)
          (asnode #'!softmax))
 ```
+
+will produce:
 
 ```lisp
 (MLP-Sequence 784 512 256)
@@ -234,6 +259,14 @@ The combination of delay evaluation and node definition mechanisms allows all th
 )>)>
 ```
 
+# Experiments
+
+(TODO)
+
+Training time/accuracy with MNIST/Cifar-10 by MLP/CNN compared to Keras/Tensorflow/PyTorch.
+
+Note that training speed still has room for improvement!
+
 # References/Acknowledgments
 
 
@@ -246,6 +279,8 @@ The combination of delay evaluation and node definition mechanisms allows all th
 
 - [Previous research of Petalisp](https://www.european-lisp-symposium.org/static/2018/heisig.pdf)
     - https://github.com/marcoheisig/Petalisp/tree/master
+
+- [Automatic differentiation in machine learning: a survey](https://arxiv.org/abs/1502.05767)
 
 - Some of the algorithms implemented within the source code are referenced below:
 
