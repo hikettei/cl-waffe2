@@ -13,12 +13,6 @@
 ;;    - Flatten
 ;;    - represetned by lambda expression
 
-;; TODO: 後で全て強制的にbuildを用いるモードでテストしないといけない
-;; Github Actionsではパラメーターを変えて二回テストしよう
-;; JITCPUTensorの仕様は後で変更しよう...
-;; TODO:
-;; Optimize:
-
 ;; X <- Y
 ;; Y <- X optim: => Z <- Y
 ;; Z <- Y
