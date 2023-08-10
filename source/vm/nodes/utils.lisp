@@ -9,7 +9,7 @@
 	  :where (A[~] -> A[~])
 	  :documentation ""))
 
-(define-impl (InstantKernelNode :device t)
+(define-impl (InstantKernelNode :device t :cache-when-compiled nil)
 	     :forward ((self x)
 		       (let ((result (funcall (instant-call-form self))))
 			 (setf (out-scalar-p self) (cl-waffe2/vm.generic-tensor:scalar-p x))

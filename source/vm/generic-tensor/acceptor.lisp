@@ -473,25 +473,24 @@ The definition/implementation of nodes could be invaild."
 
 ;; Toplevel
 ;; This is not for users.
-(defun compile-forward-kernel (toplevel
+(defun compile-forward-kernel (forward-iseq
+			       variables
 			       &key
 				 (compile-mode :default))
   "
 ## [function] compile-forward-kernel
 "
 
-  (declare (type compile-option-t compile-mode))
+  (declare (type compile-option-t compile-mode)
+	   (ignore compile-mode))
   ;; Pruning unused nodes.
-  (optimize-computation-node! toplevel :speed 1)
+  ;;(optimize-computation-node! toplevel :speed 1)
   
-  (let* ((*node-parameters-tmp*)
-	 (*kernel-storeroom*)
-	 (body (compile-forward-chain toplevel))
-	 (inputs (loop for var in *node-parameters-tmp*
+  (let* ((inputs (loop for var in variables
 		       if (user-input-p var)
 			 collect var))
 	 (set-input-forms))
-
+    ;; set-input-form .. collects adjustable shapes
     (mapc #'(lambda (input)
 	      (loop for shape in (shape input)
 		    for kth-dim upfrom 0
@@ -502,13 +501,9 @@ The definition/implementation of nodes could be invaild."
     (values
      (compile nil
 	      `(lambda ()
-		 (declare ,(compile-option-form compile-mode))
-		 ,@(map 'list #'(lambda (x) `(state-reset! ,x)) *node-parameters-tmp*)
-		 (state-reset! ,toplevel)
-		 ,(place-cached-kernels
-		   `(with-adjustable-symbols (,@set-input-forms)
-		      ,body))))
-     *node-parameters-tmp*
+		 (with-adjustable-symbols (,@set-input-forms)
+		   (cl-waffe2/vm:accept-instructions ',forward-iseq))))
+     variables
      set-input-forms)))
 
 ;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed. <- Do it at toplevel
@@ -518,8 +513,9 @@ The definition/implementation of nodes could be invaild."
   `(progn
      ,(compile-forward-chain toplevel)))
 
-(defun compile-backward-kernel (toplevel &key (compile-mode :default) (set-input-forms))
-  (declare (type compile-option-t compile-mode))
+(defun compile-backward-kernel (toplevel backward-iseq &key (compile-mode :default) (set-input-forms))
+  (declare (type compile-option-t compile-mode)
+	   (ignore compile-mode))
 
   
   (when (some #'symbolp (shape toplevel))
@@ -527,32 +523,11 @@ The definition/implementation of nodes could be invaild."
 
 Try again with: (with-no-grad ...) " (shape toplevel)))
   
-  (let* ((*kernel-storeroom*)
-	 (*node-parameters-tmp*)
-	 (out (if (scalar-p toplevel)
-		  (make-tensor 1
-			       :dtype (dtype toplevel)
-			       :order (order toplevel))
-		  (make-tensor (shape toplevel)
-			       :dtype (dtype toplevel)
-			       :order (order toplevel)
-			       :initial-element 1)))
-	 (body `(let ((,(tensor-id out) ,out))
-		  (declare (ignorable ,(tensor-id out))
-			   ,(compile-option-form compile-mode))
-		  
-		  (let ((*no-grad* t)
-			(*calling-backward-mode* t))
-		    ,(if set-input-forms
-			 `(with-adjustable-symbols (,@set-input-forms)
-			    ,(compile-backward-chain toplevel out))
-			 (compile-backward-chain toplevel out)))
-		  t)))
-    (compile nil `(lambda ()
-		    ;(state-reset-bw! ,out)
-		    ;(state-reset-bw! ,toplevel)
-		    ;,@(map 'list #'(lambda (x) `(state-reset-bw! ,x)) *node-parameters-tmp*)
-		    ,(place-cached-kernels body)))))
+  (let* ((body (if set-input-forms
+		   `(with-adjustable-symbols (,@set-input-forms)
+		      (cl-waffe2/vm:accept-instructions ',backward-iseq))
+		   `(cl-waffe2/vm:accept-instructions ',backward-iseq))))
+    (compile nil `(lambda () ,body t))))
 
 ;; ==========================================
 ;; General-Purpose APIs
@@ -697,19 +672,19 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 `compile-mode`[compile-mode-t] an keyword to indicate compiling option.
 "
   (declare (type AbstractTensor toplevel))
-  
-  (multiple-value-bind (forward-kernel vars set-input-forms) (compile-forward-kernel toplevel :compile-mode compile-mode)
 
-    ;; Vars - All Variables (including ChainTMP) used in forward.
-    (prog1
-	(values (make-instance 'Compiled-Composite
-			       :variables  (construct-variables-table vars)
-			       :compiled-forward forward-kernel
-			       :compiled-backward (when construct-backward?
-						    (compile-backward-kernel toplevel :compile-mode compile-mode :set-input-forms set-input-forms)))
-		
-		(when use-setinput-form set-input-forms))
-      (mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*))))
+  (multiple-value-bind (fw-iseq bw-iseq variables) (cl-waffe2/vm:compile-forward-and-backward toplevel :need-backward construct-backward?)
+    (multiple-value-bind (fw-function variables set-input-forms) (compile-forward-kernel fw-iseq variables :compile-mode compile-mode)
+      ;; Vars - All Variables (including ChainTMP) used in forward.
+      (prog1
+	  (values (make-instance 'Compiled-Composite
+				 :variables  (construct-variables-table variables)
+				 :compiled-forward fw-function
+				 :compiled-backward (when construct-backward?
+						      (compile-backward-kernel toplevel bw-iseq :compile-mode compile-mode :set-input-forms set-input-forms)))
+		  
+		  (when use-setinput-form set-input-forms))
+	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
@@ -723,4 +698,3 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 	  (compiled-backward model)
 	  (compiled-variables model)))
 
-;; set variable

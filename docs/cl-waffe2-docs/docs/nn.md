@@ -13,13 +13,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1762 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1070 
   :vec-state [computed]
-  ((0.54795235  1.6235474   0.5676201   ~ -0.0        0.052415702 0.592523)                   
-   (0.3905703   0.909697    -0.0        ~ 0.7793865   1.1814722   0.70569587)   
+  ((-0.0        -0.0        -0.0        ~ 0.40561935  0.115193695 0.66292197)                   
+   (-0.0        -0.0        -0.0        ~ -0.0        1.7522626   -0.0)   
                 ...
-   (-0.0        -0.0        -0.0        ~ -0.0        0.43317536  0.95860183)
-   (-0.0        0.33624887  -0.0        ~ 2.351149    -0.0        -0.0))
+   (-0.0        -0.0        0.9096082   ~ 0.7867626   -0.0        0.22214448)
+   (-0.0        -0.0        -0.0        ~ -0.0        -0.0        -0.0))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -42,13 +42,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1923 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1314 
   :vec-state [computed]
-  ((0.3162559   0.87631273  0.5881605   ~ 0.18262608  0.42268223  0.11140414)                   
-   (0.30611554  0.73730034  0.44554135  ~ 0.660299    0.6358208   0.63479567)   
-                ...
-   (0.2109514   0.23612864  0.69080406  ~ 0.32275796  0.7881756   0.8983441)
-   (0.47323906  0.6907624   0.41804832  ~ 0.486416    0.71819955  0.7666125))
+  ((0.1272022  0.43307915 0.8074486  ~ 0.76300204 0.52910817 0.5744591)                  
+   (0.66711944 0.48927152 0.7403083  ~ 0.5147265  0.43981186 0.5560996)   
+               ...
+   (0.40799212 0.76683646 0.47810072 ~ 0.272411   0.6820497  0.36251238)
+   (0.37265834 0.9108884  0.33976826 ~ 0.5162964  0.4790535  0.4126613))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -75,9 +75,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2152 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1649 
   :vec-state [computed]
-  ((1.0249314))
+  ((1.1078815))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -102,9 +102,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2349 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1926 
   :vec-state [computed]
-  ((1.9567565))
+  ((1.3670301))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -196,7 +196,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W2353}(
+<Composite: LINEARLAYER{W1933}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -284,7 +284,7 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W2359}(
+<Composite: CONV2D{W1943}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)
@@ -295,15 +295,12 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ## [model] MAXPOOL2D
 
 ```
-(maxpool2d KERNEL-SIZE &KEY (STRIDE 1) (PADDING 0) (DILATION 1) &AUX (STRIDE
-                                                            (MAYBE-TUPLE STRIDE
-                                                                         'STRIDE)) (PADDING
-                                                                                    (MAYBE-TUPLE
-                                                                                     PADDING
-                                                                                     'PADDING)) (DILATION
-                                                                                                 (MAYBE-TUPLE
-                                                                                                  DILATION
-                                                                                                  'DILATION)))
+(maxpool2d KERNEL-SIZE &KEY (STRIDE KERNEL-SIZE) (PADDING 0) &AUX (STRIDE
+                                                         (MAYBE-TUPLE STRIDE
+                                                                      'STRIDE)) (PADDING
+                                                                                 (MAYBE-TUPLE
+                                                                                  PADDING
+                                                                                  'PADDING)))
 ```
 
 
@@ -311,13 +308,11 @@ which transformation of shapes are defined as:
 ```
 (INPUT[N C H_IN W_IN] -> OUTPUT[N C H_OUT W_OUT] WHERE H_OUT =
  (IF (NUMBERP H_IN)
-     (CONV-OUT-SIZE H_IN (CAR PADDING) (CAR DILATION) (CAR KERNEL-SIZE)
-      (CAR STRIDE))
+     (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE))
      -1)
  W_OUT =
  (IF (NUMBERP W_OUT)
-     (CONV-OUT-SIZE W_IN (SECOND PADDING) (SECOND DILATION)
-      (SECOND KERNEL-SIZE) (SECOND STRIDE))
+     (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
      -1))
 ```
 ### Description
@@ -333,23 +328,18 @@ Applies a 2D max pooling over an input signal composed of several input planes.
 
 `padding[fixnum or list]` adds 0 padding
 
-`dilation[fixnum or list]` a parameter that controls the stride of elements in the window.
-
 Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 
 
 ## [model] AVGPOOL2D
 
 ```
-(avgpool2d KERNEL-SIZE &KEY (STRIDE 1) (PADDING 0) (DILATION 1) &AUX (STRIDE
-                                                            (MAYBE-TUPLE STRIDE
-                                                                         'STRIDE)) (PADDING
-                                                                                    (MAYBE-TUPLE
-                                                                                     PADDING
-                                                                                     'PADDING)) (DILATION
-                                                                                                 (MAYBE-TUPLE
-                                                                                                  DILATION
-                                                                                                  'DILATION)))
+(avgpool2d KERNEL-SIZE &KEY (STRIDE KERNEL-SIZE) (PADDING 0) &AUX (STRIDE
+                                                         (MAYBE-TUPLE STRIDE
+                                                                      'STRIDE)) (PADDING
+                                                                                 (MAYBE-TUPLE
+                                                                                  PADDING
+                                                                                  'PADDING)))
 ```
 
 
@@ -357,13 +347,11 @@ which transformation of shapes are defined as:
 ```
 (INPUT[N C H_IN W_IN] -> OUTPUT[N C H_OUT W_OUT] WHERE H_OUT =
  (IF (NUMBERP H_IN)
-     (CONV-OUT-SIZE H_IN (CAR PADDING) (CAR DILATION) (CAR KERNEL-SIZE)
-      (CAR STRIDE))
+     (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE))
      -1)
  W_OUT =
  (IF (NUMBERP W_OUT)
-     (CONV-OUT-SIZE W_IN (SECOND PADDING) (SECOND DILATION)
-      (SECOND KERNEL-SIZE) (SECOND STRIDE))
+     (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
      -1))
 ```
 ### Description
@@ -378,8 +366,6 @@ Applies a 2D average pooling over an input signal composed of several input plan
 `stride[fixnum or list]` the stride of window
 
 `padding[fixnum or list]` adds 0 padding
-
-`dilation[fixnum or list]` a parameter that controls the stride of elements in the window.
 
 Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 

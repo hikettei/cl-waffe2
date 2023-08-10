@@ -365,13 +365,15 @@ Use the define-impl macro to give definitions for the node and forward them.
       place))
 
 
-(defun adjust-bw-place (bw-node place argn nth-trying)
+(defun adjust-bw-place (bw-node place argn nth-trying &key (force-move nil))
   "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
   
   (when bw-node
-    (if (movetensor-p (tensor-backward bw-node))
+    (if (and
+	 (not force-move)
+	 (movetensor-p (tensor-backward bw-node)))
 	bw-node
-	(with-shape-checkpoint (:moving nil)
+	(with-shape-checkpoint (:moving (tensor-backward bw-node))
 	  (let ((out (cl-waffe2/base-impl:!move
 		      (select-return-place place argn nth-trying)
 		      bw-node
@@ -459,6 +461,19 @@ inputs      ... inputs called with
 	  collect
 	  (when kernel
 	    (list dout kernel compile-option inputs-out)))))
+
+(defun compiler-expand-backward (node dout &rest inputs-out)
+  (let* ((inputs-in (loop for input in inputs-out
+			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
+	 ;; Tracing User-Defined-Backward, still not yet compiled.
+	 (out-kernels (apply #'backward node dout inputs-in))
+	 ;; out-kernels = (list x.g y.g)
+	 (out-kernels (loop with argn fixnum = (length inputs-in)
+			    for x in out-kernels
+			    for y in inputs-out
+			    for i upfrom 0
+			    collect (adjust-bw-place x y argn i))))
+    out-kernels))
 
 (defun call-instant-backward (outs)
   (multiple-value-bind (dout kernel compile-option inputs-out) (apply #'values outs)

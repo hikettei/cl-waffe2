@@ -12,6 +12,7 @@
    #:free-current-memory-pool
    #:make-compiled-kernel
    #:compile-forward-kernel
+   #:find-cached-function
    #:*memory-pool*)
   ;; Tensor classes
   (:export
@@ -51,6 +52,7 @@
    #:parameter
    #:*with-printing-tensor-omitted*
    #:tensor-id
+   #:tensor-iid
    #:system-lazy-set-save-for-backward
    #:system-lazy-read-save-for-backward
    #:compile-option-t

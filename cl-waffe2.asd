@@ -25,6 +25,7 @@
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")
+	       
 	       (:file "vm/generic-tensor/conditions")
 	       
 	       (:file "vm/generic-tensor/dtype")
@@ -36,6 +37,9 @@
 	       ;; Load package.lisp first. (since scheduling depends on vm/nodes/package, MoveNodeTensor in base-impl/package)
 	       (:file "vm/nodes/package")
 	       (:file "base-impl/package")
+
+	       (:file "vm/package")
+	       
 	       (:file "vm/generic-tensor/cache")
 	       (:file "vm/generic-tensor/utils")
 	       (:file "vm/generic-tensor/view")
@@ -72,8 +76,12 @@
 	       (:file "base-impl/transform")
 	       (:file "base-impl/ir")
 	       (:file "base-impl/reshapers")
+
 	       
-	       
+	       (:file "vm/ir")
+	       (:file "vm/utils")
+	       (:file "vm/vm")
+	       (:file "vm/compile")	       
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")

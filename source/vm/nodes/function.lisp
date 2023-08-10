@@ -60,7 +60,7 @@ Return: defun form
 	 (tmp-fname (gensym (symbol-name function-name)))
 	 (mname     (gensym)))
     (with-no-grad
-      (multiple-value-bind (compiled-kernel set-input-forms) (cl-waffe2/vm.generic-tensor:build result :compile-mode compile-mode :use-setinput-form t)
+      (multiple-value-bind (compiled-kernel set-input-forms) (cl-waffe2/vm.generic-tensor::build result :compile-mode compile-mode :use-setinput-form t) ;; build-inlined-proceed-form
 	`(progn
 	   ;; Main Body
 	   (defun ,tmp-fname (,self ,@namelist)

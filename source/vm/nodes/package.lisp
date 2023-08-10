@@ -49,6 +49,7 @@
    #:define-composite-function
    #:forward
    #:backward
+   #:compiler-expand-backward
    #:expand-backward
    #:expand-backward-instant
    #:call-instant-backward
