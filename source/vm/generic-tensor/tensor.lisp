@@ -60,7 +60,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (state     :initform nil :accessor tensor-state)
    (variables :initform nil :accessor tensor-variables)
 
-   (tensor-id :initform (gensym "TID") :accessor tensor-id)
+   (tensor-id :initform (gensym "TID") :accessor tensor-id)         ;; In-place extends TID
+   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid) ;; In-place never extends TID
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
    (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
@@ -1088,6 +1089,11 @@ The function parameter computes all the previous nodes of the given tensor if an
 
   (let ((space-tmp (make-clone tensor nil nil)))
     (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
+
+      ;; For compiler to use this info.
+      (setf (cl-waffe2/base-impl:mv-lazy-sv4bw
+	     (tensor-backward result))
+	    t)
       ;; If tensor is arguments (of toplevel)...
       (setf (save-for-backward-space result) tensor)
       ;; Keep The Tensor Broadcastable!

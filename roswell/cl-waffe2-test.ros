@@ -21,8 +21,15 @@ exec ros -Q -- $0 "$@"
      (cl-waffe2.docs:generate))
     (T
      ;; Calling all tests depending on *force-use-build*
-     (let ((cl-waffe2/vm.generic-tensor::*force-use-build* nil))
-       (format t "[INFO] Testing under *force-use-build* = nil (i.e.: the function vm-build is replaced with build")
+     (let ((cl-waffe2/vm.generic-tensor::*force-use-build*
+	     (if (and (car argv)
+		      (equal (car argv) "vm-test"))
+		 t
+		 nil)))
+       (if cl-waffe2/vm.generic-tensor::*force-use-build*
+	   (format t "[INFO] Now the test is operating under *force-use-build* is t, that is, all interpreters are replaced with VM.")
+	   (format t "[INFO] Now the test is operation under *force-use-build* is nil, that is, proceed is working as an interpreter."))
+       
        (asdf:load-system :cl-waffe2/test)
        (asdf:test-system :cl-waffe2))
      

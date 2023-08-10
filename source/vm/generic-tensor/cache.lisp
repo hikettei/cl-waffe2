@@ -240,3 +240,28 @@ Reading *kernel-storeroom*, the function expands the form below.
 	  (apply compiled-function args))
 	(apply target args))))
 
+(defun find-cached-function (kernel-function compile-option &rest args)
+  (declare (type Compiled-Kernel kernel-function))
+
+  (let* ((function-name (compiled-kernel-name kernel-function))
+	 ;; MoveTensor is a special node that cl-waffe2 will dynamically ignore/use depending on the situation.
+	 ;; So, we dont wanna use :cache-when-compiled option.
+	 (movep (movetensor-p (compiled-kernel-self kernel-function)))
+	 (function-name (if movep
+			    (symb function-name '- (cl-waffe2/base-impl:movetensor-ignore-me (compiled-kernel-self kernel-function)))
+			    function-name))
+	 (target (lut-search-function
+		  *compiled-function-cache*
+		  function-name
+		  args)))
+    (if (null target)
+	(let ((compiled-function (make-funcallable-kernel kernel-function compile-option)))
+	  (when (compiled-kernel-cache-when-compiled kernel-function)
+	    (lut-search-function
+	     *compiled-function-cache*
+	     function-name
+	     args
+	     :setme compiled-function))
+	  compiled-function)
+	target)))
+

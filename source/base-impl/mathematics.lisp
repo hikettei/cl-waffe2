@@ -114,10 +114,10 @@ OUT_{copy}\\gets{~(~a~)(X)}
 				   x)))
 			(if ->
 			    (forward (,scal-node-name) x ->)
-			    (forward (,scal-node-name) x (make-clone x))))
+			    (forward (,scal-node-name) x (!copy x))))
 		      (if ->
 			  (forward (,node-name) x ->)
-			  (forward (,node-name) x (make-clone x)))))))))
+			  (forward (,node-name) x (!copy x)))))))))
 
   ;; define-elwise-node will define: nameNode, !name.
 

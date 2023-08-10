@@ -9,6 +9,7 @@
 (defnode (MoveTensorNode (myself dtype &key (save-for-backward nil))
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (internal-lazy-save-for-backward :initform nil :accessor mv-lazy-sv4bw :type boolean)
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
@@ -18,15 +19,12 @@
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (if (tensor-permuted-p dout)
+				 (if (tensor-permuted-p dout)				     
 				     (let ((out (make-input (shape dx) nil
 							    :create-from dout
 							    :dtype (dtype dx)
 							    :order (order dx))))
-				       (with-instant-kernel out
-					 `(progn
-					    (setf (tensor-vec ,out) (tensor-vec ,dout))
-					    ,out)))
+				       (!move out dout :force t))
 				     (!copy dout :force t)))))
 		       (values nil dy-out)))
 	  :documentation "
@@ -60,6 +58,7 @@ For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for ex
 (defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
 	  :out-scalar-p t
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (internal-lazy-save-for-backward :initform nil :accessor mv-lazy-sv4bw :type boolean)
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :where (A[scal] B[scal] -> A[scal] where scal = 1)
@@ -215,10 +214,16 @@ This function is also used to adjust memory alignment of tensor."
 		 (setf (tensor-vec ,viewed-tensor) (tensor-vec ,old))
 		 ,viewed-tensor))
 	     :backward
+	     ;; [FixME] Slicing backward won't works
+	     ;; e.g.:
+	     ;; randn(3 3)[0:2, t].backward()
+	     ;; (1 1 1)
+	     ;; (1 1 1)
+	     ;; (0.1 0.2 0.3) <- should be filled with 0
 	     ((self dout dx dy) ;; (viewed-tensor old)
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
-		     (res (!move dx (apply #'!view dout inp-sub))))
+		     (res (!move dx (apply #'!view dout inp-sub))))		
 		(values nil (apply #'!view res out-sub)))))
 
 
