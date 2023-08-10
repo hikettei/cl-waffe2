@@ -686,7 +686,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 		  (when use-setinput-form set-input-forms))
 	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
-  (defmethod print-object ((model Compiled-Composite) stream)
+(defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward:  ~a
     backward: ~a
@@ -698,4 +698,3 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 	  (compiled-backward model)
 	  (compiled-variables model)))
 
-;; set variable

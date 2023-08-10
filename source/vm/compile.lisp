@@ -13,12 +13,6 @@
 ;;    - Flatten
 ;;    - represetned by lambda expression
 
-;; TODO: 後で全て強制的にbuildを用いるモードでテストしないといけない
-;; Github Actionsではパラメーターを変えて二回テストしよう
-;; JITCPUTensorの仕様は後で変更しよう...
-;; TODO:
-;; Optimize:
-
 ;; X <- Y
 ;; Y <- X optim: => Z <- Y
 ;; Z <- Y
@@ -108,16 +102,29 @@
   (multiple-value-bind (iseq-forward leaves)
       (node-compile-into-vm toplevel)
 
+    ;; [TODO] Testing the line below carefully:
+    ;; In-place mutation is working??
     (apply-in-place-mutation! iseq-forward leaves)
 
     (let* ((dout (if (scalar-p toplevel)
-		   (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-		   (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
+		     (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+		     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
 	   (backward-iseq
 	     (when (and need-backward
 			(ancestor-param-p toplevel))
 	       (trace-backward-network toplevel leaves dout))))
 
+      (mapc
+       #'(lambda (tensor)
+	   (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
+	     (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
+		   (if (scalar-p tensor)
+		       #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
+		       (let* ((*no-grad* t)
+			      (out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
+			 #'(lambda ()
+			     (forward out)))))))
+       leaves)
       ;; (print (reverse iseq-forward))
       ;; (print backward-iseq)
       ;; (print backward-iseq)

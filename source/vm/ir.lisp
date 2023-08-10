@@ -2,11 +2,6 @@
 (in-package :cl-waffe2/vm)
 
 
-;; 標準でこれを使うように
-;; JITCPUTensor?
-;; 大幅な仕様変更なしにProceed/Build両方の場合で動作するようにしたいが・・・
-;; 各JITでTP Sortをする？(その後時間があればJITCPUTensor/JITLispTensorをリファクタする)
-
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
 	    (:constructor make-wfop (op self node args)))
@@ -72,19 +67,23 @@ cl-waffe2 vm specializes on  the sequence of above format.
 	 ;; Set 100 as for ExistTensor, in order not to destruct training data/parameters
 
 	 (if (eql (tensor-attribute variable) :chain)
-	     (setf (gethash (tensor-id variable) ref-table) 0)
+	     ;;(setf (gethash (tensor-id variable) ref-table) 0) ;; [FixME] Originally it was set to 0, but here's unexcepted side effects...
+	     (setf (gethash (tensor-id variable) ref-table)
+		   (if *no-grad*
+		       0
+		       1))
 	     (setf (gethash (tensor-id variable) ref-table) nil)))
      leaves)
 
-
     ;; Tracing all the computation nodes, counting up reference tables
+    ;; X <- A B : A B ... reference, X ... set
     (mapc
      #'(lambda (instruction)
 	 (when (not (movetensor-p (wfop-node instruction)))
 	   (mapc
 	    #'(lambda (arg)
-		(if (gethash (tensor-id arg) ref-table)
-		    (incf (gethash (tensor-id arg) ref-table) 1)))
+		(when (gethash (tensor-id arg) ref-table)
+		  (incf (gethash (tensor-id arg) ref-table) 1)))
 	    (wfop-args instruction))))
      iseq)
 
@@ -92,7 +91,8 @@ cl-waffe2 vm specializes on  the sequence of above format.
 
     (mapc
      #'(lambda (instruction)
-	 (when (movetensor-p (wfop-node instruction))
+	 (when (and (movetensor-p (wfop-node instruction))
+		    (not (sv4bw-p (wfop-node instruction)))) ;; save4bw never ignored!
 	   ;; MoveTensor: A B -> A (Place Target -> Place)
 	   ;; In-place MoveTensor: A B -> B
 
@@ -107,15 +107,13 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		     ;; :force t is not subject to in-place
 
 		     ;; The problem is that: it is unknown wheter movetensor returns Viewed Input or not.
-		     ;; So Tensors whose place has multi-dimensional offset, is ignored
+		     ;; So Tensors whose place has multi-dimensional offset, is never deleted.
 
 		     (apply #'cl-waffe2/vm.generic-tensor::order-reductable-p 0 past-variables) ;; <- is it worth it? test
 		     (not (tensor-protect-me (car past-variables)))
 		     (not (movetensor-save-for-backward bw)))))
 	     
-	     (if in-place-p
-		 ;; Decrease the count
-		 
+	     (if in-place-p		 
 		 (setf (movetensor-ignore-me (wfop-node instruction)) t)
 		 (when (gethash (tensor-id target) ref-table)
 		   (decf (gethash (tensor-id target) ref-table)))))))
