@@ -99,23 +99,44 @@ See also:
 
 ## Powerful Network Description Features
 
-TODO: `defsequence/call->` `composite/node` `defmodel`
+The most fundamental unit of calculation in cl-waffe2 is `AbstractNode`, and it provides utilities such as combining and compositing them. For example, `call->` composes all given nodes while `call` can call a single node. Later, it can be named and defined by `defsequence`. Owing to the lazy evaluation of cl-waffe2, functions can be used like nodes via the `(asnode function &rest args)` macro.
 
-`defmodel` defines a set of nodes.
+```lisp
+(call-> (randn `(1 32))
+        (LinearLayer 32 16)
+        (asnode #'!softmax)
+        (asnode #'!add 0.1))
+```
+
+```lisp
+(defsequence CNN (&key
+            (out-channels1 4)
+	    (out-channels2 16))
+    (Conv2D 1 out-channels1 `(3 3))
+    (asnode #'!relu)     
+    (MaxPool2D `(2 2))
+    (Conv2D out-channels1 out-channels2 `(5 5))
+    (asnode #'!relu)
+    (MaxPool2D `(2 2))
+    (asnode #'!reshape t (* 16 4 4)) 
+    (LinearLayer (* 16 4 4) 10))
+```
+
+`Composite` is a data structure which binds several `AbstractNode`, defined by `defmodel`.
 
 ```lisp
 (defmodel (Softmax-Model (self)
        :where (X[~] -> OUT[~])
        :on-call-> ((self x)
-               (declare (ignore self))
-               (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
-                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
-                  (!div (!exp x1) z)))))
+                   (declare (ignore self))
+                   (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                          (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                      (!div (!exp x1) z)))))
 ```
 
-It can be used to lazily evaluate and compile later, or to define functions for immediate execution.
+`Composites` can be used not only as merely subroutines, but also for compiling several nodes in advance.
 
-`call` to keep using lazy-evaluation.
+For example, just use `call` to compile later.
 
 ```lisp
 (call (Softmax-Model) (randn `(10 10)))
@@ -140,12 +161,12 @@ It can be used to lazily evaluate and compile later, or to define functions for 
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
-`define-composite-function` to define a function.
+Use the `define-composite-function` macro to define a function that works statically.
 
 ```lisp
 (define-composite-function (Softmax-Model) !softmax-static)
 
-(time (!softmax-static (randn `(10 10)))) ;; No compiling time for second and subsequent calls.
+(time (!softmax-static (randn `(10 10))))
 Evaluation took:
   0.000 seconds of real time
   0.000460 seconds of total run time (0.000418 user, 0.000042 system)
@@ -164,7 +185,7 @@ Evaluation took:
   :backward NIL}
 ```
 
-There's more, `defnode` is a generic definiiton of `AbstractNode`, being implemented by `define-impl` which works like a macro in Common Lisp. On the other hand, `define-static-node` works like a `defun`. For details, visit docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
+If you are not comfortable writing macros to create your own forward and backward propagation, there are various means, such as `define-static-node`. they're working by just wrapping the `define-impl` macro. For details, visit the docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
 
 ## Numpy-like APIs
 
