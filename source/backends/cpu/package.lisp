@@ -19,7 +19,8 @@
       (setf (gethash (car element) hash) (cdr element)))
     hash))
 
-#+sbcl(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor))
+;;#+sbcl(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor))
+(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor))
 
 ;; TODO: Delete this alert with *cl-waffe-never-use-blas* = t
 (defun could-not-find ()
@@ -59,7 +60,7 @@ To continue with BLAS, Add the following code to the initialisation file and res
 
 ;; Load libblas.dylib
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  #+sbcl(find-and-load-libblas)
-  #-sbcl(warn-blas-without-sbcl)
+  (find-and-load-libblas)
+  ;;#-sbcl(warn-blas-without-sbcl)
   )
 
