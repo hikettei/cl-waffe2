@@ -16,6 +16,16 @@
    #:maybe-pdotimes
    #:maybe-ploop))
 
+
+;; How to enable multi-threading in cl-waffe2?
+
+;;
+;; (cl-waffe2:with-num-cores (4)
+;;      (let ((*multithread-threshold* 80000))
+;;           ...)))
+;;
+;; lparallel is enabled only after call-with-view is used with lparallel option=t.
+
 (in-package :cl-waffe2/threads)
 
 ;; MultiThreading configs
