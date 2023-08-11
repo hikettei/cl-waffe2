@@ -87,9 +87,7 @@ Otherwise: (values X Y)"
 ;; call-with-view utils
 ;; ===============================================
 
-(defun tensor-gensym-list (tensors)
-  (loop for tensor in tensors
-	collect (gensym)))
+(defun tensor-gensym-list (tensors) (loop for tensor in tensors collect (gensym)))
 
 (defun expand-first-offset-adder (tensors
 				  offset-places
@@ -171,10 +169,12 @@ Set 2 if the operation is matmul for example.
 		       below (+ rest-dims target-dim)
 		     collect (make-viewinstruction
 			      (nth kth-tensor offsets-place)
-			      `(read-adjustable-symbol (nth ,target-dim-n (shape ,tensor)))
-			      (let ((stride `(nth ,target-dim-n (list ,@(tensor-stride tensor))))
-				    (view   `(subscript-view (nth ,target-dim-n (tensor-view ,tensor)))))
-				(lazy* stride `(compute-stepby ,view))))))))
+			      (if (symbolp (nth target-dim-n (shape tensor)))
+				  `(read-adjustable-symbol (nth ,target-dim-n (shape ,tensor)))
+				  (nth target-dim-n (shape tensor)))
+			      (let ((stride (nth target-dim-n  (tensor-stride tensor)))
+				    (view   (subscript-view (nth target-dim-n (tensor-view tensor)))))
+				(lazy* stride (compute-stepby view))))))))
 
 (defun expand-call-with-view-flatten
     (function
@@ -192,7 +192,10 @@ Set 2 if the operation is matmul for example.
 			 (loop for i upfrom dim-start-from below (length s)
 			       unless (eql (force-list (nth i v)) t)
 				 do (error "Internal Error: call-with-view-1dkernel is only applied to view=t axes.")
-			       collect `(read-symbol (nth ,i (shape ,tensor)))))
+			       if (symbolp (nth i (shape tensor)))				 
+				 collect `(read-symbol (nth ,i (shape ,tensor)))
+			       else
+				 collect (nth i (shape tensor))))
 		     tensors))
 	 (sizes (map 'list #'(lambda (x) (apply #'lazy-mulup x)) size-list)))
 
@@ -208,9 +211,11 @@ Set 2 if the operation is matmul for example.
 	   for k upfrom 0
 	   collect (let ((view (make-viewinstruction
 				(nth k offset-place)
-				`(read-adjustable-symbol ,(nth k sizes))
-				`(compute-stepby
-				  (subscript-view (nth ,target-dim (tensor-view ,tensor)))))))
+				(if (symbolp (nth k sizes))
+				    `(read-adjustable-symbol ,(nth k sizes))
+				    (nth k sizes))
+				(compute-stepby
+				 (subscript-view (nth target-dim (tensor-view tensor)))))))
 		     (list view))))))
 
 
