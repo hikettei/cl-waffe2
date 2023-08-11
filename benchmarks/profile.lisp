@@ -23,3 +23,11 @@
        (make-input `(batch-size 100) :X))
       (make-input `(batch-size ,5) :Y))))))
 
+
+
+(defun start-benchmark ()
+  (start-math-bench)
+  (start-composed-bench)
+  (start-model-bench))
+
+(start-benchmark)
