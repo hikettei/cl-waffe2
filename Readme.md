@@ -193,9 +193,11 @@ Except that you need to call `proceed` or `build` when you need results, cl-waff
 
 ```lisp
 (!add (randn `(3 3)) (randn `(3 3)))
+
 (!matmul (ax+b `(3 5) 1 0) (!t (ax+b `(3 5) 1 0)))
+
 (let ((a (parameter (ax+b `(3 5 2) 1 0))))
-    (proceed-backward
+      (proceed-backward
         (!mean
             (!permute a (torch-order 0 2 1))))) ;; the equivalent to (!permute a 2 0 1)
 ```
