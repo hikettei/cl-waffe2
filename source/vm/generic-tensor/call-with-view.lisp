@@ -82,7 +82,6 @@ Otherwise: (values X Y)"
 )
 |#
 
-
 ;; ===============================================
 ;; call-with-view utils
 ;; ===============================================
@@ -129,6 +128,20 @@ Otherwise: (values X Y)"
 		     (error ":TFLIST IS NOT IMPLEMENTED"))
 		    (T
 		     (error "Unknown keyword ~a" viewtype))))))
+
+(defun compute-index (offset stride target-dim ith tensor)
+  (let* ((view     (subscript-view (nth target-dim (tensor-view tensor))))
+	 (viewtype (viewtype view)))
+    (cond
+      ((or (eql viewtype :index)
+	   (eql viewtype :broadcast))
+       offset)
+      ((or (eql viewtype :t)
+	   (eql viewtype :slice))
+       `(+ (the fixnum ,offset) (%* ,stride ,ith)))
+      ((eql viewtype :slice-step)
+       `(+ (the fixnum ,offset) (%* ,ith (%* ,(third view) (the fixnum ,stride)))))
+      (T (error "Unsupported view keyword: ~a" viewtype)))))
 
 ;; e.g: (view tensor `(0 2) t t) could be splitted into: `(0 2) * t*t times order
 (defun order-reductable-p (dim-start-from &rest tensors)
@@ -226,8 +239,7 @@ Return: (values offsets-place form)"
 
   `(let ((,offset-name-place (tensor-gensym-list ,tensors)))
      ;; Initializing Offsets with 0
-     `(let*-ignorable (,@(loop for name in ,offset-name-place
-			       collect `(,name 0)))
+     `(let*-ignorable (,@(loop for name in ,offset-name-place collect `(,name 0)))
 	(locally (declare (type fixnum ,@,offset-name-place))
 	  ,,@body))))
 
@@ -242,48 +254,46 @@ Return: (values offsets-place form)"
 	(locally (declare (type fixnum ,@,offset-name-place))
 	  ,,@body))))
 
+(defparameter *under-lparallel* nil)
 
-(defmacro with-shape-det-form (tensors used-symbol-binding &body body)
-  `(let ((used-symbols))
-     (mapc #'(lambda (tensor)
-	       (mapc #'(lambda (s)
-			 (when (symbolp s)
-			   (push s used-symbols)))
-		     (shape tensor)))
-	   ,tensors)
-     `(progn
-	(let ((,',used-symbol-binding ',used-symbols))
-	  (declare (ignorable ,',used-symbol-binding))
-	  ,,@body))))
-
-(defmacro with-expanding-explore-form ((tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
+(defmacro with-expanding-explore-form ((lparallel tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
   ;; Set Strides At Runtime
-  ;; Expand Loop
+  ;; Expand Loop      
   `(let ((stride-places (tensor-gensym-list ,tensors))
 	 (ith (gensym)))
      `(let* (,@(loop for stride-place in stride-places ;; (place <- stride)
 		     for tensor in ,tensors
 		     collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor)))))
 	     (,',endpoint-place ,(car ,end-points))
-	     (,',endpoint-place (if (symbolp ,',endpoint-place)
-				    (read-adjustable-symbol ,',endpoint-place)
-				    ,',endpoint-place)))
+	     (,',endpoint-place (read-adjustable-symbol ,',endpoint-place)))
 
 	,@(expand-first-offset-adder
 	   ,tensors
 	   ,offset-places
 	   stride-places
 	   ,start-points)
-	
-	;; Expand Multi-Dimensional Looping Forms
 
-	(loop for ,ith fixnum upfrom 0 below ,',endpoint-place
-	      ;; 1. Execute Operation
-	      ;; 2. Adding Offsets
-	      do (progn ,,@body)
-	      unless (= ,ith (1- ,',endpoint-place))
-		;; Unless islast, expand it.
-		do (progn ,@(expand-view-stride-adder ,offset-places stride-places ,target-dim ,tensors))))))
+	,(if (and ,(not *under-lparallel*) ,lparallel (not (= 1 cl-waffe2/threads:*num-cores*)))
+	     (let ((*under-lparallel* t))
+	       `(cl-waffe2/threads:maybe-pdotimes (,ith
+						   ,',endpoint-place
+						   :thread-safe-vars ,,offset-places
+						   :disable-p (<= (apply #'* (translate-adjustable-shape (shape ,(car ,tensors))))
+								  cl-waffe2/threads:*multithread-threshold*))
+		  (let* (,@(loop for offset in ,offset-places
+				 for k fixnum upfrom 0
+				 for tensor in tensors
+				 collect
+				 `(,offset ,(compute-index offset (nth k stride-places) ,target-dim ith tensor))))
+		    ,,@body)))
+	     ;; Expand Multi-Dimensional Looping Forms
+	     `(loop for ,ith fixnum upfrom 0 below ,',endpoint-place
+		    ;; 1. Execute Operation
+		    ;; 2. Adding Offsets
+		    do (progn ,,@body)
+		    unless (= ,ith (1- ,',endpoint-place))
+		      ;; Unless islast, expand it.
+		      do (progn ,@(expand-view-stride-adder ,offset-places stride-places ,target-dim ,tensors)))))))
 
 (defun update-calling-route (value)
   (push value cl-waffe2/vm.nodes::*call-with-view-route*))
@@ -309,6 +319,7 @@ Return: (values offsets-place form)"
 		       &key
 			 (at-least-dim 1)
 			 (force-order nil)
+			 (lparallel nil)
 		       &aux
 			 (shape (shape (car tensors)))
 			 (dims  (length shape)))
@@ -347,7 +358,7 @@ See also:
 butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
-  (labels ((explore (rest-dim offsets-place used-symbols &aux (target-dim (- dims rest-dim)))
+  (labels ((explore (rest-dim offsets-place &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim target-dim)
 		      (type list offsets-place))
 	     ;; Exploring ND .. 3D 2D 1D
@@ -408,13 +419,11 @@ butgot ~a."
 		  ;; batching
 		  (with-update-offset-place offsets-place tensors
 		    (with-expanding-explore-form
-			(tensors offsets-place target-dim start-points end-points)
+			(lparallel tensors offsets-place target-dim start-points end-points)
 		      (explore
 		       (1- rest-dim)
-		       offsets-place
-		       used-symbols))))))))
+		       offsets-place))))))))
 
-    (with-shape-det-form tensors used-symbols
-      (with-expand-init-tmp-form offset-place tensors
-	(explore dims offset-place used-symbols)))))
+    (with-expand-init-tmp-form offset-place tensors
+      (explore dims offset-place))))
 

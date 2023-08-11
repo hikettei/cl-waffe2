@@ -66,7 +66,7 @@ Set *num-core*=num-core under the body execution.
 ;; optimize compared to pure dotimes.
 ;; gemm ... (with-num-cores (1) ...) is must.
 
-(defmacro maybe-pdotimes ((var count) &body body &aux (thread-idx (gensym)))
+(defmacro maybe-pdotimes ((var count &key (thread-safe-vars nil) (disable-p nil)) &body body &aux (thread-idx (gensym)))
   "
 ## [macro] maybe-pdotimes
 "
@@ -76,10 +76,14 @@ Set *num-core*=num-core under the body execution.
 		(declare (type index ,from ,to))
 		(loop with *under-multi-thread* = t
 		      for ,var of-type index upfrom ,from below ,to
-		      do ,@body)))
+		      do (let (,@(loop for var in thread-safe-vars
+				       collect `(,var ,var)))
+			   ,@body))))
 	 (if (or *under-multi-thread*
 		 (= (the fixnum *num-cores*) 1)
-		 (< (the index ,count) *multithread-threshold*)
+		 ,(if disable-p
+		      `,disable-p
+		      `(< (the index ,count) *multithread-threshold*))
 		 ;; [todo] benchmark
 		 (< (the index ,count) *num-cores*))
 	     ;; If *num-cores* = 1 or count is enough small. ignore parallelize.
