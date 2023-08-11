@@ -256,6 +256,7 @@ Return: (values offsets-place form)"
 
 (defparameter *under-lparallel* nil)
 
+;; TODO: SIMDfied mathematical functions, inline view offsets.
 (defmacro with-expanding-explore-form ((lparallel tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
   ;; Set Strides At Runtime
   ;; Expand Loop      
@@ -273,7 +274,7 @@ Return: (values offsets-place form)"
 	   stride-places
 	   ,start-points)
 
-	,(if (and ,(not *under-lparallel*) ,lparallel (not (= 1 cl-waffe2/threads:*num-cores*)))
+	,(if (and (not *under-lparallel*) ,lparallel (not (= 1 cl-waffe2/threads:*num-cores*)))
 	     (let ((*under-lparallel* t))
 	       `(cl-waffe2/threads:maybe-pdotimes (,ith
 						   ,',endpoint-place
