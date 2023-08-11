@@ -68,3 +68,32 @@ Under this macro, two backends (`JITCPUTensor` and `JITCPUScalarTensor`) are ins
   #-(or sbcl)
   (error "JITCPUTensor requires SBCL to access the storage vector!"))
 
+(declaim ;;(inline incf-tensor-ptr)
+	 (ftype (function (AbstractTensor cffi-sys:foreign-pointer &key (:offset fixnum)) cffi-sys:foreign-pointer) incf-tensor-ptr))
+(defun incf-tensor-ptr (tensor ptr &key (offset 0))
+  (declare (type AbstractTensor tensor)
+	   (type cffi-sys:foreign-pointer ptr)
+	   (type fixnum offset))
+  (let ((out (the fixnum (* (the fixnum (cffi:foreign-type-size (dtype tensor))) offset))))
+    (if (= out 0)
+	ptr
+        (progn
+	  (cffi:incf-pointer ptr out)))))
+
+
+(defmacro with-tensor-ptr ((bind tensor) &body body)
+  `(progn
+     ;; Ensure that tensor storage vector has allocated.
+     (tensor-vec ,tensor)
+     (cffi:with-pointer-to-vector-data (,bind (cl-waffe2/vm.generic-tensor::vec ,tensor))
+       (declare (type cffi-sys:foreign-pointer ,bind))
+       ,@body)))
+
+(defmacro with-tensor-ptrs ((&rest input-forms) &body body)
+  (labels ((expand (rest-forms)
+	     (if rest-forms
+		 `(with-tensor-ptr (,(caar rest-forms) ,(second (car rest-forms)))
+		    ,(expand (cdr rest-forms)))
+		 `(progn ,@body))))
+    (expand input-forms)))
+
