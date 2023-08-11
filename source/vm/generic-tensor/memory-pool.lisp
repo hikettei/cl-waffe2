@@ -44,6 +44,7 @@
 ;;        ...
 ;;
 
+(declaim (inline get-from-memory-pool))
 
 (defparameter *thread-memory-pool*
   (make-hash-table);;(tg:make-weak-hash-table :weakness :key)
@@ -314,6 +315,7 @@ Usage:
 
   ;;  Much Higher  <->    Low
   ;;    ChainTMP        ScalarTensor
+
   (cond
     ((scalar-p tensor)
      (if (vec tensor)

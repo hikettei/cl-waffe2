@@ -582,7 +582,8 @@ because there's still unembodied tensors:
   ;; Check if all the inputs are embodied?
   (all-embodied? model)
 
-  (funcall (compiled-forward model)))
+  (let ((*runtime-mode-p* t))
+    (funcall (compiled-forward model))))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
 
@@ -590,8 +591,9 @@ because there's still unembodied tensors:
     (warn "backward: Inputs for compiled-composite are ignored"))
   (when (null (compiled-backward model))
     (error "cl-waffe2/vm.nodes:backward. Because the model was compiled with (with-no-grad ) mode, a backward function wasn't compiled."))
-  
-  (funcall (compiled-backward model)))
+
+  (let ((*runtime-mode-p* t))
+    (funcall (compiled-backward model))))
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)
   "
