@@ -676,7 +676,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 "
   (declare (type AbstractTensor toplevel))
 
-  (multiple-value-bind (fw-iseq bw-iseq variables) (cl-waffe2/vm:compile-forward-and-backward toplevel :need-backward construct-backward?)
+  (multiple-value-bind (fw-iseq bw-iseq variables) (cl-waffe2/vm:compile-forward-and-backward toplevel :need-backward construct-backward? :compile-mode compile-mode)
     (multiple-value-bind (fw-function variables set-input-forms) (compile-forward-kernel fw-iseq variables :compile-mode compile-mode)
       ;; Vars - All Variables (including ChainTMP) used in forward.
       (prog1

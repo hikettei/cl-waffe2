@@ -4,7 +4,7 @@
 
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (fuse-prev nil))))
+	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
@@ -21,7 +21,9 @@ cl-waffe2 vm specializes on  the sequence of above format.
   (self self :type AbstractTensor)
   (args args :type list)
   (bw-is-leaf-p nil :type boolean)
-  (fuse-prev fuse-prev :type (or null list)))
+  (call-with-view call-with-view :type (or null cl-waffe2/vm.generic-tensor::Ranked-Loop))
+  (fuse-prev fuse-prev :type (or null list))
+  (fused-body-cache fused-body-cache :type (or null list)))
 
 ;; (defstruct (Composable-Operator <- separate call-with-view from body
 ;; (defun .cop (cop1 cop2) ...)

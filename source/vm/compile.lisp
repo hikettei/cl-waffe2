@@ -135,14 +135,15 @@
 
   (sort-and-prune-for-backward toplevel dout-toplevel leaves))
 
+(defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
-(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t))
+(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default))
   "
 
 ## [function] compile-forward-and-backward
 
 ```lisp
-(compile-forward-and-backward toplevel &key (need-backward t) (fuse-p t))
+(compile-forward-and-backward toplevel &key (need-backward t) (fuse-p t) (compile-mode :default))
 ```
 
 Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set `fuse-p`=t to get additional optimization to the generated IR.
@@ -150,37 +151,38 @@ Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backw
 Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 "
   (declare (type AbstractTensor toplevel))
-  (multiple-value-bind (iseq-forward leaves)
-      (node-compile-into-vm toplevel :fuse-p fuse-p)
+  (let ((*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
+    (multiple-value-bind (iseq-forward leaves)
+	(node-compile-into-vm toplevel :fuse-p fuse-p)
 
-    ;; [TODO] Testing the line below carefully:
-    ;; In-place mutation is working??
-    (apply-in-place-mutation! iseq-forward leaves)
+      ;; [TODO] Testing the line below carefully:
+      ;; In-place mutation is working??
+      (apply-in-place-mutation! iseq-forward leaves)
 
-    (let* ((dout (if (scalar-p toplevel)
-		     (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-		     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
-	   (backward-iseq
-	     (when (and need-backward
-			(ancestor-param-p toplevel))
-	       (trace-backward-network toplevel leaves dout))))
+      (let* ((dout (if (scalar-p toplevel)
+		       (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+		       (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
+	     (backward-iseq
+	       (when (and need-backward
+			  (ancestor-param-p toplevel))
+		 (trace-backward-network toplevel leaves dout))))
 
-      (mapc
-       #'(lambda (tensor)
-	   (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
-	     (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
-		   (if (scalar-p tensor)
-		       #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
-		       (let* ((*no-grad* t)
-			      (out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
-			 #'(lambda ()
-			     (forward out)))))))
-       leaves)
-      ;; (print (reverse iseq-forward))
-      ;; (print backward-iseq)
-      ;; (print backward-iseq)
+	(mapc
+	 #'(lambda (tensor)
+	     (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
+	       (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
+		     (if (scalar-p tensor)
+			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
+			 (let* ((*no-grad* t)
+				(out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
+			   #'(lambda ()
+			       (forward out)))))))
+	 leaves)
+	;; (print (reverse iseq-forward))
+	;; (print backward-iseq)
+	;; (print backward-iseq)
 
-      (values (reverse iseq-forward) backward-iseq leaves))))
+	(values (reverse iseq-forward) backward-iseq leaves)))))
 
 
 (defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))

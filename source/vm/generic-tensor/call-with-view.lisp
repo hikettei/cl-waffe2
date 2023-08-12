@@ -314,6 +314,14 @@ Return: (values offsets-place form)"
 	     (equal (reverse k) (tensor-permute-order tensor)))))
     (every #'check tensors)))
 
+(defmacro cl-waffe2-internal-tagbody (tag &body body)
+  "(cl-waffe2-internal-tagbody #:TAG000
+     ... body)
+
+Used to replace/fuse generated call-with-view."
+  (declare (ignore tag))
+  `(progn ,@body))
+
 
 ;; Using Ranked-Loop Information at compiling time, and later expand into Fused Operation:
 ;; The step seems ugly:
@@ -328,14 +336,43 @@ Return: (values offsets-place form)"
   (expanded-body nil :type list)
   (op-function nil :type function)
   (tensors nil :type list)
+  (n-tensors 0 :type fixnum)
   (kernel-size 0 :type fixnum)
   (force-order nil :type boolean)
   (view-route nil :type list)
   (fuse-p     nil :type boolean)
-  (lparallel  nil :type boolean))
+  (lparallel  nil :type boolean)
+  (tagid      nil :type symbol))
+
+(defun fuse-generated-iteration (old-ranked-loop new-ranked-loop old-body &key (merge-p nil))
+  "Replaces the body of (c-waffe2-internal-tagbody ...) with new, fused body"
+
+  (let ((target-id (rloop-tagID old-ranked-loop)))
+    (labels ((fuse-op-helper (fn tree)
+	       ;; "return (values XXX t) to stop exploring"
+	       (multiple-value-bind (tree stop-p) (funcall fn tree)
+		 (if (and (listp tree) (not stop-p))
+		     (mapcar (lambda (subtree)
+			       (map-tree fn subtree))
+			     tree)
+		     tree))))
+      (fuse-op-helper
+       #'(lambda (tree)
+	   ;; Finds out this part: (cl-waffe2-internal-tagbody tag &body ...)
+	   (if (listp tree)
+	       (if (and
+		    (eql (car tree) 'cl-waffe2-internal-tagbody)
+		    (eql (second tree) target-id))
+		   (values
+		    (if merge-p
+			`(progn ,tree ,(rloop-expanded-body new-ranked-loop))
+			(rloop-expanded-body new-ranked-loop))
+		    t)
+		   tree)
+	       tree))
+       old-body))))
 
 ;; The function it. composes the given two ranked-loop if possible, otherwise return nil
-
 (defun it.-able-p (ranked-loop1 ranked-loop2)
   "
 ## [function] it.-able-p
@@ -380,8 +417,9 @@ Composable Ranked-Loop is defined as:
 		 (rloop-tensors ranked-loop1))
 	  (every #'(lambda (s) (equal (shape s) rep))
 		 (rloop-tensors ranked-loop2))
-	  (= (length (rloop-tensors ranked-loop1))
-	     (length (rloop-tensors ranked-loop2)))))
+	  ;;(= (length (rloop-tensors ranked-loop1))
+	  ;;   (length (rloop-tensors ranked-loop2)))
+	  ))
 	      
   ;; Sort by Ranks, instead of view-route? to fuse sum
   ;; (equal (rloop-view-route ranked-loop1)
@@ -411,7 +449,7 @@ Return: brand new composed Ranked-Loop
 		   ,@(rloop-tensors ranked-loop2))))
     (call-with-view
      #'(lambda (&rest views)
-	 (let* ((argn1  (length (rloop-tensors ranked-loop1)))
+	 (let* ((argn1  (- (length views) (rloop-n-tensors ranked-loop1)))
 		(views1 (butlast views argn1))
 		(views2 (last    views argn1)))
 	   `(progn
@@ -580,20 +618,24 @@ butgot ~a."
 		       (1- rest-dim)
 		       offsets-place))))))))
 
-    (let ((result
-	    (with-expand-init-tmp-form offset-place tensors
-	      (explore dims offset-place))))
+    (let* ((tag (gensym "INTERNAL-TAG"))
+	   (result
+	     (with-expand-init-tmp-form offset-place tensors
+	       (explore dims offset-place)))
+	   (result `(cl-waffe2-internal-tagbody ,tag ,result)))
 
       (setf *ranked-loop-result-cacher*
 	    (make-ranked-loop
 	     :expanded-body result
 	     :op-function function
 	     :tensors tensors
+	     :n-tensors (length tensors)
 	     :force-order force-order
 	     :kernel-size at-least-dim
-	     :view-route (copy-list cl-waffe2/vm.nodes::*call-with-view-route*)
+	     ;;:view-route (copy-list cl-waffe2/vm.nodes::*call-with-view-route*)
 	     :fuse-p fuse
-	     :lparallel lparallel))
+	     :lparallel lparallel
+	     :tagID tag))
       result)))
 
 

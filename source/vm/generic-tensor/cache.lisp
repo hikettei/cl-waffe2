@@ -150,18 +150,21 @@ TensorViewNameN depicts the path call-with-view traced.
 
 (defparameter *print-compiled-function* nil)
 
-(defun make-funcallable-kernel (compiled-function compile-option)
+(defun make-funcallable-kernel-form (compiled-function compile-option)
   (declare (type Compiled-Kernel compiled-function))
   (let ((fbody (cdar (compiled-kernel-body compiled-function))))
-    (compile nil
-	     (let ((out (tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))
-	       (let ((args (car out))
-		     (decl (second out))
-		     (body (cddr out)))
-		 (let ((out `(lambda ,args ,decl (declare ,compile-option) ,@body)))
-		   (if *print-compiled-function*
-		       (print out)
-		       out)))))))
+    (let ((out (tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))
+      (let ((args (car out))
+	    (decl (second out))
+	    (body (cddr out)))
+	(let ((out `(lambda ,args ,decl (declare ,compile-option) ,@body)))
+	  (if *print-compiled-function*
+	      (print out)
+	      out))))))
+
+(defun make-funcallable-kernel (compiled-function compile-option)
+  (declare (type Compiled-Kernel compiled-function))
+  (compile nil (make-funcallable-kernel-form compiled-function compile-option)))
 
 (defun place-cached-kernels (&rest body)
   "

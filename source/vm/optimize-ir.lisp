@@ -56,12 +56,18 @@
   ;; If 0 and 1 is composable, replaces 0 and 1 with (0 . 1).
 
   (let ((result))
-    (loop for inst of-type WFINstruction in (cdr iseq)
+    (loop for inst of-type WFInstruction in (cdr iseq)
 	  do (let* ((last-val (car result))
 		    (last-iseq-iter (when last-val
-				      (tensor-iter-of (wfop-self last-val))))
+				      (or
+				       (wfop-call-with-view last-val)
+				       (tensor-iter-of (wfop-self last-val)))))
 		    (current-op-iter (tensor-iter-of (wfop-self inst)))
-		    (compose-p (it.-able-p last-iseq-iter current-op-iter)))
+		    (compose-p (and
+				(it.-able-p last-iseq-iter current-op-iter)
+				(if (movetensor-p (wfop-node inst))
+				    (not (movetensor-ignore-me (wfop-node inst)))
+				    t))))
 	       
 	       (if compose-p
 		   (let ((latest (pop result)))

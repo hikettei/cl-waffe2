@@ -114,15 +114,31 @@
 op1 ... A <- F(B, C, D)
 op2 ..  E <- F(X, Y, Z)"
   (declare (type WFInstruction op1 op2))
-  (let* ((out (wfop-self op2))
-	 (composed-iter (it. (tensor-iter-of (wfop-self op1)) (tensor-iter-of (wfop-self op2)))))
+  (let* ((prev-iter (or (wfop-call-with-view op1) (tensor-iter-of (wfop-self op1))))
+	 (out (wfop-self op2))
+	 (composed-iter (it. prev-iter (tensor-iter-of (wfop-self op2))))
+	 ;; Replace op1
+	 (body (fuse-generated-iteration
+		(tensor-iter-of (wfop-self op1))
+		(tensor-iter-of (wfop-self op2))
+		(cl-waffe2/vm.generic-tensor::make-funcallable-kernel-form
+		 (tensor-compiled-kernel (wfop-self op1))
+		 *compile-option*)))
+	 (body (fuse-generated-iteration
+		(tensor-iter-of (wfop-self op2))
+		composed-iter
+		body)))
+
+    ;; TODO: make body compilable and apply lazy-compile
+    ;;(print " == Fused =========")
+    ;;(print composed-iter)
+    ;;(print body)
     (make-wfop
      #'(lambda (&rest args)
 	 ;; [TODO] Embedding ...:
 	 ;; replacing originally call-with-view -> new call-with-view form
 	 ;; x-ptr -> use gensym
-	 (print composed-iter)
-	 (print out)
+	 (car args)
 	 )
      out
      #'(lambda ()
@@ -136,5 +152,7 @@ op2 ..  E <- F(X, Y, Z)"
 		 (with-output-to-string (out)
 		   (dotimes (i (+  *node-indent*)) (princ " " out)))))
      `(,@(wfop-args op1) ,@(wfop-args op2))
-     :fuse-prev `(,op1 ,op2))))
+     :call-with-view composed-iter
+     :fuse-prev `(,op1 ,op2)
+     :fused-body-cache body)))
 
