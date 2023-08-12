@@ -499,6 +499,7 @@ The definition/implementation of nodes could be invaild."
 	  inputs)
 
     (values
+     ;; [FixME] Eliminate this compile in the future release.
      (compile nil
 	      `(lambda ()
 		 (with-adjustable-symbols (,@set-input-forms)

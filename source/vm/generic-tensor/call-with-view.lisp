@@ -314,6 +314,10 @@ Return: (values offsets-place form)"
 	     (equal (reverse k) (tensor-permute-order tensor)))))
     (every #'check tensors)))
 
+;; FuseOps
+;; (defparameter *iteration-infor* <- defnode展開時にこれをBindingしておく
+;; そこにLazyIterationInfoをPushして cl-waffe2 IRがその情報を使う
+;; (defstruct (LazyIterationInfo))  with kernel-size lparallel setting view route force-order etc...
 
 (defun call-with-view (function
 		       tensors
@@ -321,6 +325,7 @@ Return: (values offsets-place form)"
 			 (at-least-dim 1)
 			 (force-order nil)
 			 (lparallel nil)
+			 (fuse nil)
 		       &aux
 			 (shape (shape (car tensors)))
 			 (dims  (length shape)))
@@ -346,6 +351,10 @@ See also:
 `size-of`
 `stride-of`
 `offset-of`
+
+Return: `LazyIteration Structure`
+
+See also: `expand-ranked-iteration` for more straightforward alias.
 "
   
   (declare ;;(optimize (speed 3))
@@ -428,3 +437,20 @@ butgot ~a."
     (with-expand-init-tmp-form offset-place tensors
       (explore dims offset-place))))
 
+
+(defmacro with-ranked-loop (((op-function &rest variables)
+			     &key
+			       (kernel-size 1)
+			       (shuffle-rank t)
+			       (lparallel nil)
+			       (fuse nil))
+			    &body
+			      body)
+  "
+## [macro] with-ranked-loop
+
+"
+  `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
+    ,@body))
+
+		    

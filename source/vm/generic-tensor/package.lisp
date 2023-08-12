@@ -87,6 +87,7 @@
    #:viewinstruction-size
    #:viewinstruction-by
    #:call-with-view
+   #:with-ranked-loop
    #:stride-of
    #:size-of
    #:offset-of
