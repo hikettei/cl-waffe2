@@ -372,9 +372,17 @@ Composable Ranked-Loop is defined as:
    (eql (rloop-force-order ranked-loop1)
 	(rloop-force-order ranked-loop2))
 
-   ;; Sort by Ranks, instead of view-route? to fuse sum
-   (equal (rloop-view-route ranked-loop1)
-	  (rloop-view-route ranked-loop2))))
+   ;; Applies to the same size?
+   (let ((rep (shape (car (rloop-tensors ranked-loop1)))))
+     (and (every #'(lambda (s) (equal (shape s) rep))
+		 (rloop-tensors ranked-loop1))
+	  (every #'(lambda (s) (equal (shape s) rep))
+		 (rloop-tensors ranked-loop2))))
+	      
+  ;; Sort by Ranks, instead of view-route? to fuse sum
+  ;; (equal (rloop-view-route ranked-loop1)
+  ;;	    (rloop-view-route ranked-loop2))
+  ))
 
 ;; TODO: Shuffling Views to compose more operators
 ;; TODO: how do we handle with with-tensor-ptr?
