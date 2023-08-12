@@ -326,7 +326,10 @@ Return: (values offsets-place form)"
 (defstruct (Ranked-Loop
 	    (:conc-name rloop-))
   (expanded-body nil :type list)
+  (op-function nil :type function)
   (tensors nil :type list)
+  (kernel-size 0 :type fixnum)
+  (force-order nil :type boolean)
   (view-route nil :type list)
   (fuse-p     nil :type boolean)
   (lparallel  nil :type boolean))
@@ -341,18 +344,70 @@ Return: (values offsets-place form)"
 (it.-able-p ranked-loop1 ranked-loop2)
 ```
 
-Returns t If the two given Ranked-Loops are composable otherwise nil
+Returns t If the two given Ranked-Loops are composable otherwise nil.
+
+Composable Ranked-Loop is defined as:
+
+1. the value of `lparallel`, `view-route`, `force-order`, and `kernel-size` corresponds with.
+
+2. Both of `fuse-p` is t
+
 "
+  (declare (type (or null Ranked-Loop) ranked-loop1 ranked-loop2))
+  (and
 
-  )
+   ;; define-impl is for Tensors?
+   (not (null ranked-loop1))
+   (not (null ranked-loop2))
 
+   (rloop-fuse-p ranked-loop1)
+   (rloop-fuse-p ranked-loop2)
+
+   (eql (rloop-lparallel ranked-loop1)
+	(rloop-lparallel ranked-loop2))
+
+   (eql (rloop-kernel-size ranked-loop1)
+	(rloop-kernel-size ranked-loop2))
+
+   (eql (rloop-force-order ranked-loop1)
+	(rloop-force-order ranked-loop2))
+
+   (equal (print (rloop-view-route ranked-loop1))
+	  (rloop-view-route ranked-loop2))))
+
+;; TODO: Shuffling Views to compose more operators
+;; TODO: how do we treat with with-tensor-ptr
 (defun it. (ranked-loop1 ranked-loop2)
   "
 ## [function] it.
-Composes the given two iterations: ranked-loop1 and ranked-loop2 if possible.
+
+`it.` is the operator to compose ranked-loop1 and ranked-loop2 if possible.
+
+Return: brand new composed Ranked-Loop
 "
-  
-  )
+  (declare (type (or null Ranked-Loop) ranked-loop1 ranked-loop2))
+
+  (assert (it.-able-p ranked-loop1 ranked-loop2)
+	  nil
+	  "it.: Assertion Failed because the given two Iterations aren't composable.")
+
+  (let ((*ranked-loop-result-cacher*)
+	(tensors `(,@(rloop-tensors ranked-loop1)
+		   ,@(rloop-tensors ranked-loop2)))
+	(argn1 (length (rloop-tensors ranked-loop1))))
+    (call-with-view
+     #'(lambda (&rest views)
+	 (let ((views1 (butlast views argn1))
+	       (views2 (last    views argn1)))
+	   `(progn
+	      ,(apply (rloop-op-function ranked-loop1) views1)
+	      ,(apply (rloop-op-function ranked-loop2) views2))))
+     tensors
+     :at-least-dim (rloop-kernel-size ranked-loop1)
+     :force-order  (rloop-force-order ranked-loop1)
+     :lparallel    (rloop-lparallel   ranked-loop1)
+     :fuse t)
+    *ranked-loop-result-cacher*))
 
 ;; TODO: Ranked-Loop . Ranked-Loop -> New-Ranked-Loop
 
@@ -517,7 +572,10 @@ butgot ~a."
       (setf *ranked-loop-result-cacher*
 	    (make-ranked-loop
 	     :expanded-body result
+	     :op-function function
 	     :tensors tensors
+	     :force-order force-order
+	     :kernel-size at-least-dim
 	     :view-route (copy-list cl-waffe2/vm.nodes::*call-with-view-route*)
 	     :fuse-p fuse
 	     :lparallel lparallel))
