@@ -326,11 +326,33 @@ Return: (values offsets-place form)"
 (defstruct (Ranked-Loop
 	    (:conc-name rloop-))
   (expanded-body nil :type list)
+  (tensors nil :type list)
   (view-route nil :type list)
   (fuse-p     nil :type boolean)
   (lparallel  nil :type boolean))
 
 ;; The function it. composes the given two ranked-loop if possible, otherwise return nil
+
+(defun it.-able-p (ranked-loop1 ranked-loop2)
+  "
+## [function] it.-able-p
+
+```lisp
+(it.-able-p ranked-loop1 ranked-loop2)
+```
+
+Returns t If the two given Ranked-Loops are composable otherwise nil
+"
+
+  )
+
+(defun it. (ranked-loop1 ranked-loop2)
+  "
+## [function] it.
+Composes the given two iterations: ranked-loop1 and ranked-loop2 if possible.
+"
+  
+  )
 
 ;; TODO: Ranked-Loop . Ranked-Loop -> New-Ranked-Loop
 
@@ -363,6 +385,8 @@ In the simplest case, `call-with-view` first deploys `(loop for...)` until the r
 	   `(+ 1 1))
        (list (randn `(100 100 100)))
        :at-least-dim 2)
+
+;; will return:
 
 (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312057 0))
   (LOCALLY
@@ -403,6 +427,8 @@ Here, the number of tensors corresponds with the number of arguments `function` 
 `lparallel[boolean]` Set t to use lparallel. This should be denoted that under lparallel execution, the parameter `cl-waffe2/threads:*under-multi-thread*` becomes t. Use this parameter for the lowest rank operation to decide whether to parallelise.
 
 Return: `Expanded Lisp Codes`
+
+Note that `call-with-view` should be used at once or zero in the one `define-impl` forward. If you need twice times to call it, the general definition of `AbstractNode` should be split.
 
 See also: `with-ranked-loop` to the more elegant wrapping macro.
 "
@@ -491,6 +517,7 @@ butgot ~a."
       (setf *ranked-loop-result-cacher*
 	    (make-ranked-loop
 	     :expanded-body result
+	     :tensors tensors
 	     :view-route (copy-list cl-waffe2/vm.nodes::*call-with-view-route*)
 	     :fuse-p fuse
 	     :lparallel lparallel))

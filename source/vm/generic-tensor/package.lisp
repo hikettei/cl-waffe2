@@ -87,6 +87,9 @@
    #:viewinstruction-size
    #:viewinstruction-by
    #:call-with-view
+   #:it.
+   #:it.-able-p
+   #:*ranked-loop-result-cacher*
    #:with-ranked-loop
    #:stride-of
    #:size-of
