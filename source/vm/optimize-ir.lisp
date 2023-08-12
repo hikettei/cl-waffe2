@@ -62,7 +62,7 @@
 				      (tensor-iter-of (wfop-self last-val))))
 		    (current-op-iter (tensor-iter-of (wfop-self inst)))
 		    (compose-p (it.-able-p last-iseq-iter current-op-iter)))
-
+	       
 	       (if compose-p
 		   (let ((latest (pop result)))
 		     (push (compose-two-ops latest inst) result))

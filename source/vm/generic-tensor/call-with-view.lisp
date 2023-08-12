@@ -377,7 +377,9 @@ Composable Ranked-Loop is defined as:
      (and (every #'(lambda (s) (equal (shape s) rep))
 		 (rloop-tensors ranked-loop1))
 	  (every #'(lambda (s) (equal (shape s) rep))
-		 (rloop-tensors ranked-loop2))))
+		 (rloop-tensors ranked-loop2))
+	  (= (length (rloop-tensors ranked-loop1))
+	     (length (rloop-tensors ranked-loop2)))))
 	      
   ;; Sort by Ranks, instead of view-route? to fuse sum
   ;; (equal (rloop-view-route ranked-loop1)
@@ -404,18 +406,18 @@ Return: brand new composed Ranked-Loop
 
   (let ((*ranked-loop-result-cacher*)
 	(tensors `(,@(rloop-tensors ranked-loop1)
-		   ,@(rloop-tensors ranked-loop2)))
-	(argn1 (length (rloop-tensors ranked-loop1))))
+		   ,@(rloop-tensors ranked-loop2))))
     (call-with-view
      #'(lambda (&rest views)
-	 (let ((views1 (butlast views argn1))
-	       (views2 (last    views argn1)))
+	 (let* ((argn1  (length (rloop-tensors ranked-loop1)))
+		(views1 (butlast views argn1))
+		(views2 (last    views argn1)))
 	   `(progn
 	      ,(apply (rloop-op-function ranked-loop1) views1)
 	      ,(apply (rloop-op-function ranked-loop2) views2))))
      tensors
      :at-least-dim (rloop-kernel-size ranked-loop1)
-     :force-order  (rloop-force-order ranked-loop1)
+     :force-order  (or (rloop-force-order ranked-loop1) (rloop-force-order ranked-loop2))
      :lparallel    (rloop-lparallel   ranked-loop1)
      :fuse t)
     *ranked-loop-result-cacher*))
