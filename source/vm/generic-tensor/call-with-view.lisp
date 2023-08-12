@@ -388,13 +388,13 @@ butgot ~a."
 	     ;; Computing Multi-Dimensional Offsets
 	     (let* ((start-points (loop for tensor in tensors
 					collect
-					`(compute-visible-start-idx
-					  (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
+					(lazy-compute-visible-start-idx
+					 (subscript-view (nth target-dim (tensor-view tensor))))))
 		    (end-points (loop for tensor in tensors
 				      collect
-				      `(compute-visible-end-idx
-					(subscript-view (nth ,target-dim (tensor-view ,tensor)))
-					(nth ,target-dim (original-shape ,tensor))))))
+				      (lazy-compute-visible-end-idx
+				       (subscript-view (nth target-dim (tensor-view tensor)))
+				       (nth target-dim (original-shape tensor))))))
 	       (cond
 		 ((<= rest-dim at-least-dim)
 
@@ -404,7 +404,7 @@ butgot ~a."
 		    (let ((stride-places (tensor-gensym-list tensors)))
 		      `(let (,@(loop for stride-place in stride-places
 				     for tensor in tensors
-				     collect `(,stride-place (nth ,target-dim (list ,@(tensor-stride tensor))))))
+				     collect `(,stride-place (the fixnum (nth ,target-dim (list ,@(tensor-stride tensor)))))))
 			 ,@(expand-first-offset-adder
 			    tensors
 			    offsets-place
