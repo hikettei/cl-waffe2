@@ -372,11 +372,13 @@ Composable Ranked-Loop is defined as:
    (eql (rloop-force-order ranked-loop1)
 	(rloop-force-order ranked-loop2))
 
-   (equal (print (rloop-view-route ranked-loop1))
+   (equal (rloop-view-route ranked-loop1)
 	  (rloop-view-route ranked-loop2))))
 
 ;; TODO: Shuffling Views to compose more operators
-;; TODO: how do we treat with with-tensor-ptr
+;; TODO: how do we handle with with-tensor-ptr?
+;; We should embedding codes at a cetrain position
+;; Gensym: a-ptr etc..
 (defun it. (ranked-loop1 ranked-loop2)
   "
 ## [function] it.

@@ -81,6 +81,7 @@
 	       (:file "vm/ir")
 	       (:file "vm/utils")
 	       (:file "vm/vm")
+	       (:file "vm/optimize-ir")
 	       (:file "vm/compile")	       
 
 	       (:file "backends/lisp/package")

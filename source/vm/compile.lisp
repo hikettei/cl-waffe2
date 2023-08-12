@@ -46,7 +46,15 @@
 ;; (!sin x (!copy x))
 ;;
 
-(defun node-compile-into-vm (toplevel)
+;; TODO:
+;; Forward Reodering
+;; MUL     VIEW
+;; VIEW    VIEW
+;; ADD  => MUL
+;; VIEW    ADD  to compose more operations
+
+(defun node-compile-into-vm (toplevel &key (fuse-p nil))
+  "Set fuse-p=t to apply view-reordering and fuse operations"
   (let ((instruction-seq)
 	(variable-leaves))
 
@@ -84,7 +92,15 @@
 		      instruction-seq)))))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
-    (values instruction-seq variable-leaves)))
+
+    (if fuse-p
+	(values
+	 (reverse
+	  (apply-fuse-operations
+	   (apply-iseq-reordering
+	    (reverse instruction-seq))))
+	 variable-leaves)
+	(values instruction-seq variable-leaves))))
 
 (defun expand-gradient-adder (tensor grad)
   ;; Tensor += Grad
@@ -120,22 +136,22 @@
   (sort-and-prune-for-backward toplevel dout-toplevel leaves))
 
 ;; When doing forward: reverse it in advance
-(defun compile-forward-and-backward (toplevel &key (need-backward t))
+(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t))
   "
 
 ## [function] compile-forward-and-backward
 
 ```lisp
-(compile-forward-and-backward toplevel &key (need-backward t))
+(compile-forward-and-backward toplevel &key (need-backward t) (fuse-p t))
 ```
 
-Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables).
+Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set `fuse-p`=t to get additional optimization to the generated IR.
 
 Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 "
   (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-forward leaves)
-      (node-compile-into-vm toplevel)
+      (node-compile-into-vm toplevel :fuse-p fuse-p)
 
     ;; [TODO] Testing the line below carefully:
     ;; In-place mutation is working??
@@ -167,19 +183,19 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (values (reverse iseq-forward) backward-iseq leaves))))
 
 
-(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t))
+(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
   "
 ## [function] disassemble-waffe2-ir
 
 ```lisp
-(disassemble-waffe2-ir toplevel &key (backward t) (stream t))
+(disassemble-waffe2-ir toplevel &key (backward t) (stream t) (fuse-p t))
 ```
 
 Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `stream`. If `backward` was set to t, `backward` is also displayed.
 "
   (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-fw iseq-bw leaves)
-      (compile-forward-and-backward toplevel :need-backward backward)
+      (compile-forward-and-backward toplevel :need-backward backward :fuse-p t)
     (declare (ignore leaves))
     
     (flet ((conc-iseq-str (iseq)
