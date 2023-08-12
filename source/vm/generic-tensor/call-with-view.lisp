@@ -314,10 +314,25 @@ Return: (values offsets-place form)"
 	     (equal (reverse k) (tensor-permute-order tensor)))))
     (every #'check tensors)))
 
-;; FuseOps
-;; (defparameter *iteration-infor* <- defnode展開時にこれをBindingしておく
-;; そこにLazyIterationInfoをPushして cl-waffe2 IRがその情報を使う
-;; (defstruct (LazyIterationInfo))  with kernel-size lparallel setting view route force-order etc...
+
+;; Using Ranked-Loop Information at compiling time, and later expand into Fused Operation:
+;; The step seems ugly:
+;; After call-with-view is called, the structure Ranked-Loop is set to *ranked-loop-result-cacher*
+(defparameter *ranked-loop-result-cacher* nil)
+;; define-impl macro binds this parameter, and then reading this variable.
+
+;; So, one define-impl :forward, call-with-view can be used at once.
+
+(defstruct (Ranked-Loop
+	    (:conc-name rloop-))
+  (expanded-body nil :type list)
+  (view-route nil :type list)
+  (fuse-p     nil :type boolean)
+  (lparallel  nil :type boolean))
+
+;; The function it. composes the given two ranked-loop if possible, otherwise return nil
+
+;; TODO: Ranked-Loop . Ranked-Loop -> New-Ranked-Loop
 
 (defun call-with-view (function
 		       tensors
@@ -332,29 +347,64 @@ Return: (values offsets-place form)"
   "
 ## [function] call-with-view
 
+A principle operator to extend your functions to higher arrays.
+
 ```lisp
-(call-with-view function tensors &key (at-least-dim 1))
+(call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil) (fuse nil))
 ```
 
-`call-with-view` is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.
+The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
 
-(TODO: Example/Documents)
+In the simplest case, `call-with-view` first deploys `(loop for...)` until the rank of given tensors reaches the given `at-least-dim`. After reaching `at-least-dim`, the function places the result of calling the given `function`.
 
-`function` [lambda] an lambda function which receives `variable1.view variable2.view ...` as arguments, returning an list being compiled.
+```lisp
+(call-with-view
+      #'(lambda (x-view)
+	   `(+ 1 1))
+       (list (randn `(100 100 100)))
+       :at-least-dim 2)
 
-`tensors` [list of abstracttensor] tensors to be called with.
-`at-least-dim` [fixnum] ... kernel-size
+(CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312057 0))
+  (LOCALLY
+   (DECLARE (TYPE FIXNUM #:G312057))
+   (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312058 #:G312057))
+     (LOCALLY
+      (DECLARE (TYPE FIXNUM #:G312058))
+      (LET* ((#:G312059 (NTH 0 (LIST 10000 100 1)))
+             (#:G25 100)
+             (#:G25
+              (CL-WAFFE2/VM.GENERIC-TENSOR::READ-ADJUSTABLE-SYMBOL #:G25)))
+        (INCF #:G312058 (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312059))
+        (LOOP CL-WAFFE2/VM.GENERIC-TENSOR::FOR #:G312060 FIXNUM CL-WAFFE2/VM.GENERIC-TENSOR::UPFROM 0 CL-WAFFE2/VM.GENERIC-TENSOR::BELOW #:G25
+              DO (PROGN
+                  (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312061
+                                                                 #:G312058))
+                    (LOCALLY
+                     (DECLARE (TYPE FIXNUM #:G312061))
+                     (LET ((#:G312062 (THE FIXNUM (NTH 1 (LIST 10000 100 1)))))
+                       (INCF #:G312061
+                             (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312062))
+                       (+ 1 1)))))
+              UNLESS (= #:G312060 (1- #:G25))
+              DO (PROGN
+                  (INCF (THE FIXNUM #:G312058) (THE FIXNUM #:G312059)))))))))
+```
 
-`force-order[boolean]` If t, iterates over matrices of ranks below the kernel size, preserving their shape.
-See also:
+Here, the number of tensors corresponds with the number of arguments `function` receive. Usually, the function receives information on the view of the tensor at the corresponding position: `(size-of x-view)` to get the number of iteration, `(stride-of x-view)` to get the number of increment, and, `(offset-of x-view)` to get the offset of tensor. (Sometimes they return s-expression because the shapes of tensors are not necessary number, but symbols.)
 
-`size-of`
-`stride-of`
-`offset-of`
+`function [function]` should return a list which corresponds with invoking user-defined operation given views.
 
-Return: `LazyIteration Structure`
+`tensors[a list of abstracttensor]` tensors to be called with.
 
-See also: `expand-ranked-iteration` for more straightforward alias.
+`at-least-dim [fixnum]` `at-least-dim is minimum rank value required by the operation. set 1 to define `element-wise` operation, set 2 to define `gemm` for example.
+
+`force-order[boolean]` On some conditions, `call-with-view` shuffles the order of ranks, or flattens given tensors (e.g.: `100x100` tensors is the equivalent to just `10000x1` tensor on the memory). If you want to disable this behaviour, set `force-order`=t.
+
+`lparallel[boolean]` Set t to use lparallel. This should be denoted that under lparallel execution, the parameter `cl-waffe2/threads:*under-multi-thread*` becomes t. Use this parameter for the lowest rank operation to decide whether to parallelise.
+
+Return: `Expanded Lisp Codes`
+
+See also: `with-ranked-loop` to the more elegant wrapping macro.
 "
   
   (declare ;;(optimize (speed 3))
@@ -434,8 +484,17 @@ butgot ~a."
 		       (1- rest-dim)
 		       offsets-place))))))))
 
-    (with-expand-init-tmp-form offset-place tensors
-      (explore dims offset-place))))
+    (let ((result
+	    (with-expand-init-tmp-form offset-place tensors
+	      (explore dims offset-place))))
+
+      (setf *ranked-loop-result-cacher*
+	    (make-ranked-loop
+	     :expanded-body result
+	     :view-route (copy-list cl-waffe2/vm.nodes::*call-with-view-route*)
+	     :fuse-p fuse
+	     :lparallel lparallel))
+      result)))
 
 
 (defmacro with-ranked-loop (((op-function &rest variables)
@@ -449,6 +508,23 @@ butgot ~a."
   "
 ## [macro] with-ranked-loop
 
+
+```lisp
+(with-ranked-loop (((op-function &rest variables)
+                    &key
+                       (kernel-size 1)
+                       (shuffle-rank t)
+                       (lparallel nil)
+                       (fuse nil))
+                    &body body))
+```
+
+Just an alias of `call-with-view` with this form:
+
+```lisp
+`(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
+    ,@body)
+```
 "
   `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
     ,@body))
