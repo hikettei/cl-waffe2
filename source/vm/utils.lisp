@@ -91,6 +91,19 @@
   (when (tensor-compiled-kernel tensor)
     (cl-waffe2/vm.generic-tensor::compiled-kernel-call-with-view (tensor-compiled-kernel tensor))))
 
+(defun print-fuse-ops (op1 op2 out)
+  (flet ((print-node (op)
+	   (format out "        ~a~%" op)))
+
+    (if (wfop-fuse-prev op1)
+	(print-fuse-ops (car (wfop-fuse-prev op1)) (second (wfop-fuse-prev op1)) out)
+	(print-node op1))
+
+    (if (wfop-fuse-prev op2)
+	(print-fuse-ops (car (wfop-fuse-prev op2)) (second (wfop-fuse-prev op2)) out)
+	(print-node op2))))
+    
+
 (defun compose-two-ops (op1 op2)
   "op1(op2(...))
 
@@ -101,11 +114,17 @@ op2 ..  E <- F(X, Y, Z)"
 	 (composed-iter (it. (tensor-iter-of (wfop-self op1)) (tensor-iter-of (wfop-self op2)))))
     (make-wfop
      #'(lambda (&rest args)
-	 ;; TODO
+	 ;; [TODO] Embedding ...:
 	 (print composed-iter)
 	 (print out)
 	 )
      out
-     #'(lambda () "Composed Node")
-     `(,@(wfop-args op1) ,@(wfop-args op2)))))
+     #'(lambda ()
+	 (format nil "Block -> Fused {
+~a    }
+  "		
+		 (with-output-to-string (out)
+		   (print-fuse-ops op1 op2 out))))
+     `(,@(wfop-args op1) ,@(wfop-args op2))
+     :fuse-prev `(,op1 ,op2))))
 

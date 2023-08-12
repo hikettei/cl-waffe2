@@ -4,7 +4,7 @@
 
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args)))
+	    (:constructor make-wfop (op self node args &key (fuse-prev nil))))
   "
 ## [struct] WFInstruction
 
@@ -20,11 +20,13 @@ cl-waffe2 vm specializes on  the sequence of above format.
   (node node :type (or function string null AbstractNode))
   (self self :type AbstractTensor)
   (args args :type list)
-  (bw-is-leaf-p nil :type boolean))
+  (bw-is-leaf-p nil :type boolean)
+  (fuse-prev fuse-prev :type (or null list)))
 
 ;; (defstruct (Composable-Operator <- separate call-with-view from body
 ;; (defun .cop (cop1 cop2) ...)
 
+(defparameter *omit-args-n* 5)
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
 	  "<WfInst[Compiled: ~a] : ~a.state <= apply( ~a)>~%"
@@ -40,13 +42,15 @@ cl-waffe2 vm specializes on  the sequence of above format.
 			  (class-name (class-of (wfop-node inst)))))
 		  (class-name (class-of (wfop-node inst)))))
 	  (tensor-id (wfop-self inst))
-	  (with-output-to-string (out)
-	    (dolist (var (wfop-args inst))
-	      (format out "~a~a~a "
-		      (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-			  "<Param>"
-			  "")
-		      (tensor-id var) (shape var))))))
+	  (if (>= (length (wfop-args inst)) *omit-args-n*)
+	      (format nil "..., x~a,..." (length (wfop-args inst)))
+	      (with-output-to-string (out)
+		(dolist (var (wfop-args inst))
+		  (format out "~a~a~a "
+			  (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
+			      "<Param>"
+			      "")
+			  (tensor-id var) (shape var)))))))
 
 ;; In-place mutation
 
@@ -112,8 +116,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 
 		     (apply #'cl-waffe2/vm.generic-tensor::order-reductable-p 0 past-variables) ;; <- is it worth it? test
 		     (not (tensor-protect-me (car past-variables)))
-		     (not (movetensor-save-for-backward bw)))))
-	     
+		     (not (movetensor-save-for-backward bw)))))	     
 	     (if in-place-p		 
 		 (setf (movetensor-ignore-me (wfop-node instruction)) t)
 		 (when (gethash (tensor-id target) ref-table)
