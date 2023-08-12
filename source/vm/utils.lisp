@@ -91,9 +91,13 @@
   (when (tensor-compiled-kernel tensor)
     (cl-waffe2/vm.generic-tensor::compiled-kernel-call-with-view (tensor-compiled-kernel tensor))))
 
+(defparameter *node-indent* 4)
+
 (defun print-fuse-ops (op1 op2 out)
   (flet ((print-node (op)
-	   (format out "        ~a~%" op)))
+	   (format out "~a~a~%"
+		   (with-output-to-string (out) (dotimes (i (+ 8 *node-indent*)) (princ " " out)))
+		   op)))
 
     (if (wfop-fuse-prev op1)
 	(print-fuse-ops (car (wfop-fuse-prev op1)) (second (wfop-fuse-prev op1)) out)
@@ -115,16 +119,22 @@ op2 ..  E <- F(X, Y, Z)"
     (make-wfop
      #'(lambda (&rest args)
 	 ;; [TODO] Embedding ...:
+	 ;; replacing originally call-with-view -> new call-with-view form
+	 ;; x-ptr -> use gensym
 	 (print composed-iter)
 	 (print out)
 	 )
      out
      #'(lambda ()
 	 (format nil "Block -> Fused {
-~a    }
-  "		
+~a~a}
+~a"		
 		 (with-output-to-string (out)
-		   (print-fuse-ops op1 op2 out))))
+		   (print-fuse-ops op1 op2 out))
+		 (with-output-to-string (out)
+		   (dotimes (i (+ 4 *node-indent*)) (princ " " out)))
+		 (with-output-to-string (out)
+		   (dotimes (i (+  *node-indent*)) (princ " " out)))))
      `(,@(wfop-args op1) ,@(wfop-args op2))
      :fuse-prev `(,op1 ,op2))))
 

@@ -352,6 +352,8 @@ Composable Ranked-Loop is defined as:
 
 2. Both of `fuse-p` is t
 
+3. The number of `tensors` do match.
+
 "
   (declare (type (or null Ranked-Loop) ranked-loop1 ranked-loop2))
   (and

@@ -85,5 +85,8 @@ Evaluates generated cl-waffe2 IR sequence.
 		 (class-name (class-of (tensor-backward toplevel)))
 		 (with-output-to-string (out)
 		   (dolist (i iseq)
-		     (format out "        ~a" i))))))))
+		     (let ((*node-indent* (+ 4 *node-indent*)))
+		       (format out "        ~a" i)))))))))
+
+
 
