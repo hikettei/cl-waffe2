@@ -65,7 +65,7 @@ Evaluates generated cl-waffe2 IR sequence.
 		   (tensor-backward toplevel)
 		   dout-input
 		   (tensor-variables toplevel))))
-	 (iseq (reverse (node-compile-into-vm bw))))
+	 (iseq (reverse (node-compile-into-vm bw :fuse-p t))))
     (apply-in-place-mutation! iseq leaves)
     (setf (tensor-state dout-input)
 	  (make-statecontainer :forward-out-form (make-compiled-kernel)))

@@ -372,6 +372,7 @@ Composable Ranked-Loop is defined as:
    (eql (rloop-force-order ranked-loop1)
 	(rloop-force-order ranked-loop2))
 
+   ;; Sort by Ranks, instead of view-route? to fuse sum
    (equal (rloop-view-route ranked-loop1)
 	  (rloop-view-route ranked-loop2))))
 

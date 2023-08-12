@@ -27,7 +27,8 @@
 	      ,(stride-of x-view 0)))
 	   (T
 	    (error "the dtype ~a is not supported. (TODO)" dtype))))
-     `(,x ,y))))
+     `(,x ,y)
+     :fuse t)))
 
 (defun expand-move-form (x y)
   (let ((dtype (dtype x)))
@@ -51,7 +52,8 @@
 	      ,(stride-of x-view 0)))
 	   (T
 	    (error "the dtype ~a is not supported. (TODO)" dtype))))
-     `(,x ,y))))
+     `(,x ,y)
+     :fuse t)))
 
 (define-impl (AddNode :device CPUTensor
 	      :reject-p (supported-dtypes-are 0 :float :double))

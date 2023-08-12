@@ -57,6 +57,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
+  
   (let ((ref-table (make-hash-table)))
 
     ;; First, Register all tensors appeared in the computation node

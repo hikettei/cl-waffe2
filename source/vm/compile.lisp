@@ -195,7 +195,7 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 "
   (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-fw iseq-bw leaves)
-      (compile-forward-and-backward toplevel :need-backward backward :fuse-p t)
+      (compile-forward-and-backward toplevel :need-backward backward :fuse-p fuse-p)
     (declare (ignore leaves))
     
     (flet ((conc-iseq-str (iseq)

@@ -83,3 +83,29 @@
 		       above-sort)))))
       (top-sort-helper toplevel dout-toplevel))))
 
+(defun tensor-compiled-kernel (tensor)
+  (when (tensor-state tensor)
+    (statecontainer-forward-out-form (tensor-state tensor))))
+
+(defun tensor-iter-of (tensor)
+  (when (tensor-compiled-kernel tensor)
+    (cl-waffe2/vm.generic-tensor::compiled-kernel-call-with-view (tensor-compiled-kernel tensor))))
+
+(defun compose-two-ops (op1 op2)
+  "op1(op2(...))
+
+op1 ... A <- F(B, C, D)
+op2 ..  E <- F(X, Y, Z)"
+  (declare (type WFInstruction op1 op2))
+  (let* ((out (wfop-self op2))
+	 (composed-iter (it. (tensor-iter-of (wfop-self op1)) (tensor-iter-of (wfop-self op2)))))
+    (make-wfop
+     #'(lambda (&rest args)
+	 ;; TODO
+	 (print composed-iter)
+	 (print out)
+	 )
+     out
+     #'(lambda () "Composed Node")
+     `(,@(wfop-args op1) ,@(wfop-args op2)))))
+
