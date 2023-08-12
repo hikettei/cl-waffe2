@@ -106,7 +106,20 @@
     (if (wfop-fuse-prev op2)
 	(print-fuse-ops (car (wfop-fuse-prev op2)) (second (wfop-fuse-prev op2)) out)
 	(print-node op2))))
-    
+
+(defun make-callable-fused-f (ranked-iter body return)
+  ;; body ... (lambda (args) (declare ...) body ...)
+
+  (let ((other-parts (cdddr body))
+	(args (gensym)))
+    (cl-waffe2/vm.generic-tensor::tensor->id
+     `(lambda (&rest ,args)
+	(cl-waffe2/vm.generic-tensor::let*-ignorable
+	    (,@(loop for tensor in (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter)
+		     for nth upfrom 0
+		     collect `(,(tensor-id tensor) (nth ,nth ,args))))
+	  (locally ,@other-parts ,return)))
+     (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter))))
 
 (defun compose-two-ops (op1 op2)
   "op1(op2(...))
@@ -127,19 +140,23 @@ op2 ..  E <- F(X, Y, Z)"
 	 (body (fuse-generated-iteration
 		(tensor-iter-of (wfop-self op2))
 		composed-iter
-		body)))
+		body))
+	 (body (compile nil (make-callable-fused-f composed-iter body (tensor-id out)))))
 
-    ;; TODO: make body compilable and apply lazy-compile
-    ;;(print " == Fused =========")
-    ;;(print composed-iter)
-    ;;(print body)
+    ;; still not working...
+    ;; with LispTensor, it works but as for CPUTensor it won't
+    ;; 1. x-ptr -> replace with gensym
+    ;; 2. returned value is 0
+    ;; 3. cache (compile nil)
+    
     (make-wfop
-     #'(lambda (&rest args)
+     ;;#'(lambda (&rest args)
 	 ;; [TODO] Embedding ...:
 	 ;; replacing originally call-with-view -> new call-with-view form
 	 ;; x-ptr -> use gensym
-	 (car args)
-	 )
+;;	 (car args)
+     ;;	 )
+     body
      out
      #'(lambda ()
 	 (format nil "Block -> Fused {
@@ -153,6 +170,5 @@ op2 ..  E <- F(X, Y, Z)"
 		   (dotimes (i (+  *node-indent*)) (princ " " out)))))
      `(,@(wfop-args op1) ,@(wfop-args op2))
      :call-with-view composed-iter
-     :fuse-prev `(,op1 ,op2)
-     :fused-body-cache body)))
+     :fuse-prev `(,op1 ,op2))))
 
