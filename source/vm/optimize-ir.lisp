@@ -74,12 +74,14 @@
 		    (compose-p (and
 				(not (broadcasted-p (wfop-self inst)))
 				(it.-able-p last-iseq-iter current-op-iter)
+				(no-dependency-p last-val inst)
 				(if (movetensor-p (wfop-node inst))
 				    (progn
 				     ;; <Deleted> Node isn't subject to FuseOps
 				     ;; Because the costs for it is almost 0
 				     ;; and which tensors to be returned is still unknown
-				     (not (movetensor-ignore-me (wfop-node inst))))
+				      
+				      (not (movetensor-ignore-me (wfop-node inst))))
 				    t)
 				(if (and last-val
 					 (movetensor-p (wfop-node last-val)))

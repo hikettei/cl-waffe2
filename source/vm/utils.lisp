@@ -1,6 +1,17 @@
 
 (in-package :cl-waffe2/vm)
 
+;; Reading List
+;; https://www.cspp.cc.u-tokyo.ac.jp/hanawa/class/spc2016s/sp20160426.pdf
+;; https://www.r-ccs.riken.jp/wp/wp-content/uploads/2020/09/katagiri190516.pdf
+
+;; 3D/4D ... 次元行列の並列化
+;; メモリの局所性を高めたい
+
+;; [TODO] Benchmarking on Loop Fusion + Lparallel
+;; Loop Collapseが有効になった場合でもFusionの効果あるかも？
+;; とりあえずベンチマークから考えてみる
+;; TODO: Fusing Several Backwards To Reduce Temporary arrays
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))
@@ -118,19 +129,21 @@
 
 (defun make-callable-fused-f (ranked-iter body out)
   ;; body ... (lambda (args) (declare ...) body ...)
-
+  ;; TODO: Fuse Memory-Access
   (let ((other-parts (cdddr body))
-	(args (gensym)))
-    (cl-waffe2/vm.generic-tensor::tensor->id
-     `(lambda (&rest ,args)
-	(cl-waffe2/vm.generic-tensor::let*-ignorable
-	    (,@(loop for tensor in (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter)
-		     for nth upfrom 0
-		     collect `(,(tensor-id tensor) (nth ,nth ,args))))
-	  (locally
-	      ,@other-parts
-	    ,(wfop-self out))))
-     (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter))))
+	(args (gensym))
+	(seen nil)
+	(all-args (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter)))
+    `(lambda (&rest ,args)
+       (let  (,@(loop for tensor in all-args
+		      for nth upfrom 0
+		      if (not (find (tensor-id tensor) seen))
+			collect `(,(tensor-id tensor) (nth ,nth ,args))
+		      do (push (tensor-id tensor) seen)))
+	 (locally
+	     ,@(cl-waffe2/vm.generic-tensor::tensor->id
+		other-parts
+		all-args))))))
 
 (defun parse->body (body)
   "body ... (named-lambda xxx (x y z) ...) -> ..."
@@ -150,7 +163,6 @@ op2 ..  E <- F(X, Y, Z)
   (let* ((prev-iter (or (wfop-call-with-view op1) (tensor-iter-of (wfop-self op1))))
 	 (out (wfop-self op2))
 	 (composed-iter (it. prev-iter (tensor-iter-of (wfop-self op2))))
-	 
 	 ;; Here, we gonna apply fuse-ops to the generated Lisp-Code in a meta-programming way.
 	 ;;
 	 ;; fuse-generated-iteration example:
@@ -165,6 +177,7 @@ op2 ..  E <- F(X, Y, Z)
 
 	 
 	 (body (fuse-generated-iteration
+	        (wfop-self op2)
 		prev-iter;;(tensor-iter-of (wfop-self op1));;prev-iter
 		composed-iter
 		(or
@@ -208,4 +221,12 @@ op2 ..  E <- F(X, Y, Z)
 
 (defun broadcasted-p (tensor)
   (some #'zerop (cl-waffe2/vm.generic-tensor::tensor-actual-stride tensor)))
+
+
+(defun no-dependency-p (fused-iseq instruction)
+  (let ((fused-p (wfop-fuse-prev fused-iseq)))
+    (or (null fused-p)
+	(let* ((inst-list (apply #'collect-fused-ops fused-p))
+	       (prev-vars (map 'list (compose #'tensor-id #'wfop-self) inst-list)))
+	  (not (find (tensor-id (wfop-self instruction)) prev-vars))))))
 

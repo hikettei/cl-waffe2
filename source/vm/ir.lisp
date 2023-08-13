@@ -143,7 +143,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		     (apply #'cl-waffe2/vm.generic-tensor::order-reductable-p 0 past-variables) ;; <- is it worth it? test
 		     (not (tensor-protect-me (car past-variables)))
 		     (not (movetensor-save-for-backward bw)))))	     
-	     (if in-place-p		 
+	     (if in-place-p
 		 (setf (movetensor-ignore-me (wfop-node instruction)) t)
 		 (when (gethash (tensor-id target) ref-table)
 		   (decf (gethash (tensor-id target) ref-table)))))))

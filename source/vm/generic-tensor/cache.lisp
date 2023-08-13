@@ -205,6 +205,18 @@ Reading *kernel-storeroom*, the function expands the form below.
 	  obj)))
    body))
 
+(defun tensor->iid (body args)
+  (map-tree
+   #'(lambda (obj)
+       (typecase obj
+	 (AbstractTensor
+	  (if (find (tensor-id obj) args :key #'tensor-iid)
+	      (tensor-iid obj)
+	      obj))
+	 (T
+	  obj)))
+   body))
+
 (defmacro funcall-kernel (kernel-function &rest inputs)
   "A replacement of (funcall fw-compiled)"
   `(funcall ,@(tensor->id (compiled-kernel-body kernel-function) (compiled-kernel-args kernel-function)) ,@inputs))

@@ -340,12 +340,19 @@ Used to replace/fuse generated call-with-view."
 	       (if (and
 		    (eql (car tree) 'cl-waffe2-internal-tagbody)
 		    (eql (second tree) target-id))
-		   (values new-body nil)
+		   (progn
+		     ;;(print tree)
+		     ;;(print new-body)
+		     (values
+		      (append
+		       new-body
+		       (cdddr tree))
+		      nil))
 		   tree)
 	       tree))
        old-body))))
 
-(defun fuse-generated-iteration (old-ranked-loop new-ranked-loop old-body &key (merge-body nil) (merge-loop nil))
+(defun fuse-generated-iteration (out old-ranked-loop new-ranked-loop old-body &key (merge-body nil) (merge-loop nil))
   "Replaces the body of (c-waffe2-internal-tagbody ...) with new, fused body
 
 Based on the information from old-ranked-loop and new-ranked-loop, this funciton replaces the old-ranked-loop.tagID body in old-body with the body of new-ranked-loop"
@@ -368,12 +375,14 @@ Based on the information from old-ranked-loop and new-ranked-loop, this funciton
 		    (eql (second tree) target-id))
 		   (values
 		    ;; (cl-waffe2-internal-tagbody ID ...)
-		    (if merge-loop
-			(place-inside-of
-			 merge-loop
-			 merge-body
+		    (append		  
+		     (if merge-loop
+			 (place-inside-of
+			  merge-loop
+			  merge-body
+			  (rloop-expanded-body new-ranked-loop))
 			 (rloop-expanded-body new-ranked-loop))
-			(rloop-expanded-body new-ranked-loop))
+		     (cdddr tree))
 		    t)
 		   tree)
 	       tree))
@@ -424,13 +433,6 @@ Composable Ranked-Loop is defined as:
 		 (rloop-tensors ranked-loop1))
 	  (every #'(lambda (s) (equal (shape s) rep))
 		 (rloop-tensors ranked-loop2))
-	  ;; If the second arguments include broadcasted tensor
-	  ;; Ignore it (TODO: There must be by far more clever condition)
-
-	  ;;(not (some #'broadcasted-p (rloop-tensors ranked-loop2)))
-	  
-	  ;;(= (length (rloop-tensors ranked-loop1))
-	  ;;   (length (rloop-tensors ranked-loop2)))
 	  ))
    
    ;; Sort by Ranks, instead of view-route? to fuse sum
@@ -442,7 +444,7 @@ Composable Ranked-Loop is defined as:
 ;; TODO: how do we handle with with-tensor-ptr?
 ;; We should embedding codes at a cetrain position
 ;; Gensym: a-ptr etc..
-(defun it. (ranked-loop1 ranked-loop2)
+(defun it. (ranked-loop1 ranked-loop2 &key (embedding nil))
   "
 ## [function] it.
 
@@ -466,6 +468,7 @@ Return: brand new composed Ranked-Loop
 		(views2 (last    views argn1)))
 	   `(progn
 	      ,(apply (rloop-op-function ranked-loop1) views1)
+	      ,embedding
 	      ,(apply (rloop-op-function ranked-loop2) views2))))
      tensors
      :at-least-dim (rloop-kernel-size ranked-loop1)
