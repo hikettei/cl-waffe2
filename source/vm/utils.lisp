@@ -44,7 +44,7 @@
 ;;       sin               sin
 ;;        |                 |
 ;;       out               out
-(defun sort-and-prune-for-backward (toplevel dout-toplevel leaves)
+(defun sort-and-prune-for-backward (toplevel dout-toplevel leaves fuse-p)
   (declare (type AbstractTensor toplevel))
   (let ((seen nil))
     (labels ((top-sort-helper (var prev-gradient)
@@ -71,7 +71,7 @@
 			     if grad do
 			       (let* ((result (top-sort-helper prev grad)))
 				 (when result
-				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth leaves)
+				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth leaves fuse-p)
 				     (setq above-sort
 					   `(,@above-sort
 					     ,(make-wfop
@@ -116,7 +116,7 @@
 	  (collect-fused-ops (car (wfop-fuse-prev op2)) (second (wfop-fuse-prev op2)))
 	  op2))))
 
-(defun make-callable-fused-f (ranked-iter body)
+(defun make-callable-fused-f (ranked-iter body out)
   ;; body ... (lambda (args) (declare ...) body ...)
 
   (let ((other-parts (cdddr body))
@@ -127,7 +127,9 @@
 	    (,@(loop for tensor in (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter)
 		     for nth upfrom 0
 		     collect `(,(tensor-id tensor) (nth ,nth ,args))))
-	  (locally ,@other-parts)))
+	  (locally
+	      ,@other-parts
+	    ,(wfop-self out))))
      (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter))))
 
 (defun parse->body (body)

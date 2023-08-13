@@ -131,10 +131,10 @@
        (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
 
 
-(defun trace-backward-network (toplevel leaves dout-toplevel)
+(defun trace-backward-network (toplevel leaves dout-toplevel fuse-p)
   (declare (type AbstractTensor toplevel dout-toplevel))
 
-  (sort-and-prune-for-backward toplevel dout-toplevel leaves))
+  (sort-and-prune-for-backward toplevel dout-toplevel leaves fuse-p))
 
 (defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
@@ -158,7 +158,8 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 
       ;; [TODO] Testing the line below carefully:
       ;; In-place mutation is working??
-      (apply-in-place-mutation! iseq-forward leaves)
+      (when (not fuse-p) ;; avoid twice-time applying
+	(apply-in-place-mutation! iseq-forward leaves))
 
       (let* ((dout (if (scalar-p toplevel)
 		       (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
@@ -166,7 +167,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
-		 (trace-backward-network toplevel leaves dout))))
+		 (trace-backward-network toplevel leaves dout fuse-p))))
 
 	(mapc
 	 #'(lambda (tensor)

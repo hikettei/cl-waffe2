@@ -105,5 +105,6 @@
 		   (compile nil
 			    (make-callable-fused-f
 			     (wfop-call-with-view   inst)
-			     (wfop-fused-body-cache inst))))))
+			     (wfop-fused-body-cache inst)
+			     inst)))))
 
