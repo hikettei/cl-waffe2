@@ -424,14 +424,19 @@ Composable Ranked-Loop is defined as:
 		 (rloop-tensors ranked-loop1))
 	  (every #'(lambda (s) (equal (shape s) rep))
 		 (rloop-tensors ranked-loop2))
+	  ;; If the second arguments include broadcasted tensor
+	  ;; Ignore it (TODO: There must be by far more clever condition)
+
+	  ;;(not (some #'broadcasted-p (rloop-tensors ranked-loop2)))
+	  
 	  ;;(= (length (rloop-tensors ranked-loop1))
 	  ;;   (length (rloop-tensors ranked-loop2)))
 	  ))
-	      
-  ;; Sort by Ranks, instead of view-route? to fuse sum
-  ;; (equal (rloop-view-route ranked-loop1)
-  ;;	    (rloop-view-route ranked-loop2))
-  ))
+   
+   ;; Sort by Ranks, instead of view-route? to fuse sum
+   ;; (equal (rloop-view-route ranked-loop1)
+   ;;	    (rloop-view-route ranked-loop2))
+   ))
 
 ;; TODO: Shuffling Views to compose more operators
 ;; TODO: how do we handle with with-tensor-ptr?

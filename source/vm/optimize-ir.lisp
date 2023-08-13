@@ -72,6 +72,7 @@
 				       (tensor-iter-of (wfop-self last-val)))))
 		    (current-op-iter (tensor-iter-of (wfop-self inst)))
 		    (compose-p (and
+				(not (broadcasted-p (wfop-self inst)))
 				(it.-able-p last-iseq-iter current-op-iter)
 				(if (movetensor-p (wfop-node inst))
 				    (progn
@@ -104,6 +105,5 @@
 		   (compile nil
 			    (make-callable-fused-f
 			     (wfop-call-with-view   inst)
-			     (wfop-fused-body-cache inst)
-			     (tensor-id (wfop-self  inst)))))))
+			     (wfop-fused-body-cache inst))))))
 

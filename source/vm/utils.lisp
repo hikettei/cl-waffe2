@@ -116,7 +116,7 @@
 	  (collect-fused-ops (car (wfop-fuse-prev op2)) (second (wfop-fuse-prev op2)))
 	  op2))))
 
-(defun make-callable-fused-f (ranked-iter body return)
+(defun make-callable-fused-f (ranked-iter body)
   ;; body ... (lambda (args) (declare ...) body ...)
 
   (let ((other-parts (cdddr body))
@@ -127,7 +127,7 @@
 	    (,@(loop for tensor in (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter)
 		     for nth upfrom 0
 		     collect `(,(tensor-id tensor) (nth ,nth ,args))))
-	  (locally ,@other-parts ,return)))
+	  (locally ,@other-parts)))
      (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter))))
 
 (defun parse->body (body)
@@ -202,4 +202,8 @@ op2 ..  E <- F(X, Y, Z)
      :fuse-prev `(,op1 ,op2)
      ;; Later Compiled.
      :fused-body-cache body)))
+
+
+(defun broadcasted-p (tensor)
+  (some #'zerop (cl-waffe2/vm.generic-tensor::tensor-actual-stride tensor)))
 
