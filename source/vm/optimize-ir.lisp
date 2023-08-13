@@ -63,8 +63,7 @@
 
   (apply-in-place-mutation! iseq leaves)
   
-  (let ((result)
-	(prev-composable-move-p t))
+  (let ((result))
     (loop for inst of-type WFInstruction in (cdr iseq)
 	  do (let* ((last-val (car result))
 		    (last-iseq-iter (when last-val
@@ -72,27 +71,34 @@
 				       (wfop-call-with-view last-val)
 				       (tensor-iter-of (wfop-self last-val)))))
 		    (current-op-iter (tensor-iter-of (wfop-self inst)))
-		    (current-composable-move-p (if (movetensor-p (wfop-node inst))
-						   (not (movetensor-ignore-me (wfop-node inst)))
-						   t))
 		    (compose-p (and
 				(it.-able-p last-iseq-iter current-op-iter)
 				(if (movetensor-p (wfop-node inst))
-				    (and
+				    (progn
 				     ;; <Deleted> Node isn't subject to FuseOps
 				     ;; Because the costs for it is almost 0
 				     ;; and which tensors to be returned is still unknown
-				     prev-composable-move-p
-				     current-composable-move-p)
+				     (not (movetensor-ignore-me (wfop-node inst))))
+				    t)
+				(if (and last-val
+					 (movetensor-p (wfop-node last-val)))
+				    (not (movetensor-ignore-me (wfop-node last-val)))
 				    t))))
-	       
-	       (setq prev-composable-move-p current-composable-move-p)
 	       
 	       (if compose-p
 		   (let ((latest (pop result)))
+		     ;;(print "COMPOSE!")
+		     ;;(print latest)
+		     ;;(print inst)
 		     (push (compose-two-ops latest inst) result))
 		   (progn
 		     (push inst result)))))
+    (accept-all-lazy-compile! result)
+    ;; [TODO] Shuffling to get more fusions, esp: ScalarMulNode in !sum
     (reverse result)))
 
+(defun accept-all-lazy-compile! (iseq)
+  (loop for inst of-type WfInstruction in iseq
+	if (wfop-fused-body-cache inst)
+	  do (setf (wfop-op inst) (compile nil (wfop-fused-body-cache inst)))))
 

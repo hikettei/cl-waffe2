@@ -202,10 +202,16 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
     (declare (ignore leaves))
     
     (flet ((conc-iseq-str (iseq)
-	     (with-output-to-string (out)
-	       (with-indent-to iseq
-		 (dolist (i iseq)
-		   (princ i out))))))
+	     (let ((tensor-ids))
+	       (with-output-to-string (out)
+		 (with-indent-to iseq
+		   (dolist (i iseq)
+		     (dolist (var (wfop-args i))
+		       (push (tensor-id var) tensor-ids))
+		     (princ i out)))
+		 (format out "~%~a Instructions | ~a Tensors~%"
+			 (length iseq)
+			 (length (remove-duplicates tensor-ids)))))))
 
       (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%"  (conc-iseq-str iseq-fw))
 

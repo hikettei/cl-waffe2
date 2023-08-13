@@ -150,7 +150,7 @@ op2 ..  E <- F(X, Y, Z)"
 		(tensor-iter-of (wfop-self op2))
 		composed-iter
 		body))
-	 (body (compile nil (make-callable-fused-f composed-iter body (tensor-id out)))))
+	 (body (make-callable-fused-f composed-iter body (tensor-id out))))
 
 
     ;; does it works? (!sin (!sum (randn `(10 10))))
@@ -167,7 +167,7 @@ op2 ..  E <- F(X, Y, Z)"
 	 ;; x-ptr -> use gensym
 ;;	 (car args)
      ;;	 )
-     body
+     #'(lambda ())
      out
      #'(lambda ()
 	 (with-indent-to (collect-fused-ops op1 op2)
@@ -182,5 +182,7 @@ op2 ..  E <- F(X, Y, Z)"
 		     (dotimes (i (+  *node-indent*)) (princ " " out))))))
      `(,@(wfop-args op1) ,@(wfop-args op2))
      :call-with-view composed-iter
-     :fuse-prev `(,op1 ,op2))))
+     :fuse-prev `(,op1 ,op2)
+     ;; Later Compiled.
+     :fused-body-cache body)))
 
