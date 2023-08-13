@@ -488,7 +488,10 @@ Return: brand new composed Ranked-Loop
 			 (fuse nil)
 		       &aux
 			 (shape (shape (car tensors)))
-			 (dims  (length shape)))
+			 (dims  (length shape))
+			 (force-order (if (= cl-waffe2/threads:*num-cores* 1)
+					  force-order
+					  t)))
   "
 ## [function] call-with-view
 
