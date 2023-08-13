@@ -21,9 +21,15 @@
 ;; VIEW         ADD
 ;; To Compose More Operations
 
+;; Currently this feature isn't used anymore!
 (defun apply-iseq-reordering (iseq)
   "Shuffles the position of ViewTensorNode/ReshapeNode/PermuteNode to compose more operations."
   (declare (type list iseq))
+  
+  (return-from apply-iseq-reordering iseq)
+
+  ;; [FixME] Disabled for a while because it's unstable!!!!!
+  ;; And sometime produces an unexcepted behaviour!!!
 
   (when (null iseq) (return-from apply-iseq-reordering))
 
@@ -44,8 +50,8 @@
       ,@(reverse rest-area)
       ,@ends-with)))
 
-(defun apply-fuse-operations (iseq)
-  (declare (type list iseq))
+(defun apply-fuse-operations (iseq leaves)
+  (declare (type list iseq leaves))
 
   ;; iseq:
   ;; out = A * B + C
@@ -55,7 +61,10 @@
   ;;
   ;; If 0 and 1 is composable, replaces 0 and 1 with (0 . 1).
 
-  (let ((result))
+  (apply-in-place-mutation! iseq leaves)
+  
+  (let ((result)
+	(prev-composable-move-p t))
     (loop for inst of-type WFInstruction in (cdr iseq)
 	  do (let* ((last-val (car result))
 		    (last-iseq-iter (when last-val
@@ -63,11 +72,21 @@
 				       (wfop-call-with-view last-val)
 				       (tensor-iter-of (wfop-self last-val)))))
 		    (current-op-iter (tensor-iter-of (wfop-self inst)))
+		    (current-composable-move-p (if (movetensor-p (wfop-node inst))
+						   (not (movetensor-ignore-me (wfop-node inst)))
+						   t))
 		    (compose-p (and
 				(it.-able-p last-iseq-iter current-op-iter)
 				(if (movetensor-p (wfop-node inst))
-				    (not (movetensor-ignore-me (wfop-node inst)))
+				    (and
+				     ;; <Deleted> Node isn't subject to FuseOps
+				     ;; Because the costs for it is almost 0
+				     ;; and which tensors to be returned is still unknown
+				     prev-composable-move-p
+				     current-composable-move-p)
 				    t))))
+	       
+	       (setq prev-composable-move-p current-composable-move-p)
 	       
 	       (if compose-p
 		   (let ((latest (pop result)))

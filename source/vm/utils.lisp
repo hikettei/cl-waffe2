@@ -95,7 +95,7 @@
 
 (defun print-fuse-ops (op1 op2 out)
   (flet ((print-node (op)
-	   (format out "~a~a~%"
+	   (format out "~a~a"
 		   (with-output-to-string (out) (dotimes (i (+ 8 *node-indent*)) (princ " " out)))
 		   op)))
 
@@ -106,6 +106,15 @@
     (if (wfop-fuse-prev op2)
 	(print-fuse-ops (car (wfop-fuse-prev op2)) (second (wfop-fuse-prev op2)) out)
 	(print-node op2))))
+
+(defun collect-fused-ops (op1 op2)
+  (alexandria:flatten
+   `(,(if (wfop-fuse-prev op1)
+	  (collect-fused-ops (car (wfop-fuse-prev op1)) (second (wfop-fuse-prev op1)))
+	  op1)
+     ,(if (wfop-fuse-prev op2)
+	  (collect-fused-ops (car (wfop-fuse-prev op2)) (second (wfop-fuse-prev op2)))
+	  op2))))
 
 (defun make-callable-fused-f (ranked-iter body return)
   ;; body ... (lambda (args) (declare ...) body ...)
@@ -143,6 +152,8 @@ op2 ..  E <- F(X, Y, Z)"
 		body))
 	 (body (compile nil (make-callable-fused-f composed-iter body (tensor-id out)))))
 
+
+    ;; does it works? (!sin (!sum (randn `(10 10))))
     ;; still not working...
     ;; with LispTensor, it works but as for CPUTensor it won't
     ;; 1. x-ptr -> replace with gensym
@@ -159,15 +170,16 @@ op2 ..  E <- F(X, Y, Z)"
      body
      out
      #'(lambda ()
-	 (format nil "Block -> Fused {
+	 (with-indent-to (collect-fused-ops op1 op2)
+	   (format nil "Block -> Fused {
 ~a~a}
 ~a"		
-		 (with-output-to-string (out)
-		   (print-fuse-ops op1 op2 out))
-		 (with-output-to-string (out)
-		   (dotimes (i (+ 4 *node-indent*)) (princ " " out)))
-		 (with-output-to-string (out)
-		   (dotimes (i (+  *node-indent*)) (princ " " out)))))
+		   (with-output-to-string (out)
+		     (print-fuse-ops op1 op2 out))
+		   (with-output-to-string (out)
+		     (dotimes (i (+ 4 *node-indent*)) (princ " " out)))
+		   (with-output-to-string (out)
+		     (dotimes (i (+  *node-indent*)) (princ " " out))))))
      `(,@(wfop-args op1) ,@(wfop-args op2))
      :call-with-view composed-iter
      :fuse-prev `(,op1 ,op2))))

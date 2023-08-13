@@ -98,7 +98,8 @@
 	 (reverse
 	  (apply-fuse-operations
 	   (apply-iseq-reordering
-	    (reverse instruction-seq))))
+	    (reverse instruction-seq))
+	   variable-leaves))
 	 variable-leaves)
 	(values instruction-seq variable-leaves))))
 
@@ -202,10 +203,11 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
     
     (flet ((conc-iseq-str (iseq)
 	     (with-output-to-string (out)
-	       (dolist (i iseq)
-		 (princ i out)))))
+	       (with-indent-to iseq
+		 (dolist (i iseq)
+		   (princ i out))))))
 
-      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%" (conc-iseq-str iseq-fw))
+      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%"  (conc-iseq-str iseq-fw))
 
       (format stream "~%== [disassemble-waffe2-ir: Backward] ======~%~a~%" (conc-iseq-str iseq-bw))
 

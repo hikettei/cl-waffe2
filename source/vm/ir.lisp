@@ -29,9 +29,33 @@ cl-waffe2 vm specializes on  the sequence of above format.
 ;; (defun .cop (cop1 cop2) ...)
 
 (defparameter *omit-args-n* 5)
+(defparameter *opname-indent-to* 0 "Adds a space for this param times")
+
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
-	  "<WfInst[Compiled: ~a] : ~a.state <= apply( ~a)>~%"
+	  "~a~a : ~a <= op(~a)>~%"
+	  (instruction-opname inst)
+	  (with-output-to-string (out)
+	    (dotimes (i (- *opname-indent-to* (length (instruction-opname inst)))) (princ " " out)))
+	  (tensor-id (wfop-self inst))
+	  ;;(shape (wfop-self inst))
+	  (if (>= (length (wfop-args inst)) *omit-args-n*)
+	      (format nil "..., x~a,..." (length (wfop-args inst)))
+	      (with-output-to-string (out)
+		(dotimes (i (length (wfop-args inst)))
+		  (let ((var (nth i (wfop-args inst))))
+		    (format out "~a~a~a~a"
+			    (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
+				"<Param>"
+				"")
+			    (tensor-id var)
+			    (shape var)
+			    (if (nth (1+ i) (wfop-args inst))
+				" "
+				""))))))))
+
+(defmethod instruction-opname ((inst WFInstruction))
+  (format nil "<WfInst[Compiled: ~a]"
 	  (if (functionp (wfop-node inst))
 	      (funcall (wfop-node inst))
 	      (if (movetensor-p (wfop-node inst))
@@ -42,17 +66,17 @@ cl-waffe2 vm specializes on  the sequence of above format.
 			      "MoveScalarNode(SAVE_FOR_BACKWARD)"
 			      "MoveTensorNode(SAVE_FOR_BACKWARD)")
 			  (class-name (class-of (wfop-node inst)))))
-		  (class-name (class-of (wfop-node inst)))))
-	  (tensor-id (wfop-self inst))
-	  (if (>= (length (wfop-args inst)) *omit-args-n*)
-	      (format nil "..., x~a,..." (length (wfop-args inst)))
-	      (with-output-to-string (out)
-		(dolist (var (wfop-args inst))
-		  (format out "~a~a~a "
-			  (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-			      "<Param>"
-			      "")
-			  (tensor-id var) (shape var)))))))
+		  (class-name (class-of (wfop-node inst)))))))
+
+(defun area-indent-to (iseq)
+  "Returns the largest length of iseq name"
+  (loop for i in iseq
+	if (not (functionp (wfop-node i)))
+	  maximize (length (instruction-opname i))))
+
+(defmacro with-indent-to (iseq &body body)
+  `(let ((*opname-indent-to* (area-indent-to ,iseq)))
+     ,@body))
 
 ;; In-place mutation
 
