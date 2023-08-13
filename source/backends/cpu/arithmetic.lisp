@@ -15,7 +15,7 @@
 	      ,alpha
 	      (incf-tensor-ptr ,y ,y-ptr :offset ,(offset-of y-view 0))
 	      ,(stride-of y-view 0)
-	      (incf-tensor-ptr ,x nx-ptr :offset ,(offset-of x-view 0))
+	      (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0))
 	      ,(stride-of x-view 0)))
 	   (:double
 	    `(blas-daxpy
