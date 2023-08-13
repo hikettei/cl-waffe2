@@ -324,8 +324,31 @@ Used to replace/fuse generated call-with-view."
   (lparallel  nil :type boolean)
   (tagid      nil :type symbol))
 
-(defun fuse-generated-iteration (old-ranked-loop new-ranked-loop old-body &key (merge-p nil))
-  "Replaces the body of (c-waffe2-internal-tagbody ...) with new, fused body"
+(defun place-inside-of (old-loop old-body new-body)
+  (let ((target-id (rloop-tagID old-loop)))
+    (labels ((fuse-op-helper (fn tree)
+	       ;; "return (values XXX t) to stop exploring"
+	       (multiple-value-bind (tree stop-p) (funcall fn tree)
+		 (if (and (listp tree) (not stop-p))
+		     (mapcar (lambda (subtree)
+			       (fuse-op-helper fn subtree))
+			     tree)
+		     tree))))
+      (fuse-op-helper
+       #'(lambda (tree)
+	   (if (listp tree)
+	       (if (and
+		    (eql (car tree) 'cl-waffe2-internal-tagbody)
+		    (eql (second tree) target-id))
+		   (values new-body nil)
+		   tree)
+	       tree))
+       old-body))))
+
+(defun fuse-generated-iteration (old-ranked-loop new-ranked-loop old-body &key (merge-body nil) (merge-loop nil))
+  "Replaces the body of (c-waffe2-internal-tagbody ...) with new, fused body
+
+Based on the information from old-ranked-loop and new-ranked-loop, this funciton replaces the old-ranked-loop.tagID body in old-body with the body of new-ranked-loop"
 
   (let ((target-id (rloop-tagID old-ranked-loop)))
     (labels ((fuse-op-helper (fn tree)
@@ -333,7 +356,7 @@ Used to replace/fuse generated call-with-view."
 	       (multiple-value-bind (tree stop-p) (funcall fn tree)
 		 (if (and (listp tree) (not stop-p))
 		     (mapcar (lambda (subtree)
-			       (map-tree fn subtree))
+			       (fuse-op-helper fn subtree))
 			     tree)
 		     tree))))
       (fuse-op-helper
@@ -344,8 +367,12 @@ Used to replace/fuse generated call-with-view."
 		    (eql (car tree) 'cl-waffe2-internal-tagbody)
 		    (eql (second tree) target-id))
 		   (values
-		    (if merge-p
-			`(progn ,tree ,(rloop-expanded-body new-ranked-loop))
+		    ;; (cl-waffe2-internal-tagbody ID ...)
+		    (if merge-loop
+			(place-inside-of
+			 merge-loop
+			 merge-body
+			 (rloop-expanded-body new-ranked-loop))
 			(rloop-expanded-body new-ranked-loop))
 		    t)
 		   tree)

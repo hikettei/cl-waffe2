@@ -130,29 +130,52 @@
 	  (locally ,@other-parts ,return)))
      (cl-waffe2/vm.generic-tensor::rloop-tensors ranked-iter))))
 
+(defun parse->body (body)
+  "body ... (named-lambda xxx (x y z) ...) -> ..."
+  (if (eql (car body) 'alexandria:named-lambda)
+      `(locally ,@(cddddr body))
+      (if (eql (car body) 'lambda)
+	  `(progn ,@(cddr body))
+	  (error "parse->body given form is not a function. ~a" body))))
+
 (defun compose-two-ops (op1 op2)
   "op1(op2(...))
 
 op1 ... A <- F(B, C, D)
-op2 ..  E <- F(X, Y, Z)"
+op2 ..  E <- F(X, Y, Z)
+"
   (declare (type WFInstruction op1 op2))
   (let* ((prev-iter (or (wfop-call-with-view op1) (tensor-iter-of (wfop-self op1))))
 	 (out (wfop-self op2))
 	 (composed-iter (it. prev-iter (tensor-iter-of (wfop-self op2))))
-	 ;; Replace op1
+	 
+	 ;; Here, we gonna apply fuse-ops to the generated Lisp-Code in a meta-programming way.
+	 ;;
+	 ;; fuse-generated-iteration example:
+	 ;; (Anyfunction (X) ...
+	 ;;  (let ((x 1) ...)
+	 ;;   (cl-waffe2-internal-tagbody ID
+	 ;;     <old-call-with-view-content-here> ...
+	 ;;
+	 ;; Replace <old-call-with-view-content-here> with Compose(AnyFunction, NextFunction)
+	 ;; ID = (rloop-tagid <Corresponding Ranked-Loop>)
+	 ;;
+
+	 
 	 (body (fuse-generated-iteration
-		(tensor-iter-of (wfop-self op1))
-		(tensor-iter-of (wfop-self op2))
-		(cl-waffe2/vm.generic-tensor::make-funcallable-kernel-form
-		 (tensor-compiled-kernel (wfop-self op1))
-		 *compile-option*)))
-	 (body (fuse-generated-iteration
-		(tensor-iter-of (wfop-self op2))
+		prev-iter;;(tensor-iter-of (wfop-self op1));;prev-iter
 		composed-iter
-		body))
-	 (body (make-callable-fused-f composed-iter body (tensor-id out))))
-
-
+		(or
+		 (wfop-fused-body-cache op1)
+		 (cl-waffe2/vm.generic-tensor::make-funcallable-kernel-form
+		  (tensor-compiled-kernel (wfop-self op1))
+		  *compile-option*))
+		:merge-body (parse->body
+			     (car
+			      (cl-waffe2/vm.generic-tensor::compiled-kernel-body
+			       (tensor-compiled-kernel (wfop-self op2)))))
+		:merge-loop (tensor-iter-of (wfop-self op2)))))
+    
     ;; does it works? (!sin (!sum (randn `(10 10))))
     ;; still not working...
     ;; with LispTensor, it works but as for CPUTensor it won't
@@ -161,13 +184,7 @@ op2 ..  E <- F(X, Y, Z)"
     ;; 3. cache (compile nil)
     
     (make-wfop
-     ;;#'(lambda (&rest args)
-	 ;; [TODO] Embedding ...:
-	 ;; replacing originally call-with-view -> new call-with-view form
-	 ;; x-ptr -> use gensym
-;;	 (car args)
-     ;;	 )
-     #'(lambda ())
+     #'(lambda ()) ;; later compiled
      out
      #'(lambda ()
 	 (with-indent-to (collect-fused-ops op1 op2)

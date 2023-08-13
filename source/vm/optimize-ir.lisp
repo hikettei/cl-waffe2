@@ -64,7 +64,7 @@
   (apply-in-place-mutation! iseq leaves)
   
   (let ((result))
-    (loop for inst of-type WFInstruction in (cdr iseq)
+    (loop for inst of-type WFInstruction in iseq
 	  do (let* ((last-val (car result))
 		    (last-iseq-iter (when last-val
 				      (or
@@ -100,5 +100,10 @@
 (defun accept-all-lazy-compile! (iseq)
   (loop for inst of-type WfInstruction in iseq
 	if (wfop-fused-body-cache inst)
-	  do (setf (wfop-op inst) (compile nil (wfop-fused-body-cache inst)))))
+	  do (setf (wfop-op inst)
+		   (compile nil
+			    (make-callable-fused-f
+			     (wfop-call-with-view   inst)
+			     (wfop-fused-body-cache inst)
+			     (tensor-id (wfop-self  inst)))))))
 
