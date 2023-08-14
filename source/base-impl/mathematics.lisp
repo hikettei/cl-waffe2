@@ -262,12 +262,11 @@ OUT_{copy}\\gets{~(~a~)(X)}
 		     (values
 		      (!mul dout (!mul n (!expt x (!sub n 1))))
 		      nil
-		      (!mul dout (!mul (!expt x n)
-				       (!loge x)))))
-	  :documentation "The node ExptNode applies (expt N X) into each element, writing the result into out."))
+		      (!mul dout (!mul (!expt x n) (!loge x)))))
+	  :documentation "The node ExptNode applies (expt X N) into each element, writing the result into out."))
 
-(defun !expt (n x &key (-> nil))
-  "The function !expt applies (expt N X) into each element, writing the result into out.
+(defun !expt (x n &key (-> nil))
+  "The function !expt applies (expt X N) into each element, writing the result into out.
 
 Inputs:
     N - ScalarTensor
