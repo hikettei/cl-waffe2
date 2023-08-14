@@ -24,6 +24,7 @@ Set t to display the compiled c code to terminal. In default, `nil`
 			  (more-devices)
 			  (compiler "gcc")
 			  (viz-compiled-code nil)
+                          (openmp nil)
 			  (flags '("-fPIC" "-O3" "-march=native"))))
 ```
 
@@ -34,6 +35,8 @@ Sets `JITCPUTensor` and `JITCPUScalarTensor` to the top priority of backends. Pl
 `more-devices[List]` specify the list of device names. they have lower priority than `JITCPUTensor`
 
 `viz-compiled-code[boolean]` Set t to display the compiled c codes.
+
+`openMP[boolean]` set T to use OpenMP.
 
 ## [macro] with-cpu-jit
 

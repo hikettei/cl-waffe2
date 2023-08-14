@@ -316,7 +316,8 @@ See also: `build` `set-input` `get-input`.
 (build toplevel
 	      &key
 		(construct-backward? (not *no-grad*))
-		(compile-mode :fastest))
+		(compile-mode :fastest)
+                (fuse-ops t))
 ```
 
 Receiving the toplevel node in the neural network, the function `build` constructs a optimal forward/backward function, returning `Compiled-Composite`.
@@ -353,13 +354,15 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 
 `compile-mode`[compile-mode-t] an keyword to indicate compiling option.
 
+`fuse-ops[boolean]` Set t to enable `Loop Fusion Optimizing`. It optimizes the locality of memories instead of a litte compiling overhead.
+
 ###Example
 **REPL:**
 ```lisp
 > (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP987 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1928 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (10 10) Tensor>>
   :facet :input
@@ -375,10 +378,10 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {5358A03B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {539EBE6B}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl") {537215CB}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {539004EB}>
 
 += [Tensors in the computation node] =======+
 
@@ -450,25 +453,88 @@ The function parameter computes all the previous nodes of the given tensor if an
 
 ## [function] call-with-view
 
+A principle operator to extend your functions to higher arrays.
+
 ```lisp
-(call-with-view function tensors &key (at-least-dim 1))
+(call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil) (fuse nil))
 ```
 
-`call-with-view` is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.
+The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
 
-(TODO: Example/Documents)
+In the simplest case, `call-with-view` first deploys `(loop for...)` until the rank of given tensors reaches the given `at-least-dim`. After reaching `at-least-dim`, the function places the result of calling the given `function`.
 
-`function` [lambda] an lambda function which receives `variable1.view variable2.view ...` as arguments, returning an list being compiled.
+```lisp
+(call-with-view
+      #'(lambda (x-view)
+	   `(+ 1 1))
+       (list (randn `(100 100 100)))
+       :at-least-dim 2)
 
-`tensors` [list of abstracttensor] tensors to be called with.
-`at-least-dim` [fixnum] ... kernel-size
+;; will return:
 
-`force-order[boolean]` If t, iterates over matrices of ranks below the kernel size, preserving their shape.
-See also:
+(CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312057 0))
+  (LOCALLY
+   (DECLARE (TYPE FIXNUM #:G312057))
+   (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312058 #:G312057))
+     (LOCALLY
+      (DECLARE (TYPE FIXNUM #:G312058))
+      (LET* ((#:G312059 (NTH 0 (LIST 10000 100 1)))
+             (#:G25 100)
+             (#:G25
+              (CL-WAFFE2/VM.GENERIC-TENSOR::READ-ADJUSTABLE-SYMBOL #:G25)))
+        (INCF #:G312058 (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312059))
+        (LOOP CL-WAFFE2/VM.GENERIC-TENSOR::FOR #:G312060 FIXNUM CL-WAFFE2/VM.GENERIC-TENSOR::UPFROM 0 CL-WAFFE2/VM.GENERIC-TENSOR::BELOW #:G25
+              DO (PROGN
+                  (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312061
+                                                                 #:G312058))
+                    (LOCALLY
+                     (DECLARE (TYPE FIXNUM #:G312061))
+                     (LET ((#:G312062 (THE FIXNUM (NTH 1 (LIST 10000 100 1)))))
+                       (INCF #:G312061
+                             (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312062))
+                       (+ 1 1)))))
+              UNLESS (= #:G312060 (1- #:G25))
+              DO (PROGN
+                  (INCF (THE FIXNUM #:G312058) (THE FIXNUM #:G312059)))))))))
+```
 
-`size-of`
-`stride-of`
-`offset-of`
+Here, the number of tensors corresponds with the number of arguments `function` receive. Usually, the function receives information on the view of the tensor at the corresponding position: `(size-of x-view)` to get the number of iteration, `(stride-of x-view)` to get the number of increment, and, `(offset-of x-view)` to get the offset of tensor. (Sometimes they return s-expression because the shapes of tensors are not necessary number, but symbols.)
+
+`function [function]` should return a list which corresponds with invoking user-defined operation given views.
+
+`tensors[a list of abstracttensor]` tensors to be called with.
+
+`at-least-dim [fixnum]` `at-least-dim is minimum rank value required by the operation. set 1 to define `element-wise` operation, set 2 to define `gemm` for example.
+
+`force-order[boolean]` On some conditions, `call-with-view` shuffles the order of ranks, or flattens given tensors (e.g.: `100x100` tensors is the equivalent to just `10000x1` tensor on the memory). If you want to disable this behaviour, set `force-order`=t.
+
+`lparallel[boolean]` Set t to use lparallel. This should be denoted that under lparallel execution, the parameter `cl-waffe2/threads:*under-multi-thread*` becomes t. Use this parameter for the lowest rank operation to decide whether to parallelise.
+
+Return: `Expanded Lisp Codes`
+
+Note that `call-with-view` should be used at once or zero in the one `define-impl` forward. If you need twice times to call it, the general definition of `AbstractNode` should be split.
+
+See also: `with-ranked-loop` to the more elegant wrapping macro.
+
+## [macro] with-ranked-loop
+
+
+```lisp
+(with-ranked-loop (((op-function &rest variables)
+                    &key
+                       (kernel-size 1)
+                       (shuffle-rank t)
+                       (lparallel nil)
+                       (fuse nil))
+                    &body body))
+```
+
+Just an alias of `call-with-view` with this form:
+
+```lisp
+`(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
+    ,@body)
+```
 NILNILNIL
 ## [function] shape-equal
 
