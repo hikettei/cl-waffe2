@@ -4,8 +4,10 @@
 (defclass CPUTensor (AbstractTensor) nil
   (:documentation "
 ## [AbstractTensor] CPUTensor
-
 "))
+
+(defmethod current-backend-state ((backend-name (eql 'CPUTensor)))
+  (format nil "BLAS=~a" *openblas-found-p*))
 
 (defmethod initialize-instance :before ((tensor CPUTensor)
 					&rest initargs
