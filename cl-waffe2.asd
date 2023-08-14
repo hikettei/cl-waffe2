@@ -1,15 +1,30 @@
 
 (in-package :cl-user)
 
+
+(defpackage :cl-waffe2-simd-asd
+  (:use :cl :asdf :uiop))
+
+(in-package :cl-waffe2-simd-asd)
+
+(defsystem :cl-waffe2/simd-extension
+  :author "hikettei"
+  :licence "MIT"
+  :description "Utils for SIMD-Enabled Extension, CPUTensor"
+  :pathname "source/backends/cpu/cl-waffe2-simd"
+  :serial t
+  :components ((:file "package")))
+
+
 (defpackage :cl-waffe2-asd
   (:use :cl :asdf :uiop))
 
 (in-package :cl-waffe2-asd)
 
 (defsystem :cl-waffe2
-  :author "hikettei"
+  :author "hikettei <ichndm@gmail.com>"
   :licence "MIT"
-  :description "Deep Learning Framework"
+  :description "Programmable Deep Learning Framework for Common Lisp"
   :pathname "source"
   :serial t
   :depends-on (:cl-ppcre
@@ -21,7 +36,8 @@
 	       :bordeaux-threads
 	       :closer-mop
 	       :optima
-	       :trivial-garbage)
+	       :trivial-garbage
+	       :cl-waffe2/simd-extension)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")
@@ -160,6 +176,8 @@
 	       (:file "viz/package")
 	       (:file "viz/ast")
 	       (:file "cl-waffe2-repl")
+
+	       
 	       
 	       )
   :in-order-to ((test-op (test-op cl-waffe2/test))))
@@ -268,4 +286,3 @@
 	       (:file "model")
 	       (:file "reverse")
 	       (:file "profile")))
-
