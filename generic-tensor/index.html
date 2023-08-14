@@ -177,6 +177,8 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-call-with-view">[function] call-with-view</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-with-ranked-loop">[macro] with-ranked-loop</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-shape-equal">[function] shape-equal</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#compiling-options">Compiling Options</a>
@@ -471,7 +473,8 @@
 <pre><code class="language-lisp">(build toplevel
           &amp;key
         (construct-backward? (not *no-grad*))
-        (compile-mode :fastest))
+        (compile-mode :fastest)
+                (fuse-ops t))
 </code></pre>
 <p>Receiving the toplevel node in the neural network, the function <code>build</code> constructs a optimal forward/backward function, returning <code>Compiled-Composite</code>.</p>
 <h3 id="the-constraints-of-toplevel-tensor">The constraints of toplevel tensor.</h3>
@@ -491,11 +494,12 @@
 <p><code>toplevel [AbstractTensor]</code> the end of nodes. for neural network tasks, this should be scalartensor or tensors with total elements is 1, but since cl-waffe2 is intended to be applied other tasks, cl-waffe2 never produce warning while other frameworks like PyTorch will return error if <code>&lt;&lt;(10 10)Tensor&gt;&gt;.backward()</code> is invoked for example.</p>
 <p><code>construct-backward?</code> [boolean] If t, the backward construction won't be done.</p>
 <p><code>compile-mode</code>[compile-mode-t] an keyword to indicate compiling option.</p>
+<p><code>fuse-ops[boolean]</code> Set t to enable <code>Loop Fusion Optimizing</code>. It optimizes the locality of memories instead of a litte compiling overhead.</p>
 <h3 id="example_3">Example</h3>
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP987 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1928 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -508,10 +512,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {5358A03B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {539EBE6B}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {537215CB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {539004EB}&gt;
 
 += [Tensors in the computation node] =======+
 
@@ -554,19 +558,67 @@ Variables:
 <pre><code class="language-lisp">(parameter (randn `(3 3)))
 </code></pre>
 <h2 id="function-call-with-view">[function] call-with-view</h2>
-<pre><code class="language-lisp">(call-with-view function tensors &amp;key (at-least-dim 1))
+<p>A principle operator to extend your functions to higher arrays.</p>
+<pre><code class="language-lisp">(call-with-view function tensors &amp;key (at-least-dim 1) (force-order nil) (lparallel nil) (fuse nil))
 </code></pre>
-<p><code>call-with-view</code> is a general-purpose interface to iterate multi-dimensional tensor with considering offsets.</p>
-<p>(TODO: Example/Documents)</p>
-<p><code>function</code> [lambda] an lambda function which receives <code>variable1.view variable2.view ...</code> as arguments, returning an list being compiled.</p>
-<p><code>tensors</code> [list of abstracttensor] tensors to be called with.
-<code>at-least-dim</code> [fixnum] ... kernel-size</p>
-<p><code>force-order[boolean]</code> If t, iterates over matrices of ranks below the kernel size, preserving their shape.
-See also:</p>
-<p><code>size-of</code>
-<code>stride-of</code>
-<code>offset-of</code>
-NILNILNIL</p>
+<p>The function <code>call-with-view</code> generates a lisp code of <code>(loop for ...)</code> iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal <code>for(int i=0;i&lt;size;i++){...}</code> route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of <code>define-impl</code> macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.</p>
+<p>In the simplest case, <code>call-with-view</code> first deploys <code>(loop for...)</code> until the rank of given tensors reaches the given <code>at-least-dim</code>. After reaching <code>at-least-dim</code>, the function places the result of calling the given <code>function</code>.</p>
+<pre><code class="language-lisp">(call-with-view
+      #'(lambda (x-view)
+       `(+ 1 1))
+       (list (randn `(100 100 100)))
+       :at-least-dim 2)
+
+;; will return:
+
+(CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312057 0))
+  (LOCALLY
+   (DECLARE (TYPE FIXNUM #:G312057))
+   (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312058 #:G312057))
+     (LOCALLY
+      (DECLARE (TYPE FIXNUM #:G312058))
+      (LET* ((#:G312059 (NTH 0 (LIST 10000 100 1)))
+             (#:G25 100)
+             (#:G25
+              (CL-WAFFE2/VM.GENERIC-TENSOR::READ-ADJUSTABLE-SYMBOL #:G25)))
+        (INCF #:G312058 (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312059))
+        (LOOP CL-WAFFE2/VM.GENERIC-TENSOR::FOR #:G312060 FIXNUM CL-WAFFE2/VM.GENERIC-TENSOR::UPFROM 0 CL-WAFFE2/VM.GENERIC-TENSOR::BELOW #:G25
+              DO (PROGN
+                  (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312061
+                                                                 #:G312058))
+                    (LOCALLY
+                     (DECLARE (TYPE FIXNUM #:G312061))
+                     (LET ((#:G312062 (THE FIXNUM (NTH 1 (LIST 10000 100 1)))))
+                       (INCF #:G312061
+                             (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312062))
+                       (+ 1 1)))))
+              UNLESS (= #:G312060 (1- #:G25))
+              DO (PROGN
+                  (INCF (THE FIXNUM #:G312058) (THE FIXNUM #:G312059)))))))))
+</code></pre>
+<p>Here, the number of tensors corresponds with the number of arguments <code>function</code> receive. Usually, the function receives information on the view of the tensor at the corresponding position: <code>(size-of x-view)</code> to get the number of iteration, <code>(stride-of x-view)</code> to get the number of increment, and, <code>(offset-of x-view)</code> to get the offset of tensor. (Sometimes they return s-expression because the shapes of tensors are not necessary number, but symbols.)</p>
+<p><code>function [function]</code> should return a list which corresponds with invoking user-defined operation given views.</p>
+<p><code>tensors[a list of abstracttensor]</code> tensors to be called with.</p>
+<p><code>at-least-dim [fixnum]</code> <code>at-least-dim is minimum rank value required by the operation. set 1 to define</code>element-wise<code>operation, set 2 to define</code>gemm` for example.</p>
+<p><code>force-order[boolean]</code> On some conditions, <code>call-with-view</code> shuffles the order of ranks, or flattens given tensors (e.g.: <code>100x100</code> tensors is the equivalent to just <code>10000x1</code> tensor on the memory). If you want to disable this behaviour, set <code>force-order</code>=t.</p>
+<p><code>lparallel[boolean]</code> Set t to use lparallel. This should be denoted that under lparallel execution, the parameter <code>cl-waffe2/threads:*under-multi-thread*</code> becomes t. Use this parameter for the lowest rank operation to decide whether to parallelise.</p>
+<p>Return: <code>Expanded Lisp Codes</code></p>
+<p>Note that <code>call-with-view</code> should be used at once or zero in the one <code>define-impl</code> forward. If you need twice times to call it, the general definition of <code>AbstractNode</code> should be split.</p>
+<p>See also: <code>with-ranked-loop</code> to the more elegant wrapping macro.</p>
+<h2 id="macro-with-ranked-loop">[macro] with-ranked-loop</h2>
+<pre><code class="language-lisp">(with-ranked-loop (((op-function &amp;rest variables)
+                    &amp;key
+                       (kernel-size 1)
+                       (shuffle-rank t)
+                       (lparallel nil)
+                       (fuse nil))
+                    &amp;body body))
+</code></pre>
+<p>Just an alias of <code>call-with-view</code> with this form:</p>
+<pre><code class="language-lisp">`(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
+    ,@body)
+</code></pre>
+<p>NILNILNIL</p>
 <h2 id="function-shape-equal">[function] shape-equal</h2>
 <p>a=1, b=k =&gt; T
 a=1, b=2 =&gt; NIL</p>

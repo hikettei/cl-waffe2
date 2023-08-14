@@ -162,12 +162,14 @@
               (more-devices)
               (compiler &quot;gcc&quot;)
               (viz-compiled-code nil)
+                          (openmp nil)
               (flags '(&quot;-fPIC&quot; &quot;-O3&quot; &quot;-march=native&quot;))))
 </code></pre>
 <p>Sets <code>JITCPUTensor</code> and <code>JITCPUScalarTensor</code> to the top priority of backends. Place this function at the top of your code where JIT Compiling is needed. Of course, <code>JITCPUTensor</code> is developed as a one of <code>external backends</code> in cl-waffe2, therefore Local JIT compilation with the <code>with-devices</code> macro is another valid option.</p>
 <h3 id="inputs">Inputs</h3>
 <p><code>more-devices[List]</code> specify the list of device names. they have lower priority than <code>JITCPUTensor</code></p>
 <p><code>viz-compiled-code[boolean]</code> Set t to display the compiled c codes.</p>
+<p><code>openMP[boolean]</code> set T to use OpenMP.</p>
 <h2 id="macro-with-cpu-jit">[macro] with-cpu-jit</h2>
 <p>Under this macro, two backends (<code>JITCPUTensor</code> and <code>JITCPUScalarTensor</code>) are installed at the top of the priority list.</p>
               

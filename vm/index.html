@@ -137,13 +137,13 @@
               
                 <h1 id="cl-waffe2-vm">cl-waffe2 VM</h1>
 <h2 id="function-disassemble-waffe2-ir">[function] disassemble-waffe2-ir</h2>
-<pre><code class="language-lisp">(disassemble-waffe2-ir toplevel &amp;key (backward t) (stream t))
+<pre><code class="language-lisp">(disassemble-waffe2-ir toplevel &amp;key (backward t) (stream t) (fuse-p t))
 </code></pre>
 <p>Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to <code>stream</code>. If <code>backward</code> was set to t, <code>backward</code> is also displayed.</p>
 <h2 id="function-compile-forward-and-backward">[function] compile-forward-and-backward</h2>
-<pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t))
+<pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t) (fuse-p t) (compile-mode :default))
 </code></pre>
-<p>Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables).</p>
+<p>Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set <code>fuse-p</code>=t to get additional optimization to the generated IR.</p>
 <p>Tips: <code>disassemble-waffe2-ir</code> to display compiled Instruction Sequence.</p>
 <h2 id="function-accept-instructions">[function] accept-instructions</h2>
 <pre><code class="language-lisp">(accept-instructions iseq)
