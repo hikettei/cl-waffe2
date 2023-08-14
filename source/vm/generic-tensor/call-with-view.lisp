@@ -600,13 +600,14 @@ butgot ~a."
 	     ;; Computing Multi-Dimensional Offsets
 	     (let* ((start-points (loop for tensor in tensors
 					collect
+					;; Here, should be computed in advance to reduce the size of compiled code.
 					`(compute-visible-start-idx
-					 (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
+					  (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
 		    (end-points (loop for tensor in tensors
 				      collect
 				      `(compute-visible-end-idx
-				       (subscript-view (nth ,target-dim (tensor-view ,tensor)))
-				       (nth ,target-dim (original-shape ,tensor))))))
+					(subscript-view (nth ,target-dim (tensor-view ,tensor)))
+					(nth ,target-dim (original-shape ,tensor))))))
 	       (cond
 		 ((<= rest-dim at-least-dim)
 
