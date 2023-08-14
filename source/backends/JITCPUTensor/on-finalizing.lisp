@@ -99,7 +99,6 @@
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
 
-	  ;; [TODO]: multiple call of gcc may result low performance
 	  ;; Cache it
 	  (maybe-load-foreign-function source compile-me)
 	  (when *viz-compiled-code*
@@ -121,29 +120,32 @@
 	    `(cffi:with-foreign-objects
 		 (,@(loop for scal in scalars
 			  collect `(,(int-sap-id scal) ,(dtype scal))))
-	       (setf ,@(loop for scal in scalars
-			     append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
-	       ,call-form
-
-	       ;; Synchronize ScalarTensors
-	       (setf ,@(loop for scal in scalars
-			     append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
-	       
-	       ;; Synchronize In-place
-	       (let* (,@(loop for case in (reverse *in-place-routes*)
-			      ;; Sort by tensor-id
-			      collect `(,(tensor-id (car case)) (read-result ,(car case)))))
-		 (setf ,@(loop for case in (reverse *in-place-routes*)
-			       append `((tensor-vec ,(tensor-id (car case)))
-					(tensor-vec (read-result ,(cdr case)))))))
-	       
-	       ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
-	       ;; Synchronize output if the last node is in-place
-	       ,(let* ((all-tensors `(,@scalars ,@tensors))
-		       (latest-result (find (tensor-id variable) all-tensors :test #'eql :key #'tensor-id)))
-		  (when latest-result
-		    `(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))
-	       (read-result ,variable)))))
+	       (with-tensor-ptrs (,@(loop for tensor in arguments
+					  if (typep tensor 'JITCPUTensor)
+					    collect `(,(cPointer tensor) (read-result ,tensor))))
+		 (locally (declare (optimize (speed 1)))
+		   (setf ,@(loop for scal in scalars
+				 append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
+		   ,call-form
+		   ;; Synchronize ScalarTensors
+		   (setf ,@(loop for scal in scalars
+				 append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
+		   
+		   ;; Synchronize In-place
+		   (let* (,@(loop for case in (reverse *in-place-routes*)
+				  ;; Sort by tensor-id
+				  collect `(,(tensor-id (car case)) (read-result ,(car case)))))
+		     (setf ,@(loop for case in (reverse *in-place-routes*)
+				   append `((tensor-vec ,(tensor-id (car case)))
+					    (tensor-vec (read-result ,(cdr case)))))))
+		   
+		   ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
+		   ;; Synchronize output if the last node is in-place
+		   ,(let* ((all-tensors `(,@scalars ,@tensors))
+			   (latest-result (find (tensor-id variable) all-tensors :test #'eql :key #'tensor-id)))
+		      (when latest-result
+			`(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))
+		   (read-result ,variable)))))))
       nil))
 
 (defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))

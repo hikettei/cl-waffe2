@@ -13,6 +13,12 @@
 Default: `(cl-waffe2/vm.generic-tensor:CPUTensor)
 PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
+
+;; make-tensor under the forward method IS PROHIBITED because cl-waffe2 isn't designed so.
+;; If developers want to detect runtime creation of tensors, set *detect-runtime-creation-tensor*=t and debug it.
+(defparameter *runtime-mode-p* nil)
+(defparameter *detect-runtime-creation-tensor* nil "For debugging, set t to detect the runtime creation of tensors, which may worse performance.")
+
 (defparameter *default-dtype* :float  "")
 (defparameter *default-order* :column "")
 
@@ -294,7 +300,7 @@ Tensors has a two state:
 	   
 
 ;; Inline
-;;(declaim (inline tensor-vec))
+(declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
   "
 
@@ -402,6 +408,10 @@ Note:
 	(create-from (getf initargs :create-from))
 	;(need-copy?  (getf initargs :slot-info-copied))
 	)
+
+    (when *detect-runtime-creation-tensor*
+      (when *runtime-mode-p*
+	(warn "Detected runtime creation of tensors.")))
 
     ;; create-from   = extend permute information from the tensor create-from.
     ;; orig-shape    = used to compute strides, always synchronized with vec.

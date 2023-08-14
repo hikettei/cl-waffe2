@@ -80,7 +80,7 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
 		   (prog1
 		       ;; tensor_ptr tensor_stride ...
 		       `(:pointer
-			 (tensor-ptr (read-result ,arg) :offset ,(offset-of (read-view view-count) 0))
+			 (incf-tensor-ptr (read-result ,arg) ,(cPointer arg) :offset ,(offset-of (read-view view-count) 0))
 			 :int32
 			 ,(stride-of (read-view view-count) 0))
 		     (incf view-count)))

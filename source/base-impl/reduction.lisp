@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/base-impl)
 
+;; Could be optimized until 10x times faster
 (defun !sum (tensor &key (axis t) (-> nil) (keepdims nil))
   "
 ## [function] !sum
@@ -60,7 +61,7 @@ Return:
 				    :dtype (dtype tensor)
 				    :order (order tensor))))
 	   (out (A*=scal out (make-tensor 0 :dtype (dtype tensor)))))
-      ;; TODO: !mul is nothing but extravagance to fill with 0.0!, replace this op with !fill
+      ;; TODO: A*=scal is nothing but extravagance to fill with 0.0!, replace this op with !fill
 
       (assert (equal (shape out) shape)
 	      nil

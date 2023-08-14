@@ -25,5 +25,6 @@
       (sh "ros ./roswell/cl-waffe2-test.ros gendoc"))
 
 (task "bench" ()
-      (sh "rlwrap ros run --load ./benchmarks/package.lisp"))
+      (sh "rlwrap ros run --eval '(progn (load \"cl-waffe2.asd\") (ql:quickload :cl-waffe2) (ql:quickload :cl-waffe2/benchmark))'"))
+
 

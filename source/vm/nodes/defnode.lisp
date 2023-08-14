@@ -101,7 +101,8 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (defvar *call-with-view-route* nil)
 
 (defmacro with-tracing-call-with-view (&body body)
-  `(let ((*call-with-view-route*))
+  `(let ((*call-with-view-route*)
+	 (*ranked-loop-result-cacher*))
      ,@body))
 
 (defun vm-kernel-lambda (traceable? name args self &rest body)
@@ -110,6 +111,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :body body
    :args args
    :self self
+   :call-with-view *ranked-loop-result-cacher*
    :cache-when-compiled traceable?
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)

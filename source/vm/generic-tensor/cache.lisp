@@ -72,6 +72,7 @@
   (body nil :type list)              ;; (named-lambda ... () ...)
   (cache-when-compiled nil :type boolean)
   (cache-p nil :type boolean)
+  (call-with-view nil :type (or null Ranked-Loop))
   (args nil :type list)
   (view-route nil :type list)
   (self nil)) ;; 2D 3D Flatten ...
@@ -149,18 +150,21 @@ TensorViewNameN depicts the path call-with-view traced.
 
 (defparameter *print-compiled-function* nil)
 
-(defun make-funcallable-kernel (compiled-function compile-option)
+(defun make-funcallable-kernel-form (compiled-function compile-option)
   (declare (type Compiled-Kernel compiled-function))
   (let ((fbody (cdar (compiled-kernel-body compiled-function))))
-    (compile nil
-	     (let ((out (tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))
-	       (let ((args (car out))
-		     (decl (second out))
-		     (body (cddr out)))
-		 (let ((out `(lambda ,args ,decl (declare ,compile-option) ,@body)))
-		   (if *print-compiled-function*
-		       (print out)
-		       out)))))))
+    (let ((out (tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))
+      (let ((args (car out))
+	    (decl (second out))
+	    (body (cddr out)))
+	(let ((out `(lambda ,args ,decl (declare ,compile-option) ,@body)))
+	  (if *print-compiled-function*
+	      (print out)
+	      out))))))
+
+(defun make-funcallable-kernel (compiled-function compile-option)
+  (declare (type Compiled-Kernel compiled-function))
+  (compile nil (make-funcallable-kernel-form compiled-function compile-option)))
 
 (defun place-cached-kernels (&rest body)
   "
@@ -196,6 +200,18 @@ Reading *kernel-storeroom*, the function expands the form below.
 	 (AbstractTensor
 	  (if (find (tensor-id obj) args :key #'tensor-id)
 	      (tensor-id obj)
+	      obj))
+	 (T
+	  obj)))
+   body))
+
+(defun tensor->iid (body args)
+  (map-tree
+   #'(lambda (obj)
+       (typecase obj
+	 (AbstractTensor
+	  (if (find (tensor-id obj) args :key #'tensor-iid)
+	      (tensor-iid obj)
 	      obj))
 	 (T
 	  obj)))

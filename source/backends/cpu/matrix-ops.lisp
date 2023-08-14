@@ -20,6 +20,7 @@
 ;; FixME: support row-major with gemm
 
 (defun expand-gemm-form (a1 b1 c
+			 a-ptr b-ptr o-ptr
 			 &key
 			   trans-a?
 			   trans-b?)
@@ -80,13 +81,14 @@
 		;; variables that didn't appear in arguments
 		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
 		
-		(tensor-ptr ,b1 :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
+	        (incf-tensor-ptr ,b1 ,b-ptr :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
-		(tensor-ptr ,a1 :offset ,(offset-of a-view 0))
+		(incf-tensor-ptr ,a1 ,a-ptr :offset ,(offset-of a-view 0))
 		,lda
 		0.0
-		(tensor-ptr
+		(incf-tensor-ptr
 		 ,c
+		 ,o-ptr
 		 :offset ,(offset-of c-view 0))
 		,ldc))
 	     (:double
@@ -101,17 +103,20 @@
 		;; variables that didn't appear in arguments
 		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
 		
-		(tensor-ptr
+		(incf-tensor-ptr
 		 ,b1
+		 ,b-ptr
 		 :offset ,(offset-of b-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
 		,ldb
-		(tensor-ptr
+		(incf-tensor-ptr
 		 ,a1
+		 ,a-ptr
 		 :offset ,(offset-of a-view 0))
 		,lda
 		0.0d0
-		(tensor-ptr
+		(incf-tensor-ptr
 		 ,c
+		 ,o-ptr
 		 :offset ,(offset-of c-view 0))
 		,ldc))
 	     (T
@@ -127,13 +132,21 @@ Please consider using another backends." dtype)))))
 	     :forward
 	     ((self a b out)
 	      (let ((trans-a (trans-a? self))
-		    (trans-b (trans-b? self)))
-		`(,@(expand-gemm-form a b out :trans-a? trans-a :trans-b? trans-b)
-		  ;; Sometime matmul fails due to wrong arguments
-		  ;; But proceeds with no errors...
-		  ,out))))
+		    (trans-b (trans-b? self))
+		    (a-ptr   (gensym "PTR"))
+		    (b-ptr   (gensym "B"))
+		    (o-ptr   (gensym "OUT")))
+		`(locally (declare (optimize (speed 1)))
+		   (with-tensor-ptrs ((,a-ptr ,a)
+				      (,b-ptr ,b)
+				      (,o-ptr ,out))
+		     ,(expand-gemm-form a b out a-ptr b-ptr o-ptr :trans-a? trans-a :trans-b? trans-b)
+		     ;; Sometime matmul fails due to wrong arguments
+		     ;; But proceeds with no errors...
+		     ,out)))))
 
-(defun expand-arg-maxmin-form (x out type &aux (index (gensym)))
+;; [TODO] Optimize to get more speed!
+(defun expand-arg-maxmin-form (x out type x-ptr &aux (index (gensym)))
   (declare (type (and keyword (member :max :min)) type))
   `(let (;;(x-vec (tensor-vec ,x))
 	 (o-vec (tensor-vec ,out))
@@ -161,7 +174,7 @@ Please consider using another backends." dtype)))))
 				 (:min 'blas-ismin)))
 			      (t (error "CPUTensor: argmax/argmin/max/min do not support ~a. only :float and :double" (dtype x))))
 			   ,(size-of x-view 0)
-			   (tensor-ptr ,x :offset ,(offset-of x-view 0))
+			   (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0))
 			   ,(stride-of x-view 0)))))
 	      (incf ,index ,(stride-of o-view 0))))
        `(,x ,out)
@@ -170,18 +183,22 @@ Please consider using another backends." dtype)))))
 
 (define-impl (ArgMax-Node :device CPUTensor)
 	     :forward ((self x out)
-		       `(progn
-			  ,(expand-arg-maxmin-form x out :max)
-			  ,out)))
+		       (let ((x-ptr (gensym "PTR")))
+			 `(with-tensor-ptr (,x-ptr ,x)
+			    (locally (declare (optimize (speed 1)))
+			      ,(expand-arg-maxmin-form x out :max x-ptr)
+			      ,out)))))
 
 (define-impl (ArgMin-Node :device CPUTensor)
 	     :forward ((self x out)
-		       `(progn
-			  ,(expand-arg-maxmin-form x out :min)
-			  ,out)))
+		       (let ((x-ptr (gensym "PTR")))
+			 `(with-tensor-ptr (,x-ptr ,x)
+			    (locally (declare (optimize (speed 1)))
+			      ,(expand-arg-maxmin-form x out :min x-ptr)
+			      ,out)))))
 
 ;; [TODO] Force it using SIMD, by writing C kernel directly.
-(defun expand-maxmin-value-form (x out type &aux (index (gensym)))
+(defun expand-maxmin-value-form (x out type x-ptr &aux (index (gensym)))
   (declare (type (and keyword (member :max :min)) type))
   `(let ((x-vec (tensor-vec ,x))
 	 (o-vec (tensor-vec ,out))
@@ -213,7 +230,7 @@ Please consider using another backends." dtype)))))
 					 (:min 'blas-ismin)))
 				      (t (error "CPUTensor: argmax/argmin/max/min do not support ~a. only :float and :double" (dtype x))))
 				    ,(size-of x-view 0)
-				    (tensor-ptr ,x :offset ,(offset-of x-view 0))
+				    (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0))
 				    ,(stride-of x-view 0))))))))
 		(incf ,index ,(stride-of o-view 0))))
 	 `(,x ,out)
@@ -222,13 +239,17 @@ Please consider using another backends." dtype)))))
 
 (define-impl (MaxValue-Node :device CPUTensor)
 	     :forward ((self x out)
-		       `(progn
-			  ,(expand-maxmin-value-form x out :max)
-			  ,out)))
+		       (let ((x-ptr (gensym "PTR")))
+			 `(with-tensor-ptr (,x-ptr ,x)
+			    (locally (declare (optimize (speed 1)))
+			      ,(expand-maxmin-value-form x out :max x-ptr)
+			      ,out)))))
 
 (define-impl (MinValue-Node :device CPUTensor)
 	     :forward ((self x out)
-		       `(progn
-			  ,(expand-maxmin-value-form x out :min)
-			  ,out)))
+		       (let ((x-ptr (gensym "PTR")))
+			 `(with-tensor-ptr (,x-ptr ,x)
+			    (locally (declare (optimize (speed 1)))
+			      ,(expand-maxmin-value-form x out :min x-ptr)
+			      ,out)))))
 
