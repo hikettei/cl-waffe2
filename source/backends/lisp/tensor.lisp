@@ -3,11 +3,7 @@
 
 (defclass LispTensor (AbstractTensor) nil
   (:documentation "
-## [AbstractTensor] LispTensor
-"))
-
-(defmethod current-backend-state ((backend-name (eql 'LispTensor)))
-  "Common Lisp implementation on matrix operations")
+## [AbstractTensor] LispTensor"))
 
 (defmethod initialize-instance :before ((tensor LispTensor)
 					&rest initargs

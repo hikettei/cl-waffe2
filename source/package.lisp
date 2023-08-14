@@ -28,7 +28,6 @@
    #:with-row-major
    #:with-cpu
 
-   #:show-backends
    #:set-devices-toplevel
    ;;#:with-cuda
    )
