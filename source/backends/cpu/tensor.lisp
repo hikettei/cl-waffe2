@@ -7,7 +7,10 @@
 "))
 
 (defmethod current-backend-state ((backend-name (eql 'CPUTensor)))
-  (format nil "BLAS=~a" *openblas-found-p*))
+  (format nil "OpenBLAS=~a"
+	  (if *openblas-found-p*
+	      "available"
+	      "could not find")))
 
 (defmethod initialize-instance :before ((tensor CPUTensor)
 					&rest initargs

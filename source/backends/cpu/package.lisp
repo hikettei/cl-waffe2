@@ -49,9 +49,12 @@ For example:
   (if (boundp 'cl-user::*cl-waffe-config*)
       (let ((config (list-to-hash (eval 'cl-user::*cl-waffe-config*))))
 	(dolist (path (gethash :libblas config))
-	  (load-foreign-library (pathname path))))
+	  (load-foreign-library (pathname path)))
+	(setf *openblas-found-p* t))
       ;; Continue by finding with default path:
-      (handler-case (load-foreign-library 'blas-lib)
+      (handler-case (progn
+		      (load-foreign-library 'blas-lib)
+		      (setf *openblas-found-p* t))
 	(error (c)
 	  (declare (ignore c))
 	  (could-not-find))))
