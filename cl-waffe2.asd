@@ -10,9 +10,10 @@
 (defsystem :cl-waffe2/simd-extension
   :author "hikettei"
   :licence "MIT"
-  :description "Utils for SIMD-Enabled Extension, CPUTensor"
+  :description "Utils for SIMD-Enabled Extension, CPUTensor."
   :pathname "source/backends/cpu/cl-waffe2-simd"
   :serial t
+  :depends-on (:cffi :cl-autowrap)
   :components ((:file "package")))
 
 
