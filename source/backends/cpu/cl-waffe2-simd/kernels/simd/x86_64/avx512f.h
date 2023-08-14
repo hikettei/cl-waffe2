@@ -10,3 +10,4 @@ typedef __m128i waffe2_ivech; // half precision
 
 #define SIMD_SINGLE_STRIDE 16
 #define SIMD_DOUBLE_STRIDE 8
+

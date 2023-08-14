@@ -9,9 +9,27 @@ https://github.com/rpav/cl-autowrap
 
 x86_64 ... avx2 avx512 sse2, AMD neon.
 
+### Supported Dtypes
+
+FP16 `double-float` `single-float` `uint32` `int32` `uint16` `int16` `uint8` `int8`
+
 ## TODO
 
 Adding Sparse Matrix Support <- !!!
 
 Sparse Gemm
 
+Optimize: Compare_Op
+
+Reject-pでmul/divnodeの実装
+
+## Workflow
+
+```lisp
+[CPUTensor loads simd-extendion.dylib]
+  | -> if not found -> reject-p and lisptensor
+  v
+hogehoge
+```
+
+oneDNN

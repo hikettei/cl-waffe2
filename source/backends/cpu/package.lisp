@@ -12,6 +12,8 @@
 
 
 (defparameter *openblas-found-p* nil)
+(defparameter *simd-extension-p* nil)
+(defparameter *one-dnn-found-p* nil) ;; Still not yet available for a while
 ;; Utils
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
