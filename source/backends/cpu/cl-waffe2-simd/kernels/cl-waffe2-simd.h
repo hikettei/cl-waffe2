@@ -56,3 +56,26 @@ _define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
 _define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
 _define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
 
+#define _define_maxmin(dpref, prefix, max_or_min, stride, dtype, simd_op, scal_op) \
+  void waffe2_##prefix##max_or_min(const long n, dtype* x, const long incx, dtype* y); \
+
+
+
+_define_maxmin(d, d, max, SIMD_DOUBLE_STRIDE, double, waffe2_simd_dmax, MAX);
+_define_maxmin(d, s, max, SIMD_SINGLE_STRIDE, float,  waffe2_simd_smax, MAX);
+_define_maxmin(i, i32, max, SIMD_SINGLE_STRIDE, int32_t,  waffe2_simd_i32max, MAX);
+_define_maxmin(i, u32, max, SIMD_SINGLE_STRIDE, uint32_t,  waffe2_simd_u32max, MAX);
+_define_maxmin(i, i16, max, SIMD_SINGLE_STRIDE * 2, int16_t,  waffe2_simd_i16max, MAX);
+_define_maxmin(i, u16, max, SIMD_SINGLE_STRIDE * 2, uint16_t,  waffe2_simd_u16max, MAX);
+_define_maxmin(i, i8, max, SIMD_SINGLE_STRIDE * 4, int8_t,  waffe2_simd_i8max, MAX);
+_define_maxmin(i, u8, max, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, MAX);
+
+_define_maxmin(d, d, min, SIMD_DOUBLE_STRIDE, double, waffe2_simd_dmax, MAX);
+_define_maxmin(d, s, min, SIMD_SINGLE_STRIDE, float,  waffe2_simd_smax, MAX);
+_define_maxmin(i, i32, min, SIMD_SINGLE_STRIDE, int32_t,  waffe2_simd_i32max, MAX);
+_define_maxmin(i, u32, min, SIMD_SINGLE_STRIDE, uint32_t,  waffe2_simd_u32max, MAX);
+_define_maxmin(i, i16, min, SIMD_SINGLE_STRIDE * 2, int16_t,  waffe2_simd_i16max, MAX);
+_define_maxmin(i, u16, min, SIMD_SINGLE_STRIDE * 2, uint16_t,  waffe2_simd_u16max, MAX);
+_define_maxmin(i, i8, min, SIMD_SINGLE_STRIDE * 4, int8_t,  waffe2_simd_i8max, MAX);
+_define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, MAX);
+

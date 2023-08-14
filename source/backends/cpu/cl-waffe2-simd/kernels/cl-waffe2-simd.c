@@ -39,12 +39,74 @@ waffe2_dvec static inline make_waffe2_dvec (double* x, const long incx) {
   return out;
 }
 
+waffe2_ivec static inline make_waffe2_i32vec (int32_t* x, const long incx) {
+  waffe2_ivec out;
+  for (int i=0;i<SIMD_SINGLE_STRIDE;i++) out[i] = x[i*incx];
+  return out;
+}
+
+waffe2_ivec static inline make_waffe2_u32vec (uint32_t* x, const long incx) {
+  waffe2_ivec out;
+  for (int i=0;i<SIMD_SINGLE_STRIDE;i++) out[i] = x[i*incx];
+  return out;
+}
+
+waffe2_ivec static inline make_waffe2_i16vec (int16_t* x, const long incx) {
+  waffe2_ivec out;
+  for (int i=0;i<SIMD_SINGLE_STRIDE*2;i++) out[i] = x[i*incx];
+  return out;
+}
+
+waffe2_ivec static inline make_waffe2_u16vec (uint16_t* x, const long incx) {
+  waffe2_ivec out;
+  for (int i=0;i<SIMD_SINGLE_STRIDE*2;i++) out[i] = x[i*incx];
+  return out;
+}
+
+waffe2_ivec static inline make_waffe2_i8vec (int8_t* x, const long incx) {
+  waffe2_ivec out;
+  for (int i=0;i<SIMD_SINGLE_STRIDE*4;i++) out[i] = x[i*incx];
+  return out;
+}
+
+waffe2_ivec static inline make_waffe2_u8vec (uint8_t* x, const long incx) {
+  waffe2_ivec out;
+  for (int i=0;i<SIMD_SINGLE_STRIDE*4;i++) out[i] = x[i*incx];
+  return out;
+}
+
+
+
 void static inline strided_waffe2_store_svec(float* ptr, waffe2_svec x, const long incx) {
   for (int i=0; i<SIMD_SINGLE_STRIDE;i++) (ptr + i*incx)[0] = x[i];
 }
 
 void static inline strided_waffe2_store_dvec(double* ptr, waffe2_dvec x, const long incx) {
   for (int i=0; i<SIMD_DOUBLE_STRIDE;i++) (ptr + i*incx)[0] = x[i];
+}
+
+void static inline strided_waffe2_store_i32vec(int32_t* ptr, waffe2_ivec x, const long incx) {
+  for (int i=0; i<SIMD_SINGLE_STRIDE;i++) (ptr + i*incx)[0] = x[i];
+}
+
+void static inline strided_waffe2_store_u32vec(uint32_t* ptr, waffe2_ivec x, const long incx) {
+  for (int i=0; i<SIMD_SINGLE_STRIDE;i++) (ptr + i*incx)[0] = x[i];
+}
+
+void static inline strided_waffe2_store_i16vec(int16_t* ptr, waffe2_ivec x, const long incx) {
+  for (int i=0; i<SIMD_SINGLE_STRIDE*2;i++) (ptr + i*incx)[0] = x[i];
+}
+
+void static inline strided_waffe2_store_u16vec(uint16_t* ptr, waffe2_ivec x, const long incx) {
+  for (int i=0; i<SIMD_SINGLE_STRIDE*2;i++) (ptr + i*incx)[0] = x[i];
+}
+
+void static inline strided_waffe2_store_i8vec(int8_t* ptr, waffe2_ivec x, const long incx) {
+  for (int i=0; i<SIMD_SINGLE_STRIDE*4;i++) (ptr + i*incx)[0] = x[i];
+}
+
+void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const long incx) {
+  for (int i=0; i<SIMD_SINGLE_STRIDE*4;i++) (ptr + i*incx)[0] = x[i];
 }
 
 // Store
@@ -194,15 +256,15 @@ define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
 // argmax/argmin
 // max/min
 
-// Sets the maximum value in the are to the first element of y
-#define define_maxmin(prefix, max_or_min, stride, dtype, simd_op, scal_op) \
+// Sets the maximum value in the area to the leading element of y
+#define define_maxmin(dpref, prefix, max_or_min, stride, dtype, simd_op, scal_op) \
   void waffe2_##prefix##max_or_min(const long n, dtype* x, const long incx, dtype* y) \
   {									\
     dtype max_value = x[0];						\
     dtype *x_end = x + n * incx;					\
     dtype *x_simd_end = x + (n/stride)*stride;				\
-    waffe2_##prefix##vec xv;						\
-    waffe2_##prefix##vec maxt = waffe2_load_dscal(max_value);		\
+    waffe2_##dpref##vec xv;						\
+    waffe2_##dpref##vec maxt = waffe2_load_dscal(max_value);		\
     while (x != x_simd_end)						\
       {									\
 	if (incx == 1)							\
@@ -226,8 +288,24 @@ define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
     y[0] = max_value;							\
   };
 
-define_maxmin(d, max, SIMD_DOUBLE_STRIDE, double, waffe2_simd_dmax, MAX);
-define_maxmin(s, max, SIMD_SINGLE_STRIDE, float, waffe2_simd_smax, MAX);
+define_maxmin(d, d, max, SIMD_DOUBLE_STRIDE, double, waffe2_simd_dmax, MAX);
+define_maxmin(d, s, max, SIMD_SINGLE_STRIDE, float,  waffe2_simd_smax, MAX);
+define_maxmin(i, i32, max, SIMD_SINGLE_STRIDE, int32_t,  waffe2_simd_i32max, MAX);
+define_maxmin(i, u32, max, SIMD_SINGLE_STRIDE, uint32_t,  waffe2_simd_u32max, MAX);
+define_maxmin(i, i16, max, SIMD_SINGLE_STRIDE * 2, int16_t,  waffe2_simd_i16max, MAX);
+define_maxmin(i, u16, max, SIMD_SINGLE_STRIDE * 2, uint16_t,  waffe2_simd_u16max, MAX);
+define_maxmin(i, i8, max, SIMD_SINGLE_STRIDE * 4, int8_t,  waffe2_simd_i8max, MAX);
+define_maxmin(i, u8, max, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, MAX);
+
+define_maxmin(d, d, min, SIMD_DOUBLE_STRIDE, double, waffe2_simd_dmax, MAX);
+define_maxmin(d, s, min, SIMD_SINGLE_STRIDE, float,  waffe2_simd_smax, MAX);
+define_maxmin(i, i32, min, SIMD_SINGLE_STRIDE, int32_t,  waffe2_simd_i32max, MAX);
+define_maxmin(i, u32, min, SIMD_SINGLE_STRIDE, uint32_t,  waffe2_simd_u32max, MAX);
+define_maxmin(i, i16, min, SIMD_SINGLE_STRIDE * 2, int16_t,  waffe2_simd_i16max, MAX);
+define_maxmin(i, u16, min, SIMD_SINGLE_STRIDE * 2, uint16_t,  waffe2_simd_u16max, MAX);
+define_maxmin(i, i8, min, SIMD_SINGLE_STRIDE * 4, int8_t,  waffe2_simd_i8max, MAX);
+define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, MAX);
+
 
 // cl-autowrap
 // AVX512, SSE2
