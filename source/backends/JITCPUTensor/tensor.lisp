@@ -7,9 +7,17 @@
 "))
 
 (defclass JITCPUScalarTensor (cl-waffe2/vm.generic-tensor:ScalarTensor) nil
-  (:documentation "
-## [AbstractTensor] JITCPUScalarTensor
+  (:documentation "## [AbstractTensor] JITCPUScalarTensor
 "))
+
+(defmethod current-backend-state ((backend-name (eql 'JITCPUTensor)))
+  (format nil "compiler=~a flags=~a viz=~a"
+	  *default-c-compiler*
+	  *compiler-flags*
+	  *viz-compiled-code*))
+
+(defmethod current-backend-state ((backend-name (eql 'JITCPUScalarTensor)))
+  "Use with JITCPUTensor")
 
 (deftype JITAbleTensors ()
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
