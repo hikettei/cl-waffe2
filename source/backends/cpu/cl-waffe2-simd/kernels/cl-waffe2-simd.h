@@ -46,3 +46,12 @@ _define_arithmetic_scal_func(u8sub, uint8_t, y[0] = x[0] - y[0]);
 _define_arithmetic_scal_func(u8mul, uint8_t, y[0] = x[0] * y[0]);
 _define_arithmetic_scal_func(u8div, uint8_t, y[0] = x[0] / y[0]);
 
+// Copying for single/double float -> use BLAS routine
+// as for integers -> use functions below
+
+_define_arithmetic_scal_func(i32copy, int32_t, y[0] = x[0]);
+_define_arithmetic_scal_func(u32copy, uint32_t, y[0] = x[0]);
+_define_arithmetic_scal_func(i16copy, int16_t, y[0] = x[0]);
+_define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
+_define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
+_define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);

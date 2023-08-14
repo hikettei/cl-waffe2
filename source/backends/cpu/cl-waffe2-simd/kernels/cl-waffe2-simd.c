@@ -150,7 +150,7 @@ define_arithmetic_func(ddiv, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_ddiv, sa
 
 define_arithmetic_scal_func(i32add, int32_t, y[0] = x[0] + y[0]);
 define_arithmetic_scal_func(i32sub, int32_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(i32mul, int32_t, y[0] = x[0] * y[0]);
+define_arithmetic_scal_func(i32mul, int32_t, y[0] = x[0] * y[0])
 define_arithmetic_scal_func(i32div, int32_t, y[0] = x[0] / y[0]);
 
 define_arithmetic_scal_func(i16add, int16_t, y[0] = x[0] + y[0]);
@@ -177,6 +177,14 @@ define_arithmetic_scal_func(u8add, uint8_t, y[0] = x[0] + y[0]);
 define_arithmetic_scal_func(u8sub, uint8_t, y[0] = x[0] - y[0]);
 define_arithmetic_scal_func(u8mul, uint8_t, y[0] = x[0] * y[0]);
 define_arithmetic_scal_func(u8div, uint8_t, y[0] = x[0] / y[0]);
+
+
+define_arithmetic_scal_func(i32copy, int32_t, y[0] = x[0]);
+define_arithmetic_scal_func(u32copy, uint32_t, y[0] = x[0]);
+define_arithmetic_scal_func(i16copy, int16_t, y[0] = x[0]);
+define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
+define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
+define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
 
 // cffiでloading
 // AVX512, SSE2
