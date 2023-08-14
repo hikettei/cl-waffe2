@@ -156,5 +156,5 @@ collects and displays the current state of devices to the given `stream`
 		  (princ (symbol-name name) out)
 		  (princ " " out))
 
-		(format out "~%~%(a with-devices macro or set-devices-toplevel function to change this parameter.)~%"))))))
+		(format out "~%~%(use with-devices macro or set-devices-toplevel function to change this parameter.)~%"))))))
 		
