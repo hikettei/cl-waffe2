@@ -152,6 +152,8 @@ Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backw
 Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 "
   (declare (type AbstractTensor toplevel))
+  ;; fuse-p is intentionally disabled forcibly for a while
+  ;; because it cause unexcepted behaviours
   (let ((fuse-p nil) ;; fuse-p is disabled in default.
 	(*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
     (multiple-value-bind (iseq-forward leaves)
