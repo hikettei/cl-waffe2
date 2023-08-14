@@ -19,6 +19,7 @@
 				  (more-devices)
 				  (compiler "gcc")
 				  (viz-compiled-code nil)
+				  (openmp nil)
 				  (flags '("-fPIC" "-O3" "-march=native")))
   "
 ## [function] enable-cpu-jit-toplevel
@@ -28,6 +29,7 @@
 			  (more-devices)
 			  (compiler \"gcc\")
 			  (viz-compiled-code nil)
+                          (openmp nil)
 			  (flags '(\"-fPIC\" \"-O3\" \"-march=native\"))))
 ```
 
@@ -38,9 +40,12 @@ Sets `JITCPUTensor` and `JITCPUScalarTensor` to the top priority of backends. Pl
 `more-devices[List]` specify the list of device names. they have lower priority than `JITCPUTensor`
 
 `viz-compiled-code[boolean]` Set t to display the compiled c codes.
+
+`openMP[boolean]` set T to use OpenMP.
 "
   (setf *default-c-compiler* compiler
 	*viz-compiled-code* viz-compiled-code
+	*use-open-mp* openMP
 	*compiler-flags* flags)
   (apply #'cl-waffe2:set-devices-toplevel 'JITCPUTensor 'JITCPUScalarTensor more-devices)
   t)
@@ -67,4 +72,33 @@ Under this macro, two backends (`JITCPUTensor` and `JITCPUScalarTensor`) are ins
       (cffi:incf-pointer ptr (the fixnum (* (the fixnum (cffi:foreign-type-size (dtype tensor))) offset)))))
   #-(or sbcl)
   (error "JITCPUTensor requires SBCL to access the storage vector!"))
+
+(declaim ;;(inline incf-tensor-ptr)
+	 (ftype (function (AbstractTensor cffi-sys:foreign-pointer &key (:offset fixnum)) cffi-sys:foreign-pointer) incf-tensor-ptr))
+(defun incf-tensor-ptr (tensor ptr &key (offset 0))
+  (declare (type AbstractTensor tensor)
+	   (type cffi-sys:foreign-pointer ptr)
+	   (type fixnum offset))
+  (let ((out (the fixnum (* (the fixnum (cffi:foreign-type-size (dtype tensor))) offset))))
+    (if (= out 0)
+	ptr
+        (progn
+	  (cffi:incf-pointer ptr out)))))
+
+
+(defmacro with-tensor-ptr ((bind tensor) &body body)
+  `(progn
+     ;; Ensure that tensor storage vector has allocated.
+     (tensor-vec ,tensor)
+     (cffi:with-pointer-to-vector-data (,bind (cl-waffe2/vm.generic-tensor::vec ,tensor))
+       (declare (type cffi-sys:foreign-pointer ,bind))
+       ,@body)))
+
+(defmacro with-tensor-ptrs ((&rest input-forms) &body body)
+  (labels ((expand (rest-forms)
+	     (if rest-forms
+		 `(with-tensor-ptr (,(caar rest-forms) ,(second (car rest-forms)))
+		    ,(expand (cdr rest-forms)))
+		 `(progn ,@body))))
+    (expand input-forms)))
 

@@ -13,4 +13,3 @@
    :cl-waffe2/distributions))
 
 (in-package :cl-waffe2/benchmark)
-

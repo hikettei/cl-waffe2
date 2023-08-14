@@ -46,7 +46,15 @@
 ;; (!sin x (!copy x))
 ;;
 
-(defun node-compile-into-vm (toplevel)
+;; TODO:
+;; Forward Reodering
+;; MUL     VIEW
+;; VIEW    VIEW
+;; ADD  => MUL
+;; VIEW    ADD  to compose more operations
+
+(defun node-compile-into-vm (toplevel &key (fuse-p nil))
+  "Set fuse-p=t to apply view-reordering and fuse operations"
   (let ((instruction-seq)
 	(variable-leaves))
 
@@ -84,7 +92,16 @@
 		      instruction-seq)))))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
-    (values instruction-seq variable-leaves)))
+
+    (if fuse-p
+	(values
+	 (reverse
+	  (apply-fuse-operations
+	   (apply-iseq-reordering
+	    (reverse instruction-seq))
+	   variable-leaves))
+	 variable-leaves)
+	(values instruction-seq variable-leaves))))
 
 (defun expand-gradient-adder (tensor grad)
   ;; Tensor += Grad
@@ -114,80 +131,93 @@
        (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
 
 
-(defun trace-backward-network (toplevel leaves dout-toplevel)
+(defun trace-backward-network (toplevel leaves dout-toplevel fuse-p)
   (declare (type AbstractTensor toplevel dout-toplevel))
 
-  (sort-and-prune-for-backward toplevel dout-toplevel leaves))
+  (sort-and-prune-for-backward toplevel dout-toplevel leaves fuse-p))
 
+(defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
-(defun compile-forward-and-backward (toplevel &key (need-backward t))
+(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default))
   "
 
 ## [function] compile-forward-and-backward
 
 ```lisp
-(compile-forward-and-backward toplevel &key (need-backward t))
+(compile-forward-and-backward toplevel &key (need-backward t) (fuse-p t) (compile-mode :default))
 ```
 
-Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables).
+Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set `fuse-p`=t to get additional optimization to the generated IR.
 
 Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 "
   (declare (type AbstractTensor toplevel))
-  (multiple-value-bind (iseq-forward leaves)
-      (node-compile-into-vm toplevel)
+  ;; fuse-p is intentionally disabled forcibly for a while
+  ;; because it cause unexcepted behaviours
+  (let ((fuse-p nil) ;; fuse-p is disabled in default.
+	(*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
+    (multiple-value-bind (iseq-forward leaves)
+	(node-compile-into-vm toplevel :fuse-p fuse-p)
 
-    ;; [TODO] Testing the line below carefully:
-    ;; In-place mutation is working??
-    (apply-in-place-mutation! iseq-forward leaves)
+      ;; [TODO] Testing the line below carefully:
+      ;; In-place mutation is working??
+      (when (not fuse-p) ;; avoid twice-time applying
+	(apply-in-place-mutation! iseq-forward leaves))
 
-    (let* ((dout (if (scalar-p toplevel)
-		     (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-		     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
-	   (backward-iseq
-	     (when (and need-backward
-			(ancestor-param-p toplevel))
-	       (trace-backward-network toplevel leaves dout))))
+      (let* ((dout (if (scalar-p toplevel)
+		       (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+		       (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
+	     (backward-iseq
+	       (when (and need-backward
+			  (ancestor-param-p toplevel))
+		 (trace-backward-network toplevel leaves dout fuse-p))))
 
-      (mapc
-       #'(lambda (tensor)
-	   (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
-	     (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
-		   (if (scalar-p tensor)
-		       #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
-		       (let* ((*no-grad* t)
-			      (out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
-			 #'(lambda ()
-			     (forward out)))))))
-       leaves)
-      ;; (print (reverse iseq-forward))
-      ;; (print backward-iseq)
-      ;; (print backward-iseq)
+	(mapc
+	 #'(lambda (tensor)
+	     (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
+	       (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
+		     (if (scalar-p tensor)
+			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
+			 (let* ((*no-grad* t)
+				(out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
+			   #'(lambda ()
+			       (forward out)))))))
+	 leaves)
+	;; (print (reverse iseq-forward))
+	;; (print backward-iseq)
+	;; (print backward-iseq)
 
-      (values (reverse iseq-forward) backward-iseq leaves))))
+	(values (reverse iseq-forward) backward-iseq leaves)))))
 
 
-(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t))
+(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
   "
 ## [function] disassemble-waffe2-ir
 
 ```lisp
-(disassemble-waffe2-ir toplevel &key (backward t) (stream t))
+(disassemble-waffe2-ir toplevel &key (backward t) (stream t) (fuse-p t))
 ```
 
 Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `stream`. If `backward` was set to t, `backward` is also displayed.
 "
   (declare (type AbstractTensor toplevel))
   (multiple-value-bind (iseq-fw iseq-bw leaves)
-      (compile-forward-and-backward toplevel :need-backward backward)
+      (compile-forward-and-backward toplevel :need-backward backward :fuse-p fuse-p)
     (declare (ignore leaves))
     
     (flet ((conc-iseq-str (iseq)
-	     (with-output-to-string (out)
-	       (dolist (i iseq)
-		 (princ i out)))))
+	     (let ((tensor-ids))
+	       (with-output-to-string (out)
+		 (with-indent-to iseq
+		   (dolist (i iseq)
+		     (dolist (var (wfop-args i))
+		       (push (tensor-id var) tensor-ids))
+		     (princ i out)))
+		 (format out "~%~a Instructions | ~a Tensors~%"
+			 (length iseq)
+			 (length (remove-duplicates tensor-ids)))))))
 
-      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%" (conc-iseq-str iseq-fw))
+      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%"  (conc-iseq-str iseq-fw))
 
       (format stream "~%== [disassemble-waffe2-ir: Backward] ======~%~a~%" (conc-iseq-str iseq-bw))
 

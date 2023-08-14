@@ -87,6 +87,8 @@ In the network, `InputTensor` plays a role in being caches in the operation, or 
 
     (with-doc 'call-with-view 'function)
 
+    (with-doc 'with-ranked-loop 'macro)
+
     (with-doc 'stride-of 'function)
 
     (with-doc 'size-of 'function)

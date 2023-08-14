@@ -499,6 +499,7 @@ The definition/implementation of nodes could be invaild."
 	  inputs)
 
     (values
+     ;; [FixME] Eliminate this compile in the future release.
      (compile nil
 	      `(lambda ()
 		 (with-adjustable-symbols (,@set-input-forms)
@@ -582,7 +583,8 @@ because there's still unembodied tensors:
   ;; Check if all the inputs are embodied?
   (all-embodied? model)
 
-  (funcall (compiled-forward model)))
+  (let ((*runtime-mode-p* t))
+    (funcall (compiled-forward model))))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
 
@@ -590,8 +592,9 @@ because there's still unembodied tensors:
     (warn "backward: Inputs for compiled-composite are ignored"))
   (when (null (compiled-backward model))
     (error "cl-waffe2/vm.nodes:backward. Because the model was compiled with (with-no-grad ) mode, a backward function wasn't compiled."))
-  
-  (funcall (compiled-backward model)))
+
+  (let ((*runtime-mode-p* t))
+    (funcall (compiled-backward model))))
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)
   "
@@ -626,7 +629,8 @@ Reading all variables in the computation node, the method get-input returns an c
 	      &key
 		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest)
-		(use-setinput-form nil))
+		(use-setinput-form nil)
+		(fuse-ops t))
   "
 ## [function] build
 
@@ -634,7 +638,8 @@ Reading all variables in the computation node, the method get-input returns an c
 (build toplevel
 	      &key
 		(construct-backward? (not *no-grad*))
-		(compile-mode :fastest))
+		(compile-mode :fastest)
+                (fuse-ops t))
 ```
 
 Receiving the toplevel node in the neural network, the function `build` constructs a optimal forward/backward function, returning `Compiled-Composite`.
@@ -670,10 +675,12 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 `construct-backward?` [boolean] If t, the backward construction won't be done.
 
 `compile-mode`[compile-mode-t] an keyword to indicate compiling option.
+
+`fuse-ops[boolean]` Set t to enable `Loop Fusion Optimizing`. It optimizes the locality of memories instead of a litte compiling overhead.
 "
   (declare (type AbstractTensor toplevel))
 
-  (multiple-value-bind (fw-iseq bw-iseq variables) (cl-waffe2/vm:compile-forward-and-backward toplevel :need-backward construct-backward?)
+  (multiple-value-bind (fw-iseq bw-iseq variables) (cl-waffe2/vm:compile-forward-and-backward toplevel :need-backward construct-backward? :compile-mode compile-mode :fuse-p fuse-ops)
     (multiple-value-bind (fw-function variables set-input-forms) (compile-forward-kernel fw-iseq variables :compile-mode compile-mode)
       ;; Vars - All Variables (including ChainTMP) used in forward.
       (prog1

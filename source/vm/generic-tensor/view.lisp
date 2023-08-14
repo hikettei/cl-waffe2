@@ -3,6 +3,8 @@
 
 ;; view.lisp make cl-waffe2 unstable...?
 
+;;(declaim (inline compute-visible-start-idx compute-visible-end-idx compute-stepby))
+
 (defparameter *unroll-threshold* 3 "Unroll if iternum falls below this threshold")
 
 ;; TO Add: ViewInstruction2D to implement matmul
@@ -68,6 +70,8 @@
 ;; TODO: from view to view
 (declaim (ftype (function (subscript-t) subscript-syntax) viewtype))
 (defun viewtype (view)
+  (declare (optimize (speed 3))
+	   (type subscript-t view))
   (with-viewcase (view)
 		 :index :index
 		 :tcase :t
@@ -89,42 +93,93 @@
 		   (compute-visible-start-idx
 		    (subscript-view v)))))
 
+;; [Optim] !sum produces a lot of compute-visible-start-idx
+;;  This could be due to run-time creation of tensors?
 (declaim (ftype (function (subscript-t) fixnum) compute-visible-start-idx))
 (defun compute-visible-start-idx (view)
   "Given view, this function returns a offset at the dimension."
   (declare (optimize (speed 3)))
-  (read-symbol
-   (case (viewtype view)
-     (:index view)
-     (:t     0)
-     (:slice      (car view))
-     (:slice-step (if (> (the fixnum (third view)) 0)
-		      (min (the fixnum (car view)) (the fixnum (second view)))
-		      (max (the fixnum (car view)) (the fixnum (second view)))))
-     (:indices 0)
-     (:tflist  0)
-     (:broadcast 0)
-     (T (error "unknown viewtype: ~a" view)))))
+  (let ((out
+	  (case (viewtype view)
+	    (:index view)
+	    (:t     0)
+	    (:slice      (car view))
+	    (:slice-step (if (> (the fixnum (third view)) 0)
+			     (min (the fixnum (car view)) (the fixnum (second view)))
+			     (max (the fixnum (car view)) (the fixnum (second view)))))
+	    (:indices 0)
+	    (:tflist  0)
+	    (:broadcast 0)
+	    (T (error "unknown viewtype: ~a" view)))))
+    (typecase out
+      (fixnum out)
+      (T (let ((out (read-symbol out))) out)))))
+
+(defun lazy-compute-visible-start-idx (view)
+  "Given view, this function returns a offset at the dimension.
+If the symbol is still not determined, just returns a list."
+  (declare (optimize (speed 3)))
+  (let ((out
+	  (case (viewtype view)
+	    (:index view)
+	    (:t     0)
+	    (:slice      (car view))
+	    (:slice-step (if (> (the fixnum (third view)) 0)
+			     (min (the fixnum (car view)) (the fixnum (second view)))
+			     (max (the fixnum (car view)) (the fixnum (second view)))))
+	    (:indices 0)
+	    (:tflist  0)
+	    (:broadcast 0)
+	    (T (error "unknown viewtype: ~a" view)))))
+    (typecase out
+      (fixnum out)
+      (t `(the fixnum (read-symbol ',out))))))
 
 (declaim (ftype (function (subscript-t (or list symbol fixnum)) (or list symbol fixnum)) compute-visible-end-idx))
 (defun compute-visible-end-idx (view size)
   "Given view and size, this function returns a size at the dimension."
-  (read-symbol
-   (case (viewtype view)
-     (:index (1+ (the fixnum view)))
-     (:t     size)
-     (:slice (the fixnum (second view)))
-     ;; FIXME: Should be divided :slice-step
-     (:slice-step
-      (the fixnum
-	   (round (/ (if (> (third view) 0)
-			 (max (car view) (second view))
-			 (min (car view) (second view)))
-		     (abs (third view))))))
-     (:indices (length (cdr view)))
-     (:tflist  size)
-     (:broadcast (second view))
-     (T (error "unknwon view: ~a" view)))))
+  (let ((out
+	  (case (viewtype view)
+	    (:index (1+ (the fixnum view)))
+	    (:t     size)
+	    (:slice (the fixnum (second view)))
+	    ;; FIXME: Should be divided :slice-step
+	    (:slice-step
+	     (the fixnum
+		  (round (/ (if (> (third view) 0)
+				(max (car view) (second view))
+				(min (car view) (second view)))
+			    (abs (third view))))))
+	    (:indices (length (cdr view)))
+	    (:tflist  size)
+	    (:broadcast (second view))
+	    (T (error "unknwon view: ~a" view)))))
+    (typecase out
+      (fixnum out)
+      (T (let ((out (read-symbol out))) out)))))
+
+(defun lazy-compute-visible-end-idx (view size)
+  "Given view and size, this function returns a size at the dimension.
+If the returned value is still not determined, just returns a list"
+  (let ((out
+	  (case (viewtype view)
+	    (:index (1+ (the fixnum view)))
+	    (:t     size)
+	    (:slice (the fixnum (second view)))
+	    ;; FIXME: Should be divided :slice-step
+	    (:slice-step
+	     (the fixnum
+		  (round (/ (if (> (third view) 0)
+				(max (car view) (second view))
+				(min (car view) (second view)))
+			    (abs (third view))))))
+	    (:indices (length (cdr view)))
+	    (:tflist  size)
+	    (:broadcast (second view))
+	    (T (error "unknwon view: ~a" view)))))
+    (typecase out
+      (fixnum out)
+      (T `(the fixnum (read-symbol ',out))))))
 
 (defun compute-visible-end-idx-actual (view size)
   (read-symbol

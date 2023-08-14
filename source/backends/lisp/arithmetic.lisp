@@ -60,7 +60,8 @@
 					    ,(size-of x-view 0)
 					    ,(stride-of x-view 0)
 					    ,(stride-of y-view 0)))
-			      `(,x ,y))
+			      `(,x ,y)
+			      :fuse t)
 			   ,x))))
 
 (define-impl (SubNode :device LispTensor)
@@ -77,7 +78,8 @@
 					    ,(size-of x-view 0)
 					    ,(stride-of x-view 0)
 					    ,(stride-of y-view 0)))
-			      `(,x ,y))
+			      `(,x ,y)
+			      :fuse t)
 			   ,x))))
 
 
@@ -96,7 +98,8 @@
 					    ,(size-of x-view 0)
 					    ,(stride-of x-view 0)
 					    ,(stride-of y-view 0)))
-			      `(,x ,y))
+			      `(,x ,y)
+			      :fuse t)
 			   ,x))))
 
 
@@ -115,7 +118,8 @@
 					    ,(size-of x-view 0)
 					    ,(stride-of x-view 0)
 					    ,(stride-of y-view 0)))
-			      `(,x ,y))
+			      `(,x ,y)
+			      :fuse t)
 			   ,x))))
 
 
@@ -132,7 +136,8 @@
 			   ,(offset-of x-view 0)
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
-		     `(,x))
+		     `(,x)
+		     :fuse t)
 		  ,x))))
 
 (define-impl (ScalarAdd :device LispTensor)
@@ -148,7 +153,8 @@
 			   ,(offset-of x-view 0)
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
-		     `(,x))
+		     `(,x)
+		     :fuse t)
 		  ,x))))
 
 (define-impl (ScalarSub :device LispTensor)
@@ -164,7 +170,8 @@
 			   ,(offset-of x-view 0)
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
-		     `(,x))
+		     `(,x)
+		     :fuse t)
 		  ,x))))
 
 
@@ -182,7 +189,8 @@
 			   ,(offset-of x-view 0)
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
-		     `(,x))
+		     `(,x)
+		     :fuse t)
 		  ,x))))
 
 (define-impl (ScalarDiv :device LispTensor)
@@ -199,7 +207,8 @@
 			   ,(offset-of x-view 0)
 			   ,(size-of x-view 0)
 			   ,(stride-of x-view 0)))
-		     `(,x))
+		     `(,x)
+		     :fuse t)
 		  ,x))))
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
@@ -234,7 +243,8 @@
 			       ,(stride-of x-view 0)
 			       ,(stride-of y-view 0)
 			       ,(size-of x-view 0)))
-			 `(,x ,y))
+			 `(,x ,y)
+			 :fuse t)
 		       ,x)
 		     ,y))))
 

@@ -54,3 +54,7 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
 	      (tensor-id tensor)
 	      (if comma ", " "")))
 
+(defun cPointer (tensor)
+  (symb (tensor-id tensor) '-ptr))
+
+

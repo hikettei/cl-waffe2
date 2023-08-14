@@ -4,6 +4,8 @@
 (defvar *compiled-code-buffer* nil "The variable collects generated C codes.")
 (defparameter *indent-width* 0)
 
+(defparameter *use-open-mp* nil)
+
 (defmacro with-indent (indent &body body)
   "Add indentations to generated C code with write-c-line"
   `(let ((*indent-width* ,indent)) ,@body))
@@ -37,6 +39,9 @@
     
     (loop for include in *includes*
 	  do (write-buff "#include <~a>~%" include))
+
+    (when *use-open-mp*
+      (write-buff "#include <omp.h>~%"))
 
     (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
 
@@ -82,6 +87,8 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
   (let ((back-indent-size (max 0 (- *indent-width* 4))))
     (with-indent back-indent-size
       (write-c-line "}~%~%")
+      (when *use-open-mp*
+	(write-c-line "#pragma omp parallel for~%"))
       (write-c-line "for(int i=0; i<size; i++) {~%"))))
 
 ;; [TODO] Printing JIT Compiler Report

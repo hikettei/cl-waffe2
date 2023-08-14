@@ -4,7 +4,7 @@
 
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args)))
+	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
@@ -20,14 +20,42 @@ cl-waffe2 vm specializes on  the sequence of above format.
   (node node :type (or function string null AbstractNode))
   (self self :type AbstractTensor)
   (args args :type list)
-  (bw-is-leaf-p nil :type boolean))
+  (bw-is-leaf-p nil :type boolean)
+  (call-with-view call-with-view :type (or null cl-waffe2/vm.generic-tensor::Ranked-Loop))
+  (fuse-prev fuse-prev :type (or null list))
+  (fused-body-cache fused-body-cache :type (or null list)))
 
 ;; (defstruct (Composable-Operator <- separate call-with-view from body
 ;; (defun .cop (cop1 cop2) ...)
 
+(defparameter *omit-args-n* 5)
+(defparameter *opname-indent-to* 0 "Adds a space for this param times")
+
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
-	  "<WfInst[Compiled: ~a] : ~a.state <= apply( ~a)>~%"
+	  "~a~a : ~a <= op(~a)>~%"
+	  (instruction-opname inst)
+	  (with-output-to-string (out)
+	    (dotimes (i (- *opname-indent-to* (length (instruction-opname inst)))) (princ " " out)))
+	  (tensor-id (wfop-self inst))
+	  ;;(shape (wfop-self inst))
+	  (if (>= (length (wfop-args inst)) *omit-args-n*)
+	      (format nil "..., x~a,..." (length (wfop-args inst)))
+	      (with-output-to-string (out)
+		(dotimes (i (length (wfop-args inst)))
+		  (let ((var (nth i (wfop-args inst))))
+		    (format out "~a~a~a~a"
+			    (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
+				"<Param>"
+				"")
+			    (tensor-id var)
+			    (shape var)
+			    (if (nth (1+ i) (wfop-args inst))
+				" "
+				""))))))))
+
+(defmethod instruction-opname ((inst WFInstruction))
+  (format nil "<WfInst[Compiled: ~a]"
 	  (if (functionp (wfop-node inst))
 	      (funcall (wfop-node inst))
 	      (if (movetensor-p (wfop-node inst))
@@ -38,15 +66,17 @@ cl-waffe2 vm specializes on  the sequence of above format.
 			      "MoveScalarNode(SAVE_FOR_BACKWARD)"
 			      "MoveTensorNode(SAVE_FOR_BACKWARD)")
 			  (class-name (class-of (wfop-node inst)))))
-		  (class-name (class-of (wfop-node inst)))))
-	  (tensor-id (wfop-self inst))
-	  (with-output-to-string (out)
-	    (dolist (var (wfop-args inst))
-	      (format out "~a~a~a "
-		      (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-			  "<Param>"
-			  "")
-		      (tensor-id var) (shape var))))))
+		  (class-name (class-of (wfop-node inst)))))))
+
+(defun area-indent-to (iseq)
+  "Returns the largest length of iseq name"
+  (loop for i in iseq
+	if (not (functionp (wfop-node i)))
+	  maximize (length (instruction-opname i))))
+
+(defmacro with-indent-to (iseq &body body)
+  `(let ((*opname-indent-to* (area-indent-to ,iseq)))
+     ,@body))
 
 ;; In-place mutation
 
@@ -57,6 +87,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
+  
   (let ((ref-table (make-hash-table)))
 
     ;; First, Register all tensors appeared in the computation node
@@ -111,9 +142,8 @@ cl-waffe2 vm specializes on  the sequence of above format.
 
 		     (apply #'cl-waffe2/vm.generic-tensor::order-reductable-p 0 past-variables) ;; <- is it worth it? test
 		     (not (tensor-protect-me (car past-variables)))
-		     (not (movetensor-save-for-backward bw)))))
-	     
-	     (if in-place-p		 
+		     (not (movetensor-save-for-backward bw)))))	     
+	     (if in-place-p
 		 (setf (movetensor-ignore-me (wfop-node instruction)) t)
 		 (when (gethash (tensor-id target) ref-table)
 		   (decf (gethash (tensor-id target) ref-table)))))))
