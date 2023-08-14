@@ -57,3 +57,6 @@ waffe2_dvec static inline waffe2_simd_dsub(waffe2_dvec x, waffe2_dvec y) { retur
 waffe2_dvec static inline waffe2_simd_dmul(waffe2_dvec x, waffe2_dvec y) { return _mm256_mul_pd(x, y); }
 waffe2_dvec static inline waffe2_simd_ddiv(waffe2_dvec x, waffe2_dvec y) { return _mm256_div_pd(x, y); }
 
+waffe2_svec static inline waffe2_simd_smax(waffe2_svec x, waffe2_svec y) { return _mm256_max_ps(x, y); }
+waffe2_dvec static inline waffe2_simd_dmax(waffe2_dvec x, waffe2_dvec y) { return _mm256_max_pd(x, y); }
+

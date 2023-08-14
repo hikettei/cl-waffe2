@@ -55,3 +55,4 @@ _define_arithmetic_scal_func(i16copy, int16_t, y[0] = x[0]);
 _define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
 _define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
 _define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
+

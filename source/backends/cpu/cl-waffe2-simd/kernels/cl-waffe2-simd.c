@@ -6,12 +6,16 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <float.h>
 
 #if defined(__x86_64)
   #include "simd/x86_64.h"
 #elif defined(__aarch64__)
   #include "simd/aarch64.h"
 #endif
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 // TODO:
 // Arithmetic Ops +-/*
@@ -20,6 +24,7 @@
 // Hardware specific optimization for this:
 // Unfold for CNN, im2col.
 // If possible, more sparse matrix support, especially, sparse gemm
+//
 
 // Load
 waffe2_svec static inline make_waffe2_svec (float* x, const long incx) {
@@ -186,7 +191,45 @@ define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
 define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
 define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
 
-// cffiでloading
+// argmax/argmin
+// max/min
+
+// Sets the maximum value in the are to the first element of y
+#define define_maxmin(prefix, max_or_min, stride, dtype, simd_op, scal_op) \
+  void waffe2_##prefix##max_or_min(const long n, dtype* x, const long incx, dtype* y) \
+  {									\
+    dtype max_value = x[0];						\
+    dtype *x_end = x + n * incx;					\
+    dtype *x_simd_end = x + (n/stride)*stride;				\
+    waffe2_##prefix##vec xv;						\
+    waffe2_##prefix##vec maxt = waffe2_load_dscal(max_value);		\
+    while (x != x_simd_end)						\
+      {									\
+	if (incx == 1)							\
+	  {								\
+	    xv = waffe2_load_##prefix##vec(x);				\
+	  }								\
+	else								\
+	  {								\
+	    xv = make_waffe2_##prefix##vec(x, incx);			\
+	  }								\
+	maxt = simd_op(maxt, xv);					\
+	x += stride;							\
+      }									\
+    dtype candidates[stride];						\
+    waffe2_store_##prefix##vec(candidates, maxt);			\
+    for (int i=0; i<stride; i++) { max_value = MAX(max_value, candidates[i]); } \
+    while (x != x_end) {						\
+      max_value = scal_op(max_value, x[0]);				\
+      x += incx;							\
+    }									\
+    y[0] = max_value;							\
+  };
+
+define_maxmin(d, max, SIMD_DOUBLE_STRIDE, double, waffe2_simd_dmax, MAX);
+define_maxmin(s, max, SIMD_SINGLE_STRIDE, float, waffe2_simd_smax, MAX);
+
+// cl-autowrap
 // AVX512, SSE2
 
 // SCALAR x TENSOR, INVERSE_TENSOR -> Implemented by Broadcasting
@@ -196,3 +239,10 @@ define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
 // Fast Maxmin
 // Argmax Argmin
 // Where/CompareNodeで関数=#'>等の時、ハードウェアに特化したやつを使う
+
+// ABS
+// A>B A<B A<=B A>=B
+// A>Scal ...
+// max/min with out parameters
+// argmax/argmin
+// -> SLEEF SIMD MATHEMATICAL
