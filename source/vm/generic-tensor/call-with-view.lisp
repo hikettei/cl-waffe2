@@ -489,7 +489,8 @@ Return: brand new composed Ranked-Loop
 		       &aux
 			 (shape (shape (car tensors)))
 			 (dims  (length shape))
-			 (force-order (if (= cl-waffe2/threads:*num-cores* 1)
+			 (force-order (if (or (not lparallel)
+					      (= cl-waffe2/threads:*num-cores* 1))
 					  force-order
 					  t)))
   "
@@ -599,13 +600,14 @@ butgot ~a."
 	     ;; Computing Multi-Dimensional Offsets
 	     (let* ((start-points (loop for tensor in tensors
 					collect
-					(lazy-compute-visible-start-idx
-					 (subscript-view (nth target-dim (tensor-view tensor))))))
+					;; Here, should be computed in advance to reduce the size of compiled code.
+					`(compute-visible-start-idx
+					  (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
 		    (end-points (loop for tensor in tensors
 				      collect
-				      (lazy-compute-visible-end-idx
-				       (subscript-view (nth target-dim (tensor-view tensor)))
-				       (nth target-dim (original-shape tensor))))))
+				      `(compute-visible-end-idx
+					(subscript-view (nth ,target-dim (tensor-view ,tensor)))
+					(nth ,target-dim (original-shape ,tensor))))))
 	       (cond
 		 ((<= rest-dim at-least-dim)
 

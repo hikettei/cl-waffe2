@@ -1,6 +1,10 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+;; I'm depcrecated with Composite-Function
+;; Should be deleted in the future release:
+
+
 ;; The file function.lisp provides a system on interacting Lazy-Evaluated Nodes and Toplevel functions:
 ;;
 ;; Composite <-> Function
