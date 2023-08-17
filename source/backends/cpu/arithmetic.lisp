@@ -33,7 +33,7 @@
   (let ((fname (make-fname (dtype x) fname)))
     (call-with-view
      #'(lambda (x-view y-view)
-	 `(,fname ,(size-of y-view 0) ,x-ptr ,(stride-of x-view 0) ,y-ptr ,(stride-of y-view 0)))
+	 `(,fname ,(size-of y-view 0) (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0)) ,(stride-of x-view 0) (incf-tensor-ptr ,y ,y-ptr :offset ,(offset-of y-view 0)) ,(stride-of y-view 0)))
      `(,x ,y))))
 
 (defun expand-move-form (x y x-ptr y-ptr)
@@ -157,14 +157,14 @@
   (let ((fname (make-fname (dtype x) fname :scal t)))
     (call-with-view
      #'(lambda (x-view)
-	 `(,fname ,(size-of x-view 0) ,x-ptr ,(stride-of x-view 0) ,scalar))
+	 `(,fname ,(size-of x-view 0) (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0)) ,(stride-of x-view 0) ,scalar))
      `(,x))))
 
 (defun expand-inv-form (x x-ptr)
   (let ((fname (make-fname (dtype x) "inv")))
     (call-with-view
      #'(lambda (x-view)
-	 `(,fname ,(size-of x-view 0) ,x-ptr ,(stride-of x-view 0)))
+	 `(,fname ,(size-of x-view 0) (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0)) ,(stride-of x-view 0)))
      `(,x))))
 
 (define-impl (InverseTensorNode :device CPUTensor :reject-p #'simd-extension-p)

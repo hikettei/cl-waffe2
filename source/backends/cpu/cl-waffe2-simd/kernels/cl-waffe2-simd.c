@@ -180,7 +180,7 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
       {									\
 	while (count != simd_end_idx)					\
 	  {								\
-	    vy = waffe2_load_##prefix##vec(y + count);			\
+	    vy = waffe2_load_##prefix##vec(y + count);	         	\
 	    vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
 	    vy = simd_op_name(vx, vy);					\
 	    strided_waffe2_store_##prefix##vec(x + count * incx, vy, incx); \
@@ -192,7 +192,7 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
 	while (count != simd_end_idx)					\
 	  {								\
 	    vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
-	    vy = make_waffe2_##prefix##vec(y + count * incx, incy);	\
+	    vy = make_waffe2_##prefix##vec(y + count * incy, incy);	\
 	    vy = simd_op_name(vx, vy);					\
 	    strided_waffe2_store_##prefix##vec(x + count * incx, vy, incx); \
 	    count += stride;						\
