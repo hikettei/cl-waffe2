@@ -154,50 +154,52 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
     long count = 0;							\
     const long simd_end_idx = (n/stride)*stride;			\
     waffe2_##prefix##vec vx, vy;					\
-    if (incx == 1 && incy == 1)						\
-      {									\
-	while (count != simd_end_idx)					\
-	  {								\
-	    vx = waffe2_load_##prefix##vec(x + count);			\
-	    vy = waffe2_load_##prefix##vec(y + count);			\
-	    vy = simd_op_name(vx, vy);					\
-	    waffe2_store_##prefix##vec(x + count, vy);			\
-	    count += stride;						\
-	  }								\
-      }									\
-    else if (incx == 1)							\
-      {									\
-	while (count != simd_end_idx)				        \
-	  {								\
-	    vx = waffe2_load_##prefix##vec(x + count);			\
-	    vy = make_waffe2_##prefix##vec(y + incy * count, incy);	\
-	    vy = simd_op_name(vx, vy);					\
-	    waffe2_store_##prefix##vec(x + count, vy);			\
-	    count += stride;						\
-	  }								\
-      }									\
-    else if (incy == 1)							\
-      {									\
-	while (count != simd_end_idx)					\
-	  {								\
-	    vy = waffe2_load_##prefix##vec(y + count);	         	\
-	    vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
-	    vy = simd_op_name(vx, vy);					\
-	    strided_waffe2_store_##prefix##vec(x + count * incx, vy, incx); \
-	    count += stride;						\
-	  }								\
-      }									\
-    else								\
-      {									\
-	while (count != simd_end_idx)					\
-	  {								\
-	    vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
-	    vy = make_waffe2_##prefix##vec(y + count * incy, incy);	\
-	    vy = simd_op_name(vx, vy);					\
-	    strided_waffe2_store_##prefix##vec(x + count * incx, vy, incx); \
-	    count += stride;						\
-	  }								\
-      }									\
+    if (incx >= 1) {							\
+      if (incx == 1 && incy == 1)					\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = waffe2_load_##prefix##vec(x + count);		\
+	      vy = waffe2_load_##prefix##vec(y + count);		\
+	      vy = simd_op_name(vx, vy);				\
+	      waffe2_store_##prefix##vec(x + count, vy);		\
+	      count += stride;						\
+	    }								\
+	}								\
+      else if (incx == 1)						\
+	{								\
+	  while (count != simd_end_idx)				        \
+	    {								\
+	      vx = waffe2_load_##prefix##vec(x + count);		\
+	      vy = make_waffe2_##prefix##vec(y + incy * count, incy);	\
+	      vy = simd_op_name(vx, vy);				\
+	      waffe2_store_##prefix##vec(x + count, vy);		\
+	      count += stride;						\
+	    }								\
+	}								\
+      else if (incy == 1)						\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vy = waffe2_load_##prefix##vec(y + count);		\
+	      vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	      vy = simd_op_name(vx, vy);				\
+	      strided_waffe2_store_##prefix##vec(x + count * incx, vy, incx); \
+	      count += stride;						\
+	    }								\
+	}								\
+      else								\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	      vy = make_waffe2_##prefix##vec(y + count * incy, incy);	\
+	      vy = simd_op_name(vx, vy);				\
+	      strided_waffe2_store_##prefix##vec(x + count * incx, vy, incx); \
+	      count += stride;						\
+	    }								\
+	}								\
+    }									\
     x += count * incx;							\
     y += count * incy;							\
     while (count != n) {						\
@@ -387,19 +389,21 @@ define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, M
     waffe2_##dpref##bool mask;						\
     waffe2_##dpref##vec vthen = waffe2_load_##prefix##scal(then_value);	\
     waffe2_##dpref##vec velse = waffe2_load_##prefix##scal(else_value); \
-    while (count != simd_end_count)					\
-      {									\
-	vx = make_waffe2_##prefix##vec(x + count * incx, incx);		\
-	vy = make_waffe2_##prefix##vec(y + count * incy, incy);		\
-	mask = waffe2_simd_##prefix##simd_cmp(vx, vy);			\
-	res  = waffe2_simd_##prefix##blendv(vx, vy, mask);		\
-	if (inco == 1) {						\
-	  waffe2_store_##prefix##vec(out, res);				\
-	} else {							\
-	  strided_waffe2_store_##prefix##vec(out + count*inco, res, inco); \
+    if (inco >= 1) {							\
+      while (count != simd_end_count)					\
+	{								\
+	  vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	  vy = make_waffe2_##prefix##vec(y + count * incy, incy);	\
+	  mask = waffe2_simd_##prefix##simd_cmp(vx, vy);		\
+	  res  = waffe2_simd_##prefix##blendv(vx, vy, mask);		\
+	  if (inco == 1) {						\
+	    waffe2_store_##prefix##vec(out, res);			\
+	  } else {							\
+	    strided_waffe2_store_##prefix##vec(out + count*inco, res, inco); \
+	  }								\
+	  count += stride;						\
 	}								\
-	count += stride;						\
-      }									\
+    }									\
     x += count * incx;							\
     y += count * incy;							\
     out += count * inco;						\
@@ -478,36 +482,36 @@ define_cmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 #define define_scmp(dpref, prefix, op_name, stride, dtype, simd_cmp, rem_cmp) \
   void waffe2_##prefix##op_name##_scal(const long n, dtype* x, const long incx, dtype* out, const long inco, dtype y, dtype then_value, dtype else_value) \
   {                                                                     \
-    dtype *o_end = out + n * inco;					\
-    dtype *o_simd_end = out + (n/stride)*stride;			\
+    const long simd_end_idx = (n/stride)*stride;			\
+    long count = 0;							\
     waffe2_##dpref##vec vx, vo, res;			                \
     waffe2_##dpref##bool mask;						\
     waffe2_##dpref##vec vthen = waffe2_load_##prefix##scal(then_value);	\
     waffe2_##dpref##vec velse = waffe2_load_##prefix##scal(else_value); \
     waffe2_##dpref##vec vy    = waffe2_load_##prefix##scal(y);		\
-    while (out != o_simd_end)						\
-      {									\
-	vx = make_waffe2_##prefix##vec(x, incx);			\
-	vo = make_waffe2_##prefix##vec(out, inco);			\
-	mask = waffe2_simd_##prefix##simd_cmp(vx, vy);			\
-	res  = waffe2_simd_##prefix##blendv(vx, vy, mask);		\
-	if (inco == 1) {						\
-	  waffe2_store_##prefix##vec(out, res);				\
-	} else {							\
-	  strided_waffe2_store_##prefix##vec(out, res, inco);	       	\
+    if (inco >= 1) {							\
+      while (count != simd_end_idx)					\
+	{								\
+	  vx = make_waffe2_##prefix##vec(x + count*incx, incx);		\
+	  vo = make_waffe2_##prefix##vec(out + count*inco, inco);	\
+	  mask = waffe2_simd_##prefix##simd_cmp(vx, vy);		\
+	  res  = waffe2_simd_##prefix##blendv(vx, vy, mask);		\
+	  if (inco == 1) {						\
+	    waffe2_store_##prefix##vec(out, res);			\
+	  } else {							\
+	    strided_waffe2_store_##prefix##vec(out + count * inco, res, inco); \
+	  }								\
+	  count += stride;						\
 	}								\
-	x += stride;							\
-	out += stride;							\
-      }									\
-    while (out != o_end)						\
+    }									\
+    while (count != n)							\
       {									\
 	if (x[0] rem_cmp y) {				                \
 	  out[0] = then_value;						\
 	} else {							\
 	  out[0] = else_value;						\
 	}								\
-	x += incx;							\
-	out += inco;							\
+	count += 1;							\
       }									\
   };
 
