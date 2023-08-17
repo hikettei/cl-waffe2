@@ -536,26 +536,11 @@ define_scmp(i, u32, ge, SIMD_SINGLE_STRIDE,     uint32_t, ge, >=);
 define_scmp(i, u16, ge, SIMD_SINGLE_STRIDE * 2, uint16_t, ge, >=);
 define_scmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 
-// Comparison, SIMD Math Kernel, cl-autowrap, testing all function, merge into cl-waffe2
-
-// CMP: X, Y -> OUT, then, else
 
 
 
 
 // cl-autowrap
 // AVX512, SSE2
+// Data Casting, SLEEF/SIMD Mathematical Impls, Fast Unfold for Pool/Conv
 
-// Data Casting
-
-// TODO: IMPLEMENT SLEEF BACKEND
-// Fast Maxmin
-// Argmax Argmin
-// Where/CompareNodeで関数=#'>等の時、ハードウェアに特化したやつを使う
-
-// ABS
-// A>B A<B A<=B A>=B
-// A>Scal ...
-// max/min with out parameters (OK)
-// argmax/argmin (OK)
-// -> SLEEF SIMD MATHEMATICAL

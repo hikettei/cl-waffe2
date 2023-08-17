@@ -86,6 +86,8 @@ waffe2_dvec static inline waffe2_simd_dsub(waffe2_dvec x, waffe2_dvec y) { retur
 waffe2_dvec static inline waffe2_simd_dmul(waffe2_dvec x, waffe2_dvec y) { return _mm256_mul_pd(x, y); }
 waffe2_dvec static inline waffe2_simd_ddiv(waffe2_dvec x, waffe2_dvec y) { return _mm256_div_pd(x, y); }
 
+// [Memo] TODO: Use Intel SVML and Vectorize _mm256_div_epiXX
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // max/min
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -239,4 +241,9 @@ waffe2_ivec static inline waffe2_simd_i8blendv(waffe2_ivec x, waffe2_ivec y, waf
 waffe2_ivec static inline waffe2_simd_u32blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
 waffe2_ivec static inline waffe2_simd_u16blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
 waffe2_ivec static inline waffe2_simd_u8blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+
+// TO ADD:
+// Mathematical Functions
+
+// Unfold
 

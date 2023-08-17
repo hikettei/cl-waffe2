@@ -19,9 +19,9 @@ Adding Sparse Matrix Support <- !!!
 
 Sparse Gemm
 
-Optimize: Compare_Op
+Unfold/SIMD Mathematical Functions
 
-Reject-pでmul/divnodeの実装
+OneDNN Supports
 
 ## Workflow
 
@@ -29,7 +29,6 @@ Reject-pでmul/divnodeの実装
 [CPUTensor loads simd-extendion.dylib]
   | -> if not found -> reject-p and lisptensor
   v
-hogehoge
+execute ops
 ```
 
-oneDNN
