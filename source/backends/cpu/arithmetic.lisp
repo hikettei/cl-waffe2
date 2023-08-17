@@ -122,9 +122,6 @@
 			      ,(expand-arithmetic-form x y x-ptr y-ptr :fname "div")
 			      ,x)))))
 
-;; TODO: Mul/Div, ScalarXX Ops with AVX2/AVX512
-;; Current State: MulNode/DivNode -> LispKernel
-
 (define-impl (MoveTensorNode :device CPUTensor
 			     :reject-p #'(lambda (dtype &rest more-args)
 					   (declare (ignore more-args))
@@ -145,7 +142,80 @@
 					     (eql (dtype x) :double))
 					 (expand-move-form x y x-ptr y-ptr)					 
 					 ;; *simd-extension-p*=t
-					 (expand-arithmetic-form y x y-ptr x-ptr :fname "copy"))
+					 (expand-arithmetic-form x y x-ptr y-ptr :fname "copy"))
 				    ,x)
 				  ,y))))))
+
+(defun simd-extension-p (&rest args)
+  (declare (ignore args))
+  (not *simd-extension-p*))
+
+;; InverseTensorNode
+
+(defun expand-arithmetic-scalar-form (x x-ptr scalar &key (fname "add"))
+  (let ((fname (make-fname (dtype x) fname :scal t)))
+    (call-with-view
+     #'(lambda (x-view)
+	 `(,fname ,(size-of x-view 0) ,x-ptr ,(stride-of x-view 0) ,scalar))
+     `(,x))))
+
+(defun expand-inv-form (x x-ptr)
+  (let ((fname (make-fname (dtype x) "inv")))
+    (call-with-view
+     #'(lambda (x-view)
+	 `(,fname ,(size-of x-view 0) ,x-ptr ,(stride-of x-view 0)))
+     `(,x))))
+
+(define-impl (InverseTensorNode :device CPUTensor :reject-p #'simd-extension-p)
+	     :forward ((self x)
+		       (let ((x-ptr (gensym "PTR")))
+			 `(with-tensor-ptrs ((,x-ptr ,x))
+			    (locally (declare (optimize (speed 1)))
+			      ,(expand-inv-form x x-ptr)
+			      ,x)))))
+;; ScalarXX Series
+(define-impl (ScalarAdd :device CPUTensor
+	                :reject-p #'simd-extension-p)
+	     :forward ((self x scalar)
+		       (let ((x-ptr (gensym "PTR"))
+			     (scal  (gensym "SCAL")))
+			 `(with-tensor-ptrs ((,x-ptr ,x))
+			    (locally (declare (optimize (speed 1)))
+			      (let ((,scal (tensor-vec ,scalar)))
+				,(expand-arithmetic-scalar-form x x-ptr scal :fname "add")
+				,x))))))
+
+(define-impl (ScalarSub :device CPUTensor
+	                :reject-p #'simd-extension-p)
+	     :forward ((self x scalar)
+		       (let ((x-ptr (gensym "PTR"))
+			     (scal  (gensym "SCAL")))
+			 `(with-tensor-ptrs ((,x-ptr ,x))
+			    (locally (declare (optimize (speed 1)))
+			      (let ((,scal (tensor-vec ,scalar)))
+				,(expand-arithmetic-scalar-form x x-ptr scal :fname "sub")
+				,x))))))
+
+(define-impl (ScalarMul :device CPUTensor
+	                :reject-p #'simd-extension-p)
+	     :forward ((self x scalar)
+		       (let ((x-ptr (gensym "PTR"))
+			     (scal  (gensym "SCAL")))
+			 `(with-tensor-ptrs ((,x-ptr ,x))
+			    (locally (declare (optimize (speed 1)))
+			      (let ((,scal (tensor-vec ,scalar)))
+				,(expand-arithmetic-scalar-form x x-ptr scal :fname "mul")
+				,x))))))
+
+(define-impl (ScalarDiv :device CPUTensor
+	                :reject-p #'simd-extension-p)
+	     :forward ((self x scalar)
+		       (let ((x-ptr (gensym "PTR"))
+			     (scal  (gensym "SCAL")))
+			 `(with-tensor-ptrs ((,x-ptr ,x))
+			    (locally (declare (optimize (speed 1)))
+			      (let ((,scal (tensor-vec ,scalar)))
+				,(expand-arithmetic-scalar-form x x-ptr scal :fname "div")
+				,x))))))
+
 

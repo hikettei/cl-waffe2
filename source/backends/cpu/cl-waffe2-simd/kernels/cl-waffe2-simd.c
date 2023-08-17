@@ -275,12 +275,33 @@ define_arithmetic_scal_func(u8mul, uint8_t, x[0] = x[0] * y[0]);
 define_arithmetic_scal_func(u8div, uint8_t, x[0] = x[0] / y[0]);
 
 
-define_arithmetic_scal_func(i32copy, int32_t, y[0] = x[0]);
-define_arithmetic_scal_func(u32copy, uint32_t, y[0] = x[0]);
-define_arithmetic_scal_func(i16copy, int16_t, y[0] = x[0]);
-define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
-define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
-define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
+define_arithmetic_scal_func(i32copy, int32_t, x[0] = y[0]);
+define_arithmetic_scal_func(u32copy, uint32_t, x[0] = y[0]);
+define_arithmetic_scal_func(i16copy, int16_t, x[0] = y[0]);
+define_arithmetic_scal_func(u16copy, uint16_t, x[0] = y[0]);
+define_arithmetic_scal_func(i8copy,  int8_t, x[0] = y[0]);
+define_arithmetic_scal_func(u8copy,  uint8_t, x[0] = y[0]);
+
+#define define_inv_func(define_as, dtype, reminder_op_name)		\
+  void waffe2_##define_as(const long n, dtype* x, const long incx)	\
+  {									\
+    dtype *x_end = x + n * incx;					\
+    while (x != x_end) {						\
+      (reminder_op_name);						\
+      x += incx;							\
+    }									\
+  };
+
+define_inv_func(dinv, double, x[0] = 1.0/x[0]);
+define_inv_func(sinv, float,  x[0] = 1.0/x[0]);
+
+define_inv_func(i32inv, int32_t, x[0] = 1/x[0]);
+define_inv_func(i16inv, int16_t, x[0] = 1/x[0]);
+define_inv_func(i8inv,  int8_t, x[0] = 1/x[0]);
+
+define_inv_func(u32inv, uint32_t, x[0] = 1/x[0]);
+define_inv_func(u16inv, uint16_t, x[0] = 1/x[0]);
+define_inv_func(u8inv,  uint8_t, x[0] = 1/x[0]);
 
 // argmax/argmin
 // max/min

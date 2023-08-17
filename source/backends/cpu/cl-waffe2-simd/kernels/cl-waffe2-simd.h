@@ -56,6 +56,20 @@ _define_arithmetic_scal_func(u16copy, uint16_t, y[0] = x[0]);
 _define_arithmetic_scal_func(i8copy,  int8_t, y[0] = x[0]);
 _define_arithmetic_scal_func(u8copy,  uint8_t, y[0] = x[0]);
 
+#define _define_inv_func(define_as, dtype, reminder_op_name)		\
+  void waffe2_##define_as(const long n, dtype* x, const long incx)	\
+
+_define_inv_func(dinv, double, x[0] = 1.0/x[0]);
+_define_inv_func(sinv, float,  x[0] = 1.0/x[0]);
+
+_define_inv_func(i32inv, int32_t, x[0] = 1/x[0]);
+_define_inv_func(i16inv, int16_t, x[0] = 1/x[0]);
+_define_inv_func(i8inv,  int8_t, x[0] = 1/x[0]);
+
+_define_inv_func(u32inv, uint32_t, x[0] = 1/x[0]);
+_define_inv_func(u16inv, uint16_t, x[0] = 1/x[0]);
+_define_inv_func(u8inv,  uint8_t, x[0] = 1/x[0]);
+
 #define _define_maxmin(dpref, prefix, max_or_min, stride, dtype, simd_op, scal_op) \
   void waffe2_##prefix##max_or_min(const long n, dtype* x, const long incx, dtype* y); \
 

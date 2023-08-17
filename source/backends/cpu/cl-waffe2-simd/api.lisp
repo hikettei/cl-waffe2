@@ -71,27 +71,21 @@
   (define-arith-bc-op mul)
   (define-arith-bc-op div))
 
-(macrolet ((define-inv-family ()
+
+(macrolet ((define-inv (opname)
 	     `(progn
 		;;size xptr incx xptr incy
 		,@(loop for prefix in `(:d :s :i32 :i16 :i8 :u32 :u16 :u8)
 			for dtype  in `(:double :float :int32 :int16 :int8 :uint32 :uint16 :uint8)
-			for ltype  in `(double-float single-float (signed-byte 32) (signed-byte 16) (signed-byte 8) (unsigned-byte 32) (unsigned-byte 16) (unsigned-byte 8))
 			collect
 			`(progn
-			   (export ',(intern (uformat nil "waffe2-~ainv" prefix)))
-			   (declaim (inline ,(intern (uformat nil "waffe2-~ainv" prefix))))
-			   (defun ,(intern (uformat nil "waffe2-~ainv" prefix))
-			       (n x incx)
-			     (let ((y (make-array 1 :initial-element (coerce 1 ',ltype) :element-type ',ltype)))
-			       (with-pointer-to-vector-data (y y)
-				 (,(intern (uformat nil "waffe2-~adiv" prefix))
-				  n
-				  y
-				  0
-				  x
-				  incx)))))))))
-  (define-inv-family))
+			   (export ',(intern (uformat nil "waffe2-~a~a" prefix opname)))
+			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a" prefix opname))))
+			   (defcfun ,(dformat nil "waffe2_~a~a" prefix opname) :void
+			     (n :long)
+			     (x (:pointer ,dtype))
+			     (incx :long)))))))
+  (define-inv inv))
 
 (macrolet ((define-maxmin-op (opname)
 	     `(progn
