@@ -13,8 +13,10 @@
   :description "Utils for SIMD-Enabled Extension, CPUTensor."
   :pathname "source/backends/cpu/cl-waffe2-simd"
   :serial t
-  :depends-on (:cffi :cl-autowrap)
-  :components ((:file "package")))
+  :depends-on (:cffi)
+  :components ((:file "package")
+	       (:file "shared-object")
+	       (:file "api")))
 
 
 (defpackage :cl-waffe2-asd
