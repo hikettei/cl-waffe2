@@ -29,6 +29,13 @@
 	    (error "the dtype ~a is not supported. (TODO)" dtype))))
      `(,x ,y))))
 
+(defun expand-arithmetic-form (x y x-ptr y-ptr &key (fname "add"))
+  (let ((fname (make-fname (dtype x) fname)))
+    (call-with-view
+     #'(lambda (x-view y-view)
+	 `(,fname ,(size-of y-view 0) ,x-ptr ,(stride-of x-view 0) ,y-ptr ,(stride-of y-view 0)))
+     `(,x ,y))))
+
 (defun expand-move-form (x y x-ptr y-ptr)
   (let ((dtype (dtype x)))
     (call-with-view
@@ -53,19 +60,31 @@
 	    (error "the dtype ~a is not supported. (TODO)" dtype))))
      `(,x ,y))))
 
+;; reject-p return t to ignore the dispatching
+
 (define-impl (AddNode :device CPUTensor
-	      :reject-p (supported-dtypes-are 0 :float :double))
+		      :reject-p #'(lambda (dtype)
+				    (if (or (eql dtype :float)
+					    (eql dtype :double))
+					nil
+					(not *simd-extension-p*)))) ;; If simd-extension has loaded, it can handle with sparse matrix.
 	     :forward ((self x y)
 		       (let ((x-ptr (gensym "PTR"))
 			     (y-ptr (gensym "PTR")))
 			 `(with-tensor-ptrs ((,x-ptr ,x)
 					     (,y-ptr ,y))
-			  (locally (declare (optimize (speed 1)))
-			    ,(expand-axpy-form x y x-ptr y-ptr)
-			    ,x)))))
+			    (locally (declare (optimize (speed 1)))
+			      ,(if *simd-extension-p*
+				   (expand-arithmetic-form  x y x-ptr y-ptr :fname "add")
+				   (expand-axpy-form x y x-ptr y-ptr))
+			      ,x)))))
 
 (define-impl (SubNode :device CPUTensor
-	      :reject-p (supported-dtypes-are 0 :float :double))
+		      :reject-p #'(lambda (dtype)
+				    (if (or (eql dtype :float)
+					    (eql dtype :double))
+					nil
+					(not *simd-extension-p*))))
 	     :forward ((self x y)
 		       (let ((x-ptr (gensym "PTR"))
 			     (y-ptr (gensym "PTR")))

@@ -160,7 +160,7 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
 	  vx = waffe2_load_##prefix##vec(x);				\
 	  vy = waffe2_load_##prefix##vec(y);				\
 	  vy = simd_op_name(vx, vy);					\
-	  waffe2_store_##prefix##vec(y, vy);				\
+	  waffe2_store_##prefix##vec(x, vy);				\
 	  x += stride;							\
 	  y += stride;							\
 	}								\
@@ -172,7 +172,7 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
 	  vx = waffe2_load_##prefix##vec(x);				\
 	  vy = make_waffe2_##prefix##vec(y, incy);			\
 	  vy = simd_op_name(vx, vy);					\
-	  strided_waffe2_store_##prefix##vec(y, vy, incy);	       	\
+	  strided_waffe2_store_##prefix##vec(x, vy, incx);	       	\
 	  x += stride;							\
 	  y += stride;							\
 	}								\
@@ -184,7 +184,7 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
 	  vy = waffe2_load_##prefix##vec(y);				\
 	  vx = make_waffe2_##prefix##vec(x, incx);			\
 	  vy = simd_op_name(vx, vy);					\
-	  waffe2_store_##prefix##vec(y, vy);				\
+	  waffe2_store_##prefix##vec(x, vy);				\
 	  x += stride;							\
 	  y += stride;							\
 	}								\
@@ -196,13 +196,13 @@ void static inline strided_waffe2_store_u8vec(uint8_t* ptr, waffe2_ivec x, const
 	  vx = make_waffe2_##prefix##vec(x, incx);			\
 	  vy = make_waffe2_##prefix##vec(y, incy);			\
 	  vy = simd_op_name(vx, vy);					\
-	  strided_waffe2_store_##prefix##vec(y, vy, incy);	       	\
+	  strided_waffe2_store_##prefix##vec(x, vy, incx);	       	\
 	  x += stride;							\
 	  y += stride;							\
 	}								\
     }									\
   while (y != y_end) {							\
-    y[0] = reminder_op_name(x[0], y[0]);				\
+    x[0] = reminder_op_name(x[0], y[0]);				\
     x += incx;								\
     y += incy;								\
   }									\
@@ -244,35 +244,35 @@ define_arithmetic_func(dsub, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsub, sa
 define_arithmetic_func(dmul, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dmul, sas_dmul);
 define_arithmetic_func(ddiv, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_ddiv, sas_ddiv);
 
-define_arithmetic_scal_func(i32add, int32_t, y[0] = x[0] + y[0]);
-define_arithmetic_scal_func(i32sub, int32_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(i32mul, int32_t, y[0] = x[0] * y[0])
-define_arithmetic_scal_func(i32div, int32_t, y[0] = x[0] / y[0]);
+define_arithmetic_scal_func(i32add, int32_t, x[0] = x[0] + y[0]);
+define_arithmetic_scal_func(i32sub, int32_t, x[0] = x[0] - y[0]);
+define_arithmetic_scal_func(i32mul, int32_t, x[0] = x[0] * y[0])
+define_arithmetic_scal_func(i32div, int32_t, x[0] = x[0] / y[0]);
 
-define_arithmetic_scal_func(i16add, int16_t, y[0] = x[0] + y[0]);
-define_arithmetic_scal_func(i16sub, int16_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(i16mul, int16_t, y[0] = x[0] * y[0]);
-define_arithmetic_scal_func(i16div, int16_t, y[0] = x[0] / y[0]);
+define_arithmetic_scal_func(i16add, int16_t, x[0] = x[0] + y[0]);
+define_arithmetic_scal_func(i16sub, int16_t, x[0] = x[0] - y[0]);
+define_arithmetic_scal_func(i16mul, int16_t, x[0] = x[0] * y[0]);
+define_arithmetic_scal_func(i16div, int16_t, x[0] = x[0] / y[0]);
 
-define_arithmetic_scal_func(i8add, int8_t, y[0] = x[0] + y[0]);
-define_arithmetic_scal_func(i8sub, int8_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(i8mul, int8_t, y[0] = x[0] * y[0]);
-define_arithmetic_scal_func(i8div, int8_t, y[0] = x[0] / y[0]);
+define_arithmetic_scal_func(i8add, int8_t, x[0] = x[0] + y[0]);
+define_arithmetic_scal_func(i8sub, int8_t, x[0] = x[0] - y[0]);
+define_arithmetic_scal_func(i8mul, int8_t, x[0] = x[0] * y[0]);
+define_arithmetic_scal_func(i8div, int8_t, x[0] = x[0] / y[0]);
 
-define_arithmetic_scal_func(u32add, uint32_t, y[0] = x[0] + y[0]);
-define_arithmetic_scal_func(u32sub, uint32_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(u32mul, uint32_t, y[0] = x[0] * y[0]);
-define_arithmetic_scal_func(u32div, uint32_t, y[0] = x[0] / y[0]);
+define_arithmetic_scal_func(u32add, uint32_t, x[0] = x[0] + y[0]);
+define_arithmetic_scal_func(u32sub, uint32_t, x[0] = x[0] - y[0]);
+define_arithmetic_scal_func(u32mul, uint32_t, x[0] = x[0] * y[0]);
+define_arithmetic_scal_func(u32div, uint32_t, x[0] = x[0] / y[0]);
 
-define_arithmetic_scal_func(u16add, uint16_t, y[0] = x[0] + y[0]);
-define_arithmetic_scal_func(u16sub, uint16_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(u16mul, uint16_t, y[0] = x[0] * y[0]);
-define_arithmetic_scal_func(u16div, uint16_t, y[0] = x[0] / y[0]);
+define_arithmetic_scal_func(u16add, uint16_t, x[0] = x[0] + y[0]);
+define_arithmetic_scal_func(u16sub, uint16_t, x[0] = x[0] - y[0]);
+define_arithmetic_scal_func(u16mul, uint16_t, x[0] = x[0] * y[0]);
+define_arithmetic_scal_func(u16div, uint16_t, x[0] = x[0] / y[0]);
 
-define_arithmetic_scal_func(u8add, uint8_t, y[0] = x[0] + y[0]);
-define_arithmetic_scal_func(u8sub, uint8_t, y[0] = x[0] - y[0]);
-define_arithmetic_scal_func(u8mul, uint8_t, y[0] = x[0] * y[0]);
-define_arithmetic_scal_func(u8div, uint8_t, y[0] = x[0] / y[0]);
+define_arithmetic_scal_func(u8add, uint8_t, x[0] = x[0] + y[0]);
+define_arithmetic_scal_func(u8sub, uint8_t, x[0] = x[0] - y[0]);
+define_arithmetic_scal_func(u8mul, uint8_t, x[0] = x[0] * y[0]);
+define_arithmetic_scal_func(u8div, uint8_t, x[0] = x[0] / y[0]);
 
 
 define_arithmetic_scal_func(i32copy, int32_t, y[0] = x[0]);

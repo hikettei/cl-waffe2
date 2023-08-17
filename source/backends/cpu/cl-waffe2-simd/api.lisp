@@ -4,6 +4,26 @@
 (defmacro uformat (dest arg &rest args)
   `(string-upcase (format ,dest ,arg ,@args)))
 
+(defmacro dformat (dest arg &rest args)
+  `(string-downcase (format ,dest ,arg ,@args)))
+
+(defun make-fname (dtype name &key (scal nil))
+  (intern (uformat nil "waffe2-~a~a~a"
+		   (case dtype
+		     (:double :d)
+		     (:float  :s)
+		     (:int32  :i32)
+		     (:int16  :i16)
+		     (:int8   :i8)
+		     (:uint32 :u32)
+		     (:uint16 :u16)
+		     (:uint8  :u8))
+		   name
+		   (if scal
+		       "-scal"
+		       ""))
+	  :cl-waffe2-simd))
+
 (macrolet ((define-arith-op (opname)
 	     `(progn
 		;;size xptr incx xptr incy
@@ -13,7 +33,7 @@
 			`(progn
 			   (export ',(intern (uformat nil "waffe2-~a~a" prefix opname)))
 			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a" prefix opname))))
-			   (defcfun ,(uformat nil "waffe2_~a~a" prefix opname) :void
+			   (defcfun ,(dformat nil "waffe2_~a~a" prefix opname) :void
 			     (n :long)
 			     (x (:pointer ,dtype))
 			     (incx :long)
@@ -82,7 +102,7 @@
 			`(progn
 			   (export ',(intern (uformat nil "waffe2-~a~a" prefix opname)))
 			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a" prefix opname))))
-			   (defcfun ,(uformat nil "waffe2_~a~a" prefix opname) :void
+			   (defcfun ,(dformat nil "waffe2_~a~a" prefix opname) :void
 			     (n :long)
 			     (x (:pointer ,dtype))
 			     (incx :long)
@@ -100,7 +120,7 @@
 			`(progn
 			   (export ',(intern (uformat nil "waffe2-~a~a" prefix opname)))
 			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a" prefix opname))))
-			   (defcfun ,(uformat nil "waffe2_~a~a" prefix opname) :void
+			   (defcfun ,(dformat nil "waffe2_~a~a" prefix opname) :void
 			     (n :long)
 			     (x (:pointer ,dtype))
 			     (incx :long)
@@ -135,7 +155,7 @@
 			`(progn
 			   (export ',(intern (uformat nil "waffe2-~a~a-scal" prefix opname)))
 			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a-scal" prefix opname))))
-			   (defcfun ,(uformat nil "waffe2_~a~a_scal" prefix opname) :void
+			   (defcfun ,(dformat nil "waffe2_~a~a_scal" prefix opname) :void
 			     (n :long)
 			     (x (:pointer ,dtype))
 			     (incx :long)
@@ -158,8 +178,6 @@
 
   ;; A >= scal
   (define-cmp-op ge))
-
-;; ScalarAdd
 
 ;; Math APIs sin/cos/tan/exp/log/abs/sign etc...
 
