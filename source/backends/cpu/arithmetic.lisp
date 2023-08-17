@@ -90,15 +90,48 @@
 			     (y-ptr (gensym "PTR")))
 			 `(with-tensor-ptrs ((,x-ptr ,x)
 					     (,y-ptr ,y))
-			    (locally (declare (optimize (speed 1)))
-			      ,(expand-axpy-form x y x-ptr y-ptr :alpha -1.0)
+			    (locally (declare (optimize (speed 1)))			      
+			      ,(if *simd-extension-p*
+				   (expand-arithmetic-form x y x-ptr y-ptr :fname "sub")
+				   (expand-axpy-form x y x-ptr y-ptr :alpha -1.0))
+			      ,x)))))
+
+(define-impl (MulNode :device CPUTensor
+		      :reject-p #'(lambda (dtype)
+				    (declare (ignore dtype))
+				    (not *simd-extension-p*)))
+	     :forward ((self x y)
+		       (let ((x-ptr (gensym "PTR"))
+			     (y-ptr (gensym "PTR")))
+			 `(with-tensor-ptrs ((,x-ptr ,x)
+					     (,y-ptr ,y))
+			    (locally (declare (optimize (speed 1)))			      
+			      ,(expand-arithmetic-form x y x-ptr y-ptr :fname "mul")
+			      ,x)))))
+
+(define-impl (DivNode :device CPUTensor
+		      :reject-p #'(lambda (dtype)
+				    (declare (ignore dtype))
+				    (not *simd-extension-p*)))
+	     :forward ((self x y)
+		       (let ((x-ptr (gensym "PTR"))
+			     (y-ptr (gensym "PTR")))
+			 `(with-tensor-ptrs ((,x-ptr ,x)
+					     (,y-ptr ,y))
+			    (locally (declare (optimize (speed 1)))			      
+			      ,(expand-arithmetic-form x y x-ptr y-ptr :fname "div")
 			      ,x)))))
 
 ;; TODO: Mul/Div, ScalarXX Ops with AVX2/AVX512
 ;; Current State: MulNode/DivNode -> LispKernel
 
 (define-impl (MoveTensorNode :device CPUTensor
-			     :reject-p (supported-dtypes-are 0 :float :double))
+			     :reject-p #'(lambda (dtype &rest more-args)
+					   (declare (ignore more-args))
+					   (if (or (eql dtype :float)
+						   (eql dtype :double))
+					       nil
+					       (not *simd-extension-p*))))
 	     :forward ((self x y)
 		       ;; X <- Y
 		       (let ((x-ptr (gensym "PTR"))
@@ -108,7 +141,11 @@
 			    (locally (declare (optimize (speed 1)))
 			      (if (not (movetensor-ignore-me ,self))
 				  (progn
-				    ,(expand-move-form x y x-ptr y-ptr)
+				    ,(if (or (eql (dtype x) :float)
+					     (eql (dtype x) :double))
+					 (expand-move-form x y x-ptr y-ptr)					 
+					 ;; *simd-extension-p*=t
+					 (expand-arithmetic-form y x y-ptr x-ptr :fname "copy"))
 				    ,x)
 				  ,y))))))
 
