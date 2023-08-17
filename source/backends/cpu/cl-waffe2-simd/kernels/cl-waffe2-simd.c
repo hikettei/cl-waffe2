@@ -443,11 +443,98 @@ define_cmp(i, u16, ge, SIMD_SINGLE_STRIDE * 2, uint16_t, ge, >=);
 define_cmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 
 
+// A>scal etc
+// dpref = s d i prefix = i32 u32 s d ...
+// waffe2_slt_scal
+#define define_scmp(dpref, prefix, op_name, stride, dtype, simd_cmp, rem_cmp) \
+  void waffe2_##prefix##op_name##_scal(const long n, dtype* x, const long incx, dtype* out, const long inco, dtype y, dtype then_value, dtype else_value) \
+  {                                                                     \
+    dtype *o_end = out + n * inco;					\
+    dtype *o_simd_end = out + (n/stride)*stride;			\
+    waffe2_##dpref##vec vx, vo, res;			                \
+    waffe2_##dpref##bool mask;						\
+    waffe2_##dpref##vec vthen = waffe2_load_##prefix##scal(then_value);	\
+    waffe2_##dpref##vec velse = waffe2_load_##prefix##scal(else_value); \
+    waffe2_##dpref##vec vy    = waffe2_load_##prefix##scal(y);		\
+    while (out != o_simd_end)						\
+      {									\
+	vx = make_waffe2_##prefix##vec(x, incx);			\
+	vo = make_waffe2_##prefix##vec(out, inco);			\
+	mask = waffe2_simd_##prefix##simd_cmp(vx, vy);			\
+	res  = waffe2_simd_##prefix##blendv(vx, vy, mask);		\
+	if (inco == 1) {						\
+	  waffe2_store_##prefix##vec(out, res);				\
+	} else {							\
+	  strided_waffe2_store_##prefix##vec(out, res, inco);	       	\
+	}								\
+	x += stride;							\
+	out += stride;							\
+      }									\
+    while (out != o_end)						\
+      {									\
+	if (x[0] rem_cmp y) {				                \
+	  out[0] = then_value;						\
+	} else {							\
+	  out[0] = else_value;						\
+	}								\
+	x += incx;							\
+	out += inco;							\
+      }									\
+  };
 
 
+define_scmp(d, d, eq, SIMD_DOUBLE_STRIDE, double, eq, ==);
+define_scmp(s, s, eq, SIMD_SINGLE_STRIDE, float, eq, ==);
+define_scmp(i, i32, eq, SIMD_SINGLE_STRIDE,     int32_t, eq, ==);
+define_scmp(i, i16, eq, SIMD_SINGLE_STRIDE * 2, int16_t, eq, ==);
+define_scmp(i, i8,  eq, SIMD_SINGLE_STRIDE * 4, int8_t,  eq, ==);
+define_scmp(i, u32, eq, SIMD_SINGLE_STRIDE,     uint32_t, eq, ==);
+define_scmp(i, u16, eq, SIMD_SINGLE_STRIDE * 2, uint16_t, eq, ==);
+define_scmp(i, u8,  eq, SIMD_SINGLE_STRIDE * 4, uint8_t,  eq, ==);
+    
 
-// A>scal
+// A<B, lt
+define_scmp(d, d, lt, SIMD_DOUBLE_STRIDE, double, lt, <);
+define_scmp(s, s, lt, SIMD_SINGLE_STRIDE, float, lt,  <);
+define_scmp(i, i32, lt, SIMD_SINGLE_STRIDE,     int32_t, lt, <);
+define_scmp(i, i16, lt, SIMD_SINGLE_STRIDE * 2, int16_t, lt, <);
+define_scmp(i, i8,  lt, SIMD_SINGLE_STRIDE * 4, int8_t,  lt, <);
+define_scmp(i, u32, lt, SIMD_SINGLE_STRIDE,     uint32_t, lt, <);
+define_scmp(i, u16, lt, SIMD_SINGLE_STRIDE * 2, uint16_t, lt, <);
+define_scmp(i, u8,  lt, SIMD_SINGLE_STRIDE * 4, uint8_t,  lt, <);
 
+// A<=B, le
+
+define_scmp(d, d, le, SIMD_DOUBLE_STRIDE, double, le, <=);
+define_scmp(s, s, le, SIMD_SINGLE_STRIDE, float, le,  <=);
+define_scmp(i, i32, le, SIMD_SINGLE_STRIDE,     int32_t, le, <=);
+define_scmp(i, i16, le, SIMD_SINGLE_STRIDE * 2, int16_t, le, <=);
+define_scmp(i, i8,  le, SIMD_SINGLE_STRIDE * 4, int8_t,  le, <=);
+define_scmp(i, u32, le, SIMD_SINGLE_STRIDE,     uint32_t, le, <=);
+define_scmp(i, u16, le, SIMD_SINGLE_STRIDE * 2, uint16_t, le, <=);
+define_scmp(i, u8,  le, SIMD_SINGLE_STRIDE * 4, uint8_t,  le, <=);
+
+// A>B gt
+
+define_scmp(d, d, gt, SIMD_DOUBLE_STRIDE, double, gt, >);
+define_scmp(s, s, gt, SIMD_SINGLE_STRIDE, float, gt,  >);
+define_scmp(i, i32, gt, SIMD_SINGLE_STRIDE,     int32_t, gt, >);
+define_scmp(i, i16, gt, SIMD_SINGLE_STRIDE * 2, int16_t, gt, >);
+define_scmp(i, i8,  gt, SIMD_SINGLE_STRIDE * 4, int8_t,  gt, >);
+define_scmp(i, u32, gt, SIMD_SINGLE_STRIDE,     uint32_t, gt, >);
+define_scmp(i, u16, gt, SIMD_SINGLE_STRIDE * 2, uint16_t, gt, >);
+define_scmp(i, u8,  gt, SIMD_SINGLE_STRIDE * 4, uint8_t,  gt, >);
+
+// A>=B ge
+
+define_scmp(d, d, ge, SIMD_DOUBLE_STRIDE, double, ge, >=);
+define_scmp(s, s, ge, SIMD_SINGLE_STRIDE, float, ge,  >=);
+define_scmp(i, i32, ge, SIMD_SINGLE_STRIDE,     int32_t, ge, >=);
+define_scmp(i, i16, ge, SIMD_SINGLE_STRIDE * 2, int16_t, ge, >=);
+define_scmp(i, i8,  ge, SIMD_SINGLE_STRIDE * 4, int8_t,  ge, >=);
+define_scmp(i, u32, ge, SIMD_SINGLE_STRIDE,     uint32_t, ge, >=);
+define_scmp(i, u16, ge, SIMD_SINGLE_STRIDE * 2, uint16_t, ge, >=);
+define_scmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 
 // Comparison, SIMD Math Kernel, cl-autowrap, testing all function, merge into cl-waffe2
 

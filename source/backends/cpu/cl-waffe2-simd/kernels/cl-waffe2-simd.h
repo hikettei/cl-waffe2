@@ -79,3 +79,62 @@ _define_maxmin(i, u16, min, SIMD_SINGLE_STRIDE * 2, uint16_t,  waffe2_simd_u16ma
 _define_maxmin(i, i8, min, SIMD_SINGLE_STRIDE * 4, int8_t,  waffe2_simd_i8max, MAX);
 _define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, MAX);
 
+
+#define _define_cmp(dpref, prefix, op_name, stride, dtype, simd_cmp, rem_cmp) \
+  void waffe2_##prefix##op_name(const long n, dtype* x, const long incx, dtype* y, const long incy, dtype* out, const long inco, dtype then_value, dtype else_value) \
+  void waffe2_##prefix##op_name##_scal(const long n, dtype* x, const long incx, dtype* out, const long inco, dtype y, dtype then_value, dtype else_value) \
+  
+
+_define_cmp(d, d, eq, SIMD_DOUBLE_STRIDE, double, eq, ==);
+_define_cmp(s, s, eq, SIMD_SINGLE_STRIDE, float, eq, ==);
+_define_cmp(i, i32, eq, SIMD_SINGLE_STRIDE,     int32_t, eq, ==);
+_define_cmp(i, i16, eq, SIMD_SINGLE_STRIDE * 2, int16_t, eq, ==);
+_define_cmp(i, i8,  eq, SIMD_SINGLE_STRIDE * 4, int8_t,  eq, ==);
+_define_cmp(i, u32, eq, SIMD_SINGLE_STRIDE,     uint32_t, eq, ==);
+_define_cmp(i, u16, eq, SIMD_SINGLE_STRIDE * 2, uint16_t, eq, ==);
+_define_cmp(i, u8,  eq, SIMD_SINGLE_STRIDE * 4, uint8_t,  eq, ==);
+    
+
+// A<B, lt
+_define_cmp(d, d, lt, SIMD_DOUBLE_STRIDE, double, lt, <);
+_define_cmp(s, s, lt, SIMD_SINGLE_STRIDE, float, lt,  <);
+_define_cmp(i, i32, lt, SIMD_SINGLE_STRIDE,     int32_t, lt, <);
+_define_cmp(i, i16, lt, SIMD_SINGLE_STRIDE * 2, int16_t, lt, <);
+_define_cmp(i, i8,  lt, SIMD_SINGLE_STRIDE * 4, int8_t,  lt, <);
+_define_cmp(i, u32, lt, SIMD_SINGLE_STRIDE,     uint32_t, lt, <);
+_define_cmp(i, u16, lt, SIMD_SINGLE_STRIDE * 2, uint16_t, lt, <);
+_define_cmp(i, u8,  lt, SIMD_SINGLE_STRIDE * 4, uint8_t,  lt, <);
+
+// A<=B, le
+
+_define_cmp(d, d, le, SIMD_DOUBLE_STRIDE, double, le, <=);
+_define_cmp(s, s, le, SIMD_SINGLE_STRIDE, float, le,  <=);
+_define_cmp(i, i32, le, SIMD_SINGLE_STRIDE,     int32_t, le, <=);
+_define_cmp(i, i16, le, SIMD_SINGLE_STRIDE * 2, int16_t, le, <=);
+_define_cmp(i, i8,  le, SIMD_SINGLE_STRIDE * 4, int8_t,  le, <=);
+_define_cmp(i, u32, le, SIMD_SINGLE_STRIDE,     uint32_t, le, <=);
+_define_cmp(i, u16, le, SIMD_SINGLE_STRIDE * 2, uint16_t, le, <=);
+_define_cmp(i, u8,  le, SIMD_SINGLE_STRIDE * 4, uint8_t,  le, <=);
+
+// A>B gt
+
+_define_cmp(d, d, gt, SIMD_DOUBLE_STRIDE, double, gt, >);
+_define_cmp(s, s, gt, SIMD_SINGLE_STRIDE, float, gt,  >);
+_define_cmp(i, i32, gt, SIMD_SINGLE_STRIDE,     int32_t, gt, >);
+_define_cmp(i, i16, gt, SIMD_SINGLE_STRIDE * 2, int16_t, gt, >);
+_define_cmp(i, i8,  gt, SIMD_SINGLE_STRIDE * 4, int8_t,  gt, >);
+_define_cmp(i, u32, gt, SIMD_SINGLE_STRIDE,     uint32_t, gt, >);
+_define_cmp(i, u16, gt, SIMD_SINGLE_STRIDE * 2, uint16_t, gt, >);
+_define_cmp(i, u8,  gt, SIMD_SINGLE_STRIDE * 4, uint8_t,  gt, >);
+
+// A>=B ge
+
+_define_cmp(d, d, ge, SIMD_DOUBLE_STRIDE, double, ge, >=);
+_define_cmp(s, s, ge, SIMD_SINGLE_STRIDE, float, ge,  >=);
+_define_cmp(i, i32, ge, SIMD_SINGLE_STRIDE,     int32_t, ge, >=);
+_define_cmp(i, i16, ge, SIMD_SINGLE_STRIDE * 2, int16_t, ge, >=);
+_define_cmp(i, i8,  ge, SIMD_SINGLE_STRIDE * 4, int8_t,  ge, >=);
+_define_cmp(i, u32, ge, SIMD_SINGLE_STRIDE,     uint32_t, ge, >=);
+_define_cmp(i, u16, ge, SIMD_SINGLE_STRIDE * 2, uint16_t, ge, >=);
+_define_cmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
+
