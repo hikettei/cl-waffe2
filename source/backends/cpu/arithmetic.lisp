@@ -146,9 +146,10 @@
 				    ,x)
 				  ,y))))))
 
-(defun simd-extension-p (&rest args)
-  (declare (ignore args))
-  (not *simd-extension-p*))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun simd-extension-p (&rest args)
+    (declare (ignore args))
+    (not *simd-extension-p*)))
 
 ;; InverseTensorNode
 
