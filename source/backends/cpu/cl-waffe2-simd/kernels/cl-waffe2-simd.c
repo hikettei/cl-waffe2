@@ -1,6 +1,8 @@
 
 #pragma SIMD
 #pragma GCC optimize ("O3")
+
+// Currently AVX2 is only the supported device
 #pragma GCC target ("avx2")
 
 #include <math.h>
@@ -306,11 +308,25 @@ define_maxmin(i, u16, min, SIMD_SINGLE_STRIDE * 2, uint16_t,  waffe2_simd_u16max
 define_maxmin(i, i8, min, SIMD_SINGLE_STRIDE * 4, int8_t,  waffe2_simd_i8max, MAX);
 define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, MAX);
 
+//
+// As for argmin/argmax -> Use Lisp Tensor Implementation due to my limited knowledge :<
+// But I've found some projects on SIMD-enabled argmax/argmin impls
+//
+// https://github.com/minimalrust/argmm
+// https://github.com/jvdd/argminmax
+//
+
+
+// これからやる：A>B A<B ...
+// A>scal B>scal A>=scal B>=scal A=B A=scal
+// for Fast ReLU
+
+
+
 
 // cl-autowrap
 // AVX512, SSE2
 
-// SCALAR x TENSOR, INVERSE_TENSOR -> Implemented by Broadcasting
 // Data Casting
 
 // TODO: IMPLEMENT SLEEF BACKEND
@@ -321,6 +337,6 @@ define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, M
 // ABS
 // A>B A<B A<=B A>=B
 // A>Scal ...
-// max/min with out parameters
-// argmax/argmin
+// max/min with out parameters (OK)
+// argmax/argmin (OK)
 // -> SLEEF SIMD MATHEMATICAL

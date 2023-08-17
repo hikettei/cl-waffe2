@@ -16,7 +16,9 @@ typedef __m256d waffe2_dvec;
 // integers
 typedef __m256i waffe2_ivec;
 
-// masks?
+// masks
+typedef __m256  waffe2_sbool;
+typedef __m256d waffe2_dbool;
 
 #define SIMD_SINGLE_STRIDE 8
 #define SIMD_DOUBLE_STRIDE 4
@@ -107,3 +109,104 @@ waffe2_ivec static inline waffe2_simd_u16min(waffe2_ivec x, waffe2_ivec y) { ret
 waffe2_ivec static inline waffe2_simd_u8min (waffe2_ivec x, waffe2_ivec y) { return _mm256_min_epu8(x, y); }
 
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Compares
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Referenced: https://qiita.com/fukushima1981/items/5001079900b328696859
+// Options:
+/* 0: OP := _CMP_EQ_OQ */
+/* 1: OP := _CMP_LT_OS */
+/* 2: OP := _CMP_LE_OS */
+/* 3: OP := _CMP_UNORD_Q */
+/* 4: OP := _CMP_NEQ_UQ */
+/* 5: OP := _CMP_NLT_US */
+/* 6: OP := _CMP_NLE_US */
+/* 7: OP := _CMP_ORD_Q */
+/* 8: OP := _CMP_EQ_UQ */
+/* 9: OP := _CMP_NGE_US */
+/* 10: OP := _CMP_NGT_US */
+/* 11: OP := _CMP_FALSE_OQ */
+/* 12: OP := _CMP_NEQ_OQ */
+/* 13: OP := _CMP_GE_OS */
+/* 14: OP := _CMP_GT_OS */
+/* 15: OP := _CMP_TRUE_UQ */
+/* 16: OP := _CMP_EQ_OS */
+/* 17: OP := _CMP_LT_OQ */
+/* 18: OP := _CMP_LE_OQ */
+/* 19: OP := _CMP_UNORD_S */
+/* 20: OP := _CMP_NEQ_US */
+/* 21: OP := _CMP_NLT_UQ */
+/* 22: OP := _CMP_NLE_UQ */
+/* 23: OP := _CMP_ORD_S */
+/* 24: OP := _CMP_EQ_US */
+/* 25: OP := _CMP_NGE_UQ */
+/* 26: OP := _CMP_NGT_UQ */
+/* 27: OP := _CMP_FALSE_OS */
+/* 28: OP := _CMP_NEQ_OS */
+/* 29: OP := _CMP_GE_OQ */
+/* 30: OP := _CMP_GT_OQ */
+/* 31: OP := _CMP_TRUE_US */
+
+
+// not
+
+waffe2_ivec static inline waffe2_simd_i8not (waffe2_ivec src) {
+  return _mm256_xor_si256(src, _mm256_cmpeq_epi8(src, src));
+}
+
+// A=B
+waffe2_dbool static inline waffe2_simd_deq(waffe2_dvec x, waffe2_dvec y) { return _mm256_cmp_pd(x, y, 0); }
+waffe2_sbool static inline waffe2_simd_seq(waffe2_svec x, waffe2_svec y) { return _mm256_cmp_ps(x, y, 0); }
+
+waffe2_ivec  static inline waffe2_simd_i32eq(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpeq_epi32(x, y); }
+waffe2_ivec  static inline waffe2_simd_i16eq(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpeq_epi16(x, y); }
+waffe2_ivec  static inline waffe2_simd_i8eq(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpeq_epi8(x, y); }
+
+waffe2_ivec  static inline waffe2_simd_u32eq(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpeq_epi32(x, y); }
+waffe2_ivec  static inline waffe2_simd_u16eq(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpeq_epi16(x, y); }
+waffe2_ivec  static inline waffe2_simd_u8eq(waffe2_ivec x, waffe2_ivec y)  { return _mm256_cmpeq_epi8(x, y); }
+
+// A<B lt _CMP_LT_OQ
+
+waffe2_dbool static inline waffe2_simd_dlt(waffe2_dvec x, waffe2_dvec y) { return _mm256_cmp_pd(x, y, 17); }
+waffe2_sbool static inline waffe2_simd_slt(waffe2_svec x, waffe2_svec y) { return _mm256_cmp_ps(x, y, 17); }
+
+waffe2_ivec  static inline waffe2_simd_i32lt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi32(y, x); }
+waffe2_ivec  static inline waffe2_simd_i16lt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi16(y, x); }
+waffe2_ivec  static inline waffe2_simd_i8lt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi8(y, x); }
+
+waffe2_ivec  static inline waffe2_simd_u32lt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi32(y, x); }
+waffe2_ivec  static inline waffe2_simd_u16lt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi16(y, x); }
+waffe2_ivec  static inline waffe2_simd_u8lt(waffe2_ivec x, waffe2_ivec y)  { return _mm256_cmpgt_epi8(y, x); }
+
+// A>B, greater than, _CMP_GT_OQ=30
+
+waffe2_dbool static inline waffe2_simd_dgt(waffe2_dvec x, waffe2_dvec y) { return _mm256_cmp_pd(x, y, 30); }
+waffe2_sbool static inline waffe2_simd_sgt(waffe2_svec x, waffe2_svec y) { return _mm256_cmp_ps(x, y, 30); }
+
+waffe2_ivec  static inline waffe2_simd_i32gt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi32(x, y); }
+waffe2_ivec  static inline waffe2_simd_i16gt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi16(x, y); }
+waffe2_ivec  static inline waffe2_simd_i8gt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi8(x, y); }
+
+waffe2_ivec  static inline waffe2_simd_u32gt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi32(x, y); }
+waffe2_ivec  static inline waffe2_simd_u16gt(waffe2_ivec x, waffe2_ivec y) { return _mm256_cmpgt_epi16(x, y); }
+waffe2_ivec  static inline waffe2_simd_u8gt(waffe2_ivec x, waffe2_ivec y)  { return _mm256_cmpgt_epi8(x, y); }
+
+
+// A<=B, LE _CMP_LE_OQ=18
+waffe2_dbool static inline waffe2_simd_dle(waffe2_dvec x, waffe2_dvec y) { return _mm256_cmp_pd(x, y, 18); }
+waffe2_sbool static inline waffe2_simd_sle(waffe2_svec x, waffe2_svec y) { return _mm256_cmp_ps(x, y, 18); }
+
+waffe2_ivec static inline waffe2_simd_i32le(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_i32gt(x, y)); }
+waffe2_ivec static inline waffe2_simd_i16le(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_i16gt(x, y)); }
+waffe2_ivec static inline waffe2_simd_i8le(waffe2_ivec x, waffe2_ivec y)  { return waffe2_simd_i8not(waffe2_simd_i8gt(x, y)); }
+
+waffe2_ivec static inline waffe2_simd_u32le(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_u32gt(x, y)); }
+waffe2_ivec static inline waffe2_simd_u16le(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_u16gt(x, y)); }
+waffe2_ivec static inline waffe2_simd_u8le(waffe2_ivec x, waffe2_ivec y)  { return waffe2_simd_i8not(waffe2_simd_u8gt(x, y)); }
+// TODO/ INTEGER
+// A>B
+// A>=B
+
+// A<=B
