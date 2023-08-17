@@ -30,48 +30,75 @@
 
 // Load
 waffe2_svec static inline make_waffe2_svec (float* x, const long incx) {
-  waffe2_svec out;
-  for (int i=0;i<SIMD_SINGLE_STRIDE;i++) out[i] = x[i*incx];
-  return out;
+  if (incx == 1) {
+    return waffe2_load_svec(x);
+  } else {
+    waffe2_svec out;
+    for (int i=0;i<SIMD_SINGLE_STRIDE;i++) out[i] = x[i*incx];
+    return out;
+  }
 }
 
 waffe2_dvec static inline make_waffe2_dvec (double* x, const long incx) {
-  waffe2_dvec out;
-  for (int i=0;i<SIMD_DOUBLE_STRIDE;i++) out[i] = x[i*incx];
-  return out;
+  if (incx == 1) {
+    return waffe2_load_dvec(x);
+  } else {
+    waffe2_dvec out;
+    for (int i=0;i<SIMD_DOUBLE_STRIDE;i++) out[i] = x[i*incx];
+    return out;
+  }
 }
 
 waffe2_ivec static inline make_waffe2_i32vec (int32_t* x, const long incx) {
+  if (incx == 1) {
+    return waffe2_load_i32vec(x);
+  }
+  
   waffe2_ivec out;
   for (int i=0;i<SIMD_SINGLE_STRIDE;i++) out[i] = x[i*incx];
   return out;
 }
 
 waffe2_ivec static inline make_waffe2_u32vec (uint32_t* x, const long incx) {
+  if (incx == 1) {
+    return waffe2_load_u32vec(x);
+  }
   waffe2_ivec out;
   for (int i=0;i<SIMD_SINGLE_STRIDE;i++) out[i] = x[i*incx];
   return out;
 }
 
 waffe2_ivec static inline make_waffe2_i16vec (int16_t* x, const long incx) {
+  if (incx == 1) {
+    return waffe2_load_i16vec(x);
+  }
   waffe2_ivec out;
   for (int i=0;i<SIMD_SINGLE_STRIDE*2;i++) out[i] = x[i*incx];
   return out;
 }
 
 waffe2_ivec static inline make_waffe2_u16vec (uint16_t* x, const long incx) {
+  if (incx == 1) {
+    return waffe2_load_u16vec(x);
+  }
   waffe2_ivec out;
   for (int i=0;i<SIMD_SINGLE_STRIDE*2;i++) out[i] = x[i*incx];
   return out;
 }
 
 waffe2_ivec static inline make_waffe2_i8vec (int8_t* x, const long incx) {
+  if (incx == 1) {
+    return waffe2_load_i8vec(x);
+  }
   waffe2_ivec out;
   for (int i=0;i<SIMD_SINGLE_STRIDE*4;i++) out[i] = x[i*incx];
   return out;
 }
 
 waffe2_ivec static inline make_waffe2_u8vec (uint8_t* x, const long incx) {
+  if (incx == 1) {
+    return waffe2_load_u8vec(x);
+  }
   waffe2_ivec out;
   for (int i=0;i<SIMD_SINGLE_STRIDE*4;i++) out[i] = x[i*incx];
   return out;
@@ -316,10 +343,70 @@ define_maxmin(i, u8, min, SIMD_SINGLE_STRIDE * 4, uint8_t,  waffe2_simd_u8max, M
 // https://github.com/jvdd/argminmax
 //
 
+// out_dtype = uint8.
+// Then=1
+// Else=0
+// inco == 1
+// Constraints: out.dtype = uint8, then=1, else=0
 
-// これからやる：A>B A<B ...
-// A>scal B>scal A>=scal B>=scal A=B A=scal
-// for Fast ReLU
+// dpref = s d i prefix = i32 u32 s d ...
+#define define_cmp(dpref, prefix, op_name, stride, dtype, simd_cmp, rem_cmp) \
+  void waffe2_##prefix##op_name(const long n, dtype* x, const long incx, dtype* y, const long incy, dtype* out, const long inco, dtype then_value, dtype else_value) \
+  {                                                                     \
+    dtype *o_end = out + n * inco;					\
+    dtype *o_simd_end = out + (n/stride)*stride;			\
+    waffe2_##dpref##vec vx, vy, vo, res;			        \
+    waffe2_##dpref##bool mask;						\
+    waffe2_##dpref##vec vthen = waffe2_load_##prefix##scal(then_value);	\
+    waffe2_##dpref##vec velse = waffe2_load_##prefix##scal(else_value); \
+    while (out != o_simd_end)						\
+      {									\
+	vx = make_waffe2_##prefix##vec(x, incx);			\
+	vy = make_waffe2_##prefix##vec(y, incy);			\
+	vo = make_waffe2_##prefix##vec(out, inco);			\
+	mask = waffe2_simd_##prefix##simd_cmp(vx, vy);			\
+	res  = waffe2_simd_##prefix##blendv(vx, vy, mask);		\
+	if (inco == 1) {						\
+	  waffe2_store_##prefix##vec(out, res);				\
+	} else {							\
+	  strided_waffe2_store_##prefix##vec(out, res, inco);	       	\
+	}								\
+	x += stride;							\
+	y += stride;							\
+	out += stride;							\
+      }									\
+    while (out != o_end)						\
+      {									\
+	if (x[0] rem_cmp y[0]) {				        \
+	  out[0] = then_value;						\
+	} else {							\
+	  out[0] = else_value;						\
+	}								\
+	x += incx;							\
+	y += incy;							\
+	out += inco;							\
+      }									\
+  };
+
+// A = B
+define_cmp(d, d, eq, SIMD_DOUBLE_STRIDE, double, eq, ==);
+define_cmp(s, s, eq, SIMD_SINGLE_STRIDE, float, eq, ==);
+define_cmp(i, i32, eq, SIMD_SINGLE_STRIDE,     int32_t, eq, ==);
+define_cmp(i, i16, eq, SIMD_SINGLE_STRIDE * 2, int16_t, eq, ==);
+define_cmp(i, i8,  eq, SIMD_SINGLE_STRIDE * 4, int8_t,  eq, ==);
+define_cmp(i, u32, eq, SIMD_SINGLE_STRIDE,     uint32_t, eq, ==);
+define_cmp(i, u16, eq, SIMD_SINGLE_STRIDE * 2, uint16_t, eq, ==);
+define_cmp(i, u8,  eq, SIMD_SINGLE_STRIDE * 4, uint8_t,  eq, ==);
+    
+
+// A>B
+
+// A>scal
+
+
+// Comparison, SIMD Math Kernel, cl-autowrap, testing all function, merge into cl-waffe2
+
+// CMP: X, Y -> OUT, then, else
 
 
 

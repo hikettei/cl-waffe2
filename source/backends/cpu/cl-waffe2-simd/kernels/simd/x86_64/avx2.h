@@ -19,6 +19,7 @@ typedef __m256i waffe2_ivec;
 // masks
 typedef __m256  waffe2_sbool;
 typedef __m256d waffe2_dbool;
+typedef __m256i waffe2_ibool;
 
 #define SIMD_SINGLE_STRIDE 8
 #define SIMD_DOUBLE_STRIDE 4
@@ -52,6 +53,10 @@ waffe2_dvec static inline waffe2_load_dscal(double scal)  { return _mm256_set1_p
 waffe2_dvec static inline waffe2_load_i32scal(int32_t scal)  { return _mm256_set1_epi32(scal); }
 waffe2_dvec static inline waffe2_load_i16scal(int16_t scal)  { return _mm256_set1_epi16(scal); }
 waffe2_dvec static inline waffe2_load_i8scal(int8_t scal)    { return _mm256_set1_epi8(scal); }
+
+waffe2_dvec static inline waffe2_load_u32scal(uint32_t scal)  { return _mm256_set1_epi32(scal); }
+waffe2_dvec static inline waffe2_load_u16scal(uint16_t scal)  { return _mm256_set1_epi16(scal); }
+waffe2_dvec static inline waffe2_load_u8scal(uint8_t scal)    { return _mm256_set1_epi8(scal); }
 
 // loading values
 void static inline waffe2_store_svec(float* ptr, waffe2_svec v) { _mm256_storeu_ps(ptr, v); }
@@ -205,8 +210,33 @@ waffe2_ivec static inline waffe2_simd_i8le(waffe2_ivec x, waffe2_ivec y)  { retu
 waffe2_ivec static inline waffe2_simd_u32le(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_u32gt(x, y)); }
 waffe2_ivec static inline waffe2_simd_u16le(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_u16gt(x, y)); }
 waffe2_ivec static inline waffe2_simd_u8le(waffe2_ivec x, waffe2_ivec y)  { return waffe2_simd_i8not(waffe2_simd_u8gt(x, y)); }
-// TODO/ INTEGER
-// A>B
-// A>=B
 
-// A<=B
+// A>=B, greater equal, _CMP_GE_OQ=29
+waffe2_dbool static inline waffe2_simd_dge(waffe2_dvec x, waffe2_dvec y) { return _mm256_cmp_pd(x, y, 29); }
+waffe2_sbool static inline waffe2_simd_sge(waffe2_svec x, waffe2_svec y) { return _mm256_cmp_ps(x, y, 29); }
+
+
+waffe2_ivec static inline waffe2_simd_i32ge(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_i32gt(y, x)); }
+waffe2_ivec static inline waffe2_simd_i16ge(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_i16gt(y, x)); }
+waffe2_ivec static inline waffe2_simd_i8ge(waffe2_ivec x, waffe2_ivec y)  { return waffe2_simd_i8not(waffe2_simd_i8gt(y, x)); }
+
+waffe2_ivec static inline waffe2_simd_u32ge(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_u32gt(y, x)); }
+waffe2_ivec static inline waffe2_simd_u16ge(waffe2_ivec x, waffe2_ivec y) { return waffe2_simd_i8not(waffe2_simd_u16gt(y, x)); }
+waffe2_ivec static inline waffe2_simd_u8ge(waffe2_ivec x, waffe2_ivec y)  { return waffe2_simd_i8not(waffe2_simd_u8gt(y, x));  }
+
+
+// ~~~~~~~~~~~~~~~~~~
+// Blend
+// ~~~~~~~~~~~~~~~~~~
+
+waffe2_dvec static inline waffe2_simd_dblendv(waffe2_dvec x, waffe2_dvec y, waffe2_dbool mask) { return _mm256_blendv_pd(x, y, mask); }
+waffe2_svec static inline waffe2_simd_sblendv(waffe2_svec x, waffe2_svec y, waffe2_sbool mask) { return _mm256_blendv_ps(x, y, mask); }
+
+waffe2_ivec static inline waffe2_simd_i32blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+waffe2_ivec static inline waffe2_simd_i16blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+waffe2_ivec static inline waffe2_simd_i8blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+
+waffe2_ivec static inline waffe2_simd_u32blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+waffe2_ivec static inline waffe2_simd_u16blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+waffe2_ivec static inline waffe2_simd_u8blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
+
