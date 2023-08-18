@@ -118,6 +118,8 @@
 	       (:file "backends/cpu/blas-functions")
 	       (:file "backends/cpu/arithmetic")
 	       (:file "backends/cpu/matrix-ops")
+	       (:file "backends/cpu/logical")
+	       
 
 	       (:file "distributions/package")
 	       (:file "distributions/generic")

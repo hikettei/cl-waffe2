@@ -29,6 +29,12 @@ typedef __m256i waffe2_ibool;
 // __mm256i <- 4*uint64, 8*uint32, 16*uint16, 32*uint8
 // __mm256d <- 4*float64
 
+// not
+
+waffe2_ivec static inline waffe2_simd_i8not (waffe2_ivec src) {
+  return _mm256_xor_si256(src, _mm256_cmpeq_epi8(src, src));
+}
+
 // Storing
 waffe2_svec static inline waffe2_load_svec(float* ptr)  { return _mm256_loadu_ps(ptr); }
 waffe2_dvec static inline waffe2_load_dvec(double* ptr) { return _mm256_loadu_pd(ptr); }
@@ -115,6 +121,17 @@ waffe2_ivec static inline waffe2_simd_u32min(waffe2_ivec x, waffe2_ivec y) { ret
 waffe2_ivec static inline waffe2_simd_u16min(waffe2_ivec x, waffe2_ivec y) { return _mm256_min_epu16(x, y); }
 waffe2_ivec static inline waffe2_simd_u8min (waffe2_ivec x, waffe2_ivec y) { return _mm256_min_epu8(x, y); }
 
+waffe2_dvec static inline waffe2_make_dmask(waffe2_dvec out) {
+  return _mm256_cmp_pd(out, _mm256_setzero_pd(), 4);
+}
+
+waffe2_svec static inline waffe2_make_smask(waffe2_svec out) {
+  return _mm256_cmp_ps(out, _mm256_setzero_ps(), 4);
+}
+
+waffe2_ivec static inline waffe2_make_imask(waffe2_ivec out) {
+  return waffe2_simd_i8not(_mm256_cmpeq_epi8(out, _mm256_setzero_si256()));
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Compares
@@ -154,13 +171,6 @@ waffe2_ivec static inline waffe2_simd_u8min (waffe2_ivec x, waffe2_ivec y) { ret
 /* 29: OP := _CMP_GE_OQ */
 /* 30: OP := _CMP_GT_OQ */
 /* 31: OP := _CMP_TRUE_US */
-
-
-// not
-
-waffe2_ivec static inline waffe2_simd_i8not (waffe2_ivec src) {
-  return _mm256_xor_si256(src, _mm256_cmpeq_epi8(src, src));
-}
 
 // A=B
 waffe2_dbool static inline waffe2_simd_deq(waffe2_dvec x, waffe2_dvec y) { return _mm256_cmp_pd(x, y, 0); }

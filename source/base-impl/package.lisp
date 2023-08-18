@@ -47,7 +47,8 @@
    #:proceed
    #:proceed-time
    #:proceed-backward
-   #:lazy-print)
+   #:lazy-print
+   #:logical-compiler-info)
   (:export
    :node-x
    :node-y)
