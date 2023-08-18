@@ -1,9 +1,11 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+(defclass DebugTensor (AbstractTensor) nil)
+
 (defclass ScalarTensor (AbstractTensor)
   nil
-  (:documentation "The class ScalarTensor, is used to represent scalar values."))
+  (:documentation "The class ScalarTensor, is used to represent scalar-object."))
 
 (defmethod initialize-instance :before ((tensor ScalarTensor) &rest initargs &key &allow-other-keys)
   (declare (ignore initargs))
@@ -15,7 +17,4 @@
 (defmethod vref ((tensor ScalarTensor) index)
   (declare (ignore index))
   (tensor-vec tensor))
-
-(defmethod current-backend-state ((backend-name (eql 'ScalarTensor)))
-  "is a special tensor for representing scalar values.")
 

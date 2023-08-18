@@ -18,8 +18,6 @@
   (:export
    #:AbstractTensor
    #:ScalarTensor
-
-   #:current-backend-state
    
    #:tensor-backward
    #:read-result
