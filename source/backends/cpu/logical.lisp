@@ -40,7 +40,7 @@
 	      :reject-p #'where-simd-reject-p)
 	     :forward ((self x out)
 		       (let* ((condition (car (logical-compiler-info self)))
-			      (scal   (second (logical-compiler-info self)))
+			      (scal   (coerce (second (logical-compiler-info self)) (dtype->lisp-type (dtype x))))
 			      (fname (cond->fname (dtype x) condition t))
 			      (then (logical-true-then self))
 			      (else (logical-false-then self))

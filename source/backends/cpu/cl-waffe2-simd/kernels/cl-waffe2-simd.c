@@ -504,6 +504,8 @@ define_cmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 	  count += stride;						\
 	}								\
     }									\
+    x += count * incx;							\
+    out += count * inco;						\
     while (count != n)							\
       {									\
 	if (x[0] rem_cmp y) {				                \
@@ -512,6 +514,8 @@ define_cmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 	  out[0] = else_value;						\
 	}								\
 	count += 1;							\
+	x   += incx;							\
+	out += inco;							\
       }									\
   };
 
