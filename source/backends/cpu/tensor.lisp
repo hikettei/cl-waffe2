@@ -7,7 +7,7 @@
 "))
 
 (defmethod current-backend-state ((backend-name (eql 'CPUTensor)))
-  (format nil "OpenBLAS=~a SIMD-Extension=~a"
+  (format nil "OpenBLAS=~a *simd-extension-p*=~a"
 	  (if *openblas-found-p*
 	      "available"
 	      "not available")

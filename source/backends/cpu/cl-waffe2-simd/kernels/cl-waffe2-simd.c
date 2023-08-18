@@ -323,7 +323,7 @@ define_inv_func(u8inv,  uint8_t, x[0] = 1/x[0]);
       {									\
 	if (incx == 1)							\
 	  {								\
-	    xv = waffe2_load_##prefix##vec(x);				\
+	    xv = waffe2_load_##prefix##vec(x + count*incx);		\
 	  }								\
 	else								\
 	  {								\

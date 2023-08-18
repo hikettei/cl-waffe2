@@ -6,13 +6,14 @@
   (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl :cl-waffe2-simd)
   (:export
    :CPUTensor
+   :*simd-extension-p*
    :find-and-load-libblas))
 
 (in-package :cl-waffe2/backends.cpu)
 
 
 (defparameter *openblas-found-p* nil)
-(defparameter *simd-extension-p* nil)
+(defparameter *simd-extension-p* nil "Set this parameter=nil to disable cl-waffe2 simd extension.")
 (defparameter *one-dnn-found-p* nil) ;; Still not yet available for a while
 ;; Utils
 (eval-when (:compile-toplevel :load-toplevel :execute)
