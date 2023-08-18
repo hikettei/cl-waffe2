@@ -159,6 +159,12 @@ Users can define a new implementation following `(define-impl (Name :device MyBa
 
 (See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)
 
+Note: add `print-tensor-state` method like: `(defmethod current-backend-state (device (eql 'YourDeviceName)) \"It is working\")` in order for `(show-backends)` function display your backends state.
+
+```lisp
+(defmethod current-backend-state ((backend-name (eql 'YourBackendName)))
+  \"This is MyTensor\")
+```
 ### [function] shape
 
 Returns a visible shape of tensor
@@ -257,6 +263,15 @@ Tensors has a two state:
 ...
 
 "))
+
+
+(defgeneric current-backend-state (backend-name)
+  (:documentation "The generic function current-backend-state is used to rendering (show-backends) function."))
+
+(defmethod current-backend-state ((backend-name t))
+  (if (next-method-p)
+      (call-next-method)
+      "No status."))
 
 (defun sync-permute! (tensor)
   (declare (type AbstractTensor tensor))
@@ -1183,4 +1198,3 @@ Returns shape but <1 x N> parts are replaced with -1.
 	  collect 0
 	else
 	  collect s))
-

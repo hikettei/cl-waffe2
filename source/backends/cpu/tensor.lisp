@@ -4,8 +4,16 @@
 (defclass CPUTensor (AbstractTensor) nil
   (:documentation "
 ## [AbstractTensor] CPUTensor
-
 "))
+
+(defmethod current-backend-state ((backend-name (eql 'CPUTensor)))
+  (format nil "OpenBLAS=~a *simd-extension-p*=~a"
+	  (if *openblas-found-p*
+	      "available"
+	      "not available")
+	  (if *simd-extension-p*
+	      "available"
+	      "not available")))
 
 (defmethod initialize-instance :before ((tensor CPUTensor)
 					&rest initargs

@@ -9,15 +9,15 @@
 (export '(logical-condition logical-true-then logical-false-then
 	  Where-Operation-Node Compare-Operation-Node))
 
-(defnode (Where-Operation-Node (myself condition true-then false-then)
+(defnode (Where-Operation-Node (myself condition true-then false-then &key (compiler-info nil))
 	  ;;:no-grad t
 	  :where (A[~] OUT[~] -> OUT[~])
 	  :slots ((condition :initarg :condition :type function :reader logical-condition)
+		  (compiler-info :initarg :compiler-info :type list :reader logical-compiler-info)
 		  (true-then :initarg :true-then :reader logical-true-then)
 		  (false-then :initarg :false-then :reader logical-false-then))
 	  :backward ((self dout da do)
 		     (declare (ignore dout da do))
-		     ";; TODO: :no-grad t"
 		     (values nil nil))
 	  :documentation "Where-Operation-Node is a node which set `true-then`, if the result of calling `condition` with each element of A, is t and if it is NIL, set `false-then` at corresponding position.
 
@@ -40,7 +40,6 @@
 		  (false-then :initarg :false-then :reader logical-false-then))
 	  :backward ((self dout da db do)
 		     (declare (ignore dout da db do))
-		     ";; TODO: :no-grad t"
 		     (values nil nil nil))
 	  :documentation "Compare-Operation-Node is a node which set `true-then`, if the result of calling `condition` with each element of A and B, if it is NIl set `false-then` at corresponding position.
 
@@ -63,7 +62,7 @@
 ;; how to determine dtype
 ;; can compare being optimized?
 (export '!where)
-(defun !where (tensor condition &key (true-then 1) (false-then 0) (out nil))
+(defun !where (tensor condition &key (true-then 1) (false-then 0) (out nil) (compiler-info nil))
   "
 ## [function] !where
 
@@ -105,7 +104,7 @@ The operation is defined as:
 				 :dtype (dtype tensor))))
 	(true-then  (coerce true-then (dtype->lisp-type (dtype tensor))))
 	(false-then (coerce false-then (dtype->lisp-type (dtype tensor)))))
-    (forward (Where-Operation-Node condition true-then false-then)
+    (forward (Where-Operation-Node condition true-then false-then :compiler-info compiler-info)
 	     tensor
 	     out)))
 
@@ -178,12 +177,13 @@ The function ~(~a~) sets `true-then` if the equation: `element ~a scal` is t, ot
 `A` AbstractTensor
 `scal` number (not a ScalarTensor)
 
-(TODO: ScalarTensor as scal)"
+(TODO: ScalarTensor as a `scal` argument)"
 			   name
 			   name
 			   name
 			   operator)
 		  (!where A #'(lambda (x) (,operator x scal))
+			  :compiler-info (list #',operator scal)
 			  :true-then  true-then
 			  :false-then false-then
 			  :out out)))))

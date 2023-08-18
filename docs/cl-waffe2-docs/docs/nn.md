@@ -13,13 +13,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP2036 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP2014 
   :vec-state [computed]
-  ((-0.0        0.2005611   -0.0        ~ -0.0        0.25025347  -0.0)                   
-   (-0.0        0.9096082   0.7793865   ~ -0.0        0.22214448  -0.0)   
+  ((0.8696611   0.7867626   -0.0        ~ 0.4090601   -0.0        -0.0)                   
+   (1.0785233   -0.0        -0.0        ~ -0.0        -0.0        0.7540661)   
                 ...
-   (0.104579866 1.1341674   -0.0        ~ -0.0        0.6462526   -0.0)
-   (-0.0        -0.0        2.351149    ~ 0.3563664   1.214624    1.1086317))
+   (-0.0        1.9579667   0.3563664   ~ -0.0        -0.0        -0.0)
+   (-0.0        1.0319841   -0.0        ~ 0.6646269   0.55727094  0.552846))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -42,13 +42,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP2315 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP2282 
   :vec-state [computed]
-  ((0.4225798   0.66495955  0.18262608  ~ 0.44554135  0.656544    0.40799212)                   
-   (0.76683646  0.47810072  0.660299    ~ 0.6820497   0.36251238  0.37265834)   
+  ((0.82202435  0.272411    0.6820497   ~ 0.94103944  0.17914216  0.16671297)                   
+   (0.12418704  0.5162964   0.4790535   ~ 0.40099338  0.29518947  0.36718118)   
                 ...
-   (0.35219574  0.44995633  0.32275796  ~ 0.41804832  0.4300732   0.4534214)
-   (0.73218     0.7604109   0.486416    ~ 0.6701919   0.6264692   0.6525067))
+   (0.7994529   0.4409427   0.6701919   ~ 0.59252435  0.61069953  0.6756201)
+   (0.46399498  0.65854335  0.6439355   ~ 0.3070587   0.35817942  0.3361184))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -75,9 +75,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2686 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2651 
   :vec-state [computed]
-  ((0.9867394))
+  ((0.98152834))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -102,9 +102,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2999 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2968 
   :vec-state [computed]
-  ((1.9540706))
+  ((2.139105))
   :facet :input
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
@@ -196,7 +196,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W3006}(
+<Composite: LINEARLAYER{W2975}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -284,7 +284,7 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W3016}(
+<Composite: CONV2D{W2985}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)
@@ -369,3 +369,31 @@ Applies a 2D average pooling over an input signal composed of several input plan
 
 Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 
+
+## [function] unfold
+
+```lisp
+(unfold input dilation kernel-size stride padding)
+```
+
+Extracts sliding local blocks from a batched input tensor. The detailed specifications follow PyTorch: [nn.Unfold](https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html).
+
+As of this writing, `input` must be a 4D Tensor even when `N=batch-size=1`.
+
+Corresponding nodes: `cl-waffe2/base-impl:Im2ColNode`, `cl-waffe2/base-impl:Col2ImNode`
+
+### Inputs
+
+Note that `dilation`, `kernel-size`, `stride`, and `padding` are given in this form:
+
+`(list y-direction(Height) x-direction(Width))`
+
+`input[AbstractTensor]` the tensor to be unfold.
+
+`dilation[list]` a parameter that controls the stride of elements within the neighborhood.
+
+`kernel-size[list]` the size of sliding blocks.
+
+`padding[list]` implicts the number of zero-padding to be added on both sides of input.
+
+`stride[list]` the number of stride of the sliding blocks.

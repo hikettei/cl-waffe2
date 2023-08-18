@@ -181,6 +181,7 @@ Please consider using another backends." dtype)))))
        :at-least-dim 1
        :force-order t)))
 
+;; TODO: ArgMax for SparseMatrix
 (define-impl (ArgMax-Node :device CPUTensor)
 	     :forward ((self x out)
 		       (let ((x-ptr (gensym "PTR")))
@@ -237,19 +238,43 @@ Please consider using another backends." dtype)))))
 	 :at-least-dim 1
 	 :force-order t))))
 
-(define-impl (MaxValue-Node :device CPUTensor)
+(defun expand-simd-maxmin-value-form (x out type x-ptr out-ptr)
+  (declare (type (and string (member "max" "min")))
+	   (type AbstractTensor x out)
+	   (type symbol x-ptr out-ptr))
+  (let ((fname (make-fname (dtype x) type)))
+    (call-with-view
+     #'(lambda (x-view o-view)
+	 `(,fname ,(size-of x-view 0) (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0)) ,(stride-of x-view 0) (incf-tensor-ptr ,out ,out-ptr :offset ,(offset-of o-view 0))))
+     `(,x ,out)
+     :force-order t
+     :at-least-dim 1)))
+
+;; [TODO] reject for sparse matrices
+(define-impl (MaxValue-Node :device CPUTensor
+	      :reject-p #'simd-extension-p)
 	     :forward ((self x out)
-		       (let ((x-ptr (gensym "PTR")))
-			 `(with-tensor-ptr (,x-ptr ,x)
+		       (let ((x-ptr (gensym "PTR"))
+			     (out-ptr (gensym "PTR")))
+			 `(with-tensor-ptrs ((,x-ptr ,x)
+					     (,out-ptr ,out))
 			    (locally (declare (optimize (speed 1)))
-			      ,(expand-maxmin-value-form x out :max x-ptr)
+			      ,(if *simd-extension-p*
+				   (expand-simd-maxmin-value-form x out "max" x-ptr out-ptr)
+				   (expand-maxmin-value-form x out :max x-ptr))
 			      ,out)))))
 
-(define-impl (MinValue-Node :device CPUTensor)
+(define-impl (MinValue-Node :device CPUTensor
+	      :reject-p #'simd-extension-p)
 	     :forward ((self x out)
-		       (let ((x-ptr (gensym "PTR")))
-			 `(with-tensor-ptr (,x-ptr ,x)
+		       (let ((x-ptr (gensym "PTR"))
+			     (out-ptr (gensym "PTR")))
+			 `(with-tensor-ptrs ((,x-ptr ,x)
+					     (,out-ptr ,out))
 			    (locally (declare (optimize (speed 1)))
-			      ,(expand-maxmin-value-form x out :min x-ptr)
+			      ,(if *simd-extension-p*
+				   (expand-simd-maxmin-value-form x out "min" x-ptr out-ptr)
+				   (expand-maxmin-value-form x out :min x-ptr))
 			      ,out)))))
+
 

@@ -13,6 +13,7 @@
 ;;
 
 
+;; TODO: im2col-caller should be moved to ./backends/lisp/
 (define-with-typevar
     (im2col-caller u) (padded-x col N C filter-h filter-w out-h out-w stride-x stride-y)
   (declare (optimize (speed 3)) ;; (safety 0)
@@ -156,55 +157,27 @@ stride-x stride-y"
 	   stride-x
 	   stride-y))
 
-(define-and-impl-node
-    (Im2ColNode (self N C k-h k-w h-out w-out stride-x stride-y img-out)
-     :slots ((N :initarg :N)
-	     (C :initarg :C)
-	     (k-h :initarg :k-h)
-	     (k-w :initarg :k-w)
-	     (h-out :initarg :h-out)
-	     (w-out :initarg :w-out)
-	     (stride-x :initarg :stride-x)
-	     (stride-y :initarg :stride-y)
-	     (img-out :initarg :img-out :reader img-out-of)
-	     (h :accessor h-of)
-	     (w :accessor w-of))
-     :cache-when-compiled nil
-     ;; Backward: Col[N C k-h k-w h-out w-out] -> X[N C H W] Col[N C k-h k-w h-out w-out]
-     :where (X[N C H W] Col[N C k-h k-w h-out w-out] -> Col[N C k-h k-w h-out w-out])
-     :forward ((self x col)
-	       (setf (h-of self) (nth 2 (shape x))
-		     (w-of self) (nth 3 (shape x)))
-	       `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
-		  (call-im2col-kernel ,x ,col n c k-h k-w h-out w-out stride-x stride-y)))
-     :backward ((self dout x col)
-		(declare (ignore x col))
-		(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) self
-		  (values
-		   (call (Col2ImNode N C (h-of self) (w-of self) k-h k-w h-out w-out stride-x stride-y (img-out-of self)) dout)
-		   nil)))))
+(define-impl (Im2ColNode
+	      :device cl-waffe2/backends.lisp:LispTensor
+	      :cache-when-compiled nil)
+	     :forward ((self x col)
+		       (setf (h-of self) (nth 2 (shape x))
+			     (w-of self) (nth 3 (shape x)))
+		       `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
+			  (call-im2col-kernel ,x ,col n c k-h k-w h-out w-out stride-x stride-y))))
 
-(define-and-impl-node (Col2ImNode (self N C H W k-h k-w h-out w-out stride-x stride-y img-out)
-		       :slots ((N :initarg :N)
-			       (C :initarg :C)
-			       (k-h :initarg :k-h)
-			       (k-w :initarg :k-w)
-			       (h-out :initarg :h-out)
-			       (w-out :initarg :w-out)
-			       (stride-x :initarg :stride-x)
-			       (stride-y :initarg :stride-y)
-			       (img-out :initarg :img-out :reader img-out-of))
-		       :cache-when-compiled nil
-		       :where (Col[N C k-h k-w h-out w-out] -> X[N C H W])
-		       :forward ((self dout)
-				 `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
-				    (values (∂im2col/∂out ,dout (img-out-of ,self) N C k-h k-w h-out w-out stride-x stride-y) nil)))))
+(define-impl (Col2ImNode
+	      :device cl-waffe2/backends.lisp:LispTensor
+	      :cache-when-compiled nil)
+	     :forward ((self dout)
+		       `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
+			  (values (∂im2col/∂out ,dout (img-out-of ,self) N C k-h k-w h-out w-out stride-x stride-y) nil))))
 
 
 
-(defun !im2col-cpu (padded-x N C k-h k-w h-out w-out stride-x stride-y)
+(defun !im2col (padded-x N C k-h k-w h-out w-out stride-x stride-y)
   "
-## [function] !im2col-cpu
+## [function] !im2col
 
 N - batch-size
 C - in-channels
@@ -230,10 +203,36 @@ stride-x stride-y - stride[0], stride[1] respectively.
 	    (asnode #'!permute (torch-order 0 4 5 1 2 3))
 	    (asnode #'!reshape (* N H-out W-out) t))))
 
+
 (defun unfold (input dilation kernel-size stride padding)
   "
 ## [function] unfold
 
+```lisp
+(unfold input dilation kernel-size stride padding)
+```
+
+Extracts sliding local blocks from a batched input tensor. The detailed specifications follow PyTorch: [nn.Unfold](https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html).
+
+As of this writing, `input` must be a 4D Tensor even when `N=batch-size=1`.
+
+Corresponding nodes: `cl-waffe2/base-impl:Im2ColNode`, `cl-waffe2/base-impl:Col2ImNode`
+
+### Inputs
+
+Note that `dilation`, `kernel-size`, `stride`, and `padding` are given in this form:
+
+`(list y-direction(Height) x-direction(Width))`
+
+`input[AbstractTensor]` the tensor to be unfold.
+
+`dilation[list]` a parameter that controls the stride of elements within the neighborhood.
+
+`kernel-size[list]` the size of sliding blocks.
+
+`padding[list]` implicts the number of zero-padding to be added on both sides of input.
+
+`stride[list]` the number of stride of the sliding blocks.
 "
 
   (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
@@ -244,6 +243,6 @@ stride-x stride-y - stride[0], stride[1] respectively.
 
       (call-> input
 	      (asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-	      (asnode #'!im2col-cpu N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))))))
+	      (asnode #'!im2col N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))))))
 
 

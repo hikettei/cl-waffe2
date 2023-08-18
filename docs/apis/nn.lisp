@@ -33,5 +33,6 @@
 	"(Conv2D 3 5 '(3 3))"))
 
     (with-nn-doc (find-class 'MaxPool2D) 't)
-    (with-nn-doc (find-class 'AvgPool2D) 't)))
+    (with-nn-doc (find-class 'AvgPool2D) 't)
+    (with-nn-doc 'unfold 'function)))
 

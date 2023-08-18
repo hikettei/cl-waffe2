@@ -79,6 +79,12 @@
 (defun set-devices-toplevel (&rest devices)
   "
 ## [function] set-devices-toplevel
+
+```lisp
+(set-devices-toplevel &rest devices)
+```
+
+Declares devices to use.
 "
   (assert (every #'(lambda (x) (subtypep x 'AbstractTensor)) devices)
 	  nil
@@ -86,3 +92,103 @@
   
   (setf cl-waffe2/vm.generic-tensor:*using-backend* devices))
 
+(defun find-available-backends (&optional (from (find-class 'cl-waffe2/vm.generic-tensor:AbstractTensor)))
+  (let ((classes (c2mop:class-direct-subclasses from)))
+    (map 'list
+	 #'(lambda (class-from)
+	     `(,class-from ,@(find-available-backends class-from)))
+	 classes)))
+
+(defun rendering-backends-tree-to (tree-top out)
+  (labels ((rendering-helper (tree-from indent-level)
+	     (format out "~%")
+	     (dotimes (i indent-level) (princ " " out))
+	     (let ((using-p (find (format nil "~a" (class-name (car tree-from)))
+				  *using-backend*
+				  :key #'symbol-name
+				  :test #'equal)))
+	       (format out "~a~a~a: ~a"
+		       ;; Now the computation is done under the device?
+		       ;; -> If so, add *
+		       (if (= indent-level 0)
+			   ""
+			   "└")
+		       (if using-p
+			   "[*]"
+			   "[-]")
+		       (class-name (car tree-from))
+		       (current-backend-state (class-name (car tree-from))))
+	       (let ((indent-level (+ indent-level 4)))
+		 (dolist (more (cdr tree-from))
+		   (rendering-helper more indent-level))))))
+    (rendering-helper tree-top 0)))
+
+(defun show-backends (&key (stream t))
+  "
+## [function] show-backends
+
+```lisp
+(show-backends &key (stream t))
+```
+
+collects and displays the current state of devices to the given `stream`
+
+### Example
+
+```lisp
+(show-backends)
+
+─────[All Backends Tree]──────────────────────────────────────────────────
+
+[*]CPUTENSOR: OpenBLAS=available *simd-extension-p*=available
+    └[-]JITCPUTENSOR: compiler=gcc flags=(-fPIC -O3 -march=native) viz=NIL
+
+[*]LISPTENSOR: Common Lisp implementation on matrix operations
+    └[-]JITLISPTENSOR: To be deleted in the future release. do not use this.
+
+[-]SCALARTENSOR: is a special tensor for representing scalar values.
+    └[-]JITCPUSCALARTENSOR: Use with JITCPUTensor
+
+([*] : in use, [-] : not in use.)
+Add a current-backend-state method to display the status.
+─────[*using-backend*]───────────────────────────────────────────────────
+
+Priority: Higher <───────────────────>Lower
+                  CPUTENSOR LISPTENSOR 
+
+(use with-devices macro or set-devices-toplevel function to change this parameter.)
+```
+"
+
+  (format stream "~%~a"
+	  (with-output-to-string (out)
+	    (let ((backends-tree (find-available-backends)))
+	      (dotimes (i 5)  (princ "─" out))
+	      (princ "[All Backends Tree]" out)
+	      (dotimes (i 50) (princ "─" out))
+	      (mapc #'(lambda (tree)
+			(format out "~%")
+			(rendering-backends-tree-to tree out))
+		    backends-tree)
+	      (format out "~%~%([*] : in use, [-] : not in use.)")
+	      (format out "~%Add a current-backend-state method to display the status.~%")
+
+	      
+	      (dotimes (i 5)  (princ "─" out))
+	      (princ "[*using-backend*]" out)
+	      (dotimes (i 51) (princ "─" out))
+
+	      (format out "~%~%")
+	      (let ((total-namelen 0))
+		(dolist (name *using-backend*)
+		  (incf total-namelen (length (symbol-name name))))
+
+		(format out "Priority: Higher <")
+		(dotimes (i total-namelen) (princ "─" out))
+		(format out ">Lower~%")
+		(format out "                  ")
+		(dolist (name *using-backend*)
+		  (princ (symbol-name name) out)
+		  (princ " " out))
+
+		(format out "~%~%(use with-devices macro or set-devices-toplevel function to change this parameter.)~%"))))))
