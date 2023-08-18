@@ -160,4 +160,8 @@ Priority: Higher <───────────────────>Lowe
 
 ## [function] set-devices-toplevel
 
+```lisp
+(set-devices-toplevel &rest devices)
+```
+
 Declares devices to use.

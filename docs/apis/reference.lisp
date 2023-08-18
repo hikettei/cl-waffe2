@@ -106,6 +106,9 @@
 
     (nodedoc Where-Operation-Node)
     (nodedoc Compare-Operation-Node)
+
+    (nodedoc Im2ColNode)
+    (nodedoc Col2ImNode)
     ))
 
 

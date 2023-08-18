@@ -1650,3 +1650,53 @@ Compare-Operation-Node is a node which set `true-then`, if the result of calling
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] IM2COLNODE
+
+```
+(X[N C H W] COL[N C K-H K-W H-OUT W-OUT] -> COL[N C K-H K-W H-OUT W-OUT])
+```
+
+### Description
+
+Im2ColNode is `AbstractNode` which implements forward propagation of [nn.Unfold](https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html).
+
+The node is only executed through the `cl-waffe2/nn:unfold` function, so arguments for constructors are dispatched automatically. In addition, the tensor `X` it receive will be the one after padding has been performed.
+
+`N` indicates the number of batch-size, `C` is a channel-size. `k-h`, `k-w` represents the size of kernel, height and width respectively. `h-out` `w-out` is the size of output. `stride-x` `stride-y` is the number of stride, for the most case, specified by the stride argument in `Pooling2D` or `Conv2D`. `img-out` is AbstractTensor with the shape of `(N C H-in W-in)`, can be read by `img-out-of`.
+
+In order to implement device-specific implementation of `Unfold`, define-impl `Im2ColNode` and `Col2ImNode`.
+
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout x col) (declare (ignore x col))
+ (with-slots ((n n) (c c) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out)
+              (stride-x stride-x) (stride-y stride-y))
+     self
+   (values
+    (call
+     (col2imnode n c (h-of self) (w-of self) k-h k-w h-out w-out stride-x
+      stride-y (img-out-of self))
+     dout)
+    nil)))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] COL2IMNODE
+
+```
+(COL[N C K-H K-W H-OUT W-OUT] -> X[N C H W])
+```
+
+### Description
+
+Col2ImNode is `AbstractNode` which implements backward propagation of [nn.Unfold](https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html).
+
+See also: `Im2ColNode` documentation for argument descriptions.
+
+### Backward
+
+❌ Undefined. (To make it differentiable, must be defined with `define-impl` macro.)

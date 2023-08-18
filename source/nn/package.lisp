@@ -17,7 +17,8 @@
   (:export
    #:Conv2D
    #:apply-conv2d
-   #:!im2col-cpu
+   #:!im2col
+   #:unfold
 
    #:MaxPool2D
    #:AvgPool2D)

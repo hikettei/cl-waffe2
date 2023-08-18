@@ -77,6 +77,10 @@
   "
 ## [function] set-devices-toplevel
 
+```lisp
+(set-devices-toplevel &rest devices)
+```
+
 Declares devices to use.
 "
   (assert (every #'(lambda (x) (subtypep x 'AbstractTensor)) devices)
