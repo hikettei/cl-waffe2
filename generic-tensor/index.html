@@ -317,6 +317,10 @@
 <p>Now, the name <code>MyBackend</code> is available as a brand-new cl-waffe2 backend!</p>
 <p>Users can define a new implementation following <code>(define-impl (Name :device MyBackend) ...)</code></p>
 <p>(See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)</p>
+<p>Note: add <code>print-tensor-state</code> method like: <code>(defmethod current-backend-state (device (eql 'YourDeviceName)) "It is working")</code> in order for <code>(show-backends)</code> function display your backends state.</p>
+<pre><code class="language-lisp">(defmethod current-backend-state ((backend-name (eql 'YourBackendName)))
+  &quot;This is MyTensor&quot;)
+</code></pre>
 <h3 id="function-shape">[function] shape</h3>
 <p>Returns a visible shape of tensor</p>
 <h3 id="function-dims">[function] dims</h3>
@@ -499,7 +503,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP1928 
+<pre><code>{CPUTENSOR[float] :shape (10 10) :named ChainTMP852 
   :vec-state [maybe-not-computed]
   &lt;&lt;Not-Embodied (10 10) Tensor&gt;&gt;
   :facet :input
@@ -512,10 +516,10 @@
 <pre><code>(&lt;Compiled-Composite
     forward:  #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {539EBE6B}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53A6F8DB}&gt;
     backward: #&lt;FUNCTION (LAMBDA ()
                            :IN
-                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.3-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {539004EB}&gt;
+                           &quot;/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl&quot;) {53A781BB}&gt;
 
 += [Tensors in the computation node] =======+
 

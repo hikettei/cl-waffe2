@@ -83,6 +83,14 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#trainer">Trainer</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-show-backends">[function] show-backends</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-set-devices-toplevel">[function] set-devices-toplevel</a>
+    </li>
     </ul>
                 </li>
               </ul>
@@ -238,6 +246,37 @@ set-input:
 predict:
   describe ..
 </code></pre>
+<h2 id="function-show-backends">[function] show-backends</h2>
+<pre><code class="language-lisp">(show-backends &amp;key (stream t))
+</code></pre>
+<p>collects and displays the current state of devices to the given <code>stream</code></p>
+<h3 id="example_1">Example</h3>
+<pre><code class="language-lisp">(show-backends)
+
+─────[All Backends Tree]──────────────────────────────────────────────────
+
+[*]CPUTENSOR: OpenBLAS=available *simd-extension-p*=available
+    └[-]JITCPUTENSOR: compiler=gcc flags=(-fPIC -O3 -march=native) viz=NIL
+
+[*]LISPTENSOR: Common Lisp implementation on matrix operations
+    └[-]JITLISPTENSOR: To be deleted in the future release. do not use this.
+
+[-]SCALARTENSOR: is a special tensor for representing scalar values.
+    └[-]JITCPUSCALARTENSOR: Use with JITCPUTensor
+
+([*] : in use, [-] : not in use.)
+Add a current-backend-state method to display the status.
+─────[*using-backend*]───────────────────────────────────────────────────
+
+Priority: Higher &lt;───────────────────&gt;Lower
+                  CPUTENSOR LISPTENSOR 
+
+(use with-devices macro or set-devices-toplevel function to change this parameter.)
+</code></pre>
+<h2 id="function-set-devices-toplevel">[function] set-devices-toplevel</h2>
+<pre><code class="language-lisp">(set-devices-toplevel &amp;rest devices)
+</code></pre>
+<p>Declares devices to use.</p>
               
             </div>
           </div><footer>
