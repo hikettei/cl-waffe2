@@ -1,28 +1,29 @@
  
 (in-package :cl-waffe2/backends.cpu)
 
-(defun where-simd-reject-p (&rest args &key &allow-other-keys)
-  (let* ((compiler-info (car (last args))) ;; :compiler-info keyword
-	 (op (car compiler-info)))
-    (if *simd-extension-p*
-	(not
-	 (or (eql op #'<)
-	     (eql op #'<=)
-	     (eql op #'>)
-	     (eql op #'>=)	     
-	     (eql op #'=)))
-	t)))
+(eval-when (:compile-toplevel :load-toplevel :execute)  
+  (defun where-simd-reject-p (&rest args &key &allow-other-keys)
+    (let* ((compiler-info (car (last args))) ;; :compiler-info keyword
+	   (op (car compiler-info)))
+      (if *simd-extension-p*
+	  (not
+	   (or (eql op #'<)
+	       (eql op #'<=)
+	       (eql op #'>)
+	       (eql op #'>=)	     
+	       (eql op #'=)))
+	  t)))
 
-(defun compare-simd-reject-p (&rest args)
-  (let* ((op (car args)))
-    (if *simd-extension-p*
-	(not
-	 (or (eql op #'<)
-	     (eql op #'<=)
-	     (eql op #'>)
-	     (eql op #'>=)	     
-	     (eql op #'=)))
-	t)))
+  (defun compare-simd-reject-p (&rest args)
+    (let* ((op (car args)))
+      (if *simd-extension-p*
+	  (not
+	   (or (eql op #'<)
+	       (eql op #'<=)
+	       (eql op #'>)
+	       (eql op #'>=)	     
+	       (eql op #'=)))
+	  t))))
 
 (defun cond->fname (dtype condition scal-p)
   (declare (type function condition))
