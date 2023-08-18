@@ -18,6 +18,8 @@
   (:export
    #:AbstractTensor
    #:ScalarTensor
+
+   #:current-backend-state
    
    #:tensor-backward
    #:read-result
@@ -138,4 +140,3 @@
    #:*using-backend*))
 
 (in-package :cl-waffe2/vm.generic-tensor)
-

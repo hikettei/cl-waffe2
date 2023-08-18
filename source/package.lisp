@@ -28,6 +28,7 @@
    #:with-row-major
    #:with-cpu
 
+   #:show-backends
    #:set-devices-toplevel
    ;;#:with-cuda
    )
@@ -66,5 +67,4 @@
 
 
 ;; TO ADD: Deftrainer in cl-waffe2 package
-
 
