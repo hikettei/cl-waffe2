@@ -89,12 +89,12 @@
        `(,tensor1 ,tensor2 ,out))))
 
 
-(define-impl (Where-Operation-Node :device LispTensor)
+(define-impl (Where-Operation-Node :cache-when-compiled nil :device LispTensor)
 	     :forward ((self tensor out)
 		       `(,@(expand-where-form self tensor out)
 			  ,out)))
 
-(define-impl (Compare-Operation-Node :device LispTensor)
+(define-impl (Compare-Operation-Node :cache-when-compiled nil :device LispTensor)
 	     :forward ((self tensor1 tensor2 out)
 		       `(progn
 			  ,(expand-compare-form self tensor1 tensor2 out)

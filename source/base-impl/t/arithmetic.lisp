@@ -232,10 +232,163 @@
        
        )))
 
-;; Matmul with backward test is needed!
-
 (ss-add-tester nil)
 (ss-sub-tester nil)
 (ss-mul-tester nil)
 (ss-div-tester nil)
 
+(define-tester max-tester :all
+  (let ((a (ax+b `(9 9) 1 0)))
+    (let ((out (tensor-vec (proceed (!max a)))))
+      (every #'= out
+	     #(8 17 26 35 44 53 62 71 80)))))
+
+(define-tester min-tester :all
+  (let ((a (ax+b `(9 9) 1 0)))
+    (let ((out (tensor-vec (proceed (!min a)))))
+      (every #'= out
+	     #(0 9 18 27 36 45 54 63 72)))))
+
+
+;; Comparison Test
+
+(define-tester lt-tester :all
+  (let ((a (ax+b `(9 9) 0 1))
+	(b (ax+b `(9 9) 0 2)))
+    (let ((out (proceed (A<B a b))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester lt-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A<B a b))))
+      (every #'(lambda (x) (= x 0)) (tensor-vec out)))))
+
+(define-tester le-tester :all
+  (let ((a (ax+b `(9 9) 0 1))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A<=B a b))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester le-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A<=B a b))))
+      (every #'(lambda (x) (= x 0)) (tensor-vec out)))))
+
+
+
+(define-tester gt-tester :all
+  (let ((a (ax+b `(9 9) 0 1))
+	(b (ax+b `(9 9) 0 2)))
+    (let ((out (proceed (A>B a b))))
+      (every #'(lambda (x) (= x 0)) (tensor-vec out)))))
+
+(define-tester gt-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A>B a b))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester ge-tester :all
+  (let ((a (ax+b `(9 9) 0 1))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A>=B a b))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester ge-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A>=B a b))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester eq-tester :all
+  (let ((a (ax+b `(9 9) 0 1))
+	(b (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A=B a b))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+
+
+;; scal
+
+
+(define-tester slt-tester :all
+  (let ((a (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A<scal a 2))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester slt-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2)))
+    (let ((out (proceed (A<scal a 1))))
+      (every #'(lambda (x) (= x 0)) (tensor-vec out)))))
+
+(define-tester sle-tester :all
+  (let ((a (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A<=scal a 1))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester sle-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2)))
+    (let ((out (proceed (A<=scal a 1))))
+      (every #'(lambda (x) (= x 0)) (tensor-vec out)))))
+
+
+
+(define-tester sgt-tester :all
+  (let ((a (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A>scal a 2))))
+      (every #'(lambda (x) (= x 0)) (tensor-vec out)))))
+
+(define-tester sgt-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2)))
+    (let ((out (proceed (A>scal a 1))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester sge-tester :all
+  (let ((a (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A>=scal a 1))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester sge-tester1 :all
+  (let ((a (ax+b `(9 9) 0 2)))
+    (let ((out (proceed (A>=scal a 1))))
+      (every #'(lambda (x) (= x 1)) (tensor-vec out)))))
+
+(define-tester seq-tester :all
+  (let ((a (ax+b `(9 9) 0 1)))
+    (let ((out (proceed (A=scal a 1))))
+      (every #'(lambda (x) (= x 1.0)) (tensor-vec out)))))
+
+
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (export 'comparison-test-set)
+
+  (defmacro comparison-test-set (backend)
+    `(progn
+       (lt-tester ,backend)
+       (lt-tester1 ,backend)
+       (le-tester ,backend)
+       (le-tester1 ,backend)
+
+       (gt-tester ,backend)
+       (gt-tester1 ,backend)
+       (ge-tester ,backend)
+       (ge-tester1 ,backend)
+
+       (eq-tester ,backend)
+
+       (slt-tester ,backend)
+       (slt-tester1 ,backend)
+       (sle-tester ,backend)
+       (sle-tester1 ,backend)
+
+       (sgt-tester ,backend)
+       (sgt-tester1 ,backend)
+       (sge-tester ,backend)
+       (sge-tester1 ,backend)
+
+       (seq-tester ,backend)
+
+       )))

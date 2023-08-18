@@ -3,15 +3,18 @@
 
 (defpackage :cl-waffe2/backends.cpu
   (:documentation "The package :cl-waffe2/backends.cpu provides the BLAS Backend to cl-waffe. Note that this package is SBCL-Dependant.")
-  (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl)
+  (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl :cl-waffe2-simd)
   (:export
    :CPUTensor
+   :*simd-extension-p*
    :find-and-load-libblas))
 
 (in-package :cl-waffe2/backends.cpu)
 
 
 (defparameter *openblas-found-p* nil)
+(defparameter *simd-extension-p* nil "Set this parameter=nil to disable cl-waffe2 simd extension.")
+(defparameter *one-dnn-found-p* nil) ;; Still not yet available for a while
 ;; Utils
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
@@ -70,4 +73,7 @@ For example:
 ;; Load libblas.dylib
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (find-and-load-libblas))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf *simd-extension-p* (try-loading-simd-extension)))
 

@@ -1616,8 +1616,7 @@ Where-Operation-Node is a node which set `true-then`, if the result of calling `
 ✅ Already defined. 
 
 ```lisp
-((self dout da do) (declare (ignore dout da do)) ;; todo: :no-grad t
- (values nil nil))
+((self dout da do) (declare (ignore dout da do)) (values nil nil))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -1647,8 +1646,7 @@ Compare-Operation-Node is a node which set `true-then`, if the result of calling
 ✅ Already defined. 
 
 ```lisp
-((self dout da db do) (declare (ignore dout da db do)) ;; todo: :no-grad t
- (values nil nil nil))
+((self dout da db do) (declare (ignore dout da db do)) (values nil nil nil))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)

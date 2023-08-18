@@ -32,5 +32,10 @@
 (sum-tester LispTensor)
 
 (mathematical-test-set LispTensor)
+
+(max-tester LispTensor)
+(min-tester LispTensor)
+
+(comparison-test-set LispTensor)
 )
 

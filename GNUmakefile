@@ -6,6 +6,8 @@ MKTEMP              := mktemp
 RLWRAP              := rlwrap
 LOGFILE             := $(shell mktemp)
 
+PYTHON              := "python"
+GCC                 := "gcc"
 .DEFAULT_GOAL := help
 
 # This code taken from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -16,19 +18,19 @@ help:
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: compile
-compile: ## Compile whole project
+compile: ## Compiles the whole project
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(asdf:compile-system :cl-waffe2)' \
 		--quit
 
 .PHONY: test
-test: ## Run test harness
+test: ## Running a test harness
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(asdf:test-system :cl-waffe2)' \
 		--quit
 
 .PHONY: recordtest
-recordtest: ## Run test harness with logging
+recordtest: ## Running a test harness with recording logs
 	$(warning This session will be recorded in $(LOGFILE))
 	$(RLWRAP) --logfile $(LOGFILE) \
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
@@ -37,7 +39,7 @@ recordtest: ## Run test harness with logging
 	@printf 'This session has been recorded in %s\n' $(LOGFILE)
 
 .PHONY: repl
-repl: ## Launch REPL
+repl: ## Launch REPL with loading cl-waffe2
 	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
 
 .PHONY: rlrepl
@@ -69,6 +71,10 @@ docs: ## Generate documents
 		--eval '(ql:quickload :cl-waffe2/docs)' \
 		--eval '(cl-waffe2.docs:generate)' \
 		--quit
+
+.PHONY: mkdocs-serve
+mkdocs-serve: ## Launchs the documentation server.
+	cd ./docs/cl-waffe2-docs && mkdocs serve
 
 .PHONY: rt
 rt: recordtest ## Alias for recordtest
@@ -107,3 +113,17 @@ add_to_init_file: ## Enable Quicklisp autoloading
 		--non-interactive \
 		--load ~/quicklisp/setup.lisp \
 		--eval '(ql-util:without-prompting (ql:add-to-init-file))'
+
+.PHONY: build_simd_extension
+build_simd_extension: ## Installs SIMD Extension shared library for the CPUTensor backend.
+	$(GCC) -O3 -march=native -shared -o \
+		./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so \
+		-fpic ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.c -lm
+
+.PHONY: delete_simd_extension
+delete_simd_extension: ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
+	rm -rf ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so
+
+.PHONY: download_assets
+download_assets: ## Downloads training data sample codes use.
+	cd ./examples/mnist && $(PYTHON) train_data.py

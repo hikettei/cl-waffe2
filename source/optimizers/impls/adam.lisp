@@ -11,9 +11,9 @@
 		    :documentation "
 ### Inputs
 
-A simple Adam
+Implements Adam algorithm.
 
-(TODO)
+See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithms.
 "
 		    :slots ((lr :initarg :lr :reader lr-of :type single-float)
 			    (eps :initarg :eps :reader eps-of :type single-float)

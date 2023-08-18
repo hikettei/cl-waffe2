@@ -60,3 +60,19 @@ Param_{new}\gets{Param - Param_{grad}\times{lr}}
 ```
 
 `lr[single-float]` learning rate.
+## [optimizer] ADAM
+
+### Initializer
+
+```
+(ADAM param &KEY (LR 0.001) (EPS 1.0e-7) (BETA1 0.9) (BETA2 0.999))
+```
+
+### Description
+
+
+### Inputs
+
+Implements Adam algorithm.
+
+See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithms.

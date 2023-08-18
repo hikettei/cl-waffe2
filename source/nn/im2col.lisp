@@ -13,6 +13,7 @@
 ;;
 
 
+;; TODO: im2col-caller should be moved to ./backends/lisp/
 (define-with-typevar
     (im2col-caller u) (padded-x col N C filter-h filter-w out-h out-w stride-x stride-y)
   (declare (optimize (speed 3)) ;; (safety 0)
@@ -230,6 +231,7 @@ stride-x stride-y - stride[0], stride[1] respectively.
 	    (asnode #'!permute (torch-order 0 4 5 1 2 3))
 	    (asnode #'!reshape (* N H-out W-out) t))))
 
+;; TODO: UnfoldNode for every (CPU/CUDA/Metal) devices...
 (defun unfold (input dilation kernel-size stride padding)
   "
 ## [function] unfold
