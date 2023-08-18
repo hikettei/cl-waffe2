@@ -95,6 +95,7 @@
 	       (:file "base-impl/transform")
 	       (:file "base-impl/ir")
 	       (:file "base-impl/reshapers")
+	       (:file "base-impl/unfold")
 
 	       
 	       (:file "vm/ir")

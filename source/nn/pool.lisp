@@ -98,7 +98,7 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 
 	(call-> input
 		(asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-		(asnode #'!im2col-cpu N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
+		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
 		(asnode #'!reshape    t (apply #'* kernel-size))
 		(asnode #'!max        :axis 1)
 		(asnode #'!reshape    N h-out w-out C)
@@ -114,7 +114,7 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 
 	(call-> input
 		(asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-		(asnode #'!im2col-cpu N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
+		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
 		(asnode #'!reshape    t (apply #'* kernel-size))
 		(asnode #'!mean       :axis 1)
 		(asnode #'!reshape    N h-out w-out C)
