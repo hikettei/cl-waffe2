@@ -110,8 +110,12 @@ add_to_init_file: ## Enable Quicklisp autoloading
 		--eval '(ql-util:without-prompting (ql:add-to-init-file))'
 
 .PHONY: build_simd_extension
-build_simd_extension: ## Compiles SIMD Extension shared library for the CPUTensor backend.
+build_simd_extension: ## Installs SIMD Extension shared library for the CPUTensor backend.
 	$(GCC) -O3 -march=native -shared -o \
 		./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so \
 		-fpic ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.c -lm
+
+.PHONY: delete_simd_extension
+delete_simd_extension: ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
+	rm -rf ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so
 
