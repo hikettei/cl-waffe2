@@ -16,11 +16,11 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 (normal `(10 10) 0.0 1.0 :requires-grad t)
 
 {CPUTENSOR[float] :shape (10 10)  
-  ((0.7056598    0.2542482    -0.12520011  ~ -0.68094176  -0.096516706 1.315713)                    
-   (-0.21438554  1.6218519    -0.4971856   ~ 0.17923991   -1.8472044   -0.9620114)   
+  ((0.35961813   -0.2059159   1.4001919    ~ 0.077898845  -0.44244626  1.0635623)                    
+   (-1.016495    1.9627005    -1.1844752   ~ 0.15047064   -0.95344716  -1.6598125)   
                  ...
-   (-0.13725741  -0.047362786 -0.66012394  ~ -0.619261    1.5115738    0.9725089)
-   (-1.0936631   -1.8868078   -0.6661585   ~ -1.44131     2.1897004    -0.17695138))
+   (-1.2152638   0.30550015   0.012917101  ~ -0.06799416  -0.3919469   0.2048984)
+   (0.16792156   -0.10029652  1.2373703    ~ -0.6597983   0.5364762    0.04105287))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -146,9 +146,9 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 (beta `(3 3) 5.0 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.8440191  0.88241214 0.9691838)
-   (0.958297   0.8481254  0.6724491)
-   (0.65149814 0.9338914  0.48670492))
+  ((0.69012284 0.75272816 0.8312693)
+   (0.9785166  0.80858713 0.95975447)
+   (0.6866892  0.903407   0.97475606))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -170,9 +170,9 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 (bernoulli `(3 3) 0.3)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((1.0 1.0 1.0)
-   (0.0 0.0 1.0)
-   (1.0 0.0 0.0))
+  ((1.0 0.0 0.0)
+   (0.0 1.0 1.0)
+   (0.0 0.0 0.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -198,9 +198,9 @@ df - degree of freedom.
 (chisquare `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((0.30150574  0.2048448   1.2764052)
-   (0.012683814 0.47505778  0.214469)
-   (0.03788845  0.52503633  0.79743475))
+  ((0.3276539    0.16197506   0.92448807)
+   (0.65705556   3.8677952e-4 0.33302397)
+   (0.30150574   0.2048448    1.2764052))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -227,9 +227,9 @@ The function expotential is a family of initializer functions, and samples the e
 (expotential `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((2.2855954   0.107243605 0.088412136)
-   (0.4217182   1.1965325   2.4921713)
-   (0.8918374   0.75712913  0.118650325))
+  ((2.0468602   0.42217332  0.035641003)
+   (1.5259378   0.16441894  0.5597292)
+   (4.225213    0.08620251  0.68291944))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -252,9 +252,9 @@ The function gamma is a family of initializer functions, and samples matrices fr
 (gamma `(3 3) 1.0)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((1.1517371  0.29439908 1.4118048)
-   (0.49314132 2.491755   0.4016799)
-   (1.5593197  1.2142735  3.8439238))
+  ((0.019726882 0.37907955  0.17126423)
+   (2.2088544   0.9756858   1.9436338)
+   (4.3594155   0.21998532  0.91787076))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -309,9 +309,9 @@ Input:
 (uniform-random `(3 3) 2 4)
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((2.0738032 3.8836932 3.6007326)
-   (2.9219525 2.7779815 3.377235)
-   (3.5439923 2.779057  3.7648938))
+  ((3.263076  3.1209097 2.6771405)
+   (2.324503  3.5176752 3.7175438)
+   (3.8339875 3.1028507 3.2144558))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -339,9 +339,9 @@ The function randn is a family of initializer functions, and samples the gaussia
 (randn `(3 3))
 
 {CPUTENSOR[float] :shape (3 3)  
-  ((-0.19970755 -0.45286098 -0.2552645)
-   (0.6825513   0.37691012  1.0366943)
-   (0.6428742   -0.14792383 0.9427928))
+  ((1.5321895  0.46990195 1.4406842)
+   (0.56609684 -0.5118705 0.561935)
+   (0.8702531  1.035412   -1.2831343))
   :facet :exist
   :requires-grad NIL
   :backward NIL}

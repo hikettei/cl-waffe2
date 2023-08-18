@@ -10,5 +10,6 @@
     (with-op-doc (find-class 'AbstractOptimizer) 't)
     (with-op-doc (macro-function 'defoptimizer) 'function)
     (with-op-doc (find-class 'SGD) 't)
+    (with-op-doc (find-class 'Adam) 't)
     ))
 
