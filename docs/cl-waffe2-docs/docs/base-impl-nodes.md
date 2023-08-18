@@ -1662,7 +1662,7 @@ Im2ColNode is `AbstractNode` which implements forward propagation of [nn.Unfold]
 
 The node is only executed through the `cl-waffe2/nn:unfold` function, so arguments for constructors are dispatched automatically. In addition, the tensor `X` it receive will be the one after padding has been performed.
 
-`N` indicates the number of batch-size, `C` is a channel-size. `k-h`, `k-w` represents the size of kernel, height and width respectively. `h-out` `w-out` is the size of output. `stride-x` `stride-y` is the number of stride, for the most case, specified by the stride argument in `Pooling2D` or `Conv2D`. `img-out` is AbstractTensor with the shape of `(N C H-in W-in)`, can be read by `img-out-of`.
+`N` indicates the number of batch-size, `C` is a channel-size. `k-h`, `k-w` represents the size of kernel, height and width respectively. `h-out` `w-out` is the size of output. `stride-x` `stride-y` is the number of stride, for the most case, specified by the stride argument in `Pooling2D` or `Conv2D`. `img-out` is AbstractTensor with the shape of `(N C H-in W-in)`, can be read by `img-out-of`. All symbols are exported from `cl-waffe2/base-impl` package.
 
 In order to implement device-specific implementation of `Unfold`, define-impl `Im2ColNode` and `Col2ImNode`.
 
