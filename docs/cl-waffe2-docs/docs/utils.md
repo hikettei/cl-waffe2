@@ -124,3 +124,40 @@ set-input:
 predict:
   describe ..
 ```
+## [function] show-backends
+
+```lisp
+(show-backends &key (stream t))
+```
+
+collects and displays the current state of devices to the given `stream`
+
+### Example
+
+```lisp
+(show-backends)
+
+─────[All Backends Tree]──────────────────────────────────────────────────
+
+[*]CPUTENSOR: OpenBLAS=available *simd-extension-p*=available
+    └[-]JITCPUTENSOR: compiler=gcc flags=(-fPIC -O3 -march=native) viz=NIL
+
+[*]LISPTENSOR: Common Lisp implementation on matrix operations
+    └[-]JITLISPTENSOR: To be deleted in the future release. do not use this.
+
+[-]SCALARTENSOR: is a special tensor for representing scalar values.
+    └[-]JITCPUSCALARTENSOR: Use with JITCPUTensor
+
+([*] : in use, [-] : not in use.)
+Add a current-backend-state method to display the status.
+─────[*using-backend*]───────────────────────────────────────────────────
+
+Priority: Higher <───────────────────>Lower
+                  CPUTENSOR LISPTENSOR 
+
+(use with-devices macro or set-devices-toplevel function to change this parameter.)
+```
+
+## [function] set-devices-toplevel
+
+Declares devices to use.

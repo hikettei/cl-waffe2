@@ -71,6 +71,10 @@ docs: ## Generate documents
 		--eval '(cl-waffe2.docs:generate)' \
 		--quit
 
+.PHONY: mkdocs-serve
+mkdocs-serve: ## Launchs the documentation server.
+	cd ./docs/cl-waffe2-docs && mkdocs serve
+
 .PHONY: rt
 rt: recordtest ## Alias for recordtest
 

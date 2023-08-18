@@ -1693,7 +1693,7 @@ The function a>scal sets `true-then` if the equation: `element > scal` is t, oth
 `A` AbstractTensor
 `scal` number (not a ScalarTensor)
 
-(TODO: ScalarTensor as scal)
+(TODO: ScalarTensor as a `scal` argument)
 ## [function] a<scal
 
 ```
@@ -1707,7 +1707,7 @@ The function a<scal sets `true-then` if the equation: `element < scal` is t, oth
 `A` AbstractTensor
 `scal` number (not a ScalarTensor)
 
-(TODO: ScalarTensor as scal)
+(TODO: ScalarTensor as a `scal` argument)
 ## [function] a>=scal
 
 ```
@@ -1721,7 +1721,7 @@ The function a>=scal sets `true-then` if the equation: `element >= scal` is t, o
 `A` AbstractTensor
 `scal` number (not a ScalarTensor)
 
-(TODO: ScalarTensor as scal)
+(TODO: ScalarTensor as a `scal` argument)
 ## [function] a<=scal
 
 ```
@@ -1735,7 +1735,7 @@ The function a<=scal sets `true-then` if the equation: `element <= scal` is t, o
 `A` AbstractTensor
 `scal` number (not a ScalarTensor)
 
-(TODO: ScalarTensor as scal)
+(TODO: ScalarTensor as a `scal` argument)
 ## [function] a=scal
 
 ```
@@ -1749,7 +1749,7 @@ The function a=scal sets `true-then` if the equation: `element = scal` is t, oth
 `A` AbstractTensor
 `scal` number (not a ScalarTensor)
 
-(TODO: ScalarTensor as scal)
+(TODO: ScalarTensor as a `scal` argument)
 ## [function] a>b
 
 ```
