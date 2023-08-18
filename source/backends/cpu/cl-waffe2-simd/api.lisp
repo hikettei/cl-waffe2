@@ -100,8 +100,7 @@
 			     (n :long)
 			     (x (:pointer ,dtype))
 			     (incx :long)
-			     (y (:pointer ,dtype))
-			     (incy :long)))))))
+			     (y (:pointer ,dtype))))))))
   (define-maxmin-op max)
   (define-maxmin-op min))
 

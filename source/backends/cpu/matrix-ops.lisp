@@ -245,7 +245,7 @@ Please consider using another backends." dtype)))))
   (let ((fname (make-fname (dtype x) type)))
     (call-with-view
      #'(lambda (x-view o-view)
-	 `(,fname ,(size-of x-view 0) (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0)) ,(stride-of x-view 0) (incf-tensor-ptr ,out ,out-ptr :offset ,(offset-of o-view 0)) ,(stride-of o-view 0)))
+	 `(,fname ,(size-of x-view 0) (incf-tensor-ptr ,x ,x-ptr :offset ,(offset-of x-view 0)) ,(stride-of x-view 0) (incf-tensor-ptr ,out ,out-ptr :offset ,(offset-of o-view 0))))
      `(,x ,out)
      :force-order t
      :at-least-dim 1)))

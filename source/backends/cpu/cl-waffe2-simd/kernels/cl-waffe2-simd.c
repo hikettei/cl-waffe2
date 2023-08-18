@@ -318,12 +318,12 @@ define_inv_func(u8inv,  uint8_t, x[0] = 1/x[0]);
     long count = 0;							\
     const long simd_end_count =  (n/stride)*stride;			\
     waffe2_##dpref##vec xv;						\
-    waffe2_##dpref##vec maxt = waffe2_load_dscal(max_value);		\
+    waffe2_##dpref##vec maxt = waffe2_load_##prefix##scal(max_value);	\
     while (count != simd_end_count)					\
       {									\
 	if (incx == 1)							\
 	  {								\
-	    xv = waffe2_load_##prefix##vec(x + count*incx);		\
+	    xv = waffe2_load_##prefix##vec(x + count);	         	\
 	  }								\
 	else								\
 	  {								\
@@ -334,7 +334,7 @@ define_inv_func(u8inv,  uint8_t, x[0] = 1/x[0]);
       }									\
     dtype candidates[stride];						\
     waffe2_store_##prefix##vec(candidates, maxt);			\
-    for (int i=0; i<stride; i++) { max_value = MAX(max_value, candidates[i]); } \
+    for (int i=0; i<stride; i++) { max_value = scal_op(max_value, candidates[i]); } \
     x += count * incx;							\
     while (count != n) {						\
       count += 1;							\
