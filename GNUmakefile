@@ -6,7 +6,8 @@ MKTEMP              := mktemp
 RLWRAP              := rlwrap
 LOGFILE             := $(shell mktemp)
 
-GCC := "gcc"
+PYTHON              := "python"
+GCC                 := "gcc"
 .DEFAULT_GOAL := help
 
 # This code taken from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -123,3 +124,6 @@ build_simd_extension: ## Installs SIMD Extension shared library for the CPUTenso
 delete_simd_extension: ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
 	rm -rf ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so
 
+.PHONY: download_assets
+download_assets: ## Downloads training data sample codes use.
+	cd ./examples/mnist && $(PYTHON) train_data.py
