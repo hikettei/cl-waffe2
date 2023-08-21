@@ -36,7 +36,7 @@
 			  ;; In backward:
 			  ;;       dx   dy     dout
 			  :where (A[~] B[~] -> A[~])
-			  :save-for-backward ',sv4bw
+			  :save-for-backward ,sv4bw
 			  :backward ,backward
 			  :documentation ,(format nil "`~a` is a node which computes following operation element-wise.
 
@@ -103,7 +103,7 @@ A\\gets{1 / A}
 		(export ',name)
 		(defnode (,name (myself dtype)
 			  :where (A[~] Scalar[scal] -> A[~] where scal = 1)
-			  :save-for-backward ',sv4bw
+			  :save-for-backward ,sv4bw
 			  :backward ,backward
 			  :documentation ,(format nil
 						  "~a is a node which computes following operation element-wise.
@@ -318,7 +318,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
 (macrolet ((define-sas-node (name sv4bw backward)
 	     `(defnode (,name (myself)
 			:out-scalar-p t
-			:save-for-backward ',sv4bw
+			:save-for-backward ,sv4bw
 			:where (A[scal] B[scal] -> A[scal] where scal = 1)
 			:backward ,backward))))
   (define-sas-node ScalarAndScalarAdd
