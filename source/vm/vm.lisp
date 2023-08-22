@@ -91,11 +91,8 @@ Evaluates generated cl-waffe2 IR sequence.
 			 (format out "        ~a" i))))))))))
 
 
-;; Executes the compile node with profling/sorting
-;; Displays top K ...
-;; sort by time/mem
-;; n-sample
-
+;; TODO: Measure memory-usage
+;; TODO: Include this to the documents
 (defun benchmark-accept-instructions (iseq
 				      &key
 					(n-sample 1)
@@ -176,6 +173,7 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 
   (let ((result)
 	(longest-time-width 0)
+	(total 0.0)
 	(avg 0.0)
 	(sort-by-node    (make-hash-table :test #'equal))
 	(profiled-result (make-hash-table))) ;; Basically, NodeName -> (List Time1 Time2 ...)
@@ -204,6 +202,7 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 	 (setq longest-time-width (max longest-time-width (length (format nil "~a | " (float (apply #'+ v)))))))
      profiled-result)
 
+    (setq total avg)
     (setq avg (/ avg (length iseq)))
     
     (flet ((conc-iseq-str (iseq)
@@ -240,7 +239,7 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 			 (length iseq)
 			 (length (remove-duplicates tensor-ids)))))))
       
-      (format stream "~a" (conc-iseq-str iseq))
+      (format stream "~a~% Total Time: ~a sec~%~%" (conc-iseq-str iseq) total)
 
       ;; Displays top-k node
       (let* ((sort-by-node (loop for key being the hash-keys in sort-by-node
@@ -250,19 +249,24 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 				 collect (nth k sort-by-node)))
 	     (maxlen-node  (loop for k in top-k
 				 if k
-				   maximize (length (format nil "~a" (car k))))))
+				   maximize (length (format nil "~a" (car k)))))
+	     (maxtime-node  (loop for k in top-k
+				  if k
+				    maximize (length (format nil "~a" (second k))))))
 
 	(format stream "~a"
 		(with-output-to-string (out)
 		  (princ " Instruction" out)
 		  (dotimes (i (- maxlen-node (length " Instruction"))) (princ " " out))
-		  (format out " | Total time (s) (n-sample=~a)" n-sample)
+		  (format out " | Total time (s) | Time/Total (n-sample=~a)" n-sample)
 		  (format out "~%")
 		  (dolist (node top-k)
 		    (when node
 		      (format out  "~a" (car node))
 		      (dotimes (i (- maxlen-node (length (format nil "~a" (car node))))) (princ " " out))
 		      (princ " |" out)
-		      (format out " ~a~%" (second node))))))))
+		      (format out " ~a" (second node))
+		      (dotimes (i (- maxtime-node (length (format nil "~a" (second node))))) (princ " " out))
+		      (format out " | ~a%~%" (* 100 (/ (second node) total)))))))))
     result))
 
