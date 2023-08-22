@@ -10,7 +10,8 @@
   (:export
    #:accept-instructions
    #:compile-forward-and-backward
-   #:disassemble-waffe2-ir))
+   #:disassemble-waffe2-ir
+   #:benchmark-accept-instructions))
 
 (in-package :cl-waffe2/vm)
 

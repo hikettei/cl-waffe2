@@ -150,6 +150,10 @@
 Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set `fuse-p`=t to get additional optimization to the generated IR.
 
 Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
+
+## Return
+
+`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node])`
 "
   (declare (type AbstractTensor toplevel))
   ;; fuse-p is intentionally disabled forcibly for a while
