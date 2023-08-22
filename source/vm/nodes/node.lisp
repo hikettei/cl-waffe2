@@ -156,6 +156,7 @@ Here's a list of reports.
 			   for k upfrom 0
 			   if (and
 			       (not *no-grad*)
+			       (cl-waffe2/vm.generic-tensor::ancestor-param-p i)
 			       (nth k save-for-backward)) ;; If T?
 			     collect (let ((*enable-broadcasting-auto* nil)) (system-lazy-set-save-for-backward i))
 			   else

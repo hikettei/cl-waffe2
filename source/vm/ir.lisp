@@ -12,7 +12,7 @@ Instruction: Sets the result of λ function op called with `args`, into self.sta
 
 Basically follows this format:
 
- out_target <- Args1 Args2 Args3 ...
+ out_target <- λ(Args1 Args2 Args3) ...
 
 cl-waffe2 vm specializes on  the sequence of above format.
 "
