@@ -117,6 +117,9 @@ cl-waffe2 vm specializes on  the sequence of above format.
 ;;
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
+
+  (when (not *no-grad*)
+    (return-from apply-in-place-mutation!))
   
   (let ((ref-table (make-hash-table)))
 
@@ -144,6 +147,10 @@ cl-waffe2 vm specializes on  the sequence of above format.
     (loop for instruction in iseq
 	  for nth fixnum upfrom 0 do
 	    (let* ((move-p (movetensor-p (wfop-node instruction)))
+		   (next-node (nth (1+ nth) iseq))
+		   (next-sv4bw-p (and next-node
+				      (movetensor-p (wfop-node next-node))
+				      (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node next-node))))
 		   (node   (wfop-node instruction)))
 
 	      ;; ^ Reading in this way:
@@ -160,6 +167,7 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		     ;; But it could be possible to delete it, and delete more MoveTensorNode, especially for viewed tensor.
 		     (apply #'cl-waffe2/vm.generic-tensor::order-reductable-p 0 (wfop-args instruction)) ;; <- I dunno if is it worth it? should be tested
 		     (not (tensor-protect-me (car (wfop-args instruction))))
+		     (not (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node instruction))) ;; not save for backward
 		     (not (movetensor-save-for-backward node)) ;; ... :force t
 		     )
 		;; Invoking this form == The MoveTensorNode can be deleted as long as ref-table condition is ok.
@@ -176,9 +184,10 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		  ;; tensor_to_be_copied is the last reference in the computation node
 		  (when (and
 			 (numberp (gethash (tensor-id target) ref-table))
-			 (print (gethash (tensor-id target) ref-table))
 			 (or (= 0 (gethash (tensor-id target) ref-table))
-			     (= 1 (gethash (tensor-id target) ref-table))))
+			     (= 1 (gethash (tensor-id target) ref-table)))
+			 (not next-sv4bw-p)
+			 )
 		    ;; Replace op with the lambda function just returning y
 
 		    ;;(print "SET:")
@@ -186,7 +195,6 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		    (setf (wfop-op instruction) #'(lambda (x y)
 						    (declare (ignore x))
 						    y))
-		    
 		    (setf (movetensor-ignore-me (wfop-node instruction)) t))))
 
 	      ;; Counting up the ref-table
@@ -207,4 +215,5 @@ cl-waffe2 vm specializes on  the sequence of above format.
 		(when (numberp (gethash out-id ref-table))
 		  (setf (gethash out-id ref-table) 0))))))
   nil)
+
 
