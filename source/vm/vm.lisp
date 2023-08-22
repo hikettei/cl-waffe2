@@ -264,7 +264,7 @@ CL-WAFFE2-REPL>
 	     (maxtime-node  (loop for k in top-k
 				  if k
 				    maximize (length (format nil "~a" (second k))))))
-
+	
 	(format stream "~a"
 		(with-output-to-string (out)
 		  (princ " Instruction" out)

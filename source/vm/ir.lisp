@@ -70,6 +70,24 @@ cl-waffe2 vm specializes on  the sequence of above format.
 			  (class-name (class-of (wfop-node inst)))))
 		  (class-name (class-of (wfop-node inst)))))))
 
+
+(defmethod instruction-opname-table ((inst WFInstruction))
+  (cl-ppcre:regex-replace-all
+   "(\\n|\\s*$)"
+   (format nil "~a"
+	   (if (functionp (wfop-node inst))
+	       (funcall (wfop-node inst))
+	       (if (movetensor-p (wfop-node inst))
+		   (if (movetensor-ignore-me (wfop-node inst))
+		       "<DELETED>"
+		       (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
+			   (if (scalar-p (wfop-self inst))
+			       "MoveScalarNode(SAVE_FOR_BACKWARD)"
+			       "MoveTensorNode(SAVE_FOR_BACKWARD)")
+			   (class-name (class-of (wfop-node inst)))))
+		   (class-name (class-of (wfop-node inst))))))
+   ""))
+
 (defun area-indent-to (iseq)
   "Returns the largest length of iseq name"
   (loop for i in iseq
