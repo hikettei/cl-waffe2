@@ -45,7 +45,10 @@
     (float (/ (tensor-vec total) (nth 0 (shape out))))))
 
 ;; TODO: Adam, Dropout
-;; Goal: MNIST 96~7% with MLP.
+;; Goal: MNIST 96~7% with MLP. (OK)
+
+#|
+For benchmarking the training time without loading training data
 (defun train-and-valid-mlp (&key
 			      (epoch-num 10))
   (let* ((model (MLPTrainer 784 10 :lr 1e-3)) ;; lr = 1e-2 for SGD
@@ -58,10 +61,54 @@
     (format t "[Log] Start Training...~%")
     (dotimes (nth-epoch epoch-num)
       (format t "~ath Epoch...~%" nth-epoch)
+
+      (let ((batch 0))
+      (let ((end (+ batch 100)))
+	;; :X = Train[batch:batch+100, :]
+	(set-inputs model
+		    ;; Instead, increase offset?
+		    (proceed (->contiguous (view train-img   `(,batch ,end) t)))
+		    (proceed (->contiguous (view train-label `(,batch ,end) t)))
+
+		    )))
       ;;(time
+      (time
       (loop for batch fixnum upfrom 0 below 60000 by 100 do
 
 	;; Set training data.
+	;;(let ((end (+ batch 100)))
+	  ;; :X = Train[batch:batch+100, :]
+	  ;;(set-inputs model
+		      ;; Instead, increase offset?
+	;;	      (proceed (->contiguous (view train-img   `(,batch ,end) t)))
+	;;	      (proceed (->contiguous (view train-label `(,batch ,end) t)))
+
+	;;	      ))
+	(incf total-loss (minimize! model))))
+      (format t "Training Loss: ~a~%" (/ total-loss 600))
+      (setq total-loss 0.0))
+
+    ;; TODO: Validate, Trying Adam
+    (with-no-grad
+      (format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
+model))
+|#
+
+(defun train-and-valid-mlp (&key
+			      (epoch-num 10))
+  (let* ((model (MLPTrainer 784 10 :lr 1e-3)) ;; lr = 1e-2 for SGD
+	 ;; Flatten Inputs
+	 (train-img  (proceed (!div (!reshape *train-data*  t (* 28 28)) 255.0)))
+	 (test-img   (proceed (!div (!reshape *test-data*   t (* 28 28)) 255.0)))
+	 (train-label *train-label*)
+	 (test-label  *test-label*)
+	 (total-loss 0.0))
+    (format t "[Log] Start Training...~%")
+    (dotimes (nth-epoch epoch-num)
+      (format t "~ath Epoch...~%" nth-epoch)
+
+      
+      (loop for batch fixnum upfrom 0 below 60000 by 100 do	 
 	(let ((end (+ batch 100)))
 	  ;; :X = Train[batch:batch+100, :]
 	  (set-inputs model

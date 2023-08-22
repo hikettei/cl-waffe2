@@ -262,7 +262,7 @@ Here's a list of reports.
 
 					 ;; Memo: extending tensor-id is added later...
 					 (tensor-id next-tensor) (tensor-id input)
-					 
+					 (tensor-name next-tensor) (tensor-name input)
 					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::projected-p)
 					 (slot-value input 'cl-waffe2/vm.generic-tensor::projected-p)
 					 

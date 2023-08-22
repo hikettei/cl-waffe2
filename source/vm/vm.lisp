@@ -91,11 +91,8 @@ Evaluates generated cl-waffe2 IR sequence.
 			 (format out "        ~a" i))))))))))
 
 
-;; Executes the compile node with profling/sorting
-;; Displays top K ...
-;; sort by time/mem
-;; n-sample
-
+;; TODO: Measure memory-usage
+;; TODO: Include this to the documents
 (defun benchmark-accept-instructions (iseq
 				      &key
 					(n-sample 1)
@@ -128,42 +125,53 @@ Basically, the function `benchmark-accept-instruction` executes the given list o
 ## Example
 
 ```lisp
-CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!softmax (randn `(300 300)))) :n-sample 100)
+CL-WAFFE2-REPL> (with-no-grad (benchmark-accept-instructions (compile-forward-and-backward (!softmax (randn `(128 128)))) :n-sample 1000))
  Time(s)   |   Instruction ( * - Beyonds the average execution time)
-0.002646   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID70924 <= op(TID70924(300 300) TID70840(300 300))>
-9.5e-5     | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID70937 <= op(TID70937(300 300) TID70935(300 1))>
-5.4e-5     | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID70883 <= op(TID70883(300 300) TID70881(300 1))>
-1.59e-4    | <WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID70843 <= op(TID70843(300 1) TID70845(1))>
-4.9e-5     | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID70854 <= op(TID70854(300 300) TID70843(300 1))>
-0.033278*  | <WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID70854 <= op(TID70854(300 300) TID70840(300 300))>
-0.014609   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID70883 <= op(TID70883(300 300) TID70854(300 300))>
-9.2e-5     | <WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] : TID70906 <= op(TID70906(1) TID70878(1))>
-0.051683*  | <WfInst[Compiled: SCALARDIV-CPUTENSOR]               : TID70883 <= op(TID70883(300 300) TID70906(1))>
-0.014387   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID70937 <= op(TID70937(300 300) TID70883(300 300))>
-0.013283   | <WfInst[Compiled: SUBNODE-CPUTENSOR]                 : TID70924 <= op(TID70924(300 300) TID70937(300 300))>
-0.002301   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID71028 <= op(TID71028(300 300) TID70924(300 300))>
-0.089736*  | <WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID71028 <= op(TID70924(300 300) TID71028(300 300))>
-0.002164   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID71045 <= op(TID71045(300 300) TID71028(300 300))>
-8.3e-5     | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID71058 <= op(TID71058(300 300) TID71056(300 1))>
-1.68e-4    | <WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID70994 <= op(TID70994(300 1) TID70996(1))>
-4.3e-5     | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID71005 <= op(TID71005(300 300) TID70994(300 1))>
-0.002178   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID70977 <= op(TID70977(300 300) TID70924(300 300))>
-0.089359*  | <WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID70977 <= op(TID70924(300 300) TID70977(300 300))>
-0.033492*  | <WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID71005 <= op(TID71005(300 300) TID70977(300 300))>
-0.014615   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID71058 <= op(TID71058(300 300) TID71005(300 300))>
-0.014399   | <WfInst[Compiled: DIVNODE-CPUTENSOR]                 : TID71045 <= op(TID71045(300 300) TID71058(300 300))>
+0.005366   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078760 <= op(TID1078760(128 128) TID1078676(128 128))>
+5.62e-4    | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078719 <= op(TID1078719(128 128) TID1078717(128 1))>
+0.001171   | <WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078679 <= op(TID1078679(128 1) TID1078681(1))>
+3.62e-4    | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078690 <= op(TID1078690(128 128) TID1078679(128 1))>
+0.084953*  | <WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078690 <= op(TID1078690(128 128) TID1078676(128 128))>
+0.053719*  | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078719 <= op(TID1078719(128 128) TID1078690(128 128))>
+6.69e-4    | <WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] : TID1078742 <= op(TID1078742(1) TID1078714(1))>
+0.120082*  | <WfInst[Compiled: SCALARDIV-CPUTENSOR]               : TID1078719 <= op(TID1078719(128 128) TID1078742(1))>
+0.049947*  | <WfInst[Compiled: SUBNODE-CPUTENSOR]                 : TID1078760 <= op(TID1078760(128 128) TID1078719(128 128))>
+0.004672   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078839 <= op(TID1078839(128 128) TID1078760(128 128))>
+0.166431*  | <WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078839 <= op(TID1078760(128 128) TID1078839(128 128))>
+0.004736   | <WfInst[Compiled: <DELETED>]                         : TID1078856 <= op(TID1078856(128 128) TID1078839(128 128))>
+0.001068   | <WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078805 <= op(TID1078805(128 1) TID1078807(1))>
+4.96e-4    | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078816 <= op(TID1078816(128 128) TID1078805(128 1))>
+0.004744   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078788 <= op(TID1078788(128 128) TID1078760(128 128))>
+0.165539*  | <WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078788 <= op(TID1078760(128 128) TID1078788(128 128))>
+0.085777*  | <WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078816 <= op(TID1078816(128 128) TID1078788(128 128))>
+0.050755*  | <WfInst[Compiled: DIVNODE-CPUTENSOR]                 : TID1078856 <= op(TID1078856(128 128) TID1078816(128 128))>
 
-22 Instructions | 19 Tensors
- Instruction                                         | Total time (s) (n-sample=100)
-<WfInst[Compiled: EXPNODE-LISPTENSOR]                | 0.179095
-<WfInst[Compiled: ADDNODE-CPUTENSOR]                 | 0.06677
-<WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          | 0.052899994
-<WfInst[Compiled: SCALARDIV-CPUTENSOR]               | 0.051683
-<WfInst[Compiled: DIVNODE-CPUTENSOR]                 | 0.014399
-<WfInst[Compiled: SUBNODE-CPUTENSOR]                 | 0.013283
-<WfInst[Compiled: SCALARMUL-CPUTENSOR]               | 3.27e-4
-<WfInst[Compiled: VIEWTENSORNODE-T]                  | 3.24e-4
-<WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] | 9.2e-5
+18 Instructions | 15 Tensors
+
+ Total Time: 0.801049 sec
+
+ Instruction                                         | Total time (s) | Time/Total (n-sample=1000)
+<WfInst[Compiled: EXPNODE-LISPTENSOR]                | 0.33196998   | 41.441906%
+<WfInst[Compiled: ADDNODE-CPUTENSOR]                 | 0.17073      | 21.313303%
+<WfInst[Compiled: SCALARDIV-CPUTENSOR]               | 0.120082     | 14.990594%
+<WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          | 0.068501     | 8.551412%
+<WfInst[Compiled: DIVNODE-CPUTENSOR]                 | 0.050755     | 6.3360667%
+<WfInst[Compiled: SUBNODE-CPUTENSOR]                 | 0.049947     | 6.2351995%
+<WfInst[Compiled: <DELETED>]                         | 0.004736     | 0.5912248%
+<WfInst[Compiled: SCALARMUL-CPUTENSOR]               | 0.002239     | 0.2795085%
+<WfInst[Compiled: VIEWTENSORNODE-T]                  | 0.0014199999 | 0.17726754%
+<WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] | 6.69e-4      | 0.08351549%
+{CPUTENSOR[float] :shape (128 128) :named ChainTMP1078855 
+  ((0.0017760922 0.0030971088 0.017302852  ~ 0.012318904  6.049352e-4  0.0041618845)                    
+   (0.012581187  0.0030174912 0.016748475  ~ 0.007076549  0.007030908  0.0017801385)   
+                 ...
+   (0.0036988985 0.0061271163 0.05046869   ~ 0.009297135  0.003441493  5.820294e-4)
+   (0.045387346  0.004674337  0.0018589711 ~ 0.008918608  0.0024204857 0.00761818))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+CL-WAFFE2-REPL>
+;; (The result may not be the latest)
 ```
 "
   (declare (type list iseq)
@@ -176,6 +184,7 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 
   (let ((result)
 	(longest-time-width 0)
+	(total 0.0)
 	(avg 0.0)
 	(sort-by-node    (make-hash-table :test #'equal))
 	(profiled-result (make-hash-table))) ;; Basically, NodeName -> (List Time1 Time2 ...)
@@ -204,6 +213,7 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 	 (setq longest-time-width (max longest-time-width (length (format nil "~a | " (float (apply #'+ v)))))))
      profiled-result)
 
+    (setq total avg)
     (setq avg (/ avg (length iseq)))
     
     (flet ((conc-iseq-str (iseq)
@@ -240,7 +250,7 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 			 (length iseq)
 			 (length (remove-duplicates tensor-ids)))))))
       
-      (format stream "~a" (conc-iseq-str iseq))
+      (format stream "~a~% Total Time: ~a sec~%~%" (conc-iseq-str iseq) total)
 
       ;; Displays top-k node
       (let* ((sort-by-node (loop for key being the hash-keys in sort-by-node
@@ -250,19 +260,24 @@ CL-WAFFE2-REPL> (benchmark-accept-instructions (compile-forward-and-backward (!s
 				 collect (nth k sort-by-node)))
 	     (maxlen-node  (loop for k in top-k
 				 if k
-				   maximize (length (format nil "~a" (car k))))))
-
+				   maximize (length (format nil "~a" (car k)))))
+	     (maxtime-node  (loop for k in top-k
+				  if k
+				    maximize (length (format nil "~a" (second k))))))
+	
 	(format stream "~a"
 		(with-output-to-string (out)
 		  (princ " Instruction" out)
 		  (dotimes (i (- maxlen-node (length " Instruction"))) (princ " " out))
-		  (format out " | Total time (s) (n-sample=~a)" n-sample)
+		  (format out " | Total time (s) | Time/Total (n-sample=~a)" n-sample)
 		  (format out "~%")
 		  (dolist (node top-k)
 		    (when node
 		      (format out  "~a" (car node))
 		      (dotimes (i (- maxlen-node (length (format nil "~a" (car node))))) (princ " " out))
 		      (princ " |" out)
-		      (format out " ~a~%" (second node))))))))
+		      (format out " ~a" (second node))
+		      (dotimes (i (- maxtime-node (length (format nil "~a" (second node))))) (princ " " out))
+		      (format out " | ~a%~%" (* 100 (/ (second node) total)))))))))
     result))
 

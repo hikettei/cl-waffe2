@@ -685,6 +685,43 @@ The function proceed-backward calls forward and backwrd of the tensor.
 
 `T` (which indicates backward is succeed)
 
+## [function] proceed-bench
+
+```lisp
+(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil))
+```
+
+Invokes `cl-waffe2 VM` with benchmarking the forward and (if specified) backward.
+
+### Input
+
+`backward[boolean]` Set t in order to profile backward.
+
+### Example
+
+```lisp
+CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
+ Time(s) |   Instruction ( * - Beyonds the average execution time)
+2.3e-4*  | <WfInst[Compiled: SCALARMUL-CPUTENSOR] : TID1389503 <= op(TID1389503(1 1) <Input>TID1389505(1))>
+2.0e-6   | <WfInst[Compiled: VIEWTENSORNODE-T]    : TID1389514 <= op(TID1389514(3 3) TID1389503(1 1))>
+7.0e-6   | <WfInst[Compiled: ADDNODE-CPUTENSOR]   : TID1389514 <= op(TID1389514(3 3) <Input>TID1389488(3 3))>
+1.0e-6   | <WfInst[Compiled: VIEWTENSORNODE-T]    : TID1389536 <= op(TID1389536(1 1) TID1389514(3 3))>
+
+4 Instructions | 5 Tensors
+
+ Total Time: 2.4e-4 sec
+
+ Instruction                           | Total time (s) | Time/Total (n-sample=1)
+<WfInst[Compiled: SCALARMUL-CPUTENSOR] | 2.3e-4 | 95.833336%
+<WfInst[Compiled: ADDNODE-CPUTENSOR]   | 7.0e-6 | 2.916667%
+<WfInst[Compiled: VIEWTENSORNODE-T]    | 3.0e-6 | 1.2500001%
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP1389502 
+  ((-0.43719095))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+```
+
 ## [macro] %transform
 
 ```lisp
