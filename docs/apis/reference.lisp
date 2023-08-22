@@ -9,6 +9,7 @@
 		  (placedoc ,name ,type)
 		  ,@body)))
     (with-op-doc #'cl-waffe2/vm:disassemble-waffe2-ir 'function)
+    (with-op-doc #'cl-waffe2/vm:benchmark-accept-instructions 'function)
     (with-op-doc #'cl-waffe2/vm:compile-forward-and-backward 'function)
     (with-op-doc #'cl-waffe2/vm:accept-instructions 'function)))
 
@@ -161,6 +162,7 @@
     (caller-doc proceed)
     (caller-doc proceed-time)
     (caller-doc proceed-backward)
+    (caller-doc proceed-bench)
 
     (caller-doc %transform)
     (caller-doc !flexible)
