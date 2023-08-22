@@ -1,6 +1,26 @@
 
 (in-package :cl-waffe2/vm)
 
+;; This file isn't used anymore for a while
+;; TODO:
+;;  Add a macro named `defpath`
+;;  We create a search-based fuse-ops, which is user-extensible
+
+;; defpath possess these datum:
+;;  1. Nodes to be replaced
+;;  2. After replaced IR
+
+;; For example, (!add (!mul 2.0 x) y) should be expressed as (axpy! 2.0 x 0.0 y) to reduce instructions.
+;; defpath is the macro to achieve this ^
+
+;; (defmacro defpath
+
+;; TODO: Delete the code below?
+
+
+
+;; Not working well, currently disabled.
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; TODO: Add PermuteNode
 (defparameter *special-position-nodes* '(cl-waffe2/base-impl::ViewTensorNode cl-waffe2/base-impl::ReshapeNode)) ;; + ReshapeNode PermuteNode
 

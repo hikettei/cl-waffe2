@@ -47,6 +47,7 @@
    #:proceed
    #:proceed-time
    #:proceed-backward
+   #:proceed-bench
    #:lazy-print
    #:logical-compiler-info)
   (:export
