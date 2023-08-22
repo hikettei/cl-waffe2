@@ -73,7 +73,17 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#function-disassemble-waffe2-ir">[function] disassemble-waffe2-ir</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-benchmark-accept-instructions">[function] benchmark-accept-instructions</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#return">Return</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example">Example</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-compile-forward-and-backward">[function] compile-forward-and-backward</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#return_1">Return</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-accept-instructions">[function] accept-instructions</a>
     </li>
@@ -140,11 +150,73 @@
 <pre><code class="language-lisp">(disassemble-waffe2-ir toplevel &amp;key (backward t) (stream t) (fuse-p t))
 </code></pre>
 <p>Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to <code>stream</code>. If <code>backward</code> was set to t, <code>backward</code> is also displayed.</p>
+<h2 id="function-benchmark-accept-instructions">[function] benchmark-accept-instructions</h2>
+<pre><code class="language-lisp">(benchmark-accept-instructions iseq &amp;key (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10))
+</code></pre>
+<p>Basically, the function <code>benchmark-accept-instruction</code> executes the given list of instructions with profiling execution time, but at the end of proess, displays the report into <code>stream</code>.</p>
+<h2 id="inputs">Inputs</h2>
+<p><code>n-sample[fixnum]</code> repeats the iseq execution for <code>n-sample</code> times</p>
+<p><code>ignore-first-call[boolean]</code> If t, ignores the first call to avoid including allocating time.</p>
+<p><code>stream[stream]</code> the place to display the result</p>
+<p><code>top-k[fixnum]</code> top-k slowest nodes are displayed at the end of report.</p>
+<h2 id="return">Return</h2>
+<p><code>result[AbstractTensor]</code></p>
+<h2 id="example">Example</h2>
+<pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (with-no-grad (benchmark-accept-instructions (compile-forward-and-backward (!softmax (randn `(128 128)))) :n-sample 1000))
+ Time(s)   |   Instruction ( * - Beyonds the average execution time)
+0.005366   | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078760 &lt;= op(TID1078760(128 128) TID1078676(128 128))&gt;
+5.62e-4    | &lt;WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078719 &lt;= op(TID1078719(128 128) TID1078717(128 1))&gt;
+0.001171   | &lt;WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078679 &lt;= op(TID1078679(128 1) TID1078681(1))&gt;
+3.62e-4    | &lt;WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078690 &lt;= op(TID1078690(128 128) TID1078679(128 1))&gt;
+0.084953*  | &lt;WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078690 &lt;= op(TID1078690(128 128) TID1078676(128 128))&gt;
+0.053719*  | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078719 &lt;= op(TID1078719(128 128) TID1078690(128 128))&gt;
+6.69e-4    | &lt;WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] : TID1078742 &lt;= op(TID1078742(1) TID1078714(1))&gt;
+0.120082*  | &lt;WfInst[Compiled: SCALARDIV-CPUTENSOR]               : TID1078719 &lt;= op(TID1078719(128 128) TID1078742(1))&gt;
+0.049947*  | &lt;WfInst[Compiled: SUBNODE-CPUTENSOR]                 : TID1078760 &lt;= op(TID1078760(128 128) TID1078719(128 128))&gt;
+0.004672   | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078839 &lt;= op(TID1078839(128 128) TID1078760(128 128))&gt;
+0.166431*  | &lt;WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078839 &lt;= op(TID1078760(128 128) TID1078839(128 128))&gt;
+0.004736   | &lt;WfInst[Compiled: &lt;DELETED&gt;]                         : TID1078856 &lt;= op(TID1078856(128 128) TID1078839(128 128))&gt;
+0.001068   | &lt;WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078805 &lt;= op(TID1078805(128 1) TID1078807(1))&gt;
+4.96e-4    | &lt;WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078816 &lt;= op(TID1078816(128 128) TID1078805(128 1))&gt;
+0.004744   | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078788 &lt;= op(TID1078788(128 128) TID1078760(128 128))&gt;
+0.165539*  | &lt;WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078788 &lt;= op(TID1078760(128 128) TID1078788(128 128))&gt;
+0.085777*  | &lt;WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078816 &lt;= op(TID1078816(128 128) TID1078788(128 128))&gt;
+0.050755*  | &lt;WfInst[Compiled: DIVNODE-CPUTENSOR]                 : TID1078856 &lt;= op(TID1078856(128 128) TID1078816(128 128))&gt;
+
+18 Instructions | 15 Tensors
+
+ Total Time: 0.801049 sec
+
+ Instruction                                         | Total time (s) | Time/Total (n-sample=1000)
+&lt;WfInst[Compiled: EXPNODE-LISPTENSOR]                | 0.33196998   | 41.441906%
+&lt;WfInst[Compiled: ADDNODE-CPUTENSOR]                 | 0.17073      | 21.313303%
+&lt;WfInst[Compiled: SCALARDIV-CPUTENSOR]               | 0.120082     | 14.990594%
+&lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          | 0.068501     | 8.551412%
+&lt;WfInst[Compiled: DIVNODE-CPUTENSOR]                 | 0.050755     | 6.3360667%
+&lt;WfInst[Compiled: SUBNODE-CPUTENSOR]                 | 0.049947     | 6.2351995%
+&lt;WfInst[Compiled: &lt;DELETED&gt;]                         | 0.004736     | 0.5912248%
+&lt;WfInst[Compiled: SCALARMUL-CPUTENSOR]               | 0.002239     | 0.2795085%
+&lt;WfInst[Compiled: VIEWTENSORNODE-T]                  | 0.0014199999 | 0.17726754%
+&lt;WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] | 6.69e-4      | 0.08351549%
+{CPUTENSOR[float] :shape (128 128) :named ChainTMP1078855 
+  ((0.0017760922 0.0030971088 0.017302852  ~ 0.012318904  6.049352e-4  0.0041618845)                    
+   (0.012581187  0.0030174912 0.016748475  ~ 0.007076549  0.007030908  0.0017801385)   
+                 ...
+   (0.0036988985 0.0061271163 0.05046869   ~ 0.009297135  0.003441493  5.820294e-4)
+   (0.045387346  0.004674337  0.0018589711 ~ 0.008918608  0.0024204857 0.00761818))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+CL-WAFFE2-REPL&gt;
+;; (The result may not be the latest)
+</code></pre>
 <h2 id="function-compile-forward-and-backward">[function] compile-forward-and-backward</h2>
 <pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t) (fuse-p t) (compile-mode :default))
 </code></pre>
 <p>Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set <code>fuse-p</code>=t to get additional optimization to the generated IR.</p>
 <p>Tips: <code>disassemble-waffe2-ir</code> to display compiled Instruction Sequence.</p>
+<h2 id="return_1">Return</h2>
+<p><code>(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node])</code></p>
 <h2 id="function-accept-instructions">[function] accept-instructions</h2>
 <pre><code class="language-lisp">(accept-instructions iseq)
 </code></pre>

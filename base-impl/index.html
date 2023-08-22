@@ -285,6 +285,14 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-proceed-bench">[function] proceed-bench</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#input">Input</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-transform">[macro] %transform</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#syntax">Syntax</a>
@@ -301,7 +309,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-flexible">[function] !flexible</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
     </li>
         </ul>
     </li>
@@ -681,7 +689,7 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_60">Inputs</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_8">Example</a>
     </li>
         </ul>
     </li>
@@ -1212,6 +1220,34 @@ CL-WAFFE2-REPL&gt;
 <p>The function proceed-backward calls forward and backwrd of the tensor.</p>
 <h3 id="output_1">Output</h3>
 <p><code>T</code> (which indicates backward is succeed)</p>
+<h2 id="function-proceed-bench">[function] proceed-bench</h2>
+<pre><code class="language-lisp">(proceed-bench tensor &amp;key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil))
+</code></pre>
+<p>Invokes <code>cl-waffe2 VM</code> with benchmarking the forward and (if specified) backward.</p>
+<h3 id="input">Input</h3>
+<p><code>backward[boolean]</code> Set t in order to profile backward.</p>
+<h3 id="example_6">Example</h3>
+<pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (proceed-bench (!sum (randn `(3 3))))
+ Time(s) |   Instruction ( * - Beyonds the average execution time)
+2.3e-4*  | &lt;WfInst[Compiled: SCALARMUL-CPUTENSOR] : TID1389503 &lt;= op(TID1389503(1 1) &lt;Input&gt;TID1389505(1))&gt;
+2.0e-6   | &lt;WfInst[Compiled: VIEWTENSORNODE-T]    : TID1389514 &lt;= op(TID1389514(3 3) TID1389503(1 1))&gt;
+7.0e-6   | &lt;WfInst[Compiled: ADDNODE-CPUTENSOR]   : TID1389514 &lt;= op(TID1389514(3 3) &lt;Input&gt;TID1389488(3 3))&gt;
+1.0e-6   | &lt;WfInst[Compiled: VIEWTENSORNODE-T]    : TID1389536 &lt;= op(TID1389536(1 1) TID1389514(3 3))&gt;
+
+4 Instructions | 5 Tensors
+
+ Total Time: 2.4e-4 sec
+
+ Instruction                           | Total time (s) | Time/Total (n-sample=1)
+&lt;WfInst[Compiled: SCALARMUL-CPUTENSOR] | 2.3e-4 | 95.833336%
+&lt;WfInst[Compiled: ADDNODE-CPUTENSOR]   | 7.0e-6 | 2.916667%
+&lt;WfInst[Compiled: VIEWTENSORNODE-T]    | 3.0e-6 | 1.2500001%
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1389502 
+  ((-0.43719095))
+  :facet :input
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
 <h2 id="macro-transform">[macro] %transform</h2>
 <pre><code class="language-lisp">(%transform &amp;body transform-syntax)
 </code></pre>
@@ -1253,7 +1289,7 @@ CL-WAFFE2-REPL&gt;
                                                  ^ &lt;1 x N&gt;
 </code></pre>
 <p>Note that added axes could be broadcasted automatically when the operation called with multiple arguments.</p>
-<h3 id="example_6">Example</h3>
+<h3 id="example_7">Example</h3>
 <p><code>!flexible</code> is a fundamental operation when using broadcasting in cl-waffe2. And usually called via <code>%transform</code> macro for readability.</p>
 <pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (!add (ax+b `(3 3) 0 0) (print (!flexible (ax+b `(3) 1 0) :at -1)))
 
@@ -1878,7 +1914,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <p><code>initargs[list]</code> a list of arguments for <code>pad-maker</code></p>
 <p>Note that: the axes to be padded, must be fixnum. not a symbol.</p>
 <p>If the shapes does not change before/after padding, returns the given tensor as it is.</p>
-<h3 id="example_7">Example</h3>
+<h3 id="example_8">Example</h3>
 <pre><code class="language-lisp">(proceed (padding (ax+b `(3 3) 0 1) `((1 1) (1 1))))
 
 {CPUTENSOR[float] :shape (5 5) -&gt; :view (&lt;T&gt; &lt;T&gt;) -&gt; :visible-shape (5 5) :named ChainTMP1104579 
