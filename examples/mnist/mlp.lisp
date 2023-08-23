@@ -47,85 +47,57 @@
 ;; TODO: Adam, Dropout
 ;; Goal: MNIST 96~7% with MLP. (OK)
 
-#|
-For benchmarking the training time without loading training data
+;; Changing the visible area without making a copy:
+(defun tensor-displace-to (tensor index)
+  (setf (tensor-initial-offset tensor) (* index (second (shape tensor))))
+  tensor)
+
 (defun train-and-valid-mlp (&key
 			      (epoch-num 10))
   (let* ((model (MLPTrainer 784 10 :lr 1e-3)) ;; lr = 1e-2 for SGD
 	 ;; Flatten Inputs
 	 (train-img  (proceed (!div (!reshape *train-data*  t (* 28 28)) 255.0)))
 	 (test-img   (proceed (!div (!reshape *test-data*   t (* 28 28)) 255.0)))
-	 (train-label *train-label*)
+	 
+	 (train-img-window (view train-img `(0 100) t))
+	 
+	 (train-label (view *train-label* `(0 100) t))
 	 (test-label  *test-label*)
 	 (total-loss 0.0))
     (format t "[Log] Start Training...~%")
     (dotimes (nth-epoch epoch-num)
       (format t "~ath Epoch...~%" nth-epoch)
 
-      (let ((batch 0))
-      (let ((end (+ batch 100)))
-	;; :X = Train[batch:batch+100, :]
-	(set-inputs model
-		    ;; Instead, increase offset?
-		    (proceed (->contiguous (view train-img   `(,batch ,end) t)))
-		    (proceed (->contiguous (view train-label `(,batch ,end) t)))
-
-		    )))
-      ;;(time
       (time
-      (loop for batch fixnum upfrom 0 below 60000 by 100 do
-
-	;; Set training data.
-	;;(let ((end (+ batch 100)))
-	  ;; :X = Train[batch:batch+100, :]
-	  ;;(set-inputs model
-		      ;; Instead, increase offset?
-	;;	      (proceed (->contiguous (view train-img   `(,batch ,end) t)))
-	;;	      (proceed (->contiguous (view train-label `(,batch ,end) t)))
-
-	;;	      ))
-	(incf total-loss (minimize! model))))
+       (loop for batch fixnum upfrom 0 below 60000 by 100 do
+	 ;; :X = Train[batch:batch+100, :]
+	 (set-inputs model
+		     ;; Instead, increase offset?
+		     (tensor-displace-to train-img-window batch)
+		     (tensor-displace-to train-label     batch))
+	 (incf total-loss (minimize! model))))
       (format t "Training Loss: ~a~%" (/ total-loss 600))
       (setq total-loss 0.0))
 
     ;; TODO: Validate, Trying Adam
     (with-no-grad
       (format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
-model))
-|#
 
-(defun train-and-valid-mlp (&key
-			      (epoch-num 10))
-  (let* ((model (MLPTrainer 784 10 :lr 1e-3)) ;; lr = 1e-2 for SGD
-	 ;; Flatten Inputs
-	 (train-img  (proceed (!div (!reshape *train-data*  t (* 28 28)) 255.0)))
-	 (test-img   (proceed (!div (!reshape *test-data*   t (* 28 28)) 255.0)))
-	 (train-label *train-label*)
-	 (test-label  *test-label*)
-	 (total-loss 0.0))
-    (format t "[Log] Start Training...~%")
-    (dotimes (nth-epoch epoch-num)
-      (format t "~ath Epoch...~%" nth-epoch)
+    (format t "Benchmaking (Forward Step, 1Epoch)...~%")
 
-      
-      (loop for batch fixnum upfrom 0 below 60000 by 100 do	 
-	(let ((end (+ batch 100)))
-	  ;; :X = Train[batch:batch+100, :]
-	  (set-inputs model
-		      ;; Instead, increase offset?
-		      (proceed (->contiguous (view train-img   `(,batch ,end) t)))
-		      (proceed (->contiguous (view train-label `(,batch ,end) t)))))
-	(incf total-loss (minimize! model)))
-      (format t "Training Loss: ~a~%" (/ total-loss 600))
-      (setq total-loss 0.0))
-
-    ;; TODO: Validate, Trying Adam
-    (with-no-grad
-      (format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
+    (proceed-bench
+     (!sum (softmax-cross-entropy
+	    (call
+	     (MLP-Sequence 784 256 10)
+	     (randn `(100 784)))
+	    (randn `(100 10))))
+     :n-sample 1000
+     :backward nil)
     model))
 
 ;; PyTorch ... 7sec
 ;; 1Epoch 13s(cl-waffe2) -> 6s (cl-waffe)
+;; 2023/08/23 6~7sec
 ;;(progn;;with-cpu-jit (CPUTensor LispTensor)
 ;;  (format t "MLP(hidden_size=256) optimizer=Adam batch-size=100~%")
 ;;  (train-and-valid-mlp :epoch-num 10))

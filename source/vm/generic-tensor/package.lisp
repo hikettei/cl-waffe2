@@ -31,6 +31,7 @@
    #:tensor-stride
    #:tensor-name
    #:shape-with-broadcastable
+   #:tensor-initial-offset
    #:dtype
    #:tensor-attribute
    #:tensor-protect-me

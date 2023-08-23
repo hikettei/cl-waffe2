@@ -271,6 +271,7 @@ Here's a list of reports.
 
 				   (when (cl-waffe2/vm.generic-tensor::vec input)
 				     (setf (tensor-vec next-tensor) (tensor-vec input)
+					   (cl-waffe2/vm.generic-tensor:tensor-initial-offset next-tensor) (cl-waffe2/vm.generic-tensor:tensor-initial-offset input)
 					   (cl-waffe2/vm.generic-tensor::tensor-facet input) :exist))))
 			       
 			       (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p next-tensor) ancestor-param-p)
