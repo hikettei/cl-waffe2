@@ -13,11 +13,71 @@
 ;; For example, (!add (!mul 2.0 x) y) should be expressed as (axpy! 2.0 x 0.0 y) to reduce instructions.
 ;; defpath is the macro to achieve this ^
 
-;; (defmacro defpath
+;; ~~~ Developing Cycle with cl-waffe2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  1. Declare the new device (e.g.: CPUTensor)
+;;  2. Prepare allocator and accessors (e.g.: initialize-instance method, vref and (setf vref))
+;;  3. Implement existing operations with define-impl
+;;  4. Blush up the generated IR with defpath macro to fuse more operations in a small cycle.
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; TODO: Delete the code below?
+(defparameter *user-defined-path-list* (make-hash-table))
+
+(defclass FusionPath ()
+  nil
+  (:documentation "
+## [class] FusionPath
+
+Query                    | Output
+[ScalarMul-CPUTensor]
+[Add]                    -> [ScalarMulAndAdd]
+
+Query is a list of: (make-query ...)
+"))
+
+(defstruct (FusionPathQuery
+	    (:conc-name query-)
+	    (:constructor make-query
+		(abstract-node
+		 &key
+		   (device t)
+		   (dtype  t)
+		   (pred   #'(lambda (node &rest tensor) (declare (ignore node tensor)) t)))))
+  "
+## [struct] FusionPathQuery
+
+`FusionPathQuery` becomes t when satisfies all of following conditions:
+
+`abstract-node[symbol]` become t when the node is a subtype of `abstract-node`
+
+`device[t or symbol]`   become t when the node is working under the device
+
+`dtype[t or list]`      become t when the `dtype` is set to t, or the list of dtype in arguments are corresponds with the list. (e.g.: `(list :float :float)`)
+
+`pred[function]`        specifies an additional predicator, usually receives `(node &rest arguments-tensor)` and return t to accept it. (`arguments-tensor` is an list of tensors, which `forward` or `call` used.)
+"
+  (node   abstract-node :type symbol)
+  (device device :type symbol)
+  (dtype  dtype  :type (or symbol keyword list))
+  (pred   pred   :type function))
+
+(defmacro defpath ((fusion-name &rest query-list) &key (replaced-with nil))
+  )
+
+(defpath (AddAndScalarMulFusion
+	  (make-query 'AddNode   :device CPUTensor :dtype t)
+	  (make-query 'ScalarMul :device CPUTensor :dtype t))
+  :replaced-with ((x y) (!mul x y)))
+				  
+
+(defun apply-path-fusion (iseq)
+  (declare (type list iseq))
+  (let ((no-changed-p t))
 
 
+    ;; apply-path-fusion is forcibly called recursively until there's no modification
+    (if no-changed-p
+	iseq
+	(apply-path-fusion iseq))))
 
 ;; Not working well, currently disabled.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
