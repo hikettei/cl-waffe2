@@ -1,0 +1,6 @@
+[submodule "third_party"]
+	path = third_party
+	url = https://github.com/shibatch/sleef.git
+[submodule "third_party/sleef"]
+	path = third_party/sleef
+	url = https://github.com/shibatch/sleef.git
