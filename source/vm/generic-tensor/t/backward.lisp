@@ -9,21 +9,21 @@
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t)))
       (proceed-backward (!mul (!sum a) 1.0))
-      (= (vref (grad a) 0) 1.0))))
+      (~= (vref (grad a) 0) 1.0))))
 
 ;; !mul/!div Swapping/X->X,Y
 (defun chain-test2 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t)))
       (proceed-backward (!div (!sum a) 1.0))
-      (= (vref (grad a) 0) 1.0))))
+      (~= (vref (grad a) 0) 1.0))))
 
 ;; No side eff?
 (defun chain-test3 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t)))
       (proceed-backward (!div (!sum a) 2.0))
-      (= (vref (grad a) 0) 0.5))))
+      (~= (vref (grad a) 0) 0.5))))
 
 (defun chain-test4 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
@@ -31,7 +31,7 @@
 	  (b (make-tensor (* 15.0 15.0) :requires-grad t)))
       ;; (!div scal mat) -> (!mul (!sas-div 1 scal) mat)
       (proceed-backward (!div (!sum a) b))
-      (= (vref (grad a) 0) (float (/ (* 15 15)))))))
+      (~= (vref (grad a) 0) (float (/ (* 15 15)))))))
 
 (defun chain-test5 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
@@ -39,7 +39,7 @@
 	  (b (* 15.0 15.0)))
       ;; (!div scal mat) -> (!mul (!sas-div 1 scal) mat)
       (proceed-backward (!div (!sum a) b))
-      (= (vref (grad a) 0) (float (/ (* 15 15)))))))
+      (~= (vref (grad a) 0) (float (/ (* 15 15)))))))
 ;; =======================================================================
 
 ;; ???
@@ -48,13 +48,13 @@
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t))
 	  (b (* 15.0 15.0)))
       (proceed-backward (!sum (!add (!sin a) b)))
-      (= (vref (grad a) 0) (cos 1)))))
+      (~= (vref (grad a) 0) (cos 1)))))
 
 (defun chain-test7 ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
     (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t)))
       (proceed-backward (!sin (!sin a)))
-      (= (vref (grad a) 0) (* (cos (sin 1)) (cos 1))))))
+      (~= (vref (grad a) 0) (* (cos (sin 1)) (cos 1))))))
 
 (defun backward-being-not-destructed ()
   (with-devices (cl-waffe2/backends.lisp:LispTensor)
@@ -62,8 +62,8 @@
 	  (b (parameter (make-tensor `(15 15) :initial-element 6 :requires-grad t))))
       (proceed-backward (!sum (!mul (!sin a) (!sin b))))
       (and
-       (= (vref a 0) 3.0)
-       (= (vref b 0) 6.0)))))
+       (~= (vref a 0) 3.0)
+       (~= (vref b 0) 6.0)))))
 
 (defun chain-test8 ()
   (let ((a (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 3)))
@@ -78,9 +78,9 @@
     ;;(print (grad b))
     ;;(print (grad c))
     (and
-     (= (vref (grad a) 0) 2)
-     (= (vref (grad b) 0) 3)
-     (= (vref (grad c) 0) 1))))
+     (~= (vref (grad a) 0) 2)
+     (~= (vref (grad b) 0) 3)
+     (~= (vref (grad c) 0) 1))))
 
 (defun chain-test9 ()
   (let ((a (parameter (cl-waffe2/distributions:ax+b `(3 3) 0 3)))
@@ -93,11 +93,11 @@
       (proceed-backward (!sum (!add (!mul a1 prev-layer) c1))))
 
     (and
-     (= (vref (grad a)  0) 4)
-     (= (vref (grad b)  0) 6)
-     (= (vref (grad c)  0) 2)
-     (= (vref (grad a1) 0) 7)
-     (= (vref (grad c1) 0) 1))))
+     (~= (vref (grad a)  0) 4)
+     (~= (vref (grad b)  0) 6)
+     (~= (vref (grad c)  0) 2)
+     (~= (vref (grad a1) 0) 7)
+     (~= (vref (grad c1) 0) 1))))
     
      
      
@@ -113,7 +113,7 @@
   (is (chain-test8))
   (is (chain-test9)))
 
-(test backward-side-effect-test
+(test backward-si de-effect-test
   (is (backward-being-not-destructed)))
   
 ;; save-for-backward test

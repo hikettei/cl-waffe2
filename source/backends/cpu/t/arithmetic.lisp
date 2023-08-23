@@ -14,6 +14,8 @@
 (max-tester CPUTensor)
 (min-tester CPUTensor)
 (comparison-test-set CPUTensor)
+
+(mathematical-test-set CPUTensor)
 )
 
 (defun max-diff-test ()

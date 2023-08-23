@@ -173,5 +173,66 @@
   (define-cmp-op ge))
 
 ;; Math APIs sin/cos/tan/exp/log/abs/sign etc...
+(macrolet ((define-math-op (opname)
+	     `(progn
+		;;size xptr incx xptr incy
+		,@(loop for prefix in `(:d :s)
+			for dtype  in `(:double :float)
+			collect
+			`(progn
+			   (export ',(intern (uformat nil "waffe2-~a~a" prefix opname)))
+			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a" prefix opname))))
+			   (defcfun ,(dformat nil "waffe2_~a~a" prefix opname) :void
+			     (n :long)
+			     (x (:pointer ,dtype))
+			     (incx :long)
+			     (y (:pointer ,dtype))
+			     (incy :long)))))))
+  (define-math-op sin)
+  (define-math-op cos)
+  (define-math-op tan)
+
+  (define-math-op asin)
+  (define-math-op acos)
+  (define-math-op atan)
+
+  (define-math-op sinh)
+  (define-math-op cosh)
+  (define-math-op tanh)
+
+  (define-math-op asinh)
+  (define-math-op acosh)
+  (define-math-op atanh)
+
+  (define-math-op log)
+  (define-math-op log2)
+  (define-math-op log10)
+
+  (define-math-op abs)
+  (define-math-op exp)
+  (define-math-op sqrt)
+  (define-math-op cbrt))
+
+(export '(waffe2-sloge waffe2-dloge))
+(defun waffe2-sloge (n x incx y incy) (waffe2-slog n x incx y incy))
+(defun waffe2-dloge (n x incx y incy) (waffe2-dlog n x incx y incy))
+
+(macrolet ((define-math-op1 (opname)
+	     `(progn
+		;;size xptr incx xptr incy
+		,@(loop for prefix in `(:d :s)
+			for dtype  in `(:double :float)
+			collect
+			`(progn
+			   (export ',(intern (uformat nil "waffe2-~a~a" prefix opname)))
+			   (declaim (inline ,(intern (uformat nil "waffe2-~a~a" prefix opname))))
+			   (defcfun ,(dformat nil "waffe2_~a~a" prefix opname) :void
+			     (n :long)
+			     (x (:pointer ,dtype))
+			     (incx :long)
+			     (pow-n ,dtype)
+			     (y (:pointer ,dtype))
+			     (incy :long)))))))
+  (define-math-op1 pow))
 
 ;; Unfold

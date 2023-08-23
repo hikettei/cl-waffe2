@@ -581,3 +581,184 @@ define_scmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 // AVX512, SSE2
 // Data Casting, SLEEF/SIMD Mathematical Impls, Fast Unfold for Pool/Conv
 
+#define define_math_func(define_as, stride, prefix, dtype, simd_op_name, reminder_op_name) \
+  void waffe2_##define_as(const long n, dtype* x, const long incx, dtype* y, const long incy) \
+  {									\
+    long count = 0;							\
+    const long simd_end_idx = (n/stride)*stride;			\
+    waffe2_##prefix##vec vx, vy;					\
+    if (incx >= 1) {							\
+      if (incx == 1 && incy == 1)					\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = waffe2_load_##prefix##vec(x + count);		\
+	      vy = simd_op_name(vx);			         	\
+	      waffe2_store_##prefix##vec(y + count, vy);		\
+	      count += stride;						\
+	    }								\
+	}								\
+      else if (incx == 1)						\
+	{								\
+	  while (count != simd_end_idx)				        \
+	    {								\
+	      vx = waffe2_load_##prefix##vec(x + count);		\
+	      vy = simd_op_name(vx);					\
+	      strided_waffe2_store_##prefix##vec(y + count * incy, vy, incy); \
+	      count += stride;						\
+	    }								\
+	}								\
+      else if (incy == 1)						\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	      vy = simd_op_name(vx);				        \
+	      waffe2_store_##prefix##vec(y + count, vy);		\
+	      count += stride;						\
+	    }								\
+	}								\
+      else								\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	      vy = simd_op_name(vx);					\
+	      strided_waffe2_store_##prefix##vec(y + count * incy, vy, incy); \
+	      count += stride;						\
+	    }								\
+	}								\
+    }									\
+    x += count * incx;							\
+    y += count * incy;							\
+    while (count != n) {						\
+      count += 1;							\
+      y[0] = reminder_op_name(x[0]);					\
+      x += incx;							\
+      y += incy;							\
+    }									\
+  };									
+
+define_math_func(dsin, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsin, sin);
+define_math_func(ssin, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssin, sin);
+
+define_math_func(dcos, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcos, cos);
+define_math_func(scos, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scos, cos);
+
+define_math_func(dtan, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtan, tan);
+define_math_func(stan, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stan, tan);
+
+
+define_math_func(dasin, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dasin, asin);
+define_math_func(sasin, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sasin, asin);
+
+define_math_func(dacos, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dacos, acos);
+define_math_func(sacos, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sacos, acos);
+
+define_math_func(datan, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_datan, atan);
+define_math_func(satan, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_satan, atan);
+
+define_math_func(dsinh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsinh, sinh);
+define_math_func(ssinh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssinh, sinh);
+
+define_math_func(dcosh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcosh, cosh);
+define_math_func(scosh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scosh, cosh);
+
+define_math_func(dtanh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtanh, tanh);
+define_math_func(stanh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stanh, tanh);
+
+define_math_func(dasinh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsinh, asinh);
+define_math_func(sasinh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssinh, asinh);
+
+define_math_func(dacosh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcosh, acosh);
+define_math_func(sacosh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scosh, acosh);
+
+define_math_func(datanh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtanh, atanh);
+define_math_func(satanh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stanh, atanh);
+
+
+// loge log2 log10
+
+define_math_func(dlog, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog, log);
+define_math_func(slog, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog, log);
+
+define_math_func(dlog2, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog2, log2);
+define_math_func(slog2, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog2, log2);
+
+define_math_func(dlog10, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog10, log10);
+define_math_func(slog10, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog10, log10);
+
+define_math_func(dexp, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dexp, exp);
+define_math_func(sexp, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sexp, exp);
+
+define_math_func(dabs, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dabs, fabs);
+define_math_func(sabs, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sabs, fabs);
+
+define_math_func(dsqrt, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsqrt, sqrt);
+define_math_func(ssqrt, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssqrt, sqrt);
+
+define_math_func(dcbrt, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcbrt, cbrt);
+define_math_func(scbrt, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scbrt, cbrt);
+
+#define define_math_func_pow(define_as, stride, prefix, dtype, simd_op_name, reminder_op_name) \
+  void waffe2_##define_as(const long n, dtype* x, const long incx, dtype pow_n, dtype* y, const long incy) \
+  {									\
+    long count = 0;							\
+    const long simd_end_idx = (n/stride)*stride;			\
+    waffe2_##prefix##vec vx, vy;					\
+    waffe2_##prefix##vec pn = waffe2_load_##prefix##scal(pow_n);        \
+    if (incx >= 1) {							\
+      if (incx == 1 && incy == 1)					\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = waffe2_load_##prefix##vec(x + count);		\
+	      vy = simd_op_name(vx, pn);			        \
+	      waffe2_store_##prefix##vec(y + count, vy);		\
+	      count += stride;						\
+	    }								\
+	}								\
+      else if (incx == 1)						\
+	{								\
+	  while (count != simd_end_idx)				        \
+	    {								\
+	      vx = waffe2_load_##prefix##vec(x + count);		\
+	      vy = simd_op_name(vx, pn);				\
+	      strided_waffe2_store_##prefix##vec(y + count * incy, vy, incy); \
+	      count += stride;						\
+	    }								\
+	}								\
+      else if (incy == 1)						\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	      vy = simd_op_name(vx, pn);				\
+	      waffe2_store_##prefix##vec(y + count, vy);		\
+	      count += stride;						\
+	    }								\
+	}								\
+      else								\
+	{								\
+	  while (count != simd_end_idx)					\
+	    {								\
+	      vx = make_waffe2_##prefix##vec(x + count * incx, incx);	\
+	      vy = simd_op_name(vx, pn);				\
+	      strided_waffe2_store_##prefix##vec(y + count * incy, vy, incy); \
+	      count += stride;						\
+	    }								\
+	}								\
+    }									\
+    x += count * incx;							\
+    y += count * incy;							\
+    while (count != n) {						\
+      count += 1;							\
+      y[0] = reminder_op_name(x[0], pow_n);				\
+      x += incx;							\
+      y += incy;							\
+    }									\
+  };									
+
+define_math_func_pow(dpow, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dpow, pow);
+define_math_func_pow(spow, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_spow, pow);
+

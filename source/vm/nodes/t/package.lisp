@@ -16,3 +16,5 @@
 (def-suite :test-nodes)
 (in-suite :test-nodes)
 
+(defun ~= (x y)
+  (< (- x y) 0.00001))

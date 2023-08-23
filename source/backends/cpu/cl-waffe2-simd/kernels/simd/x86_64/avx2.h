@@ -7,6 +7,8 @@ sparse matrix supporting
   ...
 */
 
+#include <sleef.h>
+
 // single-float
 typedef __m256 waffe2_svec;
 
@@ -252,8 +254,79 @@ waffe2_ivec static inline waffe2_simd_u32blendv(waffe2_ivec x, waffe2_ivec y, wa
 waffe2_ivec static inline waffe2_simd_u16blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
 waffe2_ivec static inline waffe2_simd_u8blendv(waffe2_ivec x, waffe2_ivec y, waffe2_ivec mask) { return _mm256_blendv_epi8(x, y, mask); }
 
-// TO ADD:
-// Mathematical Functions
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// SLEEF Mathematical Functions
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Unfold
+// Always choose the lowest precision
+// sin/cos/tan
 
+waffe2_dvec static inline waffe2_simd_dsin(waffe2_dvec x) { return Sleef_sind4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_ssin(waffe2_svec x) { return Sleef_sinf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dcos(waffe2_dvec x) { return Sleef_cosd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_scos(waffe2_svec x) { return Sleef_cosf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dtan(waffe2_dvec x) { return Sleef_tand4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_stan(waffe2_svec x) { return Sleef_tanf8_u10avx2(x); }
+
+// asin acos atan
+waffe2_dvec static inline waffe2_simd_dasin(waffe2_dvec x) { return Sleef_asind4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_sasin(waffe2_svec x) { return Sleef_asinf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dacos(waffe2_dvec x) { return Sleef_acosd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_sacos(waffe2_svec x) { return Sleef_acosf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_datan(waffe2_dvec x) { return Sleef_atand4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_satan(waffe2_svec x) { return Sleef_atanf8_u10avx2(x); }
+
+// sinh cosh tanh
+waffe2_dvec static inline waffe2_simd_dsinh(waffe2_dvec x) { return Sleef_sinhd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_ssinh(waffe2_svec x) { return Sleef_sinhf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dcosh(waffe2_dvec x) { return Sleef_coshd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_scosh(waffe2_svec x) { return Sleef_coshf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dtanh(waffe2_dvec x) { return Sleef_tanhd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_stanh(waffe2_svec x) { return Sleef_tanhf8_u10avx2(x); }
+
+// asinh acosh atanh
+waffe2_dvec static inline waffe2_simd_dasinh(waffe2_dvec x) { return Sleef_asinhd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_sasinh(waffe2_svec x) { return Sleef_asinhf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dacosh(waffe2_dvec x) { return Sleef_acoshd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_sacosh(waffe2_svec x) { return Sleef_acoshf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_datanh(waffe2_dvec x) { return Sleef_atanhd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_satanh(waffe2_svec x) { return Sleef_atanhf8_u10avx2(x); }
+
+
+waffe2_dvec static inline waffe2_simd_dpow(waffe2_dvec x, waffe2_dvec y) { return Sleef_powd4_u10avx2(x, y); }
+waffe2_svec static inline waffe2_simd_spow(waffe2_svec x, waffe2_svec y) { return Sleef_powf8_u10avx2(x, y); }
+
+// loge
+waffe2_dvec static inline waffe2_simd_dlog(waffe2_dvec x) { return Sleef_logd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_slog(waffe2_svec x) { return Sleef_logf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dlog10(waffe2_dvec x) { return Sleef_log10d4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_slog10(waffe2_svec x) { return Sleef_log10f8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dlog2(waffe2_dvec x) { return Sleef_log2d4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_slog2(waffe2_svec x) { return Sleef_log2f8_u10avx2(x); }
+
+// TODO: FuseOps with log(x+1)
+
+waffe2_dvec static inline waffe2_simd_dexp(waffe2_dvec x) { return Sleef_expd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_sexp(waffe2_svec x) { return Sleef_expf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dsqrt(waffe2_dvec x) { return Sleef_sqrtd4_u05avx2(x); }
+waffe2_svec static inline waffe2_simd_ssqrt(waffe2_svec x) { return Sleef_sqrtf8_u05avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dcbrt(waffe2_dvec x) { return Sleef_cbrtd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_scbrt(waffe2_svec x) { return Sleef_cbrtf8_u10avx2(x); }
+
+
+waffe2_dvec static inline waffe2_simd_dabs(waffe2_dvec x) { return Sleef_fabsd4_avx2(x); }
+waffe2_svec static inline waffe2_simd_sabs(waffe2_svec x) { return Sleef_fabsf8_avx2(x); }
+
+// Unfold with oneDNN?
