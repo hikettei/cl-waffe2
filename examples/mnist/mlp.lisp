@@ -82,6 +82,17 @@
     ;; TODO: Validate, Trying Adam
     (with-no-grad
       (format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
+
+    (format t "Benchmaking (Forward Step, 1Epoch)...~%")
+
+    (proceed-bench
+     (!sum (softmax-cross-entropy
+	    (call
+	     (MLP-Sequence 784 256 10)
+	     (randn `(100 784)))
+	    (randn `(100 10))))
+     :n-sample 1000
+     :backward nil)
     model))
 
 ;; PyTorch ... 7sec

@@ -134,3 +134,11 @@ delete_simd_extension: ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-si
 .PHONY: download_assets
 download_assets: ## Downloads training data sample codes use.
 	cd ./examples/mnist && $(PYTHON) train_data.py
+
+.PHONY: example_mnist
+example_mnist: ## Start MNIST Example and Benchmarking. (download_assets must be called in advance)
+	$(SBCL) $(SBCL_OPTIONS) \
+		--load ./cl-waffe2.asd --load ./examples/mnist/mnist.asd \
+		--eval '(ql:quickload :mnist-sample)' \
+		--eval '(mnist-sample::train-and-valid-mlp :epoch-num 10)'
+
