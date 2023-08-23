@@ -275,6 +275,7 @@ Inputs:
 
 Output:
    out - AbstractTensor"
+  (declare (type AbstractTensor x))
   (let ((n (if (numberp n)
 	       (make-tensor n)
 	       n)))
