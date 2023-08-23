@@ -219,7 +219,9 @@ Return: (values offsets-place form)"
 
   `(let ((,offset-name-place (tensor-gensym-list ,tensors)))
      ;; Initializing Offsets with 0
-     `(let*-ignorable (,@(loop for name in ,offset-name-place collect `(,name 0)))
+     `(let*-ignorable (,@(loop for name in ,offset-name-place
+			       for tensor in tensors
+			       collect `(,name (tensor-initial-offset ,tensor))))
 	(locally (declare (type fixnum ,@,offset-name-place))
 	  ,,@body))))
 

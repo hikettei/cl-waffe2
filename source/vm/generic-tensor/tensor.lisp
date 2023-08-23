@@ -61,6 +61,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (vec :initarg :vec :initform nil :reader vec :writer write-vec)
    (dtype :initform :float :initarg :dtype :reader dtype)
 
+   (offset :initform 0 :accessor tensor-initial-offset)
+
    ;; Building Computation Nodes
    (backward  :initform nil :accessor tensor-backward)
    (state     :initform nil :accessor tensor-state)
@@ -180,6 +182,12 @@ Returns the number of total visible elements in tensor.
 ### [slot] orig-shape (List)
 
 the original shape of `vec`. `(apply #'* orig-shape)` must correspond with the number of total elements of `vec`.
+
+### [slot] initial-offset (fixnum)
+
+`(tensor-initial-offset tensor)`
+
+Offset is forced to be added. default: 0
 
 ### [slot] stride (list)
 
@@ -435,6 +443,9 @@ Note:
     (setf (slot-value tensor 'orig-shape)      orig-shape)
     (setf (slot-value tensor 'projected-p)     (getf initargs :projected-p))
     (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor)) ;; Is it worth to call backward?
+
+    (when create-from
+      (setf (tensor-initial-offset tensor) (tensor-initial-offset create-from)))
     
     ;; Updates/Initializes: Strides/Shapes/View/Permution Informations
     (cond
@@ -679,16 +690,18 @@ This function is setfable."
 	  nil
 	  "Can't reference tensors which doesn't have a existing vec.")
   (vref tensor
-	(apply #'+
-	       (map 'list
-		    #'(lambda (stride s view shape)
-			(declare (ignore shape))
-			(* stride (compute-stepby (subscript-view view))
-			   (+ s (compute-visible-start-idx (subscript-view view)))))
-		    (tensor-stride tensor)
-		    subscripts
-		    (tensor-view tensor)
-		    (slot-value tensor 'orig-shape)))))
+	(+
+	 (tensor-initial-offset tensor)
+	 (apply #'+
+		(map 'list
+		     #'(lambda (stride s view shape)
+			 (declare (ignore shape))
+			 (* stride (compute-stepby (subscript-view view))
+			    (+ s (compute-visible-start-idx (subscript-view view)))))
+		     (tensor-stride tensor)
+		     subscripts
+		     (tensor-view tensor)
+		     (slot-value tensor 'orig-shape))))))
 
 ;; Note that mref is super slow and only used in a limited situation.
 (defun (setf mref) (new-value tensor &rest subscripts)
@@ -699,16 +712,18 @@ This function is setfable."
 	  "Can't reference tensors which doesn't have a existing vec.")
 
   (setf (vref tensor
-	      (apply #'+
-		     (map 'list
-			  #'(lambda (stride s view shape)
-			      (declare (ignore shape))
-			      (* stride (compute-stepby (subscript-view view))
-				 (+ s (compute-visible-start-idx (subscript-view view)))))
-			  (tensor-stride tensor)
-			  subscripts
-			  (tensor-view tensor)
-			  (slot-value tensor 'orig-shape))))
+	      (+
+	       (tensor-initial-offset tensor)
+	       (apply #'+
+		      (map 'list
+			   #'(lambda (stride s view shape)
+			       (declare (ignore shape))
+			       (* stride (compute-stepby (subscript-view view))
+				  (+ s (compute-visible-start-idx (subscript-view view)))))
+			   (tensor-stride tensor)
+			   subscripts
+			   (tensor-view tensor)
+			   (slot-value tensor 'orig-shape)))))
 	new-value))
 
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.
@@ -779,7 +794,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  (tensor-view input-tensor) (tensor-view actual-tensor)
 	  (tensor-stride input-tensor) (tensor-stride actual-tensor)
 	  (tensor-visible-shape input-tensor) (tensor-visible-shape actual-tensor)
-
+	  (tensor-initial-offset input-tensor) (tensor-initial-offset actual-tensor)
 	  (slot-value input-tensor 'projected-p) (slot-value actual-tensor 'projected-p)))
   t)
 
@@ -804,6 +819,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	      actual-tensor)))
 
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor)
+	  (tensor-initial-offset input-tensor) (tensor-initial-offset actual-tensor)
 	  (slot-value input-tensor 'orig-shape) (translate-adjustable-shape (original-shape actual-tensor))
 	  (tensor-permute-order input-tensor) (tensor-permute-order actual-tensor)
 	  (tensor-view input-tensor) (tensor-view actual-tensor)

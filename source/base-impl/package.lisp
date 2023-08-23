@@ -71,6 +71,7 @@
    flexible-p
    transposed-p"
   (setf (tensor-flexible-p result) (tensor-flexible-p extend-from))
+  (setf (tensor-initial-offset result) (tensor-initial-offset extend-from))
   result)
 
 (defun tensor-permuted-p (tensor)
