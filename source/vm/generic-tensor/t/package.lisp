@@ -14,3 +14,6 @@
 (def-suite :test-tensor)
 (in-suite :test-tensor)
 
+(defun ~= (x y)
+  (< (- x y) 0.00001))
+

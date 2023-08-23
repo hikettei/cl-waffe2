@@ -64,7 +64,7 @@
 	       (:file "vm/generic-tensor/view")
 	       (:file "vm/generic-tensor/call-with-view")
 	       (:file "vm/generic-tensor/memory-pool")
-
+	       
 	       (:file "optimizers/package")
 	       
 	       (:file "vm/generic-tensor/acceptor")
@@ -119,6 +119,7 @@
 	       (:file "backends/cpu/blas-functions")
 	       (:file "backends/cpu/arithmetic")
 	       (:file "backends/cpu/matrix-ops")
+	       (:file "backends/cpu/mathematics")
 	       (:file "backends/cpu/logical")
 	       
 

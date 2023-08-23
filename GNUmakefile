@@ -8,6 +8,7 @@ LOGFILE             := $(shell mktemp)
 
 PYTHON              := "python"
 GCC                 := "gcc"
+CMAKE               := "cmake"
 .DEFAULT_GOAL := help
 
 # This code taken from https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
@@ -114,14 +115,20 @@ add_to_init_file: ## Enable Quicklisp autoloading
 		--load ~/quicklisp/setup.lisp \
 		--eval '(ql-util:without-prompting (ql:add-to-init-file))'
 
+.PHONY: build_sleef
+build_sleef: ## Builds SLEEF
+	rm -rf ./third_party/sleef/build && mkdir ./third_party/sleef/build && cd ./third_party/sleef/build &&\
+	$(CMAKE) -DISABLE_FLOAT128=true -DISABLE_LONG_DOUBLE=true -DDISABLE_MPFR=TRUE .. &&\
+	make && make install
+
 .PHONY: build_simd_extension
-build_simd_extension: ## Installs SIMD Extension shared library for the CPUTensor backend.
+build_simd_extension: build_sleef ## Installs SIMD Extension shared library for the CPUTensor backend. (make sure that build_sleef must be done in advance)
 	$(GCC) -O3 -march=native -shared -o \
 		./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so \
-		-fpic ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.c -lm
+		-fpic ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.c -lm -lsleef \
 
 .PHONY: delete_simd_extension
-delete_simd_extension: ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
+delete_simd_extension: ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
 	rm -rf ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so
 
 .PHONY: download_assets

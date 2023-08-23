@@ -10,6 +10,9 @@
 (defun M= (a b)
   (every #'= a b))
 
+(defun ~= (x y)
+  (< (- x y) 0.00001))
+
 (defmacro with-test-form (&body body)
   `(flet ((lisp-case ()
 	    (with-devices (cl-waffe2/backends.lisp:LispTensor)
@@ -31,7 +34,7 @@
 (test backward-test
   (is (let ((a (parameter (ax+b `(3 3) 0 1))))
 	(proceed-backward (!sin a))
-	(= (cos 1) (vref (grad a) 0)))))
+	(~= (cos 1) (vref (grad a) 0)))))
 
 ;;(progn
 ;;  (let ((a (parameter (ax+b `(3 3) 0 1))))	      

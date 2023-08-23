@@ -152,3 +152,73 @@ _define_cmp(i, u32, ge, SIMD_SINGLE_STRIDE,     uint32_t, ge, >=);
 _define_cmp(i, u16, ge, SIMD_SINGLE_STRIDE * 2, uint16_t, ge, >=);
 _define_cmp(i, u8,  ge, SIMD_SINGLE_STRIDE * 4, uint8_t,  ge, >=);
 
+
+
+#define _define_math_func(define_as, stride, prefix, dtype, simd_op_name, reminder_op_name) \
+     void waffe2_##define_as(const long n, dtype* x, const long incx, dtype* y, const long incy)				
+
+_define_math_func(dsin, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsin, sin);
+_define_math_func(ssin, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssin, sin);
+
+_define_math_func(dcos, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcos, cos);
+_define_math_func(scos, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scos, cos);
+
+_define_math_func(dtan, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtan, tan);
+_define_math_func(stan, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stan, tan);
+
+
+_define_math_func(dasin, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dasin, asin);
+_define_math_func(sasin, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sasin, asin);
+
+_define_math_func(dacos, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dacos, acos);
+_define_math_func(sacos, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sacos, acos);
+
+_define_math_func(datan, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_datan, atan);
+_define_math_func(satan, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_satan, atan);
+
+_define_math_func(dsinh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsinh, sinh);
+_define_math_func(ssinh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssinh, sinh);
+
+_define_math_func(dcosh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcosh, cosh);
+_define_math_func(scosh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scosh, cosh);
+
+_define_math_func(dtanh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtanh, tanh);
+_define_math_func(stanh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stanh, tanh);
+
+_define_math_func(dasinh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsinh, asinh);
+_define_math_func(sasinh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssinh, asinh);
+
+_define_math_func(dacosh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcosh, acosh);
+_define_math_func(sacosh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scosh, acosh);
+
+_define_math_func(datanh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtanh, atanh);
+_define_math_func(satanh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stanh, atanh);
+
+// loge log2 log10
+
+_define_math_func(dlog, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog, log);
+_define_math_func(slog, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog, log);
+
+_define_math_func(dlog2, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog2, log2);
+_define_math_func(slog2, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog2, log2);
+
+_define_math_func(dlog10, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog10, log10);
+_define_math_func(slog10, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog10, log10);
+
+_define_math_func(dexp, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dexp, exp);
+_define_math_func(sexp, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sexp, exp);
+
+_define_math_func(dabs, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dabs, fabs);
+_define_math_func(sabs, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_sabs, fabs);
+
+_define_math_func(dsqrt, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dsqrt, sqrt);
+_define_math_func(ssqrt, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_ssqrt, sqrt);
+
+_define_math_func(dcbrt, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dcbrt, cbrt);
+_define_math_func(scbrt, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scbrt, cbrt);
+
+#define _define_math_func_pow(define_as, stride, prefix, dtype, simd_op_name, reminder_op_name) \
+  void waffe2_##define_as(const long n, dtype* x, const long incx, dtype pow_n, dtype* y, const long incy)
+
+_define_math_func_pow(dpow, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dpow, pow);
+_define_math_func_pow(spow, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_spow, pow);
