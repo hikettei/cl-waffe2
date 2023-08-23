@@ -22,17 +22,17 @@
 
 (defparameter *user-defined-path-list* (make-hash-table))
 
-(defclass FusionPath ()
-  nil
-  (:documentation "
-## [class] FusionPath
+(defun reset-all-path! ()
+  (setf *user-defined-path-list* nil))
 
-Query                    | Output
-[ScalarMul-CPUTensor]
-[Add]                    -> [ScalarMulAndAdd]
-
-Query is a list of: (make-query ...)
-"))
+(defstruct (FusionPathQuerySet
+	    (:conc-name qset-)
+	    (:constructor make-query-set
+		(name reject-p query-list replace-form)))
+  (name name :type Symbol)
+  (reject-p reject-p :type function)
+  (query-list query-list :type list)
+  (replace-form replace-form :type function))
 
 (defstruct (FusionPathQuery
 	    (:conc-name query-)
@@ -41,9 +41,11 @@ Query is a list of: (make-query ...)
 		 &key
 		   (device t)
 		   (dtype  t)
-		   (pred   #'(lambda (node &rest tensor) (declare (ignore node tensor)) t)))))
+		   (pred   #'(lambda (node) (declare (ignore node)) t)))))
   "
 ## [struct] FusionPathQuery
+
+`(make-query ...)` will create a new query
 
 `FusionPathQuery` becomes t when satisfies all of following conditions:
 
@@ -53,17 +55,20 @@ Query is a list of: (make-query ...)
 
 `dtype[t or list]`      become t when the `dtype` is set to t, or the list of dtype in arguments are corresponds with the list. (e.g.: `(list :float :float)`)
 
-`pred[function]`        specifies an additional predicator, usually receives `(node &rest arguments-tensor)` and return t to accept it. (`arguments-tensor` is an list of tensors, which `forward` or `call` used.)
+`pred[function]`        specifies an additional predicator, the function receives `(node)` as arguments and return t to accept it. (`arguments-tensor` is an list of tensors, which `forward` or `call` used.)
 "
   (node   abstract-node :type symbol)
   (device device :type symbol)
   (dtype  dtype  :type (or symbol keyword list))
   (pred   pred   :type function))
 
-(defmacro defpath ((fusion-name &rest query-list) &key (replaced-with nil))
+(defmacro defpath ((fusion-name &rest query-list) &key (reject-p nil) (replaced-with nil))
   "
 ## [macro] defpath
 
+```lisp
+(defpath (fusion-name &rest query-list) &key (reject-p #'(lambda ())) (replaced-with nil))
+```
 
 ```lisp
 Implementing cl-waffe2 to new devices.
@@ -74,23 +79,69 @@ Implementing cl-waffe2 to new devices.
  4. Blush up the generated IR with defpath macro to fuse more operations in a small cycle. <- defpath, here!
 ```
 
+The created and registered path, will be reset with the `(reset-all-path!)` function. All registered paths are visible in `*user-defined-path-list*` parameter.
+
+## Rules
+
+cl-waffe2 replaced the existing operations with following the rules below:
+
+1. The search is performed ignoring SaveForBackwardNode. If it is contained in the area to be replaced, it is performed after the replacement.
+
+```
+Rule: [A] [B] -> [C]
+
+{Before fused}
+
+[A]
+[SAVE_FOR_BACKWARD]
+[B]
+
+{After fused}
+
+[C]
+[SAVE_FOR_BACKWARD]
+```
 "
-  )
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (setf (gethash ',fusion-name *user-defined-path-list*)
+	   (make-query-set ',fusion-name
+			   (or ,reject-p #'(lambda ()))
+			   (list ,@query-list)
+			   (lambda ,(car replaced-with) (progn ,@(cdr replaced-with)))))))
 
-;; (defun test-path ;; Pathの同値性を検証する
+#|
+(defpath (CPUReLUFusion-No-Grad
+	  (make-query 'WhereOperationNode   :device 'CPUTensor :dtype t)
+	  (make-query 'MulNode              :device 'CPUTensor :dtype t) ;; AbstractElwiseOperation
+	  )
+	 :replaced-with ((where mul)
 
-(defpath (AddAndScalarMulFusion
-	  (make-query 'AddNode   :device CPUTensor :dtype t)
-	  (make-query 'ScalarMul :device CPUTensor :dtype t))
-	 :replaced-with ((addnode
-			  scalarmul)
 			 ))
 
-;; Save-For-Backward-Nodeは検索から除外する
-(defun query-match-p (query node)
+(defpath (CPUReLUFusion-Diff
+	  (make-query 'WhereOperationNode :device 'CPUTensor :dtype t)
+	  (make-query 'MoveTensorNode     :device 'CPUTensor :dtype t)
+	  (make-query 'MulNode            :device 'CPUTensor :dtype t))
+	 :replaced-with ((where move mul)
+
+))
+|#
+
+(defun query-match-p (query inst)
   (declare (type FusionPathQuery query)
-	   (type WfInstruction node))
-  nil)
+	   (type WfInstruction inst))
+  (let ((node (wfop-node inst)))
+    (and
+     (subtypep (class-of node) (find-class (query-node query)))
+     (subtypep (class-of node) (query-device query))
+     (or (eql (query-dtype query) t)
+	 (if (listp (query-dtype query))
+	     (every #'(lambda (x y)
+			(eql x (dtype y)))
+		    (query-dtype query)
+		    (wfop-args inst))
+	     (eql (query-dtype query) (dtype (wfop-self inst)))))
+     (funcall (query-pred query) (wfop-self inst)))))
 
 (defun apply-path-fusion (iseq &key (limit 10) (count 0))
   "`apply-path-fusions` start searching all replaceable combination of InstructionSeq declared via `defpath`, and replaces the IR.
@@ -100,17 +151,65 @@ The operation will continue until count=limit or there's no changes."
   ;; Count exceeds limit
   (when (>= count limit)
     (return-from apply-path-fusion iseq))
-    
-  (let ((no-changed-p t)
-	(candidates))
+  
+  (let ((no-changed-p t))
+    (flet ((apply-fuse-helper (iseq-op query-set &aux (iseq-list nil))
+	     (loop with query-count fixnum = 0
+		   with query-list  list   = (qset-query-list query-set)
+		   with sv4bw-stack list   = nil
+		   with candidates  list   = nil
+ 	           for inst of-type WfInstruction in iseq-op
+		   if (or (not (movetensor-p (wfop-self inst)))
+			  (not (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))))
+		     do (let ((match-p (query-match-p (nth query-count query-list) inst)))
+			  ;; If matched, incf the counter, otherwise, set to 0
+			  (if match-p
+			      (progn
+				(incf query-count 1)
+				(if (null (nth query-count query-list))
+				    ;; If reached to the last
+				    (progn
+				      ;; Replace with ...
+				      (dolist (instruction
+					       (node-compile-into-vm
+						(apply
+						 (qset-replace-form query-set)
+						 (reverse candidates))
+						:fuse-p nil))
+					(push instruction iseq-list))
+				      (dolist (mv sv4bw-stack)
+					(push mv iseq-list))
+				      (setq no-changed-p nil)
+				      (setq query-count 0))
+				    (progn
+				      ;; Stack to the candidates
+				      (push inst candidates))))
+			      (progn
+				(setq query-count 0)
+				(push inst iseq-list)
+				(dolist (mv sv4bw-stack)
+				  (push mv iseq-list)))))
+		   else
+		     do (progn
+			  ;; Remains (MoveTensorNode(SaveForBackward))
+			  (push inst sv4bw-stack))
+		   finally (progn
+			     (dolist (c candidates)
+			       (push c iseq-list))
+			     (dolist (mv sv4bw-stack)
+			       (push mv iseq-list))))
+	     (reverse iseq-list)))
 
-    
-
-
-    ;; apply-path-fusion is forcibly called recursively until there's no modification
-    (if no-changed-p
-	iseq
-	(apply-path-fusion iseq :limit limit :count (1+ count)))))
+      (maphash
+       #'(lambda (name op)
+	   (declare (ignore name))
+	   (setq iseq (apply-fuse-helper (reverse iseq) op)))
+       *user-defined-path-list*)
+      
+      ;; apply-path-fusion is forcibly called recursively until there's no modification
+      (if no-changed-p
+	  iseq
+	  (apply-path-fusion iseq :limit limit :count (1+ count))))))
 
 
 
