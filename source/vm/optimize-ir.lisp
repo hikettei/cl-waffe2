@@ -61,23 +61,58 @@ Query is a list of: (make-query ...)
   (pred   pred   :type function))
 
 (defmacro defpath ((fusion-name &rest query-list) &key (replaced-with nil))
+  "
+## [macro] defpath
+
+
+```lisp
+Implementing cl-waffe2 to new devices.
+
+ 1. Declare the new device (e.g.: CPUTensor)
+ 2. Prepare allocator and accessors (e.g.: initialize-instance method, vref and (setf vref))
+ 3. Implement existing operations with define-impl
+ 4. Blush up the generated IR with defpath macro to fuse more operations in a small cycle. <- defpath, here!
+```
+
+"
   )
+
+;; (defun test-path ;; Pathの同値性を検証する
 
 (defpath (AddAndScalarMulFusion
 	  (make-query 'AddNode   :device CPUTensor :dtype t)
 	  (make-query 'ScalarMul :device CPUTensor :dtype t))
-  :replaced-with ((x y) (!mul x y)))
-				  
+	 :replaced-with ((addnode
+			  scalarmul)
+			 ))
 
-(defun apply-path-fusion (iseq)
+;; Save-For-Backward-Nodeは検索から除外する
+(defun query-match-p (query node)
+  (declare (type FusionPathQuery query)
+	   (type WfInstruction node))
+  nil)
+
+(defun apply-path-fusion (iseq &key (limit 10) (count 0))
+  "`apply-path-fusions` start searching all replaceable combination of InstructionSeq declared via `defpath`, and replaces the IR.
+The operation will continue until count=limit or there's no changes."
   (declare (type list iseq))
-  (let ((no-changed-p t))
+
+  ;; Count exceeds limit
+  (when (>= count limit)
+    (return-from apply-path-fusion iseq))
+    
+  (let ((no-changed-p t)
+	(candidates))
+
+    
 
 
     ;; apply-path-fusion is forcibly called recursively until there's no modification
     (if no-changed-p
 	iseq
-	(apply-path-fusion iseq))))
+	(apply-path-fusion iseq :limit limit :count (1+ count)))))
+
+
 
 ;; Not working well, currently disabled.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

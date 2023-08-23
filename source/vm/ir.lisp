@@ -15,6 +15,8 @@ Basically follows this format:
  out_target <- λ(Args1 Args2 Args3) ...
 
 cl-waffe2 vm specializes on  the sequence of above format.
+
+Note: Setting node=function is the equivalent to express code blocks
 "
   (op   op   :type function)
   (node node :type (or function string null AbstractNode))
