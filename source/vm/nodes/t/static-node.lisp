@@ -42,23 +42,23 @@
 (defun test-composite-diff ()
   (let ((a (parameter (ax+b `(3 3) 0 1))))
     (proceed-backward (call (SinNode-Static) a))
-    (= (cos 1) (vref (grad a) 0))))
+    (~= (cos 1) (vref (grad a) 0))))
 
 (defun composite-with-build ()
   (let* ((a (parameter (ax+b `(3 3) 0 1)))
 	 (model (build (call (SinNode-static) a))))
     (forward model)
     (backward model)
-    (let ((f1 (= (cos 1) (vref (grad a) 0))))
+    (let ((f1 (~= (cos 1) (vref (grad a) 0))))
       (forward model)
       (backward model)
 
-      (let ((f2 (= (+ (cos 1) (cos 1)) (vref (grad a) 0))))
+      (let ((f2 (~= (+ (cos 1) (cos 1)) (vref (grad a) 0))))
 	(forward model)
 	(backward model)
 
 	(and f1 f2
-	     (= (+ (cos 1) (cos 1) (cos 1))
+	     (~= (+ (cos 1) (cos 1) (cos 1))
 		(vref (grad a) 0)))))))
 
 (defun composite-with-build1 ()
@@ -67,11 +67,11 @@
 	 (grad (* (cos (sin 1)) (cos 1))))
     (forward model)
     (backward model)
-    (let ((f1 (= (vref (grad a) 0) grad)))
+    (let ((f1 (~= (vref (grad a) 0) grad)))
       (forward model)
       (backward model)
       (and f1
-	   (= (vref (grad a) 0) (+ grad grad))))))
+	   (~= (vref (grad a) 0) (+ grad grad))))))
 
 (test composite-static-function-diff-test
   (is (test-composite-diff))

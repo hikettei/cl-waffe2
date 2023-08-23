@@ -41,14 +41,14 @@
 			(all-p t))
 		    (loop while all-p
 			  for i upfrom 0 below 900
-			  do (setq all-p (= (vref c i) (funcall ,lisp-op 1))))
+			  do (setq all-p (~= (vref c i) (funcall ,lisp-op 1))))
 		    (when all-p
 		      (let ((a (make-tensor `(30 30) :initial-element 1 :requires-grad t)))
 			(proceed-backward (,wf-op a))
 			(let ((all-p t))
 			  (loop while all-p
 				for i upfrom 0 below 900
-				do (setq all-p (= (vref (grad a) i) (funcall ,bw-lisp 1))))
+				do (setq all-p (~= (vref (grad a) i) (funcall ,bw-lisp 1))))
 			  (if all-p
 			      t
 			      :backward)))))))))

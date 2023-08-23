@@ -213,6 +213,10 @@
   (define-math-op sqrt)
   (define-math-op cbrt))
 
+(export '(waffe2-sloge waffe2-dloge))
+(defun waffe2-sloge (n x incx y incy) (waffe2-slog n x incx y incy))
+(defun waffe2-dloge (n x incx y incy) (waffe2-dlog n x incx y incy))
+
 (macrolet ((define-math-op1 (opname)
 	     `(progn
 		;;size xptr incx xptr incy
