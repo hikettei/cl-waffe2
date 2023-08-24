@@ -11,6 +11,9 @@
 (defun incf-tensor-ptr (tensor tensor-ptr &key (offset 0))
   (cl-waffe2/backends.cpu::incf-tensor-ptr tensor tensor-ptr :offset offset))
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  [AbstractNode] GPT2PositionalEmbedding
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (defun expand-embedding-form (ctx wte wpe wte-ptr wpe-ptr ctx-out-ptr ctx-out ctx-view ctx-out-view)
   ;; Returns a S-expression later compiled
   ;; CTX = [~ sentence-length], Sparse Matrix
@@ -56,6 +59,7 @@
 	      1)))))))
 
 ;; Implementing Embedding
+;; [TODO] Backward, Include this to :cl-waffe2/nn package
 (defnode (GPT2PositionalEmbedding (self vocab-size n-ctx embedding-size)
 	  :documentation "add(WTE[CTX], WPE[CTX]) -> CTX"
 	  :where (ctx[N sentence-length] wte[vocab-size embedding-size] wpe[n-ctx embedding-size] ctx-out[N sentence-length embedding-size]
@@ -103,9 +107,76 @@ In your terminal, and cl-waffe2 will load it."))
     (read-config :n-ctx)
     (read-config :n-emb))
    ctx wte wpe ctx-out))
-	
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Defines Activations
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; [TODO] Move this into :cl-waffe2/nn package
-(defun gpt2-layernorm (x)
+(defun !gpt2-layernorm (x g b &key (eps 1e-5))
+  ;; X ... [N, Sentene_length, Embedding_DIM]
+  ;; g/b... [Embedding_DIM]
 
-  )
+  (let* ((x-mean (!mean x :axis -1 :keepdims t))   ;; μ=mean(x, axis=-1)
+	 (x-diff (!sub x x-mean))
+	 (x-sd   (!expt x-diff 2))                 ;; sd=(x-μl)^2
+	 (x-var  (!sqrt (!add (!div x-sd (third (shape x))) eps)))) ;; var=sd/embedding_dim
+    (!add
+     (!mul
+      (!div x-diff x-var)
+      (%transform g[i] -> g[~ i]))
+     (%transform b[i] -> b[~ i]))))
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Defines more utils
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(defun !affine (x weight bias)
+  (!add (!matmul (!t x) (!flexible weight))
+	(%transform bias[i] -> bias[~ i])))
+
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  MHA
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(defun split-heads (x qkv &aux (stride (/ (car (last (shape x))) 3)))
+  (declare (type (member :Q :K :V) qkv))
+  ;; X ... [~ Sentence_length 2304] -> Q[~ Sentece-Length 786] K V...
+  (let* ((x (!view x t t (case qkv
+			   (:Q `(0 ,stride))
+			   (:K `(,stride ,(* 2 stride)))
+			   (:V `(,(* 2 stride) ,(* 3 stride))))))
+	 (new-x-shape `(,@(butlast (shape x)) ,(read-config :n-head) ,(/ (car (last (shape x))) (read-config :n-head))))
+	 (out          (apply #'!reshape x new-x-shape)))
+    (if (eql qkv :K)
+	(!permute out (torch-order 0 2 3 1))
+	(!permute out (torch-order 0 2 1 3)))))
+
+(defun merge-heads (x)
+  (let* ((x (!permute x (torch-order 0 2 1 3)))
+	 (x-shape `(,@(butlast (shape x) 2) t)))
+    (apply #'!reshape x x-shape)))
+
+(defun self-attention (x gpt2) ;; X ...[N 2304]
+  (with-slots ((memory-k memory-k) (memory-v memory-v)) gpt2
+    (let* ((K (split-heads x :K))
+	   (V (split-heads x :V))
+	   (x (with-instant-kernel x ;; Embedding Lisp Code Directly to cl-waffe2 IR
+		`(if (or (slot-value ,gpt2 'memory-k) (slot-value ,gpt2 'memory-v))
+		     ;; Layer-Past isn't none
+		     (progn
+		       (setf (detach-p ,K) T)
+		       (setf (detach-p ,V) T)
+		       ;; ... Concatenate past keys
+		       )
+		     ,x)))
+	   (Q (split-heads x :Q)))
+
+      (let ((w (!matmul Q K)))
+	(call-> (!matmul Q K)
+		(asnode #'!div (car (last (shape w))))
+		(asnode #'!softmax :avoid-overflow nil)
+		(asnode #'!matmul v)
+		(asnode #'merge-heads))))))
+
