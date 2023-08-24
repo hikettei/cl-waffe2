@@ -3,7 +3,7 @@
 
 (defpackage :cl-waffe2/backends.cpu
   (:documentation "The package :cl-waffe2/backends.cpu provides the BLAS Backend to cl-waffe. Note that this package is SBCL-Dependant.")
-  (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl :cl-waffe2-simd)
+  (:use :cl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :cffi :cl-waffe2/base-impl :cl-waffe2-simd :cl-waffe2/vm)
   (:export
    :CPUTensor
    :*simd-extension-p*

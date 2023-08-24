@@ -121,6 +121,7 @@
 	       (:file "backends/cpu/matrix-ops")
 	       (:file "backends/cpu/mathematics")
 	       (:file "backends/cpu/logical")
+	       (:file "backends/cpu/fusion-path")
 	       
 
 	       (:file "distributions/package")

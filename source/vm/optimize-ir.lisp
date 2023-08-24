@@ -23,7 +23,11 @@
 (defparameter *user-defined-path-list* (make-hash-table))
 
 (defun reset-all-path! ()
-  (setf *user-defined-path-list* nil))
+  "
+## [function] reset-all-path!
+
+`(setf *user-defined-path-list* (make-hash-table))`"
+  (setf *user-defined-path-list* (make-hash-table)))
 
 (defstruct (FusionPathQuerySet
 	    (:conc-name qset-)
@@ -45,17 +49,19 @@
   "
 ## [struct] FusionPathQuery
 
-`(make-query ...)` will create a new query
+`(make-query ...)` and create a new query.
 
-`FusionPathQuery` becomes t when satisfies all of following conditions:
+A single `FusionPathQuery` becomes t only when satisfies all of following conditions:
 
 `abstract-node[symbol]` become t when the node is a subtype of `abstract-node`
 
-`device[t or symbol]`   become t when the node is working under the device
+`device[t or symbol]`   become t when the node is working under the device or `subtype` of it.
 
 `dtype[t or list]`      become t when the `dtype` is set to t, or the list of dtype in arguments are corresponds with the list. (e.g.: `(list :float :float)`)
 
 `pred[function]`        specifies an additional predicator, the function receives `(node)` as arguments and return t to accept it. (`arguments-tensor` is an list of tensors, which `forward` or `call` used.)
+
+See also: `defpath`.
 "
   (node   abstract-node :type symbol)
   (device device :type symbol)
@@ -70,39 +76,76 @@
 (defpath (fusion-name &rest query-list) &key (reject-p #'(lambda ())) (replaced-with nil))
 ```
 
-```lisp
-Implementing cl-waffe2 to new devices.
+Define a `FusionQueryPath` to relocate compiled instructions with reference to the search. Composing the sequence of generated IRs to suit the device or model is the easiest way to speed up your model, cl-waffe2 searches for compiled nodes and replaces those matching the conditions specified in `query-list` with the computed nodes specified in `replaced-with`, if `:fuse-p` is set to t (default: `t`). In the simplest case, `defpath` can detect `[AddNode-CPUTensor] [MulNode-CPUTensor]` sequence and replace it with `[AddMulNode-CPUTensor]` node to reduce the number of instructions.
 
- 1. Declare the new device (e.g.: CPUTensor)
+```lisp
+[When adding a new device to cl-waffe2...]
+ 1. Declare the new device (e.g.: CPUTensor, CUDATensor ...)
  2. Prepare allocator and accessors (e.g.: initialize-instance method, vref and (setf vref))
- 3. Implement existing operations with define-impl
+ 3. Implement existing operations with define-impl macro
  4. Blush up the generated IR with defpath macro to fuse more operations in a small cycle. <- defpath, here!
 ```
 
-The created and registered path, will be reset with the `(reset-all-path!)` function. All registered paths are visible in `*user-defined-path-list*` parameter.
+The created and registered path, will be reset with the `(reset-all-path!)` function. All registered paths are stored in `*user-defined-path-list*` parameter.
 
 ## Rules
 
-cl-waffe2 replaced the existing operations with following the rules below:
+cl-waffe2 replaces the existing operations with following the rules:
 
-1. The search is performed ignoring SaveForBackwardNode. If it is contained in the area to be replaced, it is performed after the replacement.
+1. The search is performed ignoring SaveForBackwardNode. If it is contained in the area to be replaced, it is moved to the last sequence of replaced one.
+
 
 ```
-Rule: [A] [B] -> [C]
+Example:
 
-{Before fused}
+Rule: [A] [B] -> [C]
+```
+
+```
+Before Fusion:
 
 [A]
 [SAVE_FOR_BACKWARD]
 [B]
-
-{After fused}
-
-[C]
-[SAVE_FOR_BACKWARD]
+[M]
+[N]
 ```
 
-(TODO: Docstring)
+```
+Searching will be done ignoring [SAVE_FOR_BACKWARD]
+
+^ [A]
+| [B]
+| [M]
+| [N]
+reading in this direction.
+```
+
+```lisp
+After fusion:
+
+[C]  ;; [A] [B] -> [C]
+[SAVE_FOR_BACKWARD] ;; placed after the operation
+[M]
+[N]
+```
+
+2. `defpath` priority is given to those registered first.
+
+Repeat the search until no more targets are found to replace it.
+
+3. query-list
+
+Not replaced until the `query-list` matches everything, including the order.
+
+### Example
+
+(TODO: For the case of ReLU)
+
+### make-query
+
+### WfInstruction
+
 "
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (gethash ',fusion-name *user-defined-path-list*)
@@ -110,31 +153,6 @@ Rule: [A] [B] -> [C]
 			   (or ,reject-p #'(lambda ()))
 			   (list ,@query-list)
 			   (lambda ,(car replaced-with) (progn ,@(cdr replaced-with)))))))
-
-
-#|
-(defpath (CPUReLUFusion-No-Grad
-	  (make-query 'Where-Operation-Node :device 'cl-waffe2/backends.cpu:CPUTensor :dtype t)
-	  (make-query 'MulNode              :device 'cl-waffe2/backends.cpu:CPUTensor :dtype t) ;; AbstractElwiseOperation | AbstractComparisonOperation | AbstractMathematicalOperation
-	  )
-	 ;;:reject-p #'simd-extension-p
-	 :replaced-with ((&rest nodes)
-			 (print nodes)
-			 (!move
-			  (wfop-self (car (last nodes)))
-			  (!sin (cl-waffe2/distributions:randn `(3 3))))
-))
-|#
-#|
-(defpath (CPUReLUFusion-Diff
-	  (make-query 'WhereOperationNode :device 'CPUTensor :dtype t)
-	  (make-query 'MoveTensorNode     :device 'CPUTensor :dtype t)
-	  (make-query 'MulNode            :device 'CPUTensor :dtype t))
-	 :replaced-with ((where move mul)
-
-))
-|#
-
 
 (defun query-match-p (query inst)
   (declare (type FusionPathQuery query)
@@ -151,6 +169,18 @@ Rule: [A] [B] -> [C]
 		    (wfop-args inst))
 	     (eql (query-dtype query) (dtype (wfop-self inst)))))
      (funcall (query-pred query) (wfop-self inst)))))
+
+(defun detach-all-iseq! (iseq)
+  (dolist (i iseq)
+    (setf (detach-p (wfop-self i)) t)
+    (dolist (arg (wfop-args i))
+      (setf (detach-p arg) t))))
+
+(defun undo-detach-all-iseq! (iseq)
+  (dolist (i iseq)
+    (setf (detach-p (wfop-self i)) nil)
+    (dolist (arg (wfop-args i))
+      (setf (detach-p arg) nil))))
 
 ;; Test this:
 (defun apply-path-fusion (iseq &key (limit 3) (count 0))
@@ -184,6 +214,7 @@ The operation will continue until count=limit or there's no changes."
 
 				      ;; [TODO] detach
 				      ;; [TODO] pass WfInstruction
+				      (detach-all-iseq! candidates)
 				      (dolist (instruction
 					       (reverse
 						(node-compile-into-vm
@@ -192,6 +223,7 @@ The operation will continue until count=limit or there's no changes."
 						  candidates)
 						 :fuse-p nil)))
 					(push instruction iseq-list))
+				      (undo-detach-all-iseq! candidates)
 				      (dolist (mv sv4bw-stack)
 					(push mv iseq-list))
 				      (setq candidates nil)
