@@ -165,9 +165,10 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (when (not fuse-p) ;; avoid twice-time applying
 	(apply-in-place-mutation! iseq-forward leaves))
 
-      (let* ((dout (if (scalar-p toplevel)
-		       (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-		       (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
+      (let* ((dout (when need-backward
+		     (if (scalar-p toplevel)
+			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+			 (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel)))))
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
