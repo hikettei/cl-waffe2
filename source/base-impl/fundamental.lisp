@@ -661,12 +661,13 @@ The function proceed-backward calls forward and backwrd of the tensor.
 			       (ignore-first-call nil)
 			       (stream t)			       
 			       (top-k 10)
-			       (backward nil))
+			       (backward nil)
+			       (fuse-p t))
   "
 ## [function] proceed-bench
 
 ```lisp
-(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil))
+(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil) (fuse-p t))
 ```
 
 Invokes `cl-waffe2 VM` with benchmarking the forward and (if specified) backward.
@@ -702,7 +703,7 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
 "
 
   (multiple-value-bind (fw-iseq bw-iseq leaves)
-      (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode)
+      (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
     (declare (ignore leaves))
     (let ((result))
 

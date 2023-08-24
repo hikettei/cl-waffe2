@@ -13,6 +13,12 @@
    #:disassemble-waffe2-ir
    #:benchmark-accept-instructions)
   (:export
+   #:WfInstruction
+   #:wfop-op
+   #:wfop-self
+   #:wfop-node
+   #:wfop-args)
+  (:export
    #:defpath
    #:make-query
    #:*user-defined-path-list*

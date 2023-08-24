@@ -2,6 +2,7 @@
 (in-package :cl-waffe2/vm)
 
 
+;; [TODO] Add WfInstrucion to the docstring
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
 	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))

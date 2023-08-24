@@ -101,6 +101,8 @@ Rule: [A] [B] -> [C]
 [C]
 [SAVE_FOR_BACKWARD]
 ```
+
+(TODO: Docstring)
 "
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (setf (gethash ',fusion-name *user-defined-path-list*)
@@ -109,15 +111,21 @@ Rule: [A] [B] -> [C]
 			   (list ,@query-list)
 			   (lambda ,(car replaced-with) (progn ,@(cdr replaced-with)))))))
 
+
 #|
 (defpath (CPUReLUFusion-No-Grad
-	  (make-query 'WhereOperationNode   :device 'CPUTensor :dtype t)
-	  (make-query 'MulNode              :device 'CPUTensor :dtype t) ;; AbstractElwiseOperation
+	  (make-query 'Where-Operation-Node :device 'cl-waffe2/backends.cpu:CPUTensor :dtype t)
+	  (make-query 'MulNode              :device 'cl-waffe2/backends.cpu:CPUTensor :dtype t) ;; AbstractElwiseOperation | AbstractComparisonOperation | AbstractMathematicalOperation
 	  )
-	 :replaced-with ((where mul)
-
-			 ))
-
+	 ;;:reject-p #'simd-extension-p
+	 :replaced-with ((&rest nodes)
+			 (print nodes)
+			 (!move
+			  (wfop-self (car (last nodes)))
+			  (!sin (cl-waffe2/distributions:randn `(3 3))))
+))
+|#
+#|
 (defpath (CPUReLUFusion-Diff
 	  (make-query 'WhereOperationNode :device 'CPUTensor :dtype t)
 	  (make-query 'MoveTensorNode     :device 'CPUTensor :dtype t)
@@ -127,13 +135,14 @@ Rule: [A] [B] -> [C]
 ))
 |#
 
+
 (defun query-match-p (query inst)
   (declare (type FusionPathQuery query)
 	   (type WfInstruction inst))
   (let ((node (wfop-node inst)))
     (and
      (subtypep (class-of node) (find-class (query-node query)))
-     (subtypep (class-of node) (query-device query))
+     (subtypep (class-of (wfop-self inst)) (find-class (query-device query)))
      (or (eql (query-dtype query) t)
 	 (if (listp (query-dtype query))
 	     (every #'(lambda (x y)
@@ -143,7 +152,8 @@ Rule: [A] [B] -> [C]
 	     (eql (query-dtype query) (dtype (wfop-self inst)))))
      (funcall (query-pred query) (wfop-self inst)))))
 
-(defun apply-path-fusion (iseq &key (limit 10) (count 0))
+;; Test this:
+(defun apply-path-fusion (iseq &key (limit 3) (count 0))
   "`apply-path-fusions` start searching all replaceable combination of InstructionSeq declared via `defpath`, and replaces the IR.
 The operation will continue until count=limit or there's no changes."
   (declare (type list iseq))
@@ -155,7 +165,7 @@ The operation will continue until count=limit or there's no changes."
   (let ((no-changed-p t))
     (flet ((apply-fuse-helper (iseq-op query-set &aux (iseq-list nil))
 	     (loop with query-count fixnum = 0
-		   with query-list  list   = (qset-query-list query-set)
+		   with query-list  list   = (reverse (qset-query-list query-set))
 		   with sv4bw-stack list   = nil
 		   with candidates  list   = nil
  	           for inst of-type WfInstruction in iseq-op
@@ -169,26 +179,34 @@ The operation will continue until count=limit or there's no changes."
 				(if (null (nth query-count query-list))
 				    ;; If reached to the last
 				    (progn
+				      (push inst candidates)
 				      ;; Replace with ...
+
+				      ;; [TODO] detach
+				      ;; [TODO] pass WfInstruction
 				      (dolist (instruction
-					       (node-compile-into-vm
-						(apply
-						 (qset-replace-form query-set)
-						 (reverse candidates))
-						:fuse-p nil))
+					       (reverse
+						(node-compile-into-vm
+						 (apply
+						  (qset-replace-form query-set)
+						  candidates)
+						 :fuse-p nil)))
 					(push instruction iseq-list))
 				      (dolist (mv sv4bw-stack)
 					(push mv iseq-list))
+				      (setq candidates nil)
+				      (setq sv4bw-stack nil)
 				      (setq no-changed-p nil)
 				      (setq query-count 0))
 				    (progn
 				      ;; Stack to the candidates
 				      (push inst candidates))))
 			      (progn
-				(setq query-count 0)
-				(push inst iseq-list)
 				(dolist (mv sv4bw-stack)
-				  (push mv iseq-list)))))
+				  (push mv iseq-list))
+				(setq sv4bw-stack nil)
+				(setq query-count 0)
+				(push inst iseq-list))))
 		   else
 		     do (progn
 			  ;; Remains (MoveTensorNode(SaveForBackward))
@@ -198,7 +216,7 @@ The operation will continue until count=limit or there's no changes."
 			       (push c iseq-list))
 			     (dolist (mv sv4bw-stack)
 			       (push mv iseq-list))))
-	     (reverse iseq-list)))
+	     iseq-list))
 
       (maphash
        #'(lambda (name op)
@@ -212,10 +230,14 @@ The operation will continue until count=limit or there's no changes."
 	  (apply-path-fusion iseq :limit limit :count (1+ count))))))
 
 
-
-;; Not working well, currently disabled.
+;;
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; TODO: Add PermuteNode
+;; The code below is an attempt to elwise operation fusion
+;; But turned out to be not working well!
+;; And the equivalent feature should be implemented by defpath macro!
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; TODO: These things are subject to be deleted in the future release!
+;;
 (defparameter *special-position-nodes* '(cl-waffe2/base-impl::ViewTensorNode cl-waffe2/base-impl::ReshapeNode)) ;; + ReshapeNode PermuteNode
 
 (defun shuffle-node-p (node)
@@ -252,7 +274,7 @@ The operation will continue until count=limit or there's no changes."
 	(ends-with ;; If the iseq ends with View, Copying View to the corresponding position to get the returned result
 	  (when (shuffle-node-p (wfop-node (car (reverse iseq))))
 	    (list (car (reverse iseq))))))
-		       
+    
 
     (loop for instruction in iseq
 	  if (shuffle-node-p (wfop-node instruction))
@@ -291,9 +313,9 @@ The operation will continue until count=limit or there's no changes."
 				(no-dependency-p last-val inst)
 				(if (movetensor-p (wfop-node inst))
 				    (progn
-				     ;; <Deleted> Node isn't subject to FuseOps
-				     ;; Because the costs for it is almost 0
-				     ;; and which tensors to be returned is still unknown
+				      ;; <Deleted> Node isn't subject to FuseOps
+				      ;; Because the costs for it is almost 0
+				      ;; and which tensors to be returned is still unknown
 				      
 				      (not (movetensor-ignore-me (wfop-node inst))))
 				    t)
