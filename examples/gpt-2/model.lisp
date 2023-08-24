@@ -82,9 +82,10 @@
 
 	  (slot-value self 'mlp-proj-w) (load-npy "~a/mlp/c_proj/w.npy" layer-dir)
 	  (slot-value self 'mlp-proj-b) (load-npy "~a/mlp/c_proj/w.npy" layer-dir))))
-	  
 
-	  
+;; Custom printings
+(defmethod on-print-object ((model GPT2Layer) stream)
+  (format stream "~%N_LAYER=~a" (slot-value model 'nth-layer)))	  
 
 
 (defmodel (GPT2 (self &key (save-dir "./examples/gpt-2/assets/models/gpt-2-117M/gpt2-waffe2/model"))
@@ -107,4 +108,10 @@
 	  (loop for layer-n upfrom 0 below n-layer
 		collect (GPT2Layer save-dir layer-n)))))
 
+;; Customized printings
+(defmethod on-print-object ((model GPT2) stream)
+  (format stream "~%  [Layers]:~%~a~%"
+	  (with-output-to-string (out)
+	    (dolist (layer (slot-value model 'layers))
+	      (format out "~a~%" layer)))))
 
