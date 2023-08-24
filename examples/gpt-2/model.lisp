@@ -187,24 +187,26 @@
 (defun extend-source-input (model name source N)
   ;; Extend the source into N+1 Area
   (set-input model
+	     name
 	     (let ((out (!move (!view
-				(make-tensor `(,(car (shape source)) ,N ,(third (shape source))))
+				(print (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
 				t
 				`(0 ,N))
 			       source)))
-	       (proceed (!view out t t t)))
-	     name))
+	       (proceed (print (!view out t `(0 ,(1+ N))))))))
 
 (defun gpt2-inference (model compiled-model source input &key (length 10))
   (setf (slot-value model 'memory-k) nil
         (slot-value model 'memory-v) nil)
   
-  (loop with slen fixnum = (second (shape input))
+  (loop with slen fixnum   = (second (shape input))
+	with batch-size    = (car    (shape source))
+	with embedding-dim = (third  (shape source))
 	for nth fixnum upfrom slen below (+ slen length) do
-	  (extend-source-input compiled-model :x-source source nth)
-	  (extend-source-input compiled-model :x-input  input  nth)
-	  (let ((N (second (shape source))))
-	    (setq source (forward compiled-model))))
+	  (set-input compiled-model :x-source (make-tensor `(,batch-size ,(1+ nth) ,embedding-dim)))
+	  (set-input compiled-model :x-input  (make-tensor `(,batch-size ,(1+ nth))))
+	  (let* ((N (second (shape source))))
+	    (setq source (print (forward compiled-model)))))
   source)
 
 (defparameter N 0)
@@ -218,8 +220,10 @@
       (let* ((source (make-input `(1 N 768) :x-source))  ;; (Batch_Size Sentence_Length Embedding_dim)
 	     (input  (make-input `(1 N)     :x-input))   ;; (Batch_Size Sentence_Length)
 	     (compiled-model (build (call model source input))))
-	(set-input compiled-model :input (ax+b `(1 1) 0 1)) ;; First Input
-	(setq source (print (gpt2-inference model compiled-model source input :length 100)))
+	(set-input compiled-model :x-source (ax+b `(1 1 768) 0 0))
+	(set-input compiled-model :x-input  (ax+b `(1 1) 0 1)) ;; First Input
+	
+	(setq source (gpt2-inference model compiled-model source input :length 100))
 	source))))
 
 
