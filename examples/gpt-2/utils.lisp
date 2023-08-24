@@ -27,7 +27,7 @@
 	  1
 	  0.0)
 	 (loop for ,position-n fixnum upfrom 0 below ,(second (shape ctx)) do
-	   (let* ((,vocab-index (aref (tensor-vec ,ctx) (+ ,position-n (offset-of ,ctx-view 0))))
+	   (let* ((,vocab-index (aref (tensor-vec ,ctx) (+ ,position-n ,(offset-of ctx-view 0))))
 		  (,wte-position (* (round (the single-float ,vocab-index)) ,embedding-size))
 		  (,wpe-position (* ,position-n ,embedding-size)))
 	     ;; ctx-out <- add(WTE[Word_Index, :], WPE[Position, :])
@@ -40,19 +40,19 @@
 	     ;; Y += WTE
 	     ;; Y += WPE
 	     (cl-waffe2/backends.cpu::waffe2-sadd
-	      ,embedding-size
-	      (incf-tensor-ptr ,wte ,wte-ptr :offset ,wte-position)
-	      1
+	      ,embedding-size	      
 	      (incf-tensor-ptr ,ctx-out ,ctx-out-ptr :offset (+ ,(offset-of ctx-out-view 0)
 								(* ,position-n ,embedding-size))) ;; CTX-OUT[:, pos, embedding-size]
+	      1
+	      (incf-tensor-ptr ,wte ,wte-ptr :offset ,wte-position)
 	      1)
 
 	     (cl-waffe2/backends.cpu::waffe2-sadd
 	      ,embedding-size
-	      (incf-tensor-ptr ,wpe ,wpe-ptr :offset ,wpe-position)
-	      1
 	      (incf-tensor-ptr ,ctx-out ,ctx-out-ptr :offset (+ ,(offset-of ctx-out-view 0)
 								(* ,position-n ,embedding-size))) ;; CTX-OUT[:, pos, embedding-size]
+	      1
+	      (incf-tensor-ptr ,wpe ,wpe-ptr :offset ,wpe-position)
 	      1)))))))
 
 ;; Implementing Embedding
@@ -82,18 +82,19 @@ In your terminal, and cl-waffe2 will load it."))
 			"GPT2PositionalEmbedding: Orders must be :column (C Order), not a :row (Fortran Order)")
 
 		       (with-gensyms (wte-ptr wpe-ptr ctx-out-ptr)
-			 `(cl-waffe2/backends.cpu::with-tensor-ptrs ((,wpe-ptr ,wpe)
-								     (,wte-ptr ,wte)
-								     (,ctx-out-ptr ,ctx-out))
-			    (,(call-with-view
-			       #'(lambda (ctx-view ctx-out-view)
-				   (expand-embedding-form ctx wte wpe wte-ptr wpe-ptr ctx-out-ptr ctx-out ctx-view ctx-out-view))
-			       (list ctx ctx-out)
-			       :at-least-dim 1
-			       :force-order t
-			       :lparallel nil
-			       :fuse nil)
-			     ,ctx-out)))))
+			 `(locally (declare (optimize (speed 1)))
+			    (cl-waffe2/backends.cpu::with-tensor-ptrs ((,wpe-ptr ,wpe)
+								       (,wte-ptr ,wte)
+								       (,ctx-out-ptr ,ctx-out))
+			      (,@(call-with-view
+				  #'(lambda (ctx-view ctx-out-view)
+				      (expand-embedding-form ctx wte wpe wte-ptr wpe-ptr ctx-out-ptr ctx-out ctx-view ctx-out-view))
+				  (list ctx ctx-out)
+				  :at-least-dim 1
+				  :force-order t
+				  :lparallel nil
+				  :fuse nil)
+			       ,ctx-out))))))
 
 (defun !gpt2-load-pe (ctx-out ctx wte wpe)
   (call

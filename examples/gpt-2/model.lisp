@@ -157,13 +157,14 @@
 
 ;; Invokes REPL form
 (defun launch-repl ()
-  (let ((model (GPT2)))
-    (print "Loaded!")
-    (print model)
-    (print
-     (proceed-bench
-      (call model
-	    (ax+b `(1 100 768) 0 0)
-	    (ax+b `(1 100) 0 1)
-	    (ax+b `(1 100 768) 0 0))))))
+  (with-no-grad
+    (let ((model (GPT2)))
+      (print "Loaded!")
+      (print model)
+      (print
+       (proceed-bench
+	(call model
+	      (ax+b `(1 100 768) 0 0)
+	      (ax+b `(1 100) 0 1)
+	      (ax+b `(1 100 768) 0 0)))))))
 
