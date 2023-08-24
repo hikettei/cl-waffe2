@@ -14,16 +14,14 @@
     (:n-ctx   . 1024)
     (:n-emb   . 768)
     (:n-head  . 12)
-    (:n-layer . 12)
-    (:ftype   . 1)))
+    (:n-layer . 12)))
 
 (defmacro with-gpt2-config ((&key
 			       (n-vocab 50257)
 			       (n-ctx 1024)
 			       (n-emb 786)
 			       (n-head 12)
-			       (n-layer 12)
-			       (ftype 1))
+			       (n-layer 12))
 			    &body
 			      body)
   `(let ((*model-params*
@@ -31,8 +29,7 @@
 	     (:n-ctx   . ,,n-ctx)
 	     (:n-emb   . ,,n-emb)
 	     (:n-head  . ,,n-head)
-	     (:n-layer . ,,n-layer)
-	     (:ftype   . ,,ftype))))
+	     (:n-layer . ,,n-layer))))
      ,@body))
 
 (defun read-config (keyword)
