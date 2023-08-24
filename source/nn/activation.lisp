@@ -36,10 +36,10 @@ Sigmoid(x) = \\frac{1}{1 + exp(-x)}
   "
 ## [function] !gelu
 
-Approximates GeLU (Not tested yet): `(!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x 0.044715 (!expt x 3))))))`
+Approximates GeLU (Not tested yet): `(!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x (!* 0.044715 (!expt x 3)))))))`
 "
   ;; I dunno if this is really works
-  (!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x 0.044715 (!expt x 3)))))))
+  (!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x (!* 0.044715 (!expt x 3))))))))
 
 ;; todo (!matmul !t !t) test
 ;; Bug: (Proceed (!sum (Proceed (!Softmax x))))
