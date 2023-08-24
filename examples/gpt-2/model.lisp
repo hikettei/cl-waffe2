@@ -68,11 +68,11 @@
 	   :on-call-> gpt2-layer-call)
   (let* ((layer-dir (format nil "~a/h~a" save-dir nth-layer)))
     ;; layer-dir = save_dir/hN/...
-    (setf (slot-value self 'ln-1-g) (load-npy "~a/ln_1/g.npy" layer-dir)
-	  (slot-value self 'ln-1-b) (load-npy "~a/ln_1/b.npy" layer-dir)
+    (setf (slot-value self 'ln-1-g)      (load-npy "~a/ln_1/g.npy" layer-dir)
+	  (slot-value self 'ln-1-b)      (load-npy "~a/ln_1/b.npy" layer-dir)
 
-	  (slot-value self 'ln-2-g) (load-npy "~a/ln_2/g.npy" layer-dir)
-	  (slot-value self 'ln-2-b) (load-npy "~a/ln_2/b.npy" layer-dir)
+	  (slot-value self 'ln-2-g)      (load-npy "~a/ln_2/g.npy" layer-dir)
+	  (slot-value self 'ln-2-b)      (load-npy "~a/ln_2/b.npy" layer-dir)
 
 	  (slot-value self 'attn-attn-w) (load-npy "~a/attn/c_attn/w.npy" layer-dir)
 	  (slot-value self 'attn-attn-b) (load-npy "~a/attn/c_attn/b.npy" layer-dir)
@@ -80,18 +80,18 @@
 	  (slot-value self 'attn-proj-w) (load-npy "~a/attn/c_proj/w.npy" layer-dir)
 	  (slot-value self 'attn-proj-b) (load-npy "~a/attn/c_proj/b.npy" layer-dir)
 
-	  (slot-value self 'mlp-fc-w) (load-npy "~a/mlp/c_fc/w.npy" layer-dir)
-	  (slot-value self 'mlp-fc-b) (load-npy "~a/mlp/c_fc/b.npy" layer-dir)
+	  (slot-value self 'mlp-fc-w)    (load-npy "~a/mlp/c_fc/w.npy" layer-dir)
+	  (slot-value self 'mlp-fc-b)    (load-npy "~a/mlp/c_fc/b.npy" layer-dir)
 
-	  (slot-value self 'mlp-proj-w) (load-npy "~a/mlp/c_proj/w.npy" layer-dir)
-	  (slot-value self 'mlp-proj-b) (load-npy "~a/mlp/c_proj/w.npy" layer-dir))))
+	  (slot-value self 'mlp-proj-w)  (load-npy "~a/mlp/c_proj/w.npy" layer-dir)
+	  (slot-value self 'mlp-proj-b)  (load-npy "~a/mlp/c_proj/w.npy" layer-dir))))
 
 ;; Custom printings
 (defmethod on-print-object ((model GPT2Layer) stream)
   (format stream "~%N_LAYER=~a" (slot-value model 'nth-layer)))	  
 
 ;; Forward process of gpt2-layer
-(defmethod gpt2-layer-call ((self GPT2Layer) x)
+(defmethod gpt2-layer-call ((self GPT2Layer) x y)
 
   )
 
@@ -101,10 +101,15 @@
 		   (wte)
 		   (wpe)
 		   (layers))
+	   :where (X-out[~ sentence-length embedding-size] Source[~ sentence-length] Target[~ sentence-length embedding-size]
+			   ->
+			   X-out[~ sentence-length embedding-size]
+			   where
+			   embedding-size = (read-config ':n-emb))
 	   :on-call-> gpt2-call)
   (let ((n-layer (read-config :n-layer)))
-    (setf (slot-value self 'wte) (load-npy "~a/wte.npy" save-dir)
-	  (slot-value self 'wpe) (load-npy "~a/wpe.npy" save-dir)
+    (setf (slot-value self 'wte)    (load-npy "~a/wte.npy" save-dir)
+	  (slot-value self 'wpe)    (load-npy "~a/wpe.npy" save-dir)
 	  (slot-value self 'ln-f-g) (load-npy "~a/ln_f/g.npy" save-dir)
 	  (slot-value self 'ln-f-b) (load-npy "~a/ln_f/b.npy" save-dir))
 	  
@@ -120,9 +125,12 @@
 	      (format out "~a~%" layer)))))
 
 ;; Forward process for GPT2
-(defmethod gpt2-call ((self GPT2) x)
-
-  )
+(defmethod gpt2-call ((self GPT2) x-out x y)
+  (with-slots ((wte wte) (wpe wpe) (layers layers) (ln-f-g ln-f-g) (ln-f-b ln-f-b)) self
+    
+    (call-> x-out
+	    (asnode #'!gpt2-load-pe x wte wpe) ;; X-out <- GPT2Pe(x, wte, wpe)
+	    )))
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Inference/Exports/Tokenizers
@@ -138,7 +146,9 @@
     (with-no-grad
       (build
        (!argmax
-	(call (GPT2) (make-input `(1 sentence-length) :input-sentence)))))))
+	(call (GPT2)
+	      (make-input `(1 sentence-length) :input-sentence)
+	      (make-input `(1 sentence-length) :memory)))))))
 
 (defun inference-gpt2 (model sentence)
   (with-memory-pool ;; Outside of this block, gc is called.
@@ -147,7 +157,7 @@
       ;; Tokens
       )))
 
-
+;; Invokes REPL form
 (defun launch-repl ()
   (let ((model (GPT2)))
     (print "Loaded!")
