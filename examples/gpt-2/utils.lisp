@@ -155,25 +155,26 @@ In your terminal, and cl-waffe2 will load it."))
 
 (defun merge-heads (x)
   (let* ((x (!permute x (torch-order 0 2 1 3)))
-	 (x-shape `(,@(butlast (shape x) 2) t)))
+	 (x-shape `(,@(butlast (shape x) 2) ,(apply #'* (last (shape x) 2)))))
     (apply #'!reshape x x-shape)))
 
 (defun self-attention (x gpt2) ;; X ...[N 2304]
   (with-slots ((memory-k memory-k) (memory-v memory-v)) gpt2
     (let* ((K (split-heads x :K))
 	   (V (split-heads x :V))
-	   (x (with-instant-kernel x ;; Embedding Lisp Code Directly to cl-waffe2 IR
-		`(if (or (slot-value ,gpt2 'memory-k) (slot-value ,gpt2 'memory-v))
-		     ;; Layer-Past isn't none
-		     (progn
-		       (setf (detach-p ,K) T)
-		       (setf (detach-p ,V) T)
-		       ;; ... Concatenate past keys
-		       )
-		     ,x)))
+	   ;;(x (with-instant-kernel x ;; Embedding Lisp Code Directly to cl-waffe2 IR
+	   ;;	`(if (or (slot-value ,gpt2 'memory-k) (slot-value ,gpt2 'memory-v))
+	   ;;	     ;; Layer-Past isn't none
+	   ;;	     (progn
+	   ;;	       (setf (detach-p ,K) T)
+	   ;;	       (setf (detach-p ,V) T)
+	   ;;	       ;; ... Concatenate past keys
+	   ;;	       )
+	   ;;	     ,x)))
 	   (Q (split-heads x :Q)))
 
       (let ((w (!matmul Q K)))
+	;; (1 768 768)
 	(call-> (!matmul Q K)
 		(asnode #'!div (car (last (shape w))))
 		(asnode #'!softmax :avoid-overflow nil)

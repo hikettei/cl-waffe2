@@ -88,7 +88,7 @@
 	  (slot-value self 'mlp-fc-b)    (load-npy "~a/mlp/c_fc/b.npy" layer-dir)
 
 	  (slot-value self 'mlp-proj-w)  (load-npy "~a/mlp/c_proj/w.npy" layer-dir)
-	  (slot-value self 'mlp-proj-b)  (load-npy "~a/mlp/c_proj/w.npy" layer-dir))))
+	  (slot-value self 'mlp-proj-b)  (load-npy "~a/mlp/c_proj/b.npy" layer-dir))))
 
 ;; Custom printings
 (defmethod on-print-object ((model GPT2Layer) stream)
@@ -108,23 +108,28 @@
 	       (attn-attn-w attn-attn-w)
 	       (attn-attn-b attn-attn-b)
 	       (attn-proj-w attn-proj-w)
-	       (attn-proj-b attn-attn-b))
+	       (attn-proj-b attn-proj-b))
       self
 
     (let* ((xp
 	     (call-> x
 		     (asnode #'!gpt2-layernorm ln-1-g ln-1-b)
-		     (asnode #'!affine attn-attn-w attn-attn-b) ;; X[N Length Embedding_Dim] @ W[1 786 2304] + B[2304]
+		     ;; Projection: 786 -> 786*3
+		     (asnode #'!matmul attn-attn-w) ;; X[Batch N Embedding_Dim] @ W[786 2304] + B[2304]
+		     (asnode #'!add (%transform attn-attn-b[i] -> [~ i]))
 		     (asnode #'self-attention orig)
-		     (asnode #'!affine attn-proj-w attn-proj-b)))
+		     (asnode #'!matmul attn-proj-w)
+		     (asnode #'!add (%transform attn-proj-b[i] -> [~ i]))))
 	   (proj-x
 	     (call-> x
 		     (asnode #'!add xp) ;; Residual Connection
 		     ;; Feed Forward Network
 		     (asnode #'!gpt2-layernorm ln-2-g ln-2-b)
-		     (asnode #'!affine mlp-fc-w mlp-fc-b) ;; X(3072 N).T @ W(1 768 3072) + B(3072)
+		     (asnode #'!matmul mlp-fc-w) ;; X(768 N).T @ W(1 768 3072) + B(3072)
+		     (asnode #'!add    (%transform mlp-fc-b[i] -> [~ i]))
 		     (asnode #'!gelu)
-		     (asnode #'!affine mlp-proj-w mlp-proj-b))))
+		     (asnode #'!matmul mlp-proj-w)
+		     (asnode #'!add    (%transform mlp-proj-b[i] -> [~ i])))))
       (!add xp proj-x))))
 
 
@@ -178,38 +183,43 @@
 (defun encode-sentence ())
 (defun decode-sentence ())
 
-(defun extend-source-input (model source N)
+;; [TODO] Optimize it:
+(defun extend-source-input (model name source N)
   ;; Extend the source into N+1 Area
   (set-input model
 	     (let ((out (!move (!view
-				(make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source))))
+				(make-tensor `(,(car (shape source)) ,N ,(third (shape source))))
 				t
 				`(0 ,N))
 			       source)))
 	       (proceed (!view out t t t)))
-	     :x-source))
+	     name))
 
+(defun gpt2-inference (model compiled-model source input &key (length 10))
+  (setf (slot-value model 'memory-k) nil
+        (slot-value model 'memory-v) nil)
+  
+  (loop with slen fixnum = (second (shape input))
+	for nth fixnum upfrom slen below (+ slen length) do
+	  (extend-source-input compiled-model :x-source source nth)
+	  (extend-source-input compiled-model :x-input  input  nth)
+	  (let ((N (second (shape source))))
+	    (setq source (forward compiled-model))))
+  source)
+
+(defparameter N 0)
 ;; Invokes REPL form
 (defun launch-repl (&key (use-model nil))
   (with-no-grad
     (let ((model (or use-model (GPT2))))
       (print "Loaded!")
       (print model)
-      (print
-       (proceed-bench
-	(call model
-	      (ax+b `(1 100 768) 0 0) ;;(make-input `(1 N 768) :x-source) ;; X_Source
-	      (ax+b `(12 100) 0 1))))          ;; Input Words
 
-      (let* ((source (make-input `(1 N 769) :x-source))
-	     (compiled-model (build (call model
-					  source
-					  (ax+b `(12 100) 0 1)))))
-
-	(loop for n fixnum upfrom 1 below 12 do
-	  (extend-source-input compiled-model source N)
-	  (setq source (forward model)))
-	source ;; <- decode the source
-	))))
+      (let* ((source (make-input `(1 N 768) :x-source))  ;; (Batch_Size Sentence_Length Embedding_dim)
+	     (input  (make-input `(1 N)     :x-input))   ;; (Batch_Size Sentence_Length)
+	     (compiled-model (build (call model source input))))
+	(set-input compiled-model :input (ax+b `(1 1) 0 1)) ;; First Input
+	(setq source (print (gpt2-inference model compiled-model source input :length 100)))
+	source))))
 
 
