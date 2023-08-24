@@ -12,8 +12,9 @@
   :description "This is a sample project of inferencing GPT-2 on cl-waffe2"
   :pathname ""
   :serial t
-  :depends-on (:cl-waffe2 :numpy-file-format)
+  :depends-on (:cl-waffe2 :alexandria :numpy-file-format)
   :components ((:file "package")
+	       (:file "utils")
 	       (:file "model")))
 
 

@@ -133,6 +133,7 @@ delete_simd_extension: ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-si
 
 .PHONY: download_assets
 download_assets: ## Downloads training data sample codes use.
+	sh ./examples/gpt-2/download_model.sh
 	cd ./examples/mnist && $(PYTHON) train_data.py
 
 .PHONY: example_mnist

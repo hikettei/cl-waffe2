@@ -35,6 +35,13 @@
 	     (:ftype   . ,,ftype))))
      ,@body))
 
+(defun read-config (keyword)
+  "(read-config :n-vocab) ;; => 50257"
+  (let ((result (find keyword *model-params* :test #'eql :key #'car)))
+    (if result
+	(cdr result)
+	(error "No such a keyword: ~a" keyword))))
+
 (defmodel (GPT2Layer (self)
 	   :slots ((ln-1-g)
 		   (ln-1-b)
@@ -56,8 +63,7 @@
 		   (mlp-proj-w)
 		   (mlp-proj-b))
 	   :on-call-> ((self x)
-		       x))
-  nil)
+		       x)))
 
 
 (defmethod load-weights-layer ((self GPT2Layer))
@@ -75,10 +81,13 @@
 		   (memory-k)
 		   (memory-v))
 	   :on-call-> ((self x)
-		       x))
-  nil)
+
+		       ;; repeat for nlayer
+		       x)))
 
 (defmethod load-weights-model ((self GPT2))
+  (let ((n-layer (read-config :n-layer)))
 
-  )
+    ))
+
 

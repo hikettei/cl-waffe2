@@ -4,6 +4,7 @@
 (defpackage :gpt-2-example
   (:use
    :cl
+   :alexandria
    :cl-waffe2
    :cl-waffe2/vm
    :cl-waffe2/nn
