@@ -144,3 +144,10 @@ example_mnist: ## Start MNIST Example and Benchmarking. (download_assets must be
 		--eval '(ql:quickload :mnist-sample)' \
 		--eval '(mnist-sample::train-and-valid-mlp :epoch-num 10)'
 
+.PHONY: example_gpt
+example_gpt: ## Launch GPT2 Inference (download_assets must be called in advance)
+	$(SBCL) --dynamic-space-size 4096 $(SBCL_OPTIONS) \
+		--load ./cl-waffe2.asd --load ./examples/gpt-2/gpt-2.asd \
+		--eval '(ql:quickload :gpt-2-example)' \
+		--eval '(gpt-2-example:launch-repl)'
+

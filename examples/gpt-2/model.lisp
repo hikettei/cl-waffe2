@@ -39,6 +39,11 @@
 	(cdr result)
 	(error "No such a keyword: ~a" keyword))))
 
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Model definitions
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 (defmodel (GPT2Layer (self save-dir nth-layer)
 	   :slots ((ln-1-g)
 		   (ln-1-b)
@@ -60,9 +65,7 @@
 		   (mlp-proj-w)
 		   (mlp-proj-b)
 		   (nth-layer :initarg :nth-layer))
-	   :on-call-> ((self x)
-		       (declare (ignore self))
-		       x))
+	   :on-call-> gpt2-layer-call)
   (let* ((layer-dir (format nil "~a/h~a" save-dir nth-layer)))
     ;; layer-dir = save_dir/hN/...
     (setf (slot-value self 'ln-1-g) (load-npy "~a/ln_1/g.npy" layer-dir)
@@ -87,6 +90,10 @@
 (defmethod on-print-object ((model GPT2Layer) stream)
   (format stream "~%N_LAYER=~a" (slot-value model 'nth-layer)))	  
 
+;; Forward process of gpt2-layer
+(defmethod gpt2-layer-call ((self GPT2Layer) x)
+
+  )
 
 (defmodel (GPT2 (self &key (save-dir "./examples/gpt-2/assets/models/gpt-2-117M/gpt2-waffe2/model"))
 	   :slots ((ln-f-g)
@@ -94,10 +101,7 @@
 		   (wte)
 		   (wpe)
 		   (layers))
-	   :on-call-> ((self x)
-		       (declare (ignore self))
-		       ;; repeat for nlayer
-		       x))
+	   :on-call-> gpt2-call)
   (let ((n-layer (read-config :n-layer)))
     (setf (slot-value self 'wte) (load-npy "~a/wte.npy" save-dir)
 	  (slot-value self 'wpe) (load-npy "~a/wpe.npy" save-dir)
@@ -114,4 +118,38 @@
 	  (with-output-to-string (out)
 	    (dolist (layer (slot-value model 'layers))
 	      (format out "~a~%" layer)))))
+
+;; Forward process for GPT2
+(defmethod gpt2-call ((self GPT2) x)
+
+  )
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Inference/Exports/Tokenizers
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+(defun encode-sentence ())
+(defun decode-sentence ())
+
+;; [TODO] proceed-bench
+(defun build-gpt2 ()
+  (with-devices (CPUTensor LispTensor)
+    (with-no-grad
+      (build
+       (!argmax
+	(call (GPT2) (make-input `(1 sentence-length) :input-sentence)))))))
+
+(defun inference-gpt2 (model sentence)
+  (with-memory-pool ;; Outside of this block, gc is called.
+    (set-input model :input-sentence sentence)
+    (let ((tokens (forward model)))
+      ;; Tokens
+      )))
+
+
+(defun launch-repl ()
+  (let ((model (GPT2)))
+    (print "Loaded!")
+    (print model)))
 
