@@ -322,7 +322,9 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
   "check after-shape is consisted of positive fixnum.
 shapes can contain t at once, this function also infers t."
 
-  (when (some #'symbolp after-shape)
+  (when (some #'(lambda (x) (and (not (eql x t))
+				 (symbolp x)))
+	      after-shape)
     (when (some #'(lambda (x) (eql x t)) after-shape)
       (error "!reshape: Adjustable shapes and `t` cant used in the same time."))
     (return-from parse-reshape-args after-shape))

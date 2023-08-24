@@ -2,7 +2,7 @@
 (in-package :cl-waffe2/base-impl)
 
 ;; Could be optimized until 10x times faster
-(defun !sum (tensor &key (axis t) (-> nil) (keepdims nil))
+(defun !sum (tensor &key (axis t) (-> nil) (keepdims nil) (div-by nil))
   "
 ## [function] !sum
 
@@ -70,8 +70,13 @@ Return:
       ;; Main Parts
       (multiple-value-bind (out* reverser) (apply #'!view out view-args)
 	(if keepdims
-	    (A+=B out* tensor)
-	    (apply #'!view (A+=B out* tensor) reverser))))))
+	    (if div-by
+		(let ((out (apply #'!view (A+=B out* tensor) reverser)))
+		  (apply #'!view (!div out div-by) view-args))
+		(A+=B out* tensor))
+	    (if div-by
+	        (!div (apply #'!view (A+=B out* tensor) reverser) div-by)
+		(apply #'!view (A+=B out* tensor) reverser)))))))
 
 (defun !mean (tensor &key (axis t) (-> nil) (keepdims nil))
   "
@@ -96,7 +101,7 @@ The function !mean return a node which computes the average of tensor along the 
 ### Return
 
 `->`[AbstractTensor] the result."
-  (let* ((result (!sum tensor :axis axis :-> -> :keepdims keepdims))
+  (let* (;;(result (!sum tensor :axis axis :-> -> :keepdims keepdims))
 	 (dims   (length (shape tensor)))
 	 (reducted-elements (make-tensor 1 :dtype (dtype tensor))))
     
@@ -117,6 +122,6 @@ The function !mean return a node which computes the average of tensor along the 
 	#'(lambda (s)
 	    (setq reducted-elements (!mul reducted-elements s)))
 	(shape tensor))))
-    
-    (!div result reducted-elements)))
+
+    (!sum tensor :axis axis :-> -> :keepdims keepdims :div-by reducted-elements)))
 

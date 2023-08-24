@@ -113,17 +113,17 @@ In your terminal, and cl-waffe2 will load it."))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; [TODO] Move this into :cl-waffe2/nn package
-(defun !gpt2-layernorm (x g b &key (eps 1e-5))
+(defun !gpt2-layernorm (x g b &key (eps 1.0e-12))
   ;; X ... [N, Sentene_length, Embedding_DIM]
   ;; g/b... [Embedding_DIM]
 
-  (let* ((x-mean (!mean x :axis -1 :keepdims t))   ;; μ=mean(x, axis=-1)
-	 (x-diff (!sub x x-mean))
-	 (x-sd   (!expt x-diff 2))                 ;; sd=(x-μl)^2
-	 (x-var  (!sqrt (!add (!div x-sd (third (shape x))) eps)))) ;; var=sd/embedding_dim
+  (let* ((u (!mean x :axis -1 :keepdims t))   ;; μ=mean(x, axis=-1)
+	 (f (!sub x u))
+	 (s (!mean (!expt f 2) :axis -1 :keepdims t))
+	 (x (!div f (!sqrt (!add s eps)))))
     (!add
      (!mul
-      (!div x-diff x-var)
+      x
       (%transform g[i] -> g[~ i]))
      (%transform b[i] -> b[~ i]))))
 
