@@ -8,27 +8,59 @@
   (format t "[INFO] load-npy attempts to load ~a...~%" (apply #'format nil path args))
   (parameter (change-facet (numpy-file-format:load-array (apply #'format nil path args)) :direction 'AbstractTensor)))
 
-(defun expand-embedding-form (ctx wte wpe ctx-out ctx-view ctx-out-view)
+(defun incf-tensor-ptr (tensor tensor-ptr &key (offset 0))
+  (cl-waffe2/backends.cpu::incf-tensor-ptr tensor tensor-ptr :offset offset))
+
+(defun expand-embedding-form (ctx wte wpe wte-ptr wpe-ptr ctx-out-ptr ctx-out ctx-view ctx-out-view)
   ;; Returns a S-expression later compiled
   ;; CTX = [~ sentence-length], Sparse Matrix
   ;; WTE = [Vocab-Size Embedding-Size]
   ;; WPE = [N-CTX Embedding-Size]
-  (declare (type AbstractTensor ctx wte wpe ctx-out-view))
+  (declare (type AbstractTensor ctx wte wpe ctx-out))
 
   (let ((embedding-size (second (shape wte))))
-    (with-gensyms (position-n vocab-index wte-position)
-      `(loop for ,position-n fixnum upfrom 0 below ,(second (shape ctx)) do
-	(let* ((,vocab-index (aref (tensor-vec ,ctx) (+ ,position-n (offset-of ,ctx-view 0))))
-	       (,wte-position (* (round (the single-float ,vocab-index)) ,embedding-size)))
+    (with-gensyms (position-n vocab-index wte-position wpe-position)
+      `(progn
+	 (cl-waffe2/backends.cpu::waffe2-smul-scal
+	  ,embedding-size
+	  (incf-tensor-ptr ,ctx-out ,ctx-out-ptr :offset ,(offset-of ctx-out-view 0))
+	  1
+	  0.0)
+	 (loop for ,position-n fixnum upfrom 0 below ,(second (shape ctx)) do
+	   (let* ((,vocab-index (aref (tensor-vec ,ctx) (+ ,position-n (offset-of ,ctx-view 0))))
+		  (,wte-position (* (round (the single-float ,vocab-index)) ,embedding-size))
+		  (,wpe-position (* ,position-n ,embedding-size)))
+	     ;; ctx-out <- add(WTE[Word_Index, :], WPE[Position, :])
 
-	  )))))
+	     ;; [TODO] Fuse these steps to get more speed:
+	     ;; Using SIMD Extention to add two vectors
+	     ;; sadd: Y += X
+
+	     ;; Y *= 0
+	     ;; Y += WTE
+	     ;; Y += WPE
+	     (cl-waffe2/backends.cpu::waffe2-sadd
+	      ,embedding-size
+	      (incf-tensor-ptr ,wte ,wte-ptr :offset ,wte-position)
+	      1
+	      (incf-tensor-ptr ,ctx-out ,ctx-out-ptr :offset (+ ,(offset-of ctx-out-view 0)
+								(* ,position-n ,embedding-size))) ;; CTX-OUT[:, pos, embedding-size]
+	      1)
+
+	     (cl-waffe2/backends.cpu::waffe2-sadd
+	      ,embedding-size
+	      (incf-tensor-ptr ,wpe ,wpe-ptr :offset ,wpe-position)
+	      1
+	      (incf-tensor-ptr ,ctx-out ,ctx-out-ptr :offset (+ ,(offset-of ctx-out-view 0)
+								(* ,position-n ,embedding-size))) ;; CTX-OUT[:, pos, embedding-size]
+	      1)))))))
 
 ;; Implementing Embedding
 (defnode (GPT2PositionalEmbedding (self vocab-size n-ctx embedding-size)
 	  :documentation "add(WTE[CTX], WPE[CTX]) -> CTX"
-	  :where (ctx[~ sentence-length] wte[vocab-size embedding-size] wpe[n-ctx embedding-size] ctx-out[~ sentence-length embedding-size]
+	  :where (ctx[N sentence-length] wte[vocab-size embedding-size] wpe[n-ctx embedding-size] ctx-out[N sentence-length embedding-size]
 			->
-			ctx-out[~ sentence-length embedding-size])))
+			ctx-out[N sentence-length embedding-size])))
 
 (define-impl (GPT2PositionalEmbedding :device LispTensor :cache-when-compiled nil)
 	     :forward ((self ctx wte wpe ctx-out)
@@ -48,12 +80,20 @@ In your terminal, and cl-waffe2 will load it."))
 			     (eql (order wte) :column))
 			nil
 			"GPT2PositionalEmbedding: Orders must be :column (C Order), not a :row (Fortran Order)")
-		       
-		       `(with-ranked-loop ((#'expand-embedding-form ,ctx ,ctx-out)
-					   :kernel-size 1
-					   :shuffle-rank nil
-					   :lparallel nil
-					   :fuse nil))))
+
+		       (with-gensyms (wte-ptr wpe-ptr ctx-out-ptr)
+			 `(cl-waffe2/backends.cpu::with-tensor-ptrs ((,wpe-ptr ,wpe)
+								     (,wte-ptr ,wte)
+								     (,ctx-out-ptr ,ctx-out))
+			    (,(call-with-view
+			       #'(lambda (ctx-view ctx-out-view)
+				   (expand-embedding-form ctx wte wpe wte-ptr wpe-ptr ctx-out-ptr ctx-out ctx-view ctx-out-view))
+			       (list ctx ctx-out)
+			       :at-least-dim 1
+			       :force-order t
+			       :lparallel nil
+			       :fuse nil)
+			     ,ctx-out)))))
 
 (defun !gpt2-load-pe (ctx-out ctx wte wpe)
   (call

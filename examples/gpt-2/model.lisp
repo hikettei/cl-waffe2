@@ -19,7 +19,7 @@
 (defmacro with-gpt2-config ((&key
 			       (n-vocab 50257)
 			       (n-ctx 1024)
-			       (n-emb 786)
+			       (n-emb 768)
 			       (n-head 12)
 			       (n-layer 12))
 			    &body
@@ -34,10 +34,13 @@
 
 (defun read-config (keyword)
   "(read-config :n-vocab) ;; => 50257"
-  (let ((result (find keyword *model-params* :test #'eql :key #'car)))
-    (if result
-	(cdr result)
-	(error "No such a keyword: ~a" keyword))))
+  (let ((keyword (if (keywordp keyword)
+		     keyword
+		     (intern (format nil "~a" keyword) "KEYWORD"))))
+    (let ((result (find keyword *model-params* :test #'eql :key #'car)))
+      (if result
+	  (cdr result)
+	  (error "No such a keyword: ~a" keyword)))))
 
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,26 +48,26 @@
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defmodel (GPT2Layer (self save-dir nth-layer)
-	   :slots ((ln-1-g)
-		   (ln-1-b)
+	   :slots ((ln-1-g :initform nil)
+		   (ln-1-b :initform nil)
 		   
-		   (ln-2-g)
-		   (ln-2-b)
+		   (ln-2-g :initform nil)
+		   (ln-2-b :initform nil)
 
 		   ;; Attention
-		   (attn-attn-w)
-		   (attn-attn-b)
+		   (attn-attn-w :initform nil)
+		   (attn-attn-b :initform nil)
 
-		   (attn-proj-w)
-		   (attn-proj-b)
+		   (attn-proj-w :initform nil)
+		   (attn-proj-b :initform nil)
 
 		   ;; MLP
-		   (mlp-fc-w)
-		   (mlp-fc-b)
+		   (mlp-fc-w :initform nil)
+		   (mlp-fc-b :initform nil)
 
-		   (mlp-proj-w)
-		   (mlp-proj-b)
-		   (nth-layer :initarg :nth-layer))
+		   (mlp-proj-w :initform nil)
+		   (mlp-proj-b :initform nil)
+		   (nth-layer :initarg :nth-layer :initform nil))
 	   :on-call-> gpt2-layer-call)
   (let* ((layer-dir (format nil "~a/h~a" save-dir nth-layer)))
     ;; layer-dir = save_dir/hN/...
@@ -96,16 +99,11 @@
   )
 
 (defmodel (GPT2 (self &key (save-dir "./examples/gpt-2/assets/models/gpt-2-117M/gpt2-waffe2/model"))
-	   :slots ((ln-f-g)
-		   (ln-f-b)
-		   (wte)
-		   (wpe)
-		   (layers))
-	   :where (X-out[~ sentence-length embedding-size] Source[~ sentence-length] Target[~ sentence-length embedding-size]
-			   ->
-			   X-out[~ sentence-length embedding-size]
-			   where
-			   embedding-size = (read-config ':n-emb))
+	   :slots ((ln-f-g :initform nil)
+		   (ln-f-b :initform nil)
+		   (wte    :initform nil)
+		   (wpe    :initform nil)
+		   (layers :initform nil))
 	   :on-call-> gpt2-call)
   (let ((n-layer (read-config :n-layer)))
     (setf (slot-value self 'wte)    (load-npy "~a/wte.npy" save-dir)
@@ -161,5 +159,11 @@
 (defun launch-repl ()
   (let ((model (GPT2)))
     (print "Loaded!")
-    (print model)))
+    (print model)
+    (print
+     (proceed-bench
+      (call model
+	    (ax+b `(1 100 768) 0 0)
+	    (ax+b `(1 100) 0 1)
+	    (ax+b `(1 100 768) 0 0))))))
 
