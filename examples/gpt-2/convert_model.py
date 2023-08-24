@@ -41,16 +41,16 @@ for name, shape in list_vars:
     # "model/h.*/attn/c_proj/w"
     # "model/h.*/mlp/c_fc/w"
     # "model/h.*/mlp/c_proj/w"
-    if name[-14:] == "/attn/c_attn/w" or \
-       name[-14:] == "/attn/c_proj/w" or \
-       name[-11:] == "/mlp/c_fc/w" or \
-       name[-13:] == "/mlp/c_proj/w":
-        print("  Transposing...")
-        data = data.transpose()
+    #if name[-14:] == "/attn/c_attn/w" or \
+    #   name[-14:] == "/attn/c_proj/w" or \
+    #   name[-11:] == "/mlp/c_fc/w" or \
+    #   name[-13:] == "/mlp/c_proj/w":
+    #    print("  Transposing...")
+    #    data = data.transpose()
 
     dshape = data.shape
     data  = data.astype(np.float32)
     np.save(assure_dir(fname_out + name + ".npy"), data)
 
-print("Done. Output file: " + fname_out)
+print("Done. Output dir: " + fname_out)
 print("")
