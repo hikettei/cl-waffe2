@@ -111,7 +111,7 @@
 	       (attn-proj-b attn-proj-b))
       self
 
-    (let* ((xp
+    (let* ((attn
 	     (call-> x
 		     (asnode #'!gpt2-layernorm ln-1-g ln-1-b)
 		     ;; Projection: 786 -> 786*3
@@ -120,17 +120,18 @@
 		     (asnode #'self-attention orig)
 		     (asnode #'!matmul attn-proj-w)
 		     (asnode #'!add (%transform attn-proj-b[i] -> [~ i]))))
-	   (proj-x
+	   (x (!add x attn)) ;; Residual Connection
+	   (m
 	     (call-> x
-		     (asnode #'!add xp) ;; Residual Connection
 		     ;; Feed Forward Network
 		     (asnode #'!gpt2-layernorm ln-2-g ln-2-b)
 		     (asnode #'!matmul mlp-fc-w) ;; X(768 N).T @ W(1 768 3072) + B(3072)
-		     (asnode #'!add    (%transform mlp-fc-b[i] -> [~ i]))
-		     (asnode #'!gelu)
+		     (asnode #'!add    (%transform mlp-fc-b[i]   -> [~ i]))
+		     (asnode #'!gelu-lisptanh)
 		     (asnode #'!matmul mlp-proj-w)
 		     (asnode #'!add    (%transform mlp-proj-b[i] -> [~ i])))))
-      (!add xp proj-x))))
+      ;; Residual Connection
+      (!add x m))))
 
 
 (defmodel (GPT2 (self &key (save-dir "./examples/gpt-2/assets/models/gpt-2-117M/gpt2-waffe2/model"))
@@ -189,11 +190,11 @@
   (set-input model
 	     name
 	     (let ((out (!move (!view
-				(print (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
+				(make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source))))
 				t
 				`(0 ,N))
 			       source)))
-	       (proceed (print (!view out t `(0 ,(1+ N))))))))
+	       (proceed (!view out t `(0 ,(1+ N)))))))
 
 (defun gpt2-inference (model compiled-model source input &key (length 10))
   (setf (slot-value model 'memory-k) nil
@@ -204,7 +205,7 @@
 	with embedding-dim = (third  (shape source))
 	for nth fixnum upfrom slen below (+ slen length) do
 	  (set-input compiled-model :x-source (make-tensor `(,batch-size ,(1+ nth) ,embedding-dim)))
-	  (set-input compiled-model :x-input  (make-tensor `(,batch-size ,(1+ nth))))
+	  (set-input compiled-model :x-input  (make-tensor `(,batch-size ,(1+ nth)))) ;; [TODO] Merge previous outputs
 	  (let* ((N (second (shape source))))
 	    (setq source (print (forward compiled-model)))))
   source)

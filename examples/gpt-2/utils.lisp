@@ -113,14 +113,16 @@ In your terminal, and cl-waffe2 will load it."))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; [TODO] Move this into :cl-waffe2/nn package
-(defun !gpt2-layernorm (x g b &key (eps 1.0e-12))
+;; eps=1.0e-5, [FixME] rounding error of mean
+(defun !gpt2-layernorm (x g b &key (eps 1.0e-5))
   ;; X ... [N, Sentene_length, Embedding_DIM]
   ;; g/b... [Embedding_DIM]
 
-  (let* ((u (!mean x :axis -1 :keepdims t))   ;; μ=mean(x, axis=-1)
-	 (f (!sub x u))
-	 (s (!mean (!expt f 2) :axis -1 :keepdims t))
-	 (x (!div f (!sqrt (!add s eps)))))
+  ;; (!sub x u) != 0.0 ...
+  (let* ((u (!mean x :axis -1 :keepdims t))  ;; μ=mean(x, axis=-1)
+	 (s (!mean (!expt (!sub x u) 2) :axis -1 :keepdims t))
+	 (x (!div (!sub x u)
+		  (!sqrt (!add (->contiguous s) eps)))))
     (!add
      (!mul
       x
@@ -134,6 +136,17 @@ In your terminal, and cl-waffe2 will load it."))
 (defun !affine (x weight bias)
   (!add (!matmul (!t x) (!flexible weight))
 	(%transform bias[i] -> bias[~ i])))
+
+
+;; GeLU but tanh is safe
+(defun !gelu-lisptanh (x)
+  (!* 0.5 x
+      (!+ 1
+	  (let ((o (!* (coerce (sqrt (/ 2.0 pi)) (dtype->lisp-type (dtype x)))
+		       (!+ x
+			   (!* 0.044715 (!expt x 3))))))
+	    (with-devices (LispTensor)
+	      (!tanh o))))))
 
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
