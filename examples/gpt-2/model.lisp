@@ -278,7 +278,7 @@
 		(return-from bpe-iter)
 		(setq pairs (get-pairs word)))))))
     word))
-      
+
 
 (defun encode-sentence (sentence) ;; (read-line)
   (declare (type string sentence))
@@ -289,18 +289,24 @@
 			  collect (gethash (char-code (aref token n)) *byte2unicode*)))
 	     (token (apply #'concatenate 'string token)))
 	(dolist (bpetoken (bpe-split token))
-	  (push (or (gethash bpetoken *encoder-json*) 0) bpe-tokens))))
-    (reverse bpe-tokens)))
+	  (push (+ 0.0 (or (gethash bpetoken *encoder-json*) 0)) bpe-tokens))))
+    (let ((tokens (reverse bpe-tokens)))
+      (change-facet
+       (make-array `(1 ,(length tokens))
+		   :element-type 'single-float
+		   :initial-contents `(,tokens))
+       :direction 'AbstractTensor))))
 
-(defun decode-sentence (list)
-  (declare (type list list))
-  (let ((text (apply #'concatenate 'string (loop for token in list collect (gethash token *decoder-json*)))))
-    (with-output-to-string (out)
-      (loop for pos fixnum upfrom 0 below (length text) do
-	(let ((code (gethash (char-code (aref text pos)) *byte2unicode*)))
-	  (if code
-	      (princ code out)
-	      (princ " " out)))))))
+(defun decode-sentence (tensor)
+  (declare (type AbstractTensor tensor))
+  (let ((list (map 'list #'round (tensor-vec tensor))))
+    (let ((text (apply #'concatenate 'string (loop for token in list collect (gethash token *decoder-json*)))))
+      (with-output-to-string (out)
+	(loop for pos fixnum upfrom 0 below (length text) do
+	  (let ((code (gethash (char-code (aref text pos)) *byte2unicode*)))
+	    (if code
+		(princ code out)
+		(princ " " out))))))))	
 
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
