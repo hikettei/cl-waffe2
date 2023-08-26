@@ -52,6 +52,7 @@ Evaluates generated cl-waffe2 IR sequence.
 	  finally
 	     (return-from accept-instructions (maybe-read-result (wfop-self inst))))))
 
+(defparameter *under-benchmark-set* nil "(list sorted-node profiled-table) If there's any") 
 
 (defun make-backward-instruction (toplevel dout-mock nth leaves fuse-p)
   (let* ((dout-input (make-input (shape dout-mock) nil
@@ -77,7 +78,9 @@ Evaluates generated cl-waffe2 IR sequence.
 		  (type AbstractTensor dout))
 	 (write-result dout-input (list (maybe-read-result dout)))
 	 (if iseq
-	     (accept-instructions iseq)
+	     (if *under-benchmark-set*
+		 (benchmark-accept-instructions iseq)
+		 (accept-instructions iseq))
 	     dout))
      #'(lambda ()
 	 (format nil "Block -> ~a-BACKWARD {
@@ -182,29 +185,39 @@ CL-WAFFE2-REPL>
 	  nil
 	  "benchmark-accept-instructions: Assertion Failed with n-sample >= 1")
 
-  (let ((result)
-	(longest-time-width 0)
-	(total 0.0)
-	(avg 0.0)
-	(sort-by-node    (make-hash-table :test #'equal))
-	(profiled-result (make-hash-table))) ;; Basically, NodeName -> (List Time1 Time2 ...)
+  (let* ((inst->node-table (or (third *under-benchmark-set*) (make-hash-table))) ;; NodeIID -> NodeName
+	 (result)
+	 (longest-time-width 0)
+	 (total 0.0)
+	 (avg 0.0)
+	 (sort-by-node    (or (car *under-benchmark-set*) (make-hash-table :test #'equal)))
+	 (profiled-result (or (second *under-benchmark-set*) (make-hash-table)))) ;; Basically, NodeName -> (List Time1 Time2 ...)
     (dotimes (n n-sample)
       (when iseq
-	(loop for inst of-type WFInstruction in iseq
-	      for nth fixnum upfrom 0
+	(loop with *under-benchmark-set* = (list sort-by-node profiled-result inst->node-table)
+	      for inst of-type WFInstruction in iseq
 	      do (let ((start-time (get-internal-real-time)))
 		   (write-result (wfop-self inst) (apply-instruction inst))
-		   (let* ((end-time (get-internal-real-time))
-			  (executing-time (/ (- end-time start-time) internal-time-units-per-second)))
+		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
+		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
+		     (let* ((end-time (get-internal-real-time))
+			    (executing-time (/ (- end-time start-time) internal-time-units-per-second))
+			    (id (tensor-iid (wfop-self inst))))
 
-		     (when (if ignore-first-call
-			       (not (= n 0))
-			       t)
-		       (setf (gethash nth profiled-result)
-			     `(,@(gethash nth profiled-result)
-			       ,executing-time)))))
+		       (when (if ignore-first-call
+				 (not (= n 0))
+				 t)
+			 (setf (gethash id profiled-result)
+			       `(,@(gethash id profiled-result)
+				 ,executing-time))))))
 	      finally
 		 (setq result (maybe-read-result (wfop-self inst))))))
+
+    ;; If the execution is originated from another process
+    ;; just merging the result and returns the result
+
+    (when *under-benchmark-set*
+      (return-from benchmark-accept-instructions result))
 
     (maphash
      #'(lambda (k v)
@@ -219,36 +232,37 @@ CL-WAFFE2-REPL>
     (flet ((conc-iseq-str (iseq)
 	     (let ((tensor-ids))
 	       (with-output-to-string (out)
+		 (format out "[Sorted by Instructions]~%")
 		 (princ " Time(s)" out)
 		 (dotimes (i (abs (- longest-time-width (length " Time(s)")))) (princ " " out))
 		 (format out "|   Instruction ( * - Beyonds the average execution time)~%")
 		 (with-indent-to iseq
-		   (loop for i in iseq
-			 for nth fixnum upfrom 0 do
-			   (dolist (var (wfop-args i))
-			     (push (tensor-id var) tensor-ids))
-			   
-			   ;; Put the result of benchmark
-			   (let* ((times (gethash nth profiled-result))
-				  (time (format nil "~a~a  "
-						(if times
-						    (float (apply #'+ times))
-						    "?")
-						(if (> (float (apply #'+ times)) avg)
-						    "*"
-						    ""))))
-			     
-			     (when (null (gethash (instruction-opname i) sort-by-node))
-			       (setf (gethash (instruction-opname i) sort-by-node) 0.0))
-			     (incf (gethash (instruction-opname i) sort-by-node) (float (apply #'+ times)))
-			     
-			     (princ time out)
-			     (dotimes (i (- longest-time-width (length time))) (princ " " out))
-			     (princ "| " out)
-			     (princ i out))))
-		 (format out "~%~a Instructions | ~a Tensors~%"
-			 (length iseq)
-			 (length (remove-duplicates tensor-ids)))))))
+		   (loop for nth being the hash-keys in profiled-result do
+		     (let ((i (gethash nth inst->node-table)))
+		       (dolist (var (wfop-args i))
+			 (push (tensor-id var) tensor-ids))
+		       
+		       ;; Put the result of benchmark
+		       (let* ((times (gethash nth profiled-result))
+			      (time (format nil "~a~a  "
+					    (if times
+						(float (apply #'+ times))
+						"?")
+					    (if (> (float (apply #'+ times)) avg)
+						"*"
+						""))))
+			 
+			 (when (null (gethash (instruction-opname i) sort-by-node))
+			   (setf (gethash (instruction-opname i) sort-by-node) 0.0))
+			 (incf (gethash (instruction-opname i) sort-by-node) (float (apply #'+ times)))
+			 
+			 (princ time out)
+			 (dotimes (i (- longest-time-width (length time))) (princ " " out))
+			 (princ "| " out)
+			 (princ i out))))
+		   (format out "~%~a Instructions | ~a Tensors~%"
+			   (length iseq)
+			   (length (remove-duplicates tensor-ids))))))))
       
       (format stream "~a~% Total Time: ~a sec~%~%" (conc-iseq-str iseq) total)
 
@@ -264,7 +278,9 @@ CL-WAFFE2-REPL>
 	     (maxtime-node  (loop for k in top-k
 				  if k
 				    maximize (length (format nil "~a" (second k))))))
-	
+
+	(setq maxtime-node (max maxtime-node (length "Total time (s)")))
+	(format stream "[Sorted by topK]~%")
 	(format stream "~a"
 		(with-output-to-string (out)
 		  (princ " Instruction" out)

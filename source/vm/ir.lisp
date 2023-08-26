@@ -2,19 +2,30 @@
 (in-package :cl-waffe2/vm)
 
 
+;; [TODO] Add WfInstrucion to the docstring
 (defstruct (WFInstruction
 	    (:conc-name wfop-)
 	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
-Instruction: Sets the result of λ function op called with `args`, into self.state.forward_result
+WfInstruction is a data structure to express `cl-waffe2 IR`.
 
-Basically follows this format:
+Instruction: Sets the result of λ function op called with `args`, into `self.state.forward_result`. So, Operations basically follow this format:
 
- out_target <- λ(Args1 Args2 Args3) ...
+```
+out_target <- λ(Args1 Args2 Args3) ...
+```
 
-cl-waffe2 vm specializes on  the sequence of above format.
+### Slots
+
+`wfop-op[function]` corresponds with compiled λ function.
+
+`wfop-node[AbstractNode or string or function]` The node which generates λ function. For the most case, this slot is set to `AbstractNode`, but the node is something special, (e.g.: `CodeBlock`, `IfNode` etc...), set to `function`.
+
+`wfop-self[AbstractTensor]` corresponds with `out_target`, that is, the tensor to store the results
+
+`wfop-args[list of AbstractTensor]` corresponds with `(tensor-variable wfop-self)`. tensors to be called with: `arg1 arg2 arg3...`.
 "
   (op   op   :type function)
   (node node :type (or function string null AbstractNode))

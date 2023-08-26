@@ -96,10 +96,8 @@
     (if fuse-p
 	(values
 	 (reverse
-	  (apply-fuse-operations
-	   (apply-iseq-reordering
-	    (reverse instruction-seq))
-	   variable-leaves))
+	  (apply-path-fusion
+	   (reverse instruction-seq)))
 	 variable-leaves)
 	(values instruction-seq variable-leaves))))
 
@@ -158,8 +156,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
   (declare (type AbstractTensor toplevel))
   ;; fuse-p is intentionally disabled forcibly for a while
   ;; because it cause unexcepted behaviours
-  (let ((fuse-p nil) ;; fuse-p is disabled in default.
-	(*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
+  (let ((*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
     (multiple-value-bind (iseq-forward leaves)
 	(node-compile-into-vm toplevel :fuse-p fuse-p)
 
@@ -168,9 +165,10 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (when (not fuse-p) ;; avoid twice-time applying
 	(apply-in-place-mutation! iseq-forward leaves))
 
-      (let* ((dout (if (scalar-p toplevel)
-		       (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-		       (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))
+      (let* ((dout (when need-backward
+		     (if (scalar-p toplevel)
+			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
+			 (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel)))))
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
@@ -187,9 +185,6 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			   #'(lambda ()
 			       (forward out)))))))
 	 leaves)
-	;; (print (reverse iseq-forward))
-	;; (print backward-iseq)
-	;; (print backward-iseq)
 
 	(values (reverse iseq-forward) backward-iseq leaves)))))
 

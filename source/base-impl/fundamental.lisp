@@ -322,6 +322,13 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
   "check after-shape is consisted of positive fixnum.
 shapes can contain t at once, this function also infers t."
 
+  (when (some #'(lambda (x) (and (not (eql x t))
+				 (symbolp x)))
+	      after-shape)
+    (when (some #'(lambda (x) (eql x t)) after-shape)
+      (error "!reshape: Adjustable shapes and `t` cant used in the same time."))
+    (return-from parse-reshape-args after-shape))
+  
   (assert (<= (count t after-shape) 1)
 	  nil
 	  "!reshape: Assertion Failed because t only appears at once.")
@@ -376,11 +383,13 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
-    
-    (assert (= (apply #'* (shape tensor))
-	       (apply #'* shapes))
-	    nil
-	    "Reshaping failed because the total size do not match.")
+
+    (when (and (not (some #'symbolp (shape result)))
+	       (not (some #'symbolp shapes)))
+      (assert (= (apply #'* (shape tensor))
+		 (apply #'* shapes))
+	      nil
+	      "Reshaping failed because the total size do not match."))
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
     (let ((out (forward (ReshapeTensorNode (shape tensor) shapes) (->contiguous tensor) result)))
@@ -661,12 +670,13 @@ The function proceed-backward calls forward and backwrd of the tensor.
 			       (ignore-first-call nil)
 			       (stream t)			       
 			       (top-k 10)
-			       (backward nil))
+			       (backward nil)
+			       (fuse-p t))
   "
 ## [function] proceed-bench
 
 ```lisp
-(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil))
+(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil) (fuse-p t))
 ```
 
 Invokes `cl-waffe2 VM` with benchmarking the forward and (if specified) backward.
@@ -702,7 +712,7 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
 "
 
   (multiple-value-bind (fw-iseq bw-iseq leaves)
-      (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode)
+      (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
     (declare (ignore leaves))
     (let ((result))
 

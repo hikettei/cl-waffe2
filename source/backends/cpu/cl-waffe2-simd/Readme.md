@@ -1,34 +1,47 @@
 
 # cl-waffe2-simd
 
-This package is separated from `cl-waffe2` by design, to avoid adding unnecessary dependencies for some users. (that is, this package does not necessarily need to be built). To enhance cl-waffe2 with fast SIMD-enabled operations, you MUST build this package with `$ make build_simd_extension` at the top of the cl-waffe2 project tree.
+This package is separated from `cl-waffe2` by design, to avoid adding unnecessary dependencies for some users. (that is, this package does not necessarily need to be built). However, to enhance cl-waffe2 with fast SIMD-enabled operations on CPU, you **MUST** build this package with `$ make build_simd_extension` at the top of the cl-waffe2 project tree.
 
-## (TO BE) Supported Architectures
+## Build
 
-x86_64 ... avx2 avx512 sse2, and AMD neon.
+```sh
+$ make                      ## from where GNUmakefile is available...
+$ make build_simd_extension ## everything is ok with this command
+```
 
-As of this writing, AVX2 is the only supported hardware.
+## Supported Architectures
+
+| Hardware       | State |
+| -------------- | ----- | 
+| SSE            | ❌    | 
+| AVX(x86/64)    | ❌    | 
+| AVX2(x86/64)   | ⭕️    |
+| AVX512(x86/64) | ❌    |
+| Neon(AMD)      | ❌    |
 
 ### Supported Dtypes
 
-`double-float` `single-float` `uint32` `int32` `uint16` `int16` `uint8` `int8`
+|Dtype            | State |
+| --------------- | ----- |
+| double-float    | ⭕️    |
+| single-float    | ⭕️    |
+| uint64          | ❌    |
+| uint32          | ⭕️    |
+| uint16          | ⭕️    |
+| uint8           | ⭕️    |
+| int64           | ❌    |
+| int32           | ⭕️    |
+| int16           | ⭕️    |
+| int8            | ⭕️    |
+| char            | ❌    |
+| boolean(bit)    | ❌    |
 
 ## TODO
 
-Adding Sparse Matrix Support <- !!!
+- Sparse Gemm
 
-Sparse Gemm
+- Speed up `UnfoldNode` used in `Conv/Pool` with SIMD kernel
 
-Unfold/SIMD Mathematical Functions
-
-OneDNN Supports
-
-## Workflow
-
-```lisp
-[CPUTensor loads simd-extendion.dylib]
-  | -> if not found -> reject-p and lisptensor
-  v
-execute ops
-```
+- Using some oneDNN APIs
 

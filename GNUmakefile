@@ -133,6 +133,8 @@ delete_simd_extension: ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-si
 
 .PHONY: download_assets
 download_assets: ## Downloads training data sample codes use.
+	sh ./examples/gpt-2/download_model.sh
+	$(PYTHON) ./examples/gpt-2/convert_model.py ./examples/gpt-2/assets/models/gpt-2-117M
 	cd ./examples/mnist && $(PYTHON) train_data.py
 
 .PHONY: example_mnist
@@ -141,4 +143,11 @@ example_mnist: ## Start MNIST Example and Benchmarking. (download_assets must be
 		--load ./cl-waffe2.asd --load ./examples/mnist/mnist.asd \
 		--eval '(ql:quickload :mnist-sample)' \
 		--eval '(mnist-sample::train-and-valid-mlp :epoch-num 10)'
+
+.PHONY: example_gpt
+example_gpt: ## Launch GPT2 Inference (download_assets must be called in advance)
+	$(SBCL) --dynamic-space-size 4096 $(SBCL_OPTIONS) \
+		--load ./cl-waffe2.asd --load ./examples/gpt-2/gpt-2.asd \
+		--eval '(ql:quickload :gpt-2-example)' \
+		--eval '(gpt-2-example:launch-repl)'
 
