@@ -11,7 +11,18 @@
    #:accept-instructions
    #:compile-forward-and-backward
    #:disassemble-waffe2-ir
-   #:benchmark-accept-instructions))
+   #:benchmark-accept-instructions)
+  (:export
+   #:WfInstruction
+   #:wfop-op
+   #:wfop-self
+   #:wfop-node
+   #:wfop-args)
+  (:export
+   #:defpath
+   #:make-query
+   #:*user-defined-path-list*
+   #:reset-all-path!))
 
 (in-package :cl-waffe2/vm)
 

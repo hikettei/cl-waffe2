@@ -130,7 +130,7 @@ the symbol ~~ can only appear either before or after `->`"
 	 ,(when (not ~before)
 	    `(when (not (= ,(length subs-from)
 			   (dims ,read-variable)))
-	       (error "rank do not match")))
+	       (error "%transform assertion: the rank do not match compared to the declared form")))
 
 	 ;; Priorities = (Broadcast Permute View)
 	 ,(cond

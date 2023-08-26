@@ -687,10 +687,10 @@ Just an alias of `call-with-view` with this form:
 
 ```lisp
 `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
-    ,@body)
+  ,@body)
 ```
 "
   `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
     ,@body))
 
-		    
+
