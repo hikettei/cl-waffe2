@@ -361,18 +361,17 @@
 	    (format t "~a/~a...~%" nth (+ slen length))
 	    (setq source (get-input compiled-model :x-source))
 	    (setq input  (get-input compiled-model :x-input))
-	    (print "INPUT")
-	    (print (tensor-vec input))
+	    ;;(print "INPUT")
+	    ;;(print (tensor-vec input))
 	    (let* ((N (second (shape source))))
 	      (let* ((out     (forward compiled-model))
 		     (tmp     (make-input `(1 ,N ,(third (shape out))) nil))
 		     (tmp     (->contiguous (!view (!move tmp out) 0 -1)))
-		     (out     (lazy-print (lm-head model (lazy-print tmp))))
+		     (out     (lm-head model tmp))
 		     (idx     (tensor-vec (proceed (->scal (!argmax (!softmax out) :axis 1))))))
 
 		(set-input compiled-model :x-source (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
 		(extend-source-input-2d compiled-model :x-input  input  nth (coerce idx 'single-float))
-		(print idx)
 		(push idx result))))
     (reverse result)))
 
@@ -383,7 +382,8 @@
 
 ;; It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.
 
-(defun launch-repl (&key (use-model nil) (length 20) (temperature 1.0))
+(defun launch-repl (&key (use-model nil) (length 50) (temperature 1.0))
+  (format t "length=~a~%" length)
   (with-no-grad
     (let ((model (or use-model (GPT2))))
       (format t "[INFO] The model was restored from the trained weight!~%")
@@ -394,7 +394,7 @@
 	(load-encoder-json))
 
       (loop named repl while t do
-	(format t "~%Type \"quit\" to exit, \"benchmark\" to start profiling.~%>Type anything to start generating a sentence.~%")
+	(format t "~%Type \"quit\" to exit, \"benchmark\" to start profiling.~%>Type anything to start generating a sentence.~%Note that GPT2 Inference is stil unstable...~%")
 	(let ((input (read-line)))
 	  
 	  (when (equal input "quit")
