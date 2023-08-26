@@ -205,7 +205,7 @@
   (let ((encoder-str (time (parse (uiop:read-file-string save-path))))
 	(dict (make-hash-table :test #'equal))
 	(dec-dict (make-hash-table)))
-    (format t "[INFO] Pasing was done... n_vocab=~a~%" (/ (length encoder-str) 2))
+    (format t "[INFO] Parsing was done... n_vocab=~a~%" (/ (length encoder-str) 2))
     (loop while encoder-str do
       (let ((key (pop encoder-str))
 	    (val (pop encoder-str)))
@@ -312,36 +312,37 @@
 ;;  Inference/Exports
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+(defparameter N 0 "Indicates the length of sentence")
 
 ;; [TODO] Optimize it:
+;; [TODO] Impl: !concat
 (defun extend-source-input (model name source N)
   ;; Extend the source into N+1 Area
   (set-input model
 	     name
 	     (let ((out (!move (!view
-				(if (third (shape source))
-				    (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source))))
-				    (make-tensor `(,(car (shape source)) ,(1+ N))))
-				
+				(make-tensor `(,(car (shape source)) ,(+ 1 N) ,(third (shape source))))		
 				t
 				`(0 ,N))
 			       source)))
-	       (proceed (->contiguous (!view out t `(0 ,(1+ N))))))))
+	       (proceed (->contiguous (!view out t `(0 ,(+ 1 N))))))))
 
 (defun extend-source-input-2d (model name source N extend-with)
   ;; Extend the source into N+1 Area
   (set-input model
 	     name
 	     (let ((out (!move (!view
-				(make-tensor `(,(car (shape source)) ,(1+ N)))			       
+				(make-tensor `(,(car (shape source)) ,(+ 1 N)))
 				t
 				`(0 ,N))
 			       source)))
-	       (proceed (->contiguous (!view out t `(0 ,(1+ N)))))))
+	       (proceed (->contiguous (!view out t `(0 ,(+ 1 N)))))))
   (dotimes (batch-n (car (shape source)))
     (setf (mref (get-input model name) batch-n N) extend-with)))
 
-(defun gpt2-inference (model compiled-model source input &key (length 3))
+(defun gpt2-inference (model compiled-model source input &key (length 10) (temperature 1.0))
+  (declare (ignore temperature))
+  ;;mem-k mem-v: Not used for a now
   (setf (slot-value model 'memory-k) nil
         (slot-value model 'memory-v) nil)
 
@@ -349,62 +350,73 @@
     (loop with slen fixnum   = (second (shape input))
 	  with batch-size    = (car    (shape source))
 	  with embedding-dim = (third  (shape source))
-	  with last-idx single-float = 0.0
 	  for nth fixnum upfrom slen below (+ slen length) do
-	    (print nth)
-	    (extend-source-input    compiled-model :x-source source nth)
-	    (extend-source-input-2d compiled-model :x-input  input  nth last-idx)
+	    (format t "~a/~a...~%" nth (+ slen length))
 	    (setq source (get-input compiled-model :x-source))
 	    (setq input  (get-input compiled-model :x-input))
-	    (print source)
-	    (print input)
+	    (print "INPUT")
+	    (print (tensor-vec input))
 	    (let* ((N (second (shape source))))
-	      (let* ((out (forward compiled-model))
-		     (idx (proceed (->scal (!argmax (!view out t -1))))))
-		(push (tensor-vec idx) result)
-		(setq last-idx (coerce (tensor-vec idx) 'single-float)))))
-    result))
+	      
+	      (let* ((tmp     (make-tensor `(1 ,N ,(third (shape source)))))
+		     (out     (forward compiled-model))
+		     (out     (!move tmp out :force t))		     
+		     (idxs    (print (tensor-vec (proceed (!argmax (!softmax out) :axis 1)))))
+		     (idx     (aref idxs (1- N))))
 
-(defparameter N 0)
+		(set-input compiled-model :x-source (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
+		(extend-source-input-2d compiled-model :x-input  input  nth (coerce idx 'single-float))
+		(print idxs)
+		(print idx)
+		(push idx result))))
+    (reverse result)))
+
 ;; Workload:
 ;; 1. inference anyway
 ;; 2. do a cache
 ;; Invokes REPL form
 
-(defun launch-repl (&key (use-model nil))
+(defun launch-repl (&key (use-model nil) (length 100) (temperature 1.0))
   (with-no-grad
     (let ((model (or use-model (GPT2))))
-      (print "Loaded!")
+      (format t "[INFO] The model was restored from the trained weight!~%")
       (print model)
       (when (null *encoder-json*)
 	(format t "[INFO] Loading encoder...~%")
 	(load-bpe-merges)
 	(load-encoder-json))
 
-      (format t "[INFO] Compiling GPT2 Model...~%")
-      (let* ((source         (make-input `(1 N 768) :x-source))  ;; (Batch_Size Sentence_Length Embedding_dim)
-	     (input-tensor   (make-input `(1 N)     :x-input))   ;; (Batch_Size Sentence_Length)
-	     (compiled-model (build (call model source input-tensor))))
-	(loop named repl while t do
-	  (format t "Type \"quit\" to exit, \"benchmark\" to start profiling.~%>Type anything to start generating a sentence.~%")
-	  (let ((input (read-line)))
-	    (when (equal input "quit")
-	      (format t "Good bye :)")
-	      (return-from repl))
+      (loop named repl while t do
+	(format t "~%Type \"quit\" to exit, \"benchmark\" to start profiling.~%>Type anything to start generating a sentence.~%")
+	(let ((input (read-line)))
+	  
+	  (when (equal input "quit")
+	    (format t "Good bye. You can use (gpt-2-example:launch-repl) to invoke me again. ~%")
+	    (return-from repl))
+
+	  (format t "[INFO] Compiling GPT2 Model...~%")
+	  
+	  (let* ((source         (make-input `(1 N 768) :x-source))  ;; (Batch_Size Sentence_Length Embedding_dim)
+		 (input-tensor   (make-input `(1 N)     :x-input))   ;; (Batch_Size Sentence_Length)
+		 (compiled-model (time (build (call model source input-tensor)))))
 	    
 	    (if (equal input "benchmark")
 		(progn
 		  (format t "N_SAMPLE=10, LENGTH=10~%")
 		  (proceed-bench
-		   (call model (randn `(1 10 768)) (randn `(1 10)))
+		   (call model (ax+b `(1 10 768) 0 0) (uniform-random `(1 10) 0 100))
 		   :n-sample 10))
 		(let* ((input-sentence (encode-sentence input))
 		       (initial-length (second (shape input-sentence)))
 		       (input-source   (ax+b `(1 ,initial-length 768) 0 0)))
+		  
+		  ;; X Embedding ... (1 N 768)
+		  ;; X Sparse    ... (1 N)
+
 		  (set-input compiled-model :x-source input-source)
 		  (set-input compiled-model :x-input  input-sentence)
 		  
-		  (let ((generated-sentence-list (gpt2-inference model compiled-model input-source input-sentence :length 100)))
-		    (format t ">~a" (decode-sentence generated-sentence-list)))))))))))
+		  (let ((generated-sentence-list (gpt2-inference model compiled-model input-source input-sentence :length length :temperature temperature)))
+		    (format t "~%GPT2> ~a~%" (decode-sentence generated-sentence-list)))))))))))
 
 
