@@ -12,7 +12,7 @@
     ·
     <a href="https://hikettei.github.io/cl-waffe2/install/">Installing</a>
     ·
-    <a href="https://hikettei.github.io/cl-waffe2/overview/">Tutorials</a>
+    <a href="https://github.com/hikettei/cl-waffe2/tree/master/examples">Examples</a>
   </p>
 </p>
 
@@ -22,14 +22,11 @@
 
 > ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-cl-waffe2 is an experimental Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime.
-As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a framework dedicated to solving optimizing/inferencing deep neural network models using AD, all in Common Lisp. This framework is decoupled from other existing libraries by design, but interoperating with other libraries by efficient use of other libraries via with-facet macros and Common Lisp standard arrays is strongly recommended. I'm just focusing on efficient AD.
+cl-waffe2 is a user-extensible Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime. Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid functions to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and this operation is differentiable. On the other hand, the function `build` will generate the sequence of `cl-waffe2 IR`, which works fast, and is easy to apply further `FuseOps` with the route declared by the `defpath` macro.
 
-Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid functions to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function `build` will generate codes which are fully optimized for training models.
+Portability to other devices is a significant concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.
 
-Portability to other devices is a major concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.
-
-Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
+Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ### Workloads
 
@@ -39,7 +36,7 @@ Visit my preceding project: [cl-waffe](https://github.com/hikettei/cl-waffe).
     - Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)
     - For experiments, implement a backend that runs at minimum speed: `LispTensor`.
 
-- [ ] Construct JIT Compiler from cl-waffe2 to `C` (OK). and fuse operations and loops. + Multi-Threading (work in progress)
+- [ ] ~~Construct JIT Compiler from cl-waffe2 to `C` (OK). and fuse operations and loops. + Multi-Threading (work in progress)~~
 
 - [ ] Add basic computation nodes for controlling nodes: `MapNode` `IfNode` etc...
 
