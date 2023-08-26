@@ -141,18 +141,13 @@
 		   (wte    :initform nil)
 		   (wpe    :initform nil)
 		   (layers :initform nil)
-		   
-		   (lm-head    :initform nil)
-		   
+		   		   
 		   (memory-k :initform nil)
 		   (memory-v :initform nil))
 	   :on-call-> gpt2-call)
   (let ((n-layer (read-config :n-layer)))
     (setf (slot-value self 'wte)    (load-npy "~a/wte.npy" save-dir)
 	  (slot-value self 'wpe)    (load-npy "~a/wpe.npy" save-dir)
-
-	  (slot-value self 'lm-head) (or (parameter (proceed (!mul 0.01 (randn `(1 ,(read-config :n-emb) ,(read-config :n-vocab))))))
-					 (load-npy "~a/lm_head.npy" save-dir))
 	  
 	  (slot-value self 'ln-f-g) (load-npy "~a/ln_f/g.npy" save-dir)
 	  (slot-value self 'ln-f-b) (load-npy "~a/ln_f/b.npy" save-dir))
@@ -176,13 +171,15 @@
 
 ;; Forward process for GPT2
 (defmethod gpt2-call ((self GPT2) x-out x)
-  (with-slots ((wte wte) (wpe wpe) (ln-f-g ln-f-g) (ln-f-b ln-f-b) (lm-head lm-head)) self
-    
+  (with-slots ((wte wte) (wpe wpe) (ln-f-g ln-f-g) (ln-f-b ln-f-b)) self
     (call-> x-out
 	    (asnode #'!gpt2-load-pe   x wte wpe) ;; X-out <- GPT2Pe(x, wte, wpe)
 	    (asnode #'!gpt2-layers    self)
-	    (asnode #'!gpt2-layernorm ln-f-g ln-f-b)
-	    (asnode #'!matmul lm-head))))
+	    (asnode #'!gpt2-layernorm ln-f-g ln-f-b))))
+
+(defmethod lm-head ((self GPT2) x)
+  (!matmul (!rankup x -1) (!t (slot-value self 'wte))))
+
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Tokenizers
@@ -367,16 +364,14 @@
 	    (print "INPUT")
 	    (print (tensor-vec input))
 	    (let* ((N (second (shape source))))
-	      
 	      (let* ((out     (forward compiled-model))
-		     (tmp     (make-tensor `(1 ,N ,(third (shape out)))))
-		     (out     (!move tmp out :force t))		     
-		     (idxs    (print (tensor-vec (proceed (!argmax (!softmax out) :axis 1)))))
-		     (idx     (aref idxs (1- N))))
+		     (tmp     (make-input `(1 ,N ,(third (shape out))) nil))
+		     (tmp     (->contiguous (!view (!move tmp out) 0 -1)))
+		     (out     (lazy-print (lm-head model (lazy-print tmp))))
+		     (idx     (tensor-vec (proceed (->scal (!argmax (!softmax out) :axis 1))))))
 
 		(set-input compiled-model :x-source (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
 		(extend-source-input-2d compiled-model :x-input  input  nth (coerce idx 'single-float))
-		(print idxs)
 		(print idx)
 		(push idx result))))
     (reverse result)))
@@ -388,7 +383,7 @@
 
 ;; It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him.
 
-(defun launch-repl (&key (use-model nil) (length 10) (temperature 1.0))
+(defun launch-repl (&key (use-model nil) (length 20) (temperature 1.0))
   (with-no-grad
     (let ((model (or use-model (GPT2))))
       (format t "[INFO] The model was restored from the trained weight!~%")
