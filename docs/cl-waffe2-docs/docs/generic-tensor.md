@@ -95,6 +95,12 @@ Returns the number of total visible elements in tensor.
 
 the original shape of `vec`. `(apply #'* orig-shape)` must correspond with the number of total elements of `vec`.
 
+### [slot] initial-offset (fixnum)
+
+`(tensor-initial-offset tensor)`
+
+Offset is forced to be added. default: 0
+
 ### [slot] stride (list)
 
 An stride of tensor, can be chosen from `:column` `:row`.
@@ -384,7 +390,7 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 (<Compiled-Composite
     forward:  #<FUNCTION (LAMBDA ()
                            :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {5362B39B}>
+                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {53629DCB}>
     backward: #<FUNCTION (LAMBDA ()
                            :IN
                            "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {534D6CBB}>
@@ -539,7 +545,7 @@ Just an alias of `call-with-view` with this form:
 
 ```lisp
 `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
-    ,@body)
+  ,@body)
 ```
 NILNILNIL
 ## [function] shape-equal

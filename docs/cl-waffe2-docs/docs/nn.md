@@ -27,7 +27,7 @@ ReLU(x) = max(x, 0)
 
 ## [function] !gelu
 
-Not Implemented Yet.
+Approximates GeLU (Not tested yet): `(!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x (!* 0.044715 (!expt x 3)))))))`
 
 ## [function] !sigmoid
 
@@ -42,12 +42,12 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1977 
+{CPUTENSOR[float] :shape (10 10) :named ChainTMP1973 
   :vec-state [computed]
   ((0.38870513  0.31420857  0.5431252   ~ 0.44819808  0.48854244  0.59221524)                   
    (0.49752915  0.45874146  0.3822164   ~ 0.3568413   0.26439044  0.519481)   
                 ...
-   (0.6008625   0.28127894  0.26618165  ~ 0.1272022   0.43307915  0.8074486)
+   (0.6008625   0.2812789   0.26618165  ~ 0.1272022   0.43307915  0.8074486)
    (0.17289545  0.40895566  0.6800641   ~ 0.66711944  0.48927152  0.7403083))
   :facet :input
   :requires-grad NIL
@@ -75,7 +75,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2204 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2196 
   :vec-state [computed]
   ((1.2103889))
   :facet :input
@@ -102,7 +102,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2398 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP2390 
   :vec-state [computed]
   ((1.4338808))
   :facet :input
@@ -196,7 +196,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W2460}(
+<Composite: LINEARLAYER{W2452}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -284,7 +284,7 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W2470}(
+<Composite: CONV2D{W2462}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)
