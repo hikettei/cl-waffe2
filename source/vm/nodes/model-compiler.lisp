@@ -59,7 +59,9 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 		for arg-place in args
 		for name      in tensor-names
 		;; TODO: Update the form below:
-		do (set-input compiled-model name arg))
+		do (cl-waffe2/vm.generic-tensor::embody-actual-tensor
+		    (cl-waffe2/vm.generic-tensor:get-input compiled-model name)
+		    arg))
 	  (apply #'values (map 'list #'eliminate-undetermined-size
 			       (multiple-value-list (forward compiled-model))))))))
 
@@ -72,7 +74,7 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 	       (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
 	       `((declare (type AbstractTensor ,@arguments))
 		 (let* ((,dispatching-keys
-			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor))) (list ,@arguments)))
+			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor) (cl-waffe2/vm.generic-tensor:dims tensor))) (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*))))
 
 		   (if (functionp ,found-function)
@@ -87,6 +89,10 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 		 ,@body)
 	      `(lambda (,@arguments)
 		 ,@body))))))
+
+(defun expand-define->abstractnode ()
+
+  )
 
 (defmacro defmodel-as (target-model
 		       &key
@@ -106,7 +112,7 @@ Creates a new function or AbstractNode from `Composites`. Further functions or `
 ### Example
 
 ```lisp
-(TODO)
+(defmodel-as (SoftmaxNode) :named static-softmax :asif :function :where (A[~] -> A[~]))
 ```
 
 ### Inputs
@@ -219,16 +225,16 @@ Or
        ;; [TODO]
        ))))
 
-(defmodel (ExampleModel (self)
-	   ;; :where
-	   :on-call-> ((self x)
-		       (declare (ignore self))
-		       (cl-waffe2/base-impl:!sin x))))
+;;(defmodel (ExampleModel (self)
+;;	   ;; :where
+;;	   :on-call-> ((self x)
+;;		       (declare (ignore self))
+;;		       (cl-waffe2/base-impl:!sin (cl-waffe2/base-impl:lazy-print x)))))
 ;; (defmacro model-let ...)
 
 ;;(defmodel-as nil :asif :function :differentiable t)
 
-(defmodel-as (ExampleModel) :asif :function :named example-model-call :where (A[~] -> A[~]))
+;;(defmodel-as (ExampleModel) :asif :function :named example-model-call :where (A[~] -> A[~]))
 ;;(defmodel-as (SoftmaxNode) :where (X[~] -> X[~]) :as-if function :named softmax)
 
 ;;(defmodel-as (SoftmaxNode) :where () :as :function :named softmax :differentiable t)
