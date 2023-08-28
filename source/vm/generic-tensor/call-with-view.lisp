@@ -62,6 +62,15 @@
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;;
+;; call-with-view is able to generate:
+;;   1. Inlined/Optimized/Parallelized Orders with coming tensors ( *freeze-call-with-view*=nil )
+;;   2. Flexible Loop Iterations for NDArray.                     ( *freeze-call-with-view*=t   )
+;;
+
+(defparameter *freeze-call-with-view* nil "If this parameter set to T, the generated call-with-view is not inlined but compatible with ND-Array.
+Nodes generated with this parameter=t, will forcibly compiled, never cached.")
+
 ;; ===============================================
 ;; call-with-view utils
 ;; ===============================================
@@ -573,6 +582,12 @@ See also: `with-ranked-loop` to the more elegant wrapping macro.
 butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
+  ;; If this parameter=t, call-with-view never generate inlined iteration but iteration for ND-array
+  ;; Instead, using function
+  (when *freeze-call-with-view*
+    (return-from call-with-view
+      (expand-call-with-view* function tensors at-least-dim)))
+
   (labels ((explore (rest-dim offsets-place &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim target-dim)
 		      (type list offsets-place))
@@ -693,4 +708,112 @@ Just an alias of `call-with-view` with this form:
   `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
     ,@body))
 
+(defun expand-call-with-view* (function tensors at-least-dim)
+  (let* ((offsets (loop for tensor in tensors collect (gensym "offset")))
+	 (strides (loop for tensor in tensors
+			collect (loop for rank upfrom 0 below at-least-dim
+				      collect (gensym "strides"))))
+	 (sizes   (loop for tensor in tensors
+			collect (loop for rank upfrom 0 below at-least-dim
+				      collect (gensym "size"))))
+
+	 (views   (loop for tensor in tensors
+			for offset in offsets
+			for stride in strides
+			for size   in sizes
+			collect
+			(loop for rank upfrom 0 below at-least-dim
+			      collect
+			      (make-viewinstruction offset (nth rank size) (nth rank stride)))))
+	 (strides (alexandria:flatten strides))
+	 (sizes   (alexandria:flatten sizes))
+	 
+	 (kernel-function (apply function views))
+	 (kernel-applier  `(lambda (,@offsets ,@strides ,@sizes)
+			     (declare (ignorable ,@offsets ,@strides ,@sizes)
+				      (type fixnum ,@offsets ,@strides ,@sizes))
+			     ,kernel-function)))
+    ;; kernel-function ... (blas-sadd ... tensor1 tensor2 offsetXXX sizeXXX ...)
+    
+    `(with-bind-shape
+       #'original-shape
+       #'shape
+       (call-with-view-function*
+	(list ,@tensors)
+	,at-least-dim
+	,kernel-applier))))
+
+;; [TODO] Use lparallel
+(declaim (inline call-with-view-function*))
+(defun call-with-view-function* (tensors at-least-dim kernel-applier)
+  (declare (type list tensors)
+	   (type fixnum at-least-dim)
+	   (type function kernel-applier)
+	   (optimize (speed 3)))
+
+  (let* ((total-offsets (loop for tensor in tensors
+			      collect (tensor-initial-offset tensor)))
+	 (apply-strides (loop for tensor in tensors
+			      collect (loop for axis upfrom 0 below at-least-dim
+					    collect (nth axis (tensor-stride tensor)))))
+	 (apply-sizes   (loop for tensor in tensors
+			      collect (loop for axis upfrom 0 below at-least-dim
+					    collect (nth at-least-dim (shape tensor)))))
+	 (rank (the fixnum (dims (car tensors))))
+	 (all-iternums
+	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
+		 collect
+		 (loop for tensor in tensors
+		       collect (nth axis (shape tensor)))))
+	 (all-strides
+	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
+		 collect
+		 (loop for tensor in tensors
+		       collect (nth axis (tensor-stride tensor)))))
+	 (start-points 
+	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
+		 collect
+		 (loop for tensor in tensors
+		       collect (the fixnum (compute-visible-start-idx (force-list (nth axis (tensor-view tensor))))))))
+	 (end-points nil))
+;;	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
+;;		 collect (loop for tensor in tensors
+;;			       collect (compute-visible-end-idx (nth axis (tensor-view tensor)) (nth axis (shape tensor)))))))
+    
+    (labels ((expand-helper (rest-dim more-iternums more-strides more-start-offsets more-end-offsets)
+	       (declare (type fixnum rest-dim)
+			(type list more-iternums more-strides more-start-offsets more-end-offsets))
+	       (cond
+		 ((<= rest-dim at-least-dim)
+		  ;; call the operation
+		  (apply kernel-applier
+			 ;; ,@offsets ,@strides ,@sizes
+			 `(,@total-offsets
+			   ,@(alexandria:flatten apply-strides)
+			   ,@(alexandria:flatten apply-sizes))))
+		 (T
+
+		  ;; Adding first offsets
+		  (loop for stride        fixnum in (car more-strides)
+			for start-offsets fixnum in (car more-start-offsets)
+			for nth           fixnum    upfrom 0
+			do (incf (the fixnum (nth nth total-offsets))
+				 (the fixnum (* start-offsets stride))))
+		  
+		  (loop with last-idx fixnum = (1- (the fixnum (caar more-iternums)))
+			for N fixnum upfrom 0 below (caar more-iternums) do
+			  (expand-helper (1- rest-dim) (cdr more-iternums) (cdr more-strides) (cdr more-start-offsets) (cdr more-end-offsets))
+			unless (= N last-idx)
+			  do (loop for stride fixnum in (car more-strides)
+				   for nth    fixnum upfrom 0
+				   do (incf (the fixnum (nth nth total-offsets)) stride)))))))
+      
+      
+      (assert (every #'(lambda (x) (equal (dims x) (dims (car tensors)))) tensors)
+	  nil
+	  "call-with-view-function*: Assertion Failed because all tensors should have the same rank but they don't.
+~a" (map 'list #'shape tensors))
+
+      (expand-helper rank all-iternums all-strides start-points end-points)
+      nil)))
 

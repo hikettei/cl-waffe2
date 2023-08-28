@@ -84,7 +84,7 @@
 	       (:file "vm/nodes/utils")
 	       (:file "vm/nodes/function")
 	       (:file "vm/nodes/static-node")
-
+	       (:file "vm/nodes/model-compiler")
 	       
 	       (:file "base-impl/arithmetic")
 	       (:file "base-impl/fundamental")
