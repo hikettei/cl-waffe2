@@ -34,6 +34,7 @@
 		#:dtype
 		#:make-statecontainer
 		#:tensor-projected-p
+		#:tensor-iid
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
@@ -72,6 +73,7 @@
 
   (:export
    #:defmodel
+   #:defmodel-as
    #:Composite
    #:composite-traced-p
    #:composite-input-size

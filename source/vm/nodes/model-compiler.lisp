@@ -11,11 +11,26 @@
 ;; TODO: proceed should use defmodel-as like way to call functions
 ;; TODO: Cache it for the future call of proceed
 ;; TODO: Export APIs and add to the docs
+;; TODO: Remove this: MoveTensorNode(SAVE_FOR_BACKWARD) and then, fuseOps (e.g.: ReLuTensorNode, Log1pNode)
+;; TODO: (backward AbstractTensor) ;; -> PyTorch/Chainer Mode (i.e.: Pure define by run Mode with no compiling-time ahead)
+;; TODO: Update memory-pool. (add use-state attribute)
+;; TODO: Update backward
+;; TODO: tensors: tensor-delete, dummy-gc-finalize
+;; TODO: Composite-Function ... (!matmul !t !t)
+;; TODO: delete define-composite-function
 
 (defun read-where-args (where)
-  (multiple-value-bind (in out) (parse-subscript where)
-    (values in out)))
-
+  "where -> (A B) (C D)"
+  (multiple-value-bind (in out fw bw) (parse-subscript where)
+    (values
+     (or in
+	 (loop for f in fw
+	       for i upfrom 0
+	       collect (nth-subscript i)))
+     (or out
+	 (loop for b in bw
+	       for i upfrom 0
+	       collect (nth-subscript i))))))
 
 (defparameter *model-function-cache-form* (make-hash-table))
 ;; model-function-cache-form
@@ -27,7 +42,8 @@
 (deftype model-asif-options ()
   `(and keyword (member :function :node)))
 
-(defun trace-and-compile-composite (named composite names &rest args)
+(defun trace-and-compile-composite (kernel-size-list named composite composite-input-size argument-names &rest args)
+  
   (when (some #'(lambda (x) (some #'symbolp (shape x))) args)
     (error "defmodel-as: The function ~(~a~) received a tensor which includes dynamic shape.
 Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
@@ -39,47 +55,118 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
   (with-no-grad
     ;; *freeze-call-with-view*=t and forcibly disable loop-collapse option
     ;; i.e.: Compiled codes are compatible with ND-array
-    (let* ((cl-waffe2/vm.generic-tensor::*freeze-call-with-view* t)
-	   (tensor-names  (map 'list #'(lambda (x) (intern (symbol-name x) "KEYWORD")) names))
-	   (trace-tensors (map 'list #'cl-waffe2/vm.generic-tensor::make-clone
+    (let* ((cl-waffe2/vm.generic-tensor::*freeze-call-with-view* t) ;; Loop Collapse shouldn't be done but instead force force-order=t
+	   ;;(tensor-names  (map 'list #'(lambda (x) (intern (symbol-name x) "KEYWORD")) names))
+	   (batch-lengths (map 'list
+			       #'(lambda (x y)
+				   (- (cl-waffe2/vm.generic-tensor:dims x) y))
 			       args
-			       tensor-names))
-	   (toplevel (apply #'call composite trace-tensors))
-	   ;; [FixME] !matmul with transpsosed could be compiled well?
-	   (compiled-model (progn
-			     (unless (typep toplevel 'AbstractTensor)
-			       (error "defmodel-as: Attempted to compile the function ~(~a~) but failed because the composite didn't return AbstractTensor"
-				      named))
-			     (cl-waffe2/vm.generic-tensor::build toplevel
-								 :construct-backward? nil
-								 :compile-mode :fastest
-								 :fuse-ops t))))
-      #'(lambda (&rest input-arguments)
-	  (loop for arg       in input-arguments
-		for arg-place in args
-		for name      in tensor-names
-		;; TODO: Update the form below:
-		do (cl-waffe2/vm.generic-tensor::embody-actual-tensor
-		    (cl-waffe2/vm.generic-tensor:get-input compiled-model name)
-		    arg))
-	  (apply #'values (map 'list #'eliminate-undetermined-size
-			       (multiple-value-list (forward compiled-model))))))))
+			       kernel-size-list))
+	   (batch-symbols (loop for i upfrom 0 below (apply (compose #'max #'cl-waffe2/vm.generic-tensor:dims) args)
+				collect (intern (format nil "rank~a" i))))
+	   (trace-tensors (loop for arg in args
+				for in-size in composite-input-size
+				for name in argument-names
+				for batch-size in batch-lengths
+				collect (make-input (loop for decl-size in in-size
+							  for position upfrom 0
+							  if (symbol-eq decl-size '~)
+							    append
+							    (loop for b upfrom 0 below batch-size
+								  collect (nth (+ position b) batch-symbols))
+							  else
+							    append `(,decl-size))
+						    (intern (symbol-name name) "KEYWORD")
+						    :scalar-p (scalar-p arg)
+						    :dtype    (dtype arg)
+						    :order    (order arg))))
+	   (toplevel (apply #'call composite trace-tensors)))
+
+      ;; [FixME] !matmul with transpsosed could be compiled as well?
+      ;; [TODO]  -> Envolve transpose-p option into lazy-evaluation
+      
+      (unless (typep toplevel 'AbstractTensor)
+	(error "defmodel-as: Attempted to compile the function ~(~a~) but failed because the composite didn't return any AbstractTensor. butgot: ~a
+excepted: AbstractTensor"
+	       named
+	       toplevel))
+      
+      (multiple-value-bind (fwiseq bwiseq leaves)
+	  (cl-waffe2/vm:compile-forward-and-backward toplevel
+						     :need-backward nil
+						     :fuse-p t
+						     :compile-mode :default)
+	(declare (ignore bwiseq))
+
+	;; Detecting Errors
+	(when (some #'(lambda (argument-tensor)
+			(null (find (tensor-iid argument-tensor)
+				    leaves
+				    :key #'tensor-iid)))
+		    trace-tensors)
+	  (error "defmodel-as: Traced the computation node to compile the function ~(~a~) but failed.
+
+This is because the argument ~a wasn't appeared in leaves, that is, your network isn't continuous. Ensure that all tensors used as arguments are also used to compute a result."
+		 named
+		 (tensor-name
+		  (find t trace-tensors
+			:test #'(lambda (y argument-tensor)
+				  (declare (ignore y))
+				  (null (find (tensor-iid argument-tensor)
+					      leaves
+					      :key #'tensor-iid)))))))
+	
+	(let ((input-tensors ;; -> (InputTensor(:X), InputTensor(:Y) ...)
+		(loop for input-tensor of-type AbstractTensor in trace-tensors
+		      append (loop with subject-name = (tensor-name input-tensor)
+			           for leaf-point of-type AbstractTensor in leaves
+				   when (eql (tensor-name leaf-point) subject-name)
+				     collect leaf-point))))
+	  
+	  ;; Initializes StateContainer (usually created by forward but it does manually in order to change their contents later.)
+	  ;; We use StateContainer just to use (read-result) function. so anything is ok for other parameters.
+	  
+	  (mapc #'(lambda (argument)
+		    (setf (tensor-state argument) (make-statecontainer
+						   :forward-out-form (make-compiled-kernel))))
+		input-tensors)
+	  
+	  ;; -> AbstractNodeDefinition?
+	  #'(lambda (&rest received-arguments)
+	      (declare (optimize (speed 3)))
+	      (apply #'shape-compatible? composite received-arguments)
+	      
+	      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+		(loop for arg of-type AbstractTensor in received-arguments
+		      for place                      in input-tensors do
+			;; Update the argument
+			(cl-waffe2/vm::write-result place (list arg))
+			;; Update the shape
+			(loop for place-name in (shape place)
+			      for act-val    in (shape arg) do
+				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
+		(eliminate-undetermined-size
+		 (cl-waffe2/vm:accept-instructions fwiseq)))))))))
 
 (defun expand-define->function-form (composite where defun-p named)
   (with-gensyms (dispatching-keys found-function)
     (let* ((cache-key (intern (symbol-name (gensym "CF")) "KEYWORD"))
 	   (arguments (read-where-args where))
+	   (composite-input-size (where->shapes where))
+	   (kernel-size-list (loop for shape in composite-input-size
+				   collect (- (length shape) (count '~ shape :test #'symbol-eq))))
 	   (body
 	     (progn
 	       (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
 	       `((declare (type AbstractTensor ,@arguments))
 		 (let* ((,dispatching-keys
-			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor) (cl-waffe2/vm.generic-tensor:dims tensor))) (list ,@arguments)))
+			  ;; Dispatching by :DTYPE, DEVICE, RANK
+			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor) (length (shape tensor)))) (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*))))
 
 		   (if (functionp ,found-function)
 		       (funcall ,found-function ,@arguments)
-		       (let ((,found-function (trace-and-compile-composite ',named ,composite ',arguments ,@arguments)))
+		       (let ((,found-function (trace-and-compile-composite ',kernel-size-list ',named ,composite ',composite-input-size ',arguments ,@arguments)))
 			 ;; cache it
 			 (setf (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*)) ,found-function)
 			 (funcall ,found-function ,@arguments))))))))
@@ -225,16 +312,16 @@ Or
        ;; [TODO]
        ))))
 
-;;(defmodel (ExampleModel (self)
-;;	   ;; :where
-;;	   :on-call-> ((self x)
-;;		       (declare (ignore self))
-;;		       (cl-waffe2/base-impl:!sin (cl-waffe2/base-impl:lazy-print x)))))
+(defmodel (ExampleModel (self)
+	   ;; :where
+	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       (cl-waffe2/base-impl:!sin (cl-waffe2/base-impl:lazy-print x)))))
 ;; (defmacro model-let ...)
 
 ;;(defmodel-as nil :asif :function :differentiable t)
 
-;;(defmodel-as (ExampleModel) :asif :function :named example-model-call :where (A[~] -> A[~]))
+(defmodel-as (ExampleModel) :asif :function :named example-model-call :where (A[~] -> A[~]))
 ;;(defmodel-as (SoftmaxNode) :where (X[~] -> X[~]) :as-if function :named softmax)
 
 ;;(defmodel-as (SoftmaxNode) :where () :as :function :named softmax :differentiable t)

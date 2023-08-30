@@ -68,8 +68,7 @@
 ;;   2. Flexible Loop Iterations for NDArray.                     ( *freeze-call-with-view*=t   )
 ;;
 
-(defparameter *freeze-call-with-view* nil "If this parameter set to T, the generated call-with-view is not inlined but compatible with ND-Array.
-Nodes generated with this parameter=t, will forcibly compiled, never cached.")
+(defparameter *freeze-call-with-view* nil "Set this parameter T to make force-order=t everywhere. default: nil")
 
 ;; ===============================================
 ;; call-with-view utils
@@ -582,11 +581,14 @@ See also: `with-ranked-loop` to the more elegant wrapping macro.
 butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
+  (when *freeze-call-with-view*
+    (setq force-order t))
+  
   ;; If this parameter=t, call-with-view never generate inlined iteration but iteration for ND-array
   ;; Instead, using function
-  (when *freeze-call-with-view*
-    (return-from call-with-view
-      (expand-call-with-view* function tensors at-least-dim)))
+  ;;(when *freeze-call-with-view*
+  ;;  (return-from call-with-view
+  ;;    (expand-call-with-view* function tensors at-least-dim)))
 
   (labels ((explore (rest-dim offsets-place &aux (target-dim (- dims rest-dim)))
 	     (declare (type fixnum rest-dim target-dim)

@@ -163,7 +163,11 @@ Return:
   (loop for i in (composite-input-size composite)
 	collect (- (length i) (count '~ i :test #'symbol-eq))))
 
-
+(defun where->shapes (where)
+  "where -> (values ((i j) (j k)) ((i j k)))"
+  (multiple-value-bind (x y first-state out-state z) (parse-subscript where)
+    (declare (ignore x y z))
+    (values first-state out-state)))
 
 (defun collect-initarg-slots (slots constructor-arguments)
   (map 'list #'(lambda (slots)

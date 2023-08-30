@@ -510,9 +510,11 @@ An constructor function for ~a."
 
 (defun composite-input-tensor (composite ~
 			       &key
+				 (input-shape nil) ;; set any list if composite doesn't have any
 				 (inputs nil)
 				 (dtype :float)
 				 (order :column)
+				 (argument-names nil)
 				 (scalar-p-list nil))
   "Returns an list of InputTensor which is used to trace the computation nodes."
   (declare (type Composite composite)
@@ -528,13 +530,13 @@ An constructor function for ~a."
 	       ~)))
     #'read~
     
-    (let ((input-shape (composite-input-size composite)))
+    (let ((input-shape (or input-shape (composite-input-size composite))))
       (loop for i upfrom 0
 	    for x in input-shape
 	    collect
 	    ;; Hmm, in order to reuse compiled kernel, (shape (nth i inputs)) isn'g the best choise...
 	    (let ((res (make-input (shape (nth i inputs));;(where-arg->shape (read~ ~ i) x)
-				   (->keyword (nth-subscript i))
+				   (or (nth i argument-names) (->keyword (nth-subscript i)))
 				   :create-from (nth i inputs)
 				   :scalar-p (read-state scalar-p-list i)
 				   :dtype (read-state dtype i)

@@ -259,6 +259,14 @@ Usage:
 	 
      ,@body))
 
+(defmacro with-adjustable-symbol-scope (&body body)
+  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table))))
+	  (*current-shape-state*    (make-adjustable-shape-state)))
+     ,@body))
+
+(defun register-adjustable-shape (symbol value)
+  (setf (gethash symbol *adjustable-shape-table*) value))
+
 (defmacro with-adjustable-symbols ((&rest forms) &body body)
   (labels ((expand-form (rest-forms)
 	     (if (null rest-forms)
