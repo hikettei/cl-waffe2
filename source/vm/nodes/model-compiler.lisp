@@ -19,12 +19,25 @@
 ;; TODO: Composite-Function ... (!matmul !t !t)
 ;; TODO: delete define-composite-function
 ;; TODO: Test defmodel-as, documentations
+;; TODO: proceed ... TpSort
+;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
 
 ;; defmodel-as (for abstractnode mo) 動かす
 ;; proceed-backwardを十分高速に動かす+memory-leakしない
 ;; -> RNNCellをIterateする
 
 ;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
+
+;; Memory-Poolの更新と合わせて：
+;; Gradientsの加算方法をどうにかする：
+;;  計算ノード内で最初の加算 -> MoveTensorNode使えばおk
+;;  それ以降 -> Add
+;;  GradientのReset -> パラメーターかカウンターを0に治すだけにする (tensor-grad-ref-count 0) instead of ScalarMul
+
+;; ModelのWhereが読めない問題: Encapsulate_NodeでCompositeを一度Wrapする?
+
+;; そしたらdefmodel-asを動かしてみる
+;; self ... cache-when-compile=tでも更新
 
 ;; 目標1 : defmodel-asと (backward toplevel) でdefine-by-runっぽく動作 + RNNを動作させる
 ;; 目標2 : memory-pool ... メモリリーク排除, 使う終わったcacheを使い回す, finalizeとかちゃんとする
@@ -64,8 +77,8 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
     (warn "defmodel-as: The function ~(~a~) received a tensor where :vec-state=[maybe-not-computed].
 Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
   
-  (with-no-grad
-    ;; *freeze-call-with-view*=t and forcibly disable loop-collapse option
+  (let ((*no-grad* (not need-backward)))
+    ;; *freeze-call-with-view*=t and forcibly set force-order=t
     ;; i.e.: Compiled codes are compatible with ND-array
     (let* ((cl-waffe2/vm.generic-tensor::*freeze-call-with-view* t) ;; Loop Collapse shouldn't be done but instead force force-order=t
 	   ;;(tensor-names  (map 'list #'(lambda (x) (intern (symbol-name x) "KEYWORD")) names))
@@ -96,7 +109,7 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 				for arg    in args
 				do (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)
 					 (cl-waffe2/vm.generic-tensor:ancestor-param-p arg))
-					 
+				   
 				if (and need-backward
 					(cl-waffe2/vm.generic-tensor:ancestor-param-p arg))
 				  collect (progn
@@ -126,7 +139,7 @@ excepted: AbstractTensor"
 						     :need-backward need-backward
 						     :fuse-p t
 						     :compile-mode :default)
-	
+
 	;; Detecting Errors
 	(when (some #'(lambda (argument-tensor)
 			(null (find (tensor-iid argument-tensor)
@@ -161,7 +174,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 		input-tensors)
 	  
 	  ;; -> AbstractNodeDefinition?
-	  #'(lambda (&rest received-arguments)
+	  #'(lambda (&rest received-arguments &aux (shapes nil))
 	      (declare (optimize (speed 3)))
 	      (apply #'shape-compatible? composite received-arguments)
 	      
@@ -173,12 +186,15 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 			;; Update the shape
 			(loop for place-name in (shape place)
 			      for act-val    in (shape arg) do
+				(push (cons place-name act-val) shapes)
 				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
 		(if need-backward
 		    (values
 		     (eliminate-undetermined-size
 		      (cl-waffe2/vm:accept-instructions fwiseq))
-		     bwiseq)
+		     bwiseq
+		     shapes
+		     trace-tensors)
 		    (eliminate-undetermined-size
 		     (cl-waffe2/vm:accept-instructions fwiseq))))))))))
 
@@ -239,19 +255,20 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	   ;; ,kernel-function -> result1 result2 ... backward-iseq
 	   (define-static-node (,node-name (,self)
 				:where ,where
-				:slots ((bwiseq :initform nil)
-					(variables :initform nil))
-				:cache-when-compiled t
+				:slots ((bwiseq      :initform nil)
+					(variables   :initform nil)
+					(shape-table :initform nil))
+				:cache-when-compiled nil ;; TODO set=t to make compiling-overhead zero
 				:forward ((,self ,@in-names)
-					  (multiple-value-bind (out bwiseq) (apply ,kernel-function (list ,@in-names))
+					  (multiple-value-bind (out bwiseq shapes variables) (apply ,kernel-function (list ,@in-names))
 					    (setf (slot-value ,self 'bwiseq) bwiseq
-						  (slot-value ,self 'variables) (list ,@in-names))
+						  (slot-value ,self 'shape-table) shapes
+						  (slot-value ,self 'variables) variables)
 					    (when (scalar-p out)
 					      (setf (out-scalar-p ,self) t))
 					    out))
 				:backward ((,self ,dy)
 					   ;; multiply-gradients-static(X, Grad) ... X *= Grad
-
 					   (when (null (slot-value ,self 'bwiseq))
 					     (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
 => (defmodel-as (...) :differentiable t)
@@ -259,7 +276,13 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 						    ',node-name))
 					   
 					   ;; Call backwards
-					   (cl-waffe2/vm:accept-instructions (slot-value ,self 'bwiseq))
+					   (let ((shapes (slot-value ,self 'shape-table)))
+					     (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+					       
+					       (loop for comb in shapes do
+						 (cl-waffe2/vm.generic-tensor::register-adjustable-shape (car comb) (cdr comb)))
+					       
+					       (cl-waffe2/vm:accept-instructions (slot-value ,self 'bwiseq))))
 					   ;; Pass gradients to the next nodes
 					   ;; Each gradients are destructed
 					   
@@ -271,10 +294,10 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 								   ,dy)
 							else
 							  collect nil)))))
-
+	   
 	   (defun ,named (,@in-names)
 	     (declare (type AbstractTensor ,@in-names))
-	     ;; 引数に数値などがきたら自動でmake-tensorする？ 自動でmake-tensor?
+	     ;; in-names=number -> make-tensor auto?
 	     (call (,node-name) ,@in-names)))))))
 	       
 
@@ -422,11 +445,16 @@ Or
   :asif :function
   :named multiply-grads-static)
 
+(defmodel (SinModel (self) :on-call-> ((self x) (cl-waffe2/base-impl:!sin x))))
+(defmodel-as (SinModel) :where (X[~] -> Out[~]) :asif :node :named !sinmodel :differentiable t)
+
 (defmodel-as (Multiply-Gradients)
-  :where (X[~] Grad[~] -> X[~])
+  :where (X[~] Grad[~] -> out[~])
   :asif :node
   :named !mgrad
   :differentiable t)
 
 ;; Backward?
 ;; -> Test
+;; Backward ... In-place のせいで うまく動かない・・・
+

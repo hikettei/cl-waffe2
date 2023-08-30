@@ -3,7 +3,7 @@
 
 
 ;; [TODO] Add WfInstrucion to the docstring
-(defstruct (WFInstruction
+(defstruct (WfInstruction
 	    (:conc-name wfop-)
 	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
   "

@@ -73,7 +73,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
    (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
+
    (grad :initform nil :reader grad :writer set-grad)
+   (grad-count :initform 0 :type fixnum :accessor tensor-grad-count)
+   
    (gradient-adder    :accessor gradient-adder)
    (gradient-resetter :accessor gradient-resetter)
 
@@ -405,6 +408,7 @@ Note:
       (incf (tensor-vec (grad target)) (tensor-vec new-value))
       nil))
 
+;; Not anymore used
 (defun make-gradient-resetter (tensor)
   (let ((*no-grad* t))
     (let* ((out (cl-waffe2/vm.nodes:forward

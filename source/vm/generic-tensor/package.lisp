@@ -20,7 +20,8 @@
    #:ScalarTensor
 
    #:current-backend-state
-   
+
+   #:tensor-grad-count
    #:tensor-backward
    #:read-result
    #:tensor-variables

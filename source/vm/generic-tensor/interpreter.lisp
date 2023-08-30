@@ -113,11 +113,17 @@
 	      (incf (tensor-vec (grad toplevel)) (tensor-vec past-dy)))
 	    (with-no-grad
 	      (detach! past-dy)
-	      (run-node!
-	       (cl-waffe2/vm.nodes:forward
-		(cl-waffe2/base-impl:AddNode (dtype toplevel))
-		(grad toplevel)
-		past-dy))
+	      (if (= (the fixnum (tensor-grad-count toplevel)) 0)
+		  (run-node!
+		   (cl-waffe2/vm.nodes:forward
+		    (cl-waffe2/base-impl:MoveTensorNode (dtype toplevel) :save-for-backward t)
+		    (grad toplevel)
+		    past-dy))
+		  (run-node!
+		   (cl-waffe2/vm.nodes:forward
+		    (cl-waffe2/base-impl:AddNode (dtype toplevel))
+		    (grad toplevel)
+		    past-dy)))
 	      (setf (detach-p past-dy) nil))))))
 
   (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))

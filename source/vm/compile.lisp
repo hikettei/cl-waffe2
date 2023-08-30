@@ -114,12 +114,19 @@
 		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
 		 (grad tensor)
 		 grad)))
-	     (progn
-	       (node-compile-into-vm
-		(forward
-		 (cl-waffe2/base-impl:AddNode (dtype tensor))
-		 (grad tensor)
-		 grad))))))
+	     (if (= (tensor-grad-count tensor) 0)
+		 (progn
+		   (node-compile-into-vm
+		    (forward
+		     (cl-waffe2/base-impl:MoveTensorNode (dtype tensor) :save-for-backward t)
+		     (grad tensor)
+		     grad)))
+		 (progn
+		   (node-compile-into-vm
+		    (forward
+		     (cl-waffe2/base-impl:AddNode (dtype tensor))
+		     (grad tensor)
+		     grad)))))))
     (setf (detach-p grad) nil)))
 
 ;; copy(sin(x, copy(x))) <- ???
@@ -165,15 +172,16 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (when (not fuse-p) ;; avoid twice-time applying
 	(apply-in-place-mutation! iseq-forward leaves))
 
-      (let* ((dout (when need-backward
+      (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
+	     (dout (when need-backward
 		     (if (scalar-p toplevel)
 			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-			 (if (some #'symbolp (shape toplevel))
-			     (cl-waffe2/base-impl:A+=scal
-			      (make-input (shape toplevel) nil
-					  :dtype (dtype toplevel)
-					  :order (order toplevel))
-			      1)
+			 (if out-symbol-p
+			     (forward (cl-waffe2/base-impl:ScalarAdd (dtype toplevel))
+				      (make-input (shape toplevel) nil
+						  :dtype (dtype toplevel)
+						  :order (order toplevel))
+				      (make-tensor 1 :dtype (dtype toplevel)))
 			     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))))
 	     (backward-iseq
 	       (when (and need-backward
@@ -185,15 +193,24 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	       (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
 		     (if (scalar-p tensor)
 			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
-			 (let* ((*no-grad* t)
-				(out (when (not (some #'symbolp (shape toplevel)))
-				       (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0)))))
-			   (when (not (some #'symbolp (shape toplevel)))
-			     #'(lambda ()
-				 (forward out))))))))
+			 #'(lambda () (setf (tensor-grad-count tensor) 0))))))
+	
+	;;		 (let* ((*no-grad* t)
+	;;			(out (when (not (some #'symbolp (shape toplevel)))
+	 ;;			       (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0)))))
+	 ;;		   (when (not (some #'symbolp (shape toplevel)))
+	 ;;		     #'(lambda ()
+	 ;;			 (forward out))))))))
 	 leaves)
 
-	(values (reverse iseq-forward) backward-iseq leaves)))))
+	(values (reverse iseq-forward)
+		(if (and out-symbol-p (not (scalar-p toplevel)))
+		    (append ;; dout = 0, so add 1
+		     (reverse
+		      (node-compile-into-vm dout))		     
+		     backward-iseq)
+		    backward-iseq)
+		leaves)))))
 
 
 (defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
