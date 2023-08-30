@@ -198,6 +198,7 @@ Saves the given tensors to save-place, in the currently working node.
 				 (save-for-backward-names nil)
 				 (forward nil)
 				 (backward nil)
+				 (cache-when-compiled nil)
 				 (documentation ""))
 			      &body constructor-body)
   "
@@ -213,6 +214,7 @@ Saves the given tensors to save-place, in the currently working node.
 				 (save-for-backward-names nil)
 				 (forward nil)
 				 (backward nil)
+                                 (cache-when-compiled nil)
 				 (documentation \"\"))
 			      &body constructor-body))
 ```
@@ -296,7 +298,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
        (define-and-impl-node (,backward-node-name (self forward-self)
 			      :device t
 			      ;; Temporary Restores Nodes used in forward.
-			      :cache-when-compiled nil
+			      :cache-when-compiled ,cache-when-compiled
 			      :slots ((forward-self :initarg :forward-self :reader read-forward-self))
 			      ;; forward -> backward => backward -> forward
 			      :where ,(where->backward where)
@@ -343,7 +345,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 				      (backward-result :initform nil :accessor backward-result))
 			      :out-scalar-p ,out-scalar-p
 			      :documentation ,documentation
-			      :cache-when-compiled nil
+			      :cache-when-compiled ,cache-when-compiled
 			      :forward ((,@forward-args)
 					(flet ((,forward-flet-name (,@forward-args)
 						 (declare (ignorable ,(car forward-args)))

@@ -168,12 +168,17 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (let* ((dout (when need-backward
 		     (if (scalar-p toplevel)
 			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-			 (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel)))))
+			 (if (some #'symbolp (shape toplevel))
+			     (cl-waffe2/base-impl:A+=scal
+			      (make-input (shape toplevel) nil
+					  :dtype (dtype toplevel)
+					  :order (order toplevel))
+			      1)
+			     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))))
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
 		 (trace-backward-network toplevel leaves dout fuse-p))))
-
 	(mapc
 	 #'(lambda (tensor)
 	     (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
@@ -181,9 +186,11 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		     (if (scalar-p tensor)
 			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
 			 (let* ((*no-grad* t)
-				(out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
-			   #'(lambda ()
-			       (forward out)))))))
+				(out (when (not (some #'symbolp (shape toplevel)))
+				       (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0)))))
+			   (when (not (some #'symbolp (shape toplevel)))
+			     #'(lambda ()
+				 (forward out))))))))
 	 leaves)
 
 	(values (reverse iseq-forward) backward-iseq leaves)))))

@@ -6,8 +6,8 @@
 ;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
 ;;
 
-;; TODO: Under *no-inlining-call-with-view*=t declaration, call-with-view function will return a single function
-;; TODO: Compiled-Kernel <- should also have a :force-use-me option, which forcibly compiles the function if set to t.
+;; TODO: Under *no-inlining-call-with-view*=t declaration, call-with-view function will return a single function (OK)
+;; TODO: Compiled-Kernel <- should also have a :force-use-me option, which forcibly compiles the function if set to t. (OK)
 ;; TODO: proceed should use defmodel-as like way to call functions
 ;; TODO: Cache it for the future call of proceed
 ;; TODO: Export APIs and add to the docs
@@ -18,6 +18,18 @@
 ;; TODO: tensors: tensor-delete, dummy-gc-finalize
 ;; TODO: Composite-Function ... (!matmul !t !t)
 ;; TODO: delete define-composite-function
+;; TODO: Test defmodel-as, documentations
+
+;; defmodel-as (for abstractnode mo) 動かす
+;; proceed-backwardを十分高速に動かす+memory-leakしない
+;; -> RNNCellをIterateする
+
+;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
+
+;; 目標1 : defmodel-asと (backward toplevel) でdefine-by-runっぽく動作 + RNNを動作させる
+;; 目標2 : memory-pool ... メモリリーク排除, 使う終わったcacheを使い回す, finalizeとかちゃんとする
+;;      PR into (DEVELOP)
+;; 目標3 : MoveTensorNode(SAVE_FOR_BACKWARD)を排除 + ADの数値的安定性向上とFuseOps
 
 (defun read-where-args (where)
   "where -> (A B) (C D)"
@@ -42,7 +54,7 @@
 (deftype model-asif-options ()
   `(and keyword (member :function :node)))
 
-(defun trace-and-compile-composite (kernel-size-list named composite composite-input-size argument-names &rest args)
+(defun trace-and-compile-composite (need-backward kernel-size-list named composite composite-input-size argument-names &rest args)
   
   (when (some #'(lambda (x) (some #'symbolp (shape x))) args)
     (error "defmodel-as: The function ~(~a~) received a tensor which includes dynamic shape.
@@ -62,7 +74,7 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 				   (- (cl-waffe2/vm.generic-tensor:dims x) y))
 			       args
 			       kernel-size-list))
-	   (batch-symbols (loop for i upfrom 0 below (apply (compose #'max #'cl-waffe2/vm.generic-tensor:dims) args)
+	   (batch-symbols (loop for i upfrom 0 below (apply #'max (map 'list (compose #'cl-waffe2/vm.generic-tensor:dims) args))
 				collect (intern (format nil "rank~a" i))))
 	   (trace-tensors (loop for arg in args
 				for in-size in composite-input-size
@@ -80,6 +92,24 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 						    :scalar-p (scalar-p arg)
 						    :dtype    (dtype arg)
 						    :order    (order arg))))
+	   (trace-tensors (loop for tensor in trace-tensors
+				for arg    in args
+				do (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)
+					 (cl-waffe2/vm.generic-tensor:ancestor-param-p arg))
+					 
+				if (and need-backward
+					(cl-waffe2/vm.generic-tensor:ancestor-param-p arg))
+				  collect (progn
+					    (setf (slot-value tensor 'requires-grad) t
+						  (slot-value tensor 'cl-waffe2/vm.generic-tensor::grad)
+						  (make-input (shape tensor) nil
+							      :create-from tensor
+							      :scalar-p (scalar-p tensor)
+							      :dtype    (dtype tensor)
+							      :order    (order tensor)))
+					    tensor)
+				else
+				  collect tensor))
 	   (toplevel (apply #'call composite trace-tensors)))
 
       ;; [FixME] !matmul with transpsosed could be compiled as well?
@@ -88,16 +118,15 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
       (unless (typep toplevel 'AbstractTensor)
 	(error "defmodel-as: Attempted to compile the function ~(~a~) but failed because the composite didn't return any AbstractTensor. butgot: ~a
 excepted: AbstractTensor"
-	       named
+	       (or named "lambda")
 	       toplevel))
       
       (multiple-value-bind (fwiseq bwiseq leaves)
 	  (cl-waffe2/vm:compile-forward-and-backward toplevel
-						     :need-backward nil
+						     :need-backward need-backward
 						     :fuse-p t
 						     :compile-mode :default)
-	(declare (ignore bwiseq))
-
+	
 	;; Detecting Errors
 	(when (some #'(lambda (argument-tensor)
 			(null (find (tensor-iid argument-tensor)
@@ -145,10 +174,16 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 			(loop for place-name in (shape place)
 			      for act-val    in (shape arg) do
 				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
-		(eliminate-undetermined-size
-		 (cl-waffe2/vm:accept-instructions fwiseq)))))))))
+		(if need-backward
+		    (values
+		     (eliminate-undetermined-size
+		      (cl-waffe2/vm:accept-instructions fwiseq))
+		     bwiseq)
+		    (eliminate-undetermined-size
+		     (cl-waffe2/vm:accept-instructions fwiseq))))))))))
 
-(defun expand-define->function-form (composite where defun-p named)
+(defun expand-define->function-form (composite where defun-p named
+				     &key (need-backward nil))
   (with-gensyms (dispatching-keys found-function)
     (let* ((cache-key (intern (symbol-name (gensym "CF")) "KEYWORD"))
 	   (arguments (read-where-args where))
@@ -160,26 +195,88 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	       (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
 	       `((declare (type AbstractTensor ,@arguments))
 		 (let* ((,dispatching-keys
-			  ;; Dispatching by :DTYPE, DEVICE, RANK
-			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor) (length (shape tensor)))) (list ,@arguments)))
+			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
+			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor) (length (shape tensor)) (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor))) (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*))))
 
 		   (if (functionp ,found-function)
 		       (funcall ,found-function ,@arguments)
-		       (let ((,found-function (trace-and-compile-composite ',kernel-size-list ',named ,composite ',composite-input-size ',arguments ,@arguments)))
+		       (let ((,found-function (trace-and-compile-composite ,need-backward ',kernel-size-list ',named ,composite ',composite-input-size ',arguments ,@arguments)))
 			 ;; cache it
 			 (setf (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*)) ,found-function)
 			 (funcall ,found-function ,@arguments))))))))
-      `(progn
-	 ,(if defun-p
-	      `(defun ,named (,@arguments)
-		 ,@body)
-	      `(lambda (,@arguments)
-		 ,@body))))))
+      (if defun-p
+	  `(defun ,named (,@arguments)
+	     ,@body)
+	  `(lambda (,@arguments)
+	     ,@body)))))
 
-(defun expand-define->abstractnode ()
+;; argsのパラメーターで検索かける
+;; Backward ...
+;; define-static-node ... backward 複数の勾配いけるっけ？
+;; trace-and-compileで逆伝播を生成
+;; 下を使えばコンパイルをcacheする
+;; whereが使えない
+;; out-scalar-p
+;; outの数=1でないといけないという制約？？
+;; outの数=2で微分できますか？
+;; lazy-valuesみたいなノードを作る？？？(Systemだけが使う not for users) <- テストもっと増やしたほうがいい
 
-  )
+;; (defclass AbstractStaticCompositeNode () nil)
+
+(defun expand-define->abstractnode (differentiable-p target-model where named)
+  (let* ((composite-name (car target-model))
+	 (node-name (symb composite-name '-asnode)))
+    (multiple-value-bind (in-names out-names in-states out-states let-bindings) (parse-subscript where)
+      (declare (ignore let-bindings out-names in-states out-states))
+      (with-gensyms (self dy kernel-function)
+	`(let ((,kernel-function ,(expand-define->function-form
+				   target-model
+				   where
+				   nil
+				   nil
+				   :need-backward differentiable-p)))
+	   ;; ,kernel-function -> result1 result2 ... backward-iseq
+	   (define-static-node (,node-name (,self)
+				:where ,where
+				:slots ((bwiseq :initform nil)
+					(variables :initform nil))
+				:cache-when-compiled t
+				:forward ((,self ,@in-names)
+					  (multiple-value-bind (out bwiseq) (apply ,kernel-function (list ,@in-names))
+					    (setf (slot-value ,self 'bwiseq) bwiseq
+						  (slot-value ,self 'variables) (list ,@in-names))
+					    (when (scalar-p out)
+					      (setf (out-scalar-p ,self) t))
+					    out))
+				:backward ((,self ,dy)
+					   ;; multiply-gradients-static(X, Grad) ... X *= Grad
+
+					   (when (null (slot-value ,self 'bwiseq))
+					     (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
+=> (defmodel-as (...) :differentiable t)
+                              └── Set :differentiable=t or the forward wasn't called."
+						    ',node-name))
+					   
+					   ;; Call backwards
+					   (cl-waffe2/vm:accept-instructions (slot-value ,self 'bwiseq))
+					   ;; Pass gradients to the next nodes
+					   ;; Each gradients are destructed
+					   
+					   (apply #'values
+						  (loop for argument in (slot-value ,self 'variables)
+							if (cl-waffe2/vm.generic-tensor:grad argument)
+							  collect (multiply-grads-static
+								   (cl-waffe2/vm.generic-tensor:grad argument)
+								   ,dy)
+							else
+							  collect nil)))))
+
+	   (defun ,named (,@in-names)
+	     (declare (type AbstractTensor ,@in-names))
+	     ;; 引数に数値などがきたら自動でmake-tensorする？ 自動でmake-tensor?
+	     (call (,node-name) ,@in-names)))))))
+	       
 
 (defmacro defmodel-as (target-model
 		       &key
@@ -310,18 +407,26 @@ Or
 	target-model where-decl-to-use (not (null named)) named))
       (:node
        ;; [TODO]
-       ))))
+       (expand-define->abstractnode
+	differentiable target-model where-decl-to-use named)))))
 
-(defmodel (ExampleModel (self)
-	   ;; :where
-	   :on-call-> ((self x)
+
+(defmodel (Multiply-Gradients (self)
+	   :on-call-> ((self x grad)
 		       (declare (ignore self))
-		       (cl-waffe2/base-impl:!sin (cl-waffe2/base-impl:lazy-print x)))))
-;; (defmacro model-let ...)
+		       (with-no-grad
+			 (cl-waffe2/base-impl:A*=B X grad)))))
 
-;;(defmodel-as nil :asif :function :differentiable t)
+(defmodel-as (Multiply-Gradients)
+  :where (X[~] Grad[~] -> X[~])
+  :asif :function
+  :named multiply-grads-static)
 
-(defmodel-as (ExampleModel) :asif :function :named example-model-call :where (A[~] -> A[~]))
-;;(defmodel-as (SoftmaxNode) :where (X[~] -> X[~]) :as-if function :named softmax)
+(defmodel-as (Multiply-Gradients)
+  :where (X[~] Grad[~] -> X[~])
+  :asif :node
+  :named !mgrad
+  :differentiable t)
 
-;;(defmodel-as (SoftmaxNode) :where () :as :function :named softmax :differentiable t)
+;; Backward?
+;; -> Test
