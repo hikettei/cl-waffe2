@@ -130,12 +130,8 @@
 	(b (parameter (make-tensor 3))))
 
     (let ((model (build (call (OpMulTest-Scalar) a b))))
-      (cl-waffe2/vm:disassemble-waffe2-ir
-       (call (OpMulTest-Scalar) a b))
       (forward model)
       (backward model))
-    (print (grad a))
-    (print (grad b))
     (and
      (= (tensor-vec (grad a)) 3)
      (= (tensor-vec (grad b)) 2))))

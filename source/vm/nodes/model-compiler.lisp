@@ -27,6 +27,8 @@
 
 ;; TODO: lazy-values, return multiple arguments
 
+;; TODO: defpathでSymbolic Differentiation
+
 ;; defmodel-as (for abstractnode mo) 動かす
 ;; proceed-backwardを十分高速に動かす+memory-leakしない
 ;; -> RNNCellをIterateする
@@ -41,9 +43,6 @@
 
 ;; ModelのWhereが読めない問題: Encapsulate_NodeでCompositeを一度Wrapする?
 
-;; そしたらdefmodel-asを動かしてみる
-;; self ... cache-when-compile=tでも更新
-
 ;; 目標1 : defmodel-asと (backward toplevel) でdefine-by-runっぽく動作 + RNNを動作させる
 ;; 目標2 : memory-pool ... メモリリーク排除, 使う終わったcacheを使い回す, finalizeとかちゃんとする
 ;;      PR into (DEVELOP)
@@ -51,6 +50,8 @@
 
 ;; (defnode (System-Lazy-Values X Y
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  
 (defun read-where-args (where)
   "where -> (A B) (C D)"
   (multiple-value-bind (in out fw bw) (parse-subscript where)
@@ -241,61 +242,67 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	 (node-name (symb composite-name '-asnode)))
     (multiple-value-bind (in-names out-names in-states out-states let-bindings) (parse-subscript where)
       (declare (ignore let-bindings out-names in-states out-states))
-      (with-gensyms (self dy kernel-function)
-	`(let ((,kernel-function ,(expand-define->function-form
-				   target-model
-				   where
-				   nil
-				   nil
-				   :need-backward differentiable-p)))
-	   ;; ,kernel-function -> result1 result2 ... backward-iseq
-	   (define-op (,node-name (,self)
+      (with-gensyms (self dy)
+	`(progn
+	   (define-op (,node-name (,self ,@in-names)
 		       :where ,where
-		       :slots ((bwiseq      :initform nil)
-			       (variables   :initform nil)
-			       (shape-table :initform nil))
-		       :forward ((,self ,@in-names)				 
-				 (multiple-value-bind (out bwiseq shapes variables) (apply ,kernel-function (list ,@in-names))
-				   (setf (slot-value ,self 'bwiseq) bwiseq
-					 (slot-value ,self 'shape-table) shapes
-					 (slot-value ,self 'variables) variables)
-				   
+		       :slots ((fw-iseq      :initform nil)
+			       (bw-iseq      :initform nil)
+			       (variables    :initform nil)
+			       (dout         :initform nil))
+		       :forward ((,self ,@in-names)
+				 (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
 				   (when (scalar-p out)
 				     (setf (out-scalar-p ,self) t))
 				   out))
 
 		       :backward ((,self ,dy)
 				  ;; multiply-gradients-static(X, Grad) ... X *= Grad
-				  (when (null (slot-value ,self 'bwiseq))
+				  
+				  (when (null (slot-value ,self 'bw-iseq))
 				    (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
 => (defmodel-as (...) :differentiable t)
                               └── Set :differentiable=t or the forward wasn't called."
 					   ',node-name))
-				  
-				  ;; Call backwards
-				  (let ((shapes (slot-value ,self 'shape-table)))
-				    (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
-				      (loop for comb in shapes do
-					(cl-waffe2/vm.generic-tensor::register-adjustable-shape (car comb) (cdr comb)))
-					       
-				      (cl-waffe2/vm:accept-instructions (slot-value ,self 'bwiseq))))
 
-				  ;; Pass gradients to the next nodes
-				  ;; Each gradients are destructed
+				  (if (scalar-p (slot-value ,self 'dout))
+				      (setf (tensor-vec (slot-value ,self 'dout))
+					    (if (scalar-p ,dy)
+						(tensor-vec ,dy)
+						(cl-waffe2/vm.generic-tensor::vref ,dy 0)))
+				      (setf (tensor-vec (slot-value ,self 'dout)) (tensor-vec ,dy)))
 				  
+				  ;; Call Backward Iseq
+				  (cl-waffe2/vm:accept-instructions (slot-value ,self 'bw-iseq))
+
+				  ;; Compose gradients
 				  (apply #'values
 					 (loop for argument in (slot-value ,self 'variables)
 					       if (cl-waffe2/vm.generic-tensor:grad argument)
-						 collect (multiply-grads-static
-							  (cl-waffe2/vm.generic-tensor:grad argument)
-							  ,dy)
+						 collect (cl-waffe2/vm.generic-tensor:grad argument)
 					       else
-						 collect nil)))))
+						 collect nil))))
+
+	     ;; Compile in advance
+	     (let* (,@(loop for name in in-names
+			    collect `(,name (if (cl-waffe2/vm.generic-tensor:ancestor-param-p ,name)
+						(cl-waffe2/vm.generic-tensor:parameter ,name)
+						,name))))
+	       (setf (slot-value ,self 'variables) (list ,@in-names))
+	       (multiple-value-bind (fw-iseq bw-iseq leaves dout) (cl-waffe2/vm:compile-forward-and-backward
+								   (call ,target-model ,@in-names)
+								   :need-backward ,differentiable-p
+								   :fuse-p t
+								   :compile-mode :fastest)
+		 (declare (ignore leaves))
+		 (setf (slot-value ,self 'fw-iseq) fw-iseq
+		       (slot-value ,self 'bw-iseq) bw-iseq
+		       (slot-value ,self 'dout)    dout))))
 	   
 	   (defun ,named (,@in-names)
 	     (declare (type AbstractTensor ,@in-names))
 	     ;; in-names=number -> make-tensor auto?
-	     (call (,node-name) ,@in-names)))))))
+	     (call (,node-name ,@in-names) ,@in-names)))))))
 	       
 ;; [Exported]
 (defmacro defmodel-as (target-model
@@ -431,12 +438,11 @@ Or
 	differentiable target-model where-decl-to-use named)))))
 
 ;; Utils for multiplying gradients
-
 (defmodel (Multiply-Gradients (self)
 	   :on-call-> ((self x grad)
 		       (declare (ignore self))
 		       (with-no-grad
-			 (cl-waffe2/base-impl:A*=B X grad)))))
+			 (cl-waffe2/base-impl::A*=B X grad)))))
 
 (defmodel-as (Multiply-Gradients)
   :where (X[~] Grad[~] -> X[~])
@@ -444,3 +450,4 @@ Or
   :named multiply-grads-static)
 
 
+)

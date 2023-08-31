@@ -181,4 +181,12 @@ Return:
 		   slots))
        slots))
 
+(defmacro with-detach-tensors ((&rest tensors) &body body)
+  `(let ((detach-state (map 'list #'detach-p ,tensors)))
+     (map 'list #'(lambda (x) (setf (detach-p x) t)) ,tensors)
+     (prog1
+	 ,@body
+       (loop for s in detach-state
+	     for tens in tensors do
+	       (setf (detach-p tens) s)))))
 

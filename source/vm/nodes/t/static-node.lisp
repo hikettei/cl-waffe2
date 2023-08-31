@@ -3,42 +3,41 @@
 
 (in-suite :test-nodes)
 
-;; Is composite differentiable?
 
-;; define-opで書き直す
-
-(defmodel (SinModel (self)
-	   :where ([~] -> [~])
+(defmodel (SinModel1 (self)
+	   :where (A[~] -> B[~])
 	   :on-call-> ((self x)
 		       (declare (ignore self))
 		       (!sin x))))
 
-(defmodel (CosModel (self)
-	   :where ([~] -> [~])
+(defmodel (CosModel1 (self)
+	   :where (A[~] -> B[~])
 	   :on-call-> ((self x)
 		       (declare (ignore self))
 		       (!cos x))))
 
-(defmodel (MulModel (self)
-	   :where ([~] [~] -> [~])
+(defmodel (MulModel1 (self)
+	   :where (A[~] B[~] -> C[~])
 	   :on-call-> ((self x y)
 		       (declare (ignore self))
 		       (!mul x y))))
 
-(define-composite-function (SinModel) !sin-static)
-(define-composite-function (CosModel) !cos-static)
-(define-composite-function (MulModel) !mul-static)
+(defmodel-as (SinModel1) :named !sin-static)
+(defmodel-as (CosModel1) :named !cos-static)
+(defmodel-as (MulModel1) :named !mul-static)
 
 
-(define-static-node (SinNode-Static (self)
-		     :where (A[~] -> A[~])
-		     :save-for-backward-names (x)
-		     :forward ((self x)
-			       (with-setting-save4bw ((x x))
-				 (!sin-static x)))
-		     :backward ((self dout)
-				(with-reading-save4bw ((x x))
-				  (!mul-static dout (!cos-static x))))))
+(define-op (SinNode-Static (self)
+
+	    :where (A[~] -> A[~])
+
+	    :save-for-backward-names (x)
+	    :forward ((self x)
+		      (with-setting-save4bw ((x x))
+			(!sin-static x)))
+	    :backward ((self dout)
+		       (with-reading-save4bw ((x x))
+			 (!mul-static dout (!cos-static x))))))
 
 
 (defun test-composite-diff ()

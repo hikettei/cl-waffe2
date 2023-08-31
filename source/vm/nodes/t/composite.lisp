@@ -31,16 +31,17 @@
 		       (declare (ignore self))
 		       (->scal (!mean x)))))
 
-
 (defmodel-as (SumUpModel)  :where (A[~] -> out[one] where one = 1) :named sumup-static :asif :function)
 (defmodel-as (MeanUpModel) :where (A[~] -> out[one] where one = 1) :named meanup-static :asif :function)
 
 (defmodel-as (SumUpModel)  :where (A[~] -> out[one] where one = 1) :named !sumup-static :asif :node :differentiable t)
 (defmodel-as (MeanUpModel) :where (A[~] -> out[one] where one = 1) :named !meanup-static :asif :node :differentiable t)
 
+(defmodel-as (SinModel) :where (A[~] -> B[~]) :named !sinmodel :asif :node :differentiable t)
+
 (test defmodel->function-reduction-test
   (is (= 100 (tensor-vec (sumup-static  (ax+b `(10 10) 0 1)))))
-  (is (= 1 (tensor-vec   (meanup-static (ax+b `(10 10) 0 1))))))
+  (is (= 1   (tensor-vec   (meanup-static (ax+b `(10 10) 0 1))))))
 
 (test defmodel->function-test
   (is (M= (proceed (!sin (ax+b `(10 10) 0 1)))
@@ -61,9 +62,26 @@
 (defun defmodel->node-diff-1 ()
   (let ((a (parameter (ax+b `(3 5) 0 1))))
     (proceed-backward
-     (!sumup-static a))
-    (grad a)))
+     (!sinmodel a))
+    (< (- (cos 1) (mref (grad a) 0 0)) 0.00001)))
 
-;; buildでも動作する？
-;; Optimizer ugokuka?
-;; Support: Multiple Arguments returning
+(defun defmodel->node-diff-1-vm ()
+  (let ((a (parameter (ax+b `(3 5) 0 1))))
+    (let ((model (build (!sinmodel a))))
+      (forward model)
+      (backward model))
+    (< (- (cos 1) (mref (grad a) 0 0)) 0.00001)))
+
+(defun defmodel->node-diff-2 ()
+  (let ((a (parameter (ax+b `(3 5) 0 1))))
+    (proceed-backward
+     (!sumup-static a))
+    (= 1 (vref (grad a) 0))))
+
+(test defmodel-as-diff-test
+  (is (defmodel->node-diff-1))
+  (is (defmodel->node-diff-1-vm))
+  (is (defmodel->node-diff-2)))
+
+;; TODO:    Loop Collapse
+;; Support: lazy-values

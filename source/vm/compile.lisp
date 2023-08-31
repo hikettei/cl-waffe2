@@ -158,7 +158,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 
 ## Return
 
-`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node])`
+`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout)`
 "
   (declare (type AbstractTensor toplevel))
   ;; fuse-p is intentionally disabled forcibly for a while
@@ -210,7 +210,8 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		      (node-compile-into-vm dout))		     
 		     backward-iseq)
 		    backward-iseq)
-		leaves)))))
+		leaves
+		dout)))))
 
 
 (defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
