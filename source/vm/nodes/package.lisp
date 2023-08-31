@@ -91,7 +91,10 @@
   (:export
    #:defnode
    #:define-impl
-   #:define-and-impl-node)
+   #:define-and-impl-node
+
+   #:define-impl-op
+   #:define-op)
   ;; Reject-p-utils
   (:export
    #:supported-dtypes-are)

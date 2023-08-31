@@ -589,7 +589,7 @@ Gives an implementation of `abstract-name` as a function form.
 	 (forward-args  (cdar forward))
 	 (backward-args (cdar backward))
 	 
-	 (forward-body  (multiple-value-list (parse-body (cdr forward))))
+	 (forward-body  (cdr forward))
 	 (backward-body (cdr backward))
 	 
 	 (impl-name     (subnode-name abstract-name device))
@@ -624,12 +624,11 @@ Gives an implementation of `abstract-name` as a function form.
 
        
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
-	 (declare (type ,impl-name ,forward-self-name)
-		  (ignore ,inputs))
-
-	 ;; Enhancement: macroexpand
+	 (declare (type ,impl-name ,forward-self-name))
+	 
 	 (make-compiled-kernel
 	  :op #'(lambda (,@forward-args)
+		  (declare (ignorable ,@forward-args))
 		  ,@forward-body)
 	  :name ',fw-name-vm
 	  :body nil

@@ -21,7 +21,8 @@
    (transmission-state :initarg :transmission-state :reader transmission-state :type list)
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (excepted-output-shape :initform nil :type list :accessor node-output-shape)
-   (passed-at-least-once :initform nil :accessor node-passed-p :type boolean))
+   (passed-at-least-once :initform nil :accessor node-passed-p :type boolean)
+   (out-sizes :initform nil :accessor node-out-sizes))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
 
 AbstractNode must possess following:
@@ -149,6 +150,13 @@ Here's a list of reports.
   ;; Update Computation Nodes
 
   ;; TODO: Put warning when !t without matmul
+  (assert (every #'(lambda (x) (typep x 'AbstractTensor)) inputs)
+      nil
+      "(forward node &rest inputs)
+                      ^ every input should be AbstractTensor
+butgot: ~a"
+      (find 'AbstractTensor inputs :test #'(lambda (x y) (not (typep y x)))))
+     
 
   (let* ((save-for-backward (node-save-for-backward node))
 	 (inputs (or (when *restart-variable-from* inputs) ;; No additional save-for-backward is created.
@@ -279,8 +287,9 @@ Here's a list of reports.
 			       (setf (tensor-state next-tensor)     state)
 			       (setf (tensor-backward next-tensor)  node)
 			       (setf (tensor-variables next-tensor) inputs)
-			       
 			       next-tensor))))
+
+	(setf (node-out-sizes node) (map 'list #'shape next-tensor))
 	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)
@@ -358,7 +367,7 @@ Use the define-impl macro to give definitions for the node and forward them.
 
 (defun select-return-place (place argn nth-trying)
   (if (or ;;(tensor-projected-p place)
-	  (not (= argn nth-trying)))
+       (not (= argn nth-trying)))
       (make-input (shape place) nil
 		  :create-from place
 		  :dtype (dtype place)
