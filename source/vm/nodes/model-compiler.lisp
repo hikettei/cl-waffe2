@@ -6,6 +6,8 @@
 ;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
 ;;
 
+
+;; TODO: cl-waffe2/viz ... Terminalでも綺麗に表示したい
 ;; TODO: Export APIs and add to the docs
 ;; TODO: Remove this: MoveTensorNode(SAVE_FOR_BACKWARD) and then, fuseOps (e.g.: ReLuTensorNode, Log1pNode)
 
@@ -23,7 +25,7 @@
 
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
 ;; TODO: defmodel/defnode系のマクロ ... エラー表示を見やすく
-;; TODO: define-static-model/define-op -> lambda関数を直接
+;; TODO: define-static-model/define-op -> lambda関数を直接 (OK)
 
 ;; TODO: lazy-values, return multiple arguments
 

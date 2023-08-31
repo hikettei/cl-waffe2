@@ -183,6 +183,7 @@
 	       
 	       (:file "viz/package")
 	       (:file "viz/ast")
+	       (:file "viz/dprint")
 	       (:file "cl-waffe2-repl")
 
 	       

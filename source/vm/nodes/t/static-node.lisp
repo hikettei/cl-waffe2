@@ -28,7 +28,6 @@
 
 
 (define-op (SinNode-Static (self)
-
 	    :where (A[~] -> A[~])
 
 	    :save-for-backward-names (x)
@@ -39,7 +38,6 @@
 		       (with-reading-save4bw ((x x))
 			 (!mul-static dout (!cos-static x))))))
 
-
 (defun test-composite-diff ()
   (let ((a (parameter (ax+b `(3 3) 0 1))))
     (proceed-backward (call (SinNode-Static) a))
@@ -47,20 +45,21 @@
 
 (defun composite-with-build ()
   (let* ((a (parameter (ax+b `(3 3) 0 1)))
-	 (model (build (call (SinNode-static) a))))
+	 (model (build (call (SinNode-Static) a))))
     (forward model)
     (backward model)
     (let ((f1 (~= (cos 1) (vref (grad a) 0))))
       (forward model)
       (backward model)
 
-      (let ((f2 (~= (+ (cos 1) (cos 1)) (vref (grad a) 0))))
+      ;; Gradients are resetted...
+      (let ((f2 (~= (cos 1) (vref (grad a) 0))))
 	(forward model)
 	(backward model)
 
 	(and f1 f2
-	     (~= (+ (cos 1) (cos 1) (cos 1))
-		(vref (grad a) 0)))))))
+	     (~= (+ (cos 1))
+		 (vref (grad a) 0)))))))
 
 (defun composite-with-build1 ()
   (let* ((a (parameter (ax+b `(3 3) 0 1)))

@@ -46,7 +46,10 @@
 			     stream
 			     &key
 			       (format :dot))
-  "TODO: DOCSTRING"
+  "
+## [function] viz-computation-node
+
+"
   (declare (type AbstractTensor out-tensor)
 	   (type (and keyword (member :dot :print)) format))
   (case format
@@ -113,6 +116,7 @@
        "[penwidth=\"2\"]")
       (T "[weight=10]"))))
 
+;; uiop
 ;; dot -Tpng ./out.dot > ./out.png
 (defun output-to-dot (out-tensor filepath)
   (multiple-value-bind (ast nodes) (make-ast-dot out-tensor)
