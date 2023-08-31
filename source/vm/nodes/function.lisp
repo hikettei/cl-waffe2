@@ -206,6 +206,8 @@ Input:
 			   :compile-mode compile-mode)))))
 
 
+;; [TODO] The feature is Integrated into defmodel-as
+;; DELETE IT!!!
 (defmacro define-composite-function (composite-init-form
 				     function-name
 				     &key

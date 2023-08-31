@@ -3,6 +3,8 @@
 
 
 ;; [TODO] Add WfInstrucion to the docstring
+;; WfInstruciton = cl-waffe2 IR
+
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
 	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))

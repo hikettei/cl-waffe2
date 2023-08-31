@@ -189,6 +189,8 @@ Saves the given tensors to save-place, in the currently working node.
 
 ;; ==================================================================
 
+
+;; [TODO] define-static-node ... 削除する！！！
 (defmacro define-static-node ((name
 			       (self-name &rest constructor-args)
 			       &key
@@ -198,7 +200,6 @@ Saves the given tensors to save-place, in the currently working node.
 				 (save-for-backward-names nil)
 				 (forward nil)
 				 (backward nil)
-				 (cache-when-compiled nil)
 				 (documentation ""))
 			      &body constructor-body)
   "
@@ -214,12 +215,11 @@ Saves the given tensors to save-place, in the currently working node.
 				 (save-for-backward-names nil)
 				 (forward nil)
 				 (backward nil)
-                                 (cache-when-compiled nil)
 				 (documentation \"\"))
 			      &body constructor-body))
 ```
 
-Defines a differentiable AbstractNode, but its forward/backward is defined by statcically notation.
+Defines a differentiable AbstractNode, but its forward/backward definition is given by a function.
 
 ### Inputs
 
@@ -283,6 +283,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 	(backward-args (car backward))
 	(forward-body  (cdr forward))
 	(backward-body (cdr backward))
+	
 	(backward-node-name (symb name '-backward))
 
 	(forward-flet-name (symb name '-forward-body))
@@ -298,7 +299,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
        (define-and-impl-node (,backward-node-name (self forward-self)
 			      :device t
 			      ;; Temporary Restores Nodes used in forward.
-			      :cache-when-compiled ,cache-when-compiled
+			      :cache-when-compiled t
 			      :slots ((forward-self :initarg :forward-self :reader read-forward-self))
 			      ;; forward -> backward => backward -> forward
 			      :where ,(where->backward where)
@@ -345,7 +346,7 @@ But what if one wants to save the given tensors for a future call of backward? Y
 				      (backward-result :initform nil :accessor backward-result))
 			      :out-scalar-p ,out-scalar-p
 			      :documentation ,documentation
-			      :cache-when-compiled ,cache-when-compiled
+			      :cache-when-compiled t
 			      :forward ((,@forward-args)
 					(flet ((,forward-flet-name (,@forward-args)
 						 (declare (ignorable ,(car forward-args)))
@@ -370,7 +371,106 @@ But what if one wants to save the given tensors for a future call of backward? Y
 								 `(nth ,,nth (backward-result ,,(car backward-args)))))))))
 	 ,@constructor-body))))
 
+(defmacro define-op ((name
+		      (self &rest constructor-args)
+		      &key
+			(where nil)
+			(slots nil)
+			(out-scalar-p nil)
+			(save-for-backward-names nil)
+			(forward nil)
+			(backward nil)
+			(extends-fw nil)
+			(extends-bw nil)
+			(documentation ""))
+		     &body constructor-body)
+  "
+## [macro] define-op
 
-;; To Add: define-impl-static
-;; To Add: define-dynamic-node (Embedding defined-by-run nodes with AD)
+Defines a differentiable AbstractNode which its definition is given by a function.
 
+```lisp
+(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends-fw extends-bw) &body body)
+```
+
+### Effects
+
+This macro defines:
+
+1. two `AbstractNodes` named `name` and `name-backward` (if backward is given)
+
+"
+  (declare (type list save-for-backward-names))
+  (when (null where)
+    (error "define-op: The where declaration isn't provided.
+            (define-op (name (self ...)
+                             :where (A[i j] -> B[i j])
+                                └── Fill this form
+                    ...))"))
+
+  (multiple-value-bind (fw-in bw-in fw-state bw-state let-binding) (parse-subscript where)
+    (declare (ignore let-binding))
+
+    (let* ((forward-args  (car forward))
+	   (backward-args (car backward))
+	   (forward-body  (cdr forward))
+	   (backward-body (cdr backward))
+	   	
+	   (backward-node-name (symb name '-backward))
+	   (save-for-backward-slots
+	     (loop for s in save-for-backward-names
+		   collect `(,s :initform nil :type (or null AbstractTensor)))))
+
+      (when (not (= (length forward-args) (1+ (length fw-in))))
+	(error "define-op: The number of arguments in forward doesn't match with declared in :where.
+:where -> ~a
+butgot -> ~a"
+	       fw-in
+	       forward-args))
+
+      (when (and backward
+		 (not (= (length backward-args) 2)))
+	(error "define-op: The number of arguments in backward should be 2.
+                (define-op (name (self ...)
+                                 ...
+                                 :backward ((self dy)
+                                             └── Check here.
+                                            ...
+                                            (values ...))))"))
+
+      (with-gensyms (in-shapes out-shapes)
+	`(progn
+	   ;; Declares AbstractNode
+	   (defnode (,name (,self ,@constructor-args)
+		     :where ,where
+		     :out-scalar-p ,out-scalar-p
+		     :slots (,@slots
+			     ,@save-for-backward-slots)
+		     :extends ,extends-fw
+		     :documentation ,documentation)
+	     ,@constructor-body)
+
+	   (defnode (,backward-node-name (,self ,in-shapes ,out-shapes)
+		     ;; where -> Z [BW-SHAPES[0]] -> ...
+		     :where (,@(loop for bw-tensor-name in bw-in
+				     for n fixnum upfrom 0
+				     append
+				     `(,bw-tensor-name [,(symb out-shapes n)]))
+			     ->
+			     ,@(loop for fw-tensor-name in fw-in
+				     for n fixnum upfrom 0
+				     append
+				     `(,fw-tensor-name [,(symb in-shapes n)]))
+			     where
+			     ,@(loop for bw-tensor-name in bw-in
+				     for n fixnum upfrom 0
+				     append
+				     `(,(symb out-shapes n) = (nth ,n ,out-shapes)))
+			     ,@(loop for fw-tensor-name in fw-in
+				     for n fixnum upfrom 0
+				     append
+				     `(,(symb in-shapes n) = (nth ,n ,in-shapes))))
+		     :slots ((fw-self :initform nil :initarg :self))
+		     :extends ,extends-bw))
+	   
+	   )))))

@@ -1,6 +1,21 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+
+;;  [Overview of Computation Node in cl-waffe2]
+;; ====================================================================================
+;; Defining AbstractNode
+;;  defnode - Declares AbstractDefinition of AbstractNode
+;;       L define-impl     implements abstractnode as a macro to inline call-with-view, later (compile nil body) is called.
+;;       L define-impl-op  implements abstractnode as a λfunction
+;;
+;;  define-op = defnode + define-impl-op
+
+;; Defining Composite (Model)
+;;  defmodel - Defines a new Composite
+;;     L (Utils) defmodel-as Converts Composite into a function/AbstractNode
+;; ====================================================================================
+
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
 (defparameter *node-reject-case-table* (make-hash-table))
@@ -546,3 +561,89 @@ Expands `defnode` and `define-impl` at the same time.
 		  :save-for-backward ,save-for-backward
 		  :forward ,forward)))
 
+(defmacro define-impl-op ((abstract-name
+			   &key
+			     (device t)
+			     (extends nil)
+			     (reject-p nil))
+			  &key
+			    forward
+			    backward
+			  &aux
+			    (inputs (gensym "inputs")))
+  "
+## [macro] define-impl-op
+
+Gives an implementation of `abstract-name` as a function form.
+
+```lisp
+(define-impl-op ((abstract-name &key (device t) (extends nil) (reject-p nil)) &key forward backward))
+```
+
+(TODO)
+"
+  
+  (let* ((forward-self-name  (caar forward))
+	 (backward-self-name (caar backward))
+	 
+	 (forward-args  (cdar forward))
+	 (backward-args (cdar backward))
+	 
+	 (forward-body  (multiple-value-list (parse-body (cdr forward))))
+	 (backward-body (cdr backward))
+	 
+	 (impl-name     (subnode-name abstract-name device))
+	 
+	 (fw-name-vm    (symb abstract-name device '-vm-function)))
+    
+    (eval-when (:compile-toplevel :load-toplevel :execute)
+      ;; [TODO] If not deleting all caches, find the impl and remove it.
+      (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
+      (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
+	      nil
+	      "define-impl-op: The number of arguments in forward and backward should be corresponds. ~a and ~a"
+	      backward-args
+	      abstract-name))
+    
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (progn
+	 (assert (or (eql ',device t) (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor))
+	     nil
+	     "define-impl-op: the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
+	     ',abstract-name
+	     ',device))
+       
+       (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
+       
+       (defclass ,impl-name (,abstract-name ,@extends)
+	 ((save-for-backward-space2 :initform nil :reader node-save-for-backward2))
+	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
+				  impl-name
+				  abstract-name
+				  device)))
+
+       
+       (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
+	 (declare (type ,impl-name ,forward-self-name)
+		  (ignore ,inputs))
+
+	 ;; Enhancement: macroexpand
+	 (make-compiled-kernel
+	  :op #'(lambda (,@forward-args)
+		  ,@forward-body)
+	  :name ',fw-name-vm
+	  :body nil
+	  :cache-when-compiled nil
+	  :cache-p nil
+	  :call-with-view nil
+	  :args ,inputs
+	  :view-route nil
+	  :self ,forward-self-name))       
+       
+       ,(when backward
+	  `(defmethod backward ((,backward-self-name ,impl-name) &rest ,inputs)
+	     (declare (type ,impl-name ,backward-self-name))
+	     (multiple-value-bind (,@backward-args) (apply #'values ,inputs)
+		(declare (type cl-waffe2/vm.generic-tensor:AbstractTensor ,@backward-args))
+		,@backward-body))))))
+	  

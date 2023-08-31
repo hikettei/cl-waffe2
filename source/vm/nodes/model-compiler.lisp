@@ -21,6 +21,8 @@
 ;; TODO: Test defmodel-as, documentations
 ;; TODO: proceed ... TpSort
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
+;; TODO: defmodel/defnode系のマクロ ... エラー表示を見やすく
+;; TODO: define-static-model/define-op -> lambda関数を直接
 
 ;; defmodel-as (for abstractnode mo) 動かす
 ;; proceed-backwardを十分高速に動かす+memory-leakしない
