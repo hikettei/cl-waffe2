@@ -488,7 +488,8 @@ butgot -> ~a"
 					   `(,(symb 'in-shapes n) = (nth ,n ,in-shape))))
 		     :slots ((fw-self :initform nil))
 		     :extends ,extends-bw)
-	     (setf (slot-value ,self 'fw-self) ,fw-self))
+	     (setf (slot-value ,self 'fw-self) ,fw-self
+		   (ignore-shape-error ,self) t))
 	   
 	   (define-impl-op (,name :device t)
 			   :forward ((,@forward-args)

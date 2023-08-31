@@ -75,10 +75,10 @@
   `(and keyword (member :function :node)))
 
 (defun trace-and-compile-composite (need-backward kernel-size-list named composite composite-input-size argument-names &rest args)
-  
-  (when (some #'(lambda (x) (some #'symbolp (shape x))) args)
-    (error "defmodel-as: The function ~(~a~) received a tensor which includes dynamic shape.
-Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
+
+;;  (when (some #'(lambda (x) (some #'symbolp (shape x))) args)
+;;    (error "defmodel-as: The function ~(~a~) received a tensor which includes dynamic shape.
+;;Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
 
   (when (some #'(lambda (x) (and (tensor-state x) (eql :maybe-not-computed (cl-waffe2/vm.generic-tensor::state-name x (tensor-state x))))) args)
     (warn "defmodel-as: The function ~(~a~) received a tensor where :vec-state=[maybe-not-computed].
@@ -282,7 +282,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 
 				  ;; Pass gradients to the next nodes
 				  ;; Each gradients are destructed
-					   
+				  
 				  (apply #'values
 					 (loop for argument in (slot-value ,self 'variables)
 					       if (cl-waffe2/vm.generic-tensor:grad argument)
@@ -297,7 +297,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	     ;; in-names=number -> make-tensor auto?
 	     (call (,node-name) ,@in-names)))))))
 	       
-
+;; [Exported]
 (defmacro defmodel-as (target-model
 		       &key
 			 (where nil)
@@ -430,6 +430,7 @@ Or
        (expand-define->abstractnode
 	differentiable target-model where-decl-to-use named)))))
 
+;; Utils for multiplying gradients
 
 (defmodel (Multiply-Gradients (self)
 	   :on-call-> ((self x grad)
@@ -441,4 +442,5 @@ Or
   :where (X[~] Grad[~] -> X[~])
   :asif :function
   :named multiply-grads-static)
+
 

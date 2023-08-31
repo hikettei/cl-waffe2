@@ -204,7 +204,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	 leaves)
 
 	(values (reverse iseq-forward)
-		(if (and out-symbol-p (not (scalar-p toplevel)))
+		(if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 		    (append ;; dout = 0, so add 1
 		     (reverse
 		      (node-compile-into-vm dout))		     

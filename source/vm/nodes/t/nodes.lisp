@@ -123,6 +123,8 @@
      (= (tensor-vec (grad a)) 3)
      (= (tensor-vec (grad b)) 2))))
 
+
+;; This is NOT WORKING...
 (defun diff-test-vm ()
   (let ((a (parameter (make-tensor 2)))
 	(b (parameter (make-tensor 3))))
@@ -175,4 +177,5 @@
       (call (SwapNode) (make-tensor 4) (make-tensor 2))
     (let ((out (forward (build (!add a b)))))
       (= (tensor-vec out) 6))))
+
 

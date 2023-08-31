@@ -58,9 +58,17 @@ See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithm
 			     (!div (!mul m lr-t)
 				   (!add eps (!sqrt v)))))))
 
-(define-composite-function (Adam-Step-M) apply-adam-step-m)
-(define-composite-function (Adam-Step-V) apply-adam-step-v)
-(define-composite-function (Adam-Step-Param) apply-adam-step-param)
+(defmodel-as (Adam-Step-M)
+  :asif :function
+  :named apply-adam-step-m)
+
+(defmodel-as (Adam-Step-V)
+  :asif :function
+  :named apply-adam-step-v)
+
+(defmodel-as (adam-Step-Param)
+  :asif :function
+  :named apply-adam-step-param)
 
 (defun adam-step-lr (adam)
   (declare (type Adam adam)
