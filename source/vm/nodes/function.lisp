@@ -244,7 +244,6 @@ On the condition where composite should be defined as polymorphic, the function 
 	   (type keyword order)
 	   (type compile-option-t compile-mode))
 
-  
   `(eval (composite-function ,composite-init-form
 			     ',function-name
 			     #'(lambda ()

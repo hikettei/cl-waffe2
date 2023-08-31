@@ -17,6 +17,7 @@
 		       (declare (ignore self))
 		       (cl-waffe2/base-impl:!move place tensor :force t))))
 
+;; (defmodel-as ...
 ;;(define-composite-function (Save-For-Backward-Static) move-and-save-for-backward-static)
 
 ;; ==========================================================
@@ -421,7 +422,7 @@ This macro defines:
                     ...))"))
 
   (multiple-value-bind (fw-in bw-in fw-state bw-state let-binding) (parse-subscript where)
-    (declare (ignore let-binding fw-state bw-state))
+    (declare (ignore let-binding fw-state bw-state bw-in))
 
     (let* ((forward-args  (car forward))
 	   (backward-args (car backward))
@@ -450,7 +451,9 @@ butgot -> ~a"
                                             ...
                                             (values ...))))"))
 
-      (with-gensyms (fw-self dout)
+      (with-gensyms (fw-self dout in-shape out-shape)
+	(setq in-shape (intern (symbol-name in-shape) *package*))
+	(setq out-shape (intern (symbol-name out-shape) *package*))
 	`(progn
 	   ;; Declares AbstractNode
 	   (defnode (,name (,self ,@constructor-args)
@@ -461,37 +464,31 @@ butgot -> ~a"
 		     :extends ,extends-fw
 		     :documentation ,documentation)
 	     ,@constructor-body)
-
 	   
-	   (defnode (,backward-node-name (,self ,fw-self in-shapes out-shapes)
+	   (defnode (,backward-node-name (,self ,fw-self ,in-shape ,out-shape)
 		     ;; where : DOUT X [BW-SHAPES[0]] Y -> ... X Y...
+		     :out-scalar-p ,out-scalar-p
 		     :where (,dout [,(symb dout '-size)]
-				   ,@(loop for bw-tensor-name in bw-in
+				   ,@(loop for fw-tensor-name in fw-in
 					   for n fixnum upfrom 0
 					   append
-					   `(,bw-tensor-name [,(symb 'out-shapes n)]))
+					   `(,fw-tensor-name [,(symb 'in-shapes n)]))
 				   ->
 				   ,@(loop for fw-tensor-name in fw-in
 					   for n fixnum upfrom 0
 					   append
 					   `(,(symb fw-tensor-name '-grad) [,(symb 'in-shapes n)]))
-				;;   where
-				;;   ,(symb dout '-size)
-				;;   =
-				;;   (nth 0 (symbol-value 'out-shapes))
-				;;   ,@(loop for bw-tensor-name in bw-in
-				;;	   for n fixnum upfrom 0
-				;;	   append
-				;;	   `(,(symb 'out-shapes n) = (nth ,n (symbol-value 'out-shapes))))
-				;;   ,@(loop for fw-tensor-name in fw-in
-				;;	   for n fixnum upfrom 0
-				;;	   append
-				;;	   `(,(symb 'in-shapes n) = (nth ,n (symbol-value 'in-shapes))))
-				   )
+				   where
+				   ,(symb dout '-size)
+				   =
+				   (nth 0 ,out-shape)
+				   ,@(loop for fw-tensor-name in fw-in
+					   for n fixnum upfrom 0
+					   append
+					   `(,(symb 'in-shapes n) = (nth ,n ,in-shape))))
 		     :slots ((fw-self :initform nil))
 		     :extends ,extends-bw)
-	     (setf (slot-value ,self 'fw-self) ,fw-self
-		   (ignore-shape-error ,self) t))
+	     (setf (slot-value ,self 'fw-self) ,fw-self))
 	   
 	   (define-impl-op (,name :device t)
 			   :forward ((,@forward-args)
@@ -499,13 +496,12 @@ butgot -> ~a"
 				       ,@forward-body))
 			   
 			   :backward ((,self ,dout ,@(cdr forward-args))
-				      (call
-				       (,backward-node-name
-					,self
-					(map 'list #'shape (list ,@(cdr forward-args))) ;; in-shapes
-					(node-out-sizes ,self))
-				       ,dout
-				       ,@(cdr forward-args))))
+				      (let ((,in-shape (map 'list #'shape (list ,@(cdr forward-args))))
+					    (,out-shape (node-out-sizes ,self)))
+					(call
+					 (,backward-node-name ,self ,in-shape ,out-shape)
+					 ,dout
+					 ,@(cdr forward-args)))))
 
 	   (define-impl-op (,backward-node-name :device t)
 			   :forward ((,@backward-args ,@(cdr forward-args)) ;; self dout x y ...

@@ -99,10 +99,15 @@
 ;; Bottleneck:
 ;; A ton of creation of make-input (forward would be done without creation.)
 ;; init-optimizer-utils! -> when called with interpret-mode, replace them with proceed.
-(defun run-node-backward! (toplevel past-dy &key (compile-option `(optimize (speed 3))))
+(defun run-node-backward! (toplevel past-dy &key (compile-option `(optimize (speed 3))) (seen nil))
   (declare (type AbstractTensor toplevel past-dy)
+	   (type list seen)
 	   (optimize (speed 3)))
 
+  (when (find (tensor-iid toplevel) seen :test #'eq)
+    (return-from run-node-backward!))
+  
+  (push (tensor-iid toplevel) seen)
   ;; Adding Gradients
   (when (null (tensor-backward toplevel))
     (return-from run-node-backward!
@@ -148,7 +153,7 @@
 	      for grad   in gradients
 	      if (and kernel
 		      (ancestor-param-p var))
-		do (run-node-backward! var grad :compile-option compile-option))))))
+		do (run-node-backward! var grad :compile-option compile-option :seen seen))))))
 
 (defun vm-forward-function (toplevel
 			    &key

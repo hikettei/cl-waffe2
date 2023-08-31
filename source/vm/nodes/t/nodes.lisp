@@ -97,7 +97,7 @@
 	    :save-for-backward-names (a b)
 	    :forward ((self a b)
 		      (set-save-for-backward self 'a a)
-		      (set-save-for-backward self 'b a)		      
+		      (set-save-for-backward self 'b b)		      
 		      (make-tensor
 		       (* (tensor-vec a)
 			  (tensor-vec b))))
@@ -118,6 +118,7 @@
 
     (proceed-backward
      (call (OpMulTest-Scalar) a b))
+    
     (and
      (= (tensor-vec (grad a)) 3)
      (= (tensor-vec (grad b)) 2))))
@@ -127,9 +128,12 @@
 	(b (parameter (make-tensor 3))))
 
     (let ((model (build (call (OpMulTest-Scalar) a b))))
+      (cl-waffe2/vm:disassemble-waffe2-ir
+       (call (OpMulTest-Scalar) a b))
       (forward model)
       (backward model))
-    
+    (print (grad a))
+    (print (grad b))
     (and
      (= (tensor-vec (grad a)) 3)
      (= (tensor-vec (grad b)) 2))))
@@ -171,3 +175,4 @@
       (call (SwapNode) (make-tensor 4) (make-tensor 2))
     (let ((out (forward (build (!add a b)))))
       (= (tensor-vec out) 6))))
+

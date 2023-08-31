@@ -6,23 +6,26 @@
 ;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
 ;;
 
-;; TODO: Under *no-inlining-call-with-view*=t declaration, call-with-view function will return a single function (OK)
-;; TODO: Compiled-Kernel <- should also have a :force-use-me option, which forcibly compiles the function if set to t. (OK)
-;; TODO: proceed should use defmodel-as like way to call functions
-;; TODO: Cache it for the future call of proceed
 ;; TODO: Export APIs and add to the docs
 ;; TODO: Remove this: MoveTensorNode(SAVE_FOR_BACKWARD) and then, fuseOps (e.g.: ReLuTensorNode, Log1pNode)
+
 ;; TODO: (backward AbstractTensor) ;; -> PyTorch/Chainer Mode (i.e.: Pure define by run Mode with no compiling-time ahead)
-;; TODO: Update memory-pool. (add use-state attribute)
-;; TODO: Update backward
+
+;; TODO: Update memory-pool. (add use-state attribute) for proceed
+;; TODO: Update (backward toplevel) or (diff! toplevel)?
+
 ;; TODO: tensors: tensor-delete, dummy-gc-finalize
-;; TODO: Composite-Function ... (!matmul !t !t)
+
 ;; TODO: delete define-composite-function
 ;; TODO: Test defmodel-as, documentations
+
 ;; TODO: proceed ... TpSort
+
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
 ;; TODO: defmodel/defnode系のマクロ ... エラー表示を見やすく
 ;; TODO: define-static-model/define-op -> lambda関数を直接
+
+;; TODO: lazy-values, return multiple arguments
 
 ;; defmodel-as (for abstractnode mo) 動かす
 ;; proceed-backwardを十分高速に動かす+memory-leakしない
@@ -45,6 +48,8 @@
 ;; 目標2 : memory-pool ... メモリリーク排除, 使う終わったcacheを使い回す, finalizeとかちゃんとする
 ;;      PR into (DEVELOP)
 ;; 目標3 : MoveTensorNode(SAVE_FOR_BACKWARD)を排除 + ADの数値的安定性向上とFuseOps
+
+;; (defnode (System-Lazy-Values X Y
 
 (defun read-where-args (where)
   "where -> (A B) (C D)"
@@ -229,17 +234,6 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	  `(lambda (,@arguments)
 	     ,@body)))))
 
-;; argsのパラメーターで検索かける
-;; Backward ...
-;; define-static-node ... backward 複数の勾配いけるっけ？
-;; trace-and-compileで逆伝播を生成
-;; 下を使えばコンパイルをcacheする
-;; whereが使えない
-;; out-scalar-p
-;; outの数=1でないといけないという制約？？
-;; outの数=2で微分できますか？
-;; lazy-valuesみたいなノードを作る？？？(Systemだけが使う not for users) <- テストもっと増やしたほうがいい
-
 ;; (defclass AbstractStaticCompositeNode () nil)
 
 (defun expand-define->abstractnode (differentiable-p target-model where named)
@@ -255,47 +249,48 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 				   nil
 				   :need-backward differentiable-p)))
 	   ;; ,kernel-function -> result1 result2 ... backward-iseq
-	   (define-static-node (,node-name (,self)
-				:where ,where
-				:slots ((bwiseq      :initform nil)
-					(variables   :initform nil)
-					(shape-table :initform nil))
-				:cache-when-compiled nil ;; TODO set=t to make compiling-overhead zero
-				:forward ((,self ,@in-names)
-					  (multiple-value-bind (out bwiseq shapes variables) (apply ,kernel-function (list ,@in-names))
-					    (setf (slot-value ,self 'bwiseq) bwiseq
-						  (slot-value ,self 'shape-table) shapes
-						  (slot-value ,self 'variables) variables)
-					    (when (scalar-p out)
-					      (setf (out-scalar-p ,self) t))
-					    out))
-				:backward ((,self ,dy)
-					   ;; multiply-gradients-static(X, Grad) ... X *= Grad
-					   (when (null (slot-value ,self 'bwiseq))
-					     (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
+	   (define-op (,node-name (,self)
+		       :where ,where
+		       :slots ((bwiseq      :initform nil)
+			       (variables   :initform nil)
+			       (shape-table :initform nil))
+		       :forward ((,self ,@in-names)				 
+				 (multiple-value-bind (out bwiseq shapes variables) (apply ,kernel-function (list ,@in-names))
+				   (setf (slot-value ,self 'bwiseq) bwiseq
+					 (slot-value ,self 'shape-table) shapes
+					 (slot-value ,self 'variables) variables)
+				   
+				   (when (scalar-p out)
+				     (setf (out-scalar-p ,self) t))
+				   out))
+
+		       :backward ((,self ,dy)
+				  ;; multiply-gradients-static(X, Grad) ... X *= Grad
+				  (when (null (slot-value ,self 'bwiseq))
+				    (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
 => (defmodel-as (...) :differentiable t)
                               └── Set :differentiable=t or the forward wasn't called."
-						    ',node-name))
-					   
-					   ;; Call backwards
-					   (let ((shapes (slot-value ,self 'shape-table)))
-					     (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+					   ',node-name))
+				  
+				  ;; Call backwards
+				  (let ((shapes (slot-value ,self 'shape-table)))
+				    (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+				      (loop for comb in shapes do
+					(cl-waffe2/vm.generic-tensor::register-adjustable-shape (car comb) (cdr comb)))
 					       
-					       (loop for comb in shapes do
-						 (cl-waffe2/vm.generic-tensor::register-adjustable-shape (car comb) (cdr comb)))
-					       
-					       (cl-waffe2/vm:accept-instructions (slot-value ,self 'bwiseq))))
-					   ;; Pass gradients to the next nodes
-					   ;; Each gradients are destructed
+				      (cl-waffe2/vm:accept-instructions (slot-value ,self 'bwiseq))))
+
+				  ;; Pass gradients to the next nodes
+				  ;; Each gradients are destructed
 					   
-					   (apply #'values
-						  (loop for argument in (slot-value ,self 'variables)
-							if (cl-waffe2/vm.generic-tensor:grad argument)
-							  collect (multiply-grads-static
-								   (cl-waffe2/vm.generic-tensor:grad argument)
-								   ,dy)
-							else
-							  collect nil)))))
+				  (apply #'values
+					 (loop for argument in (slot-value ,self 'variables)
+					       if (cl-waffe2/vm.generic-tensor:grad argument)
+						 collect (multiply-grads-static
+							  (cl-waffe2/vm.generic-tensor:grad argument)
+							  ,dy)
+					       else
+						 collect nil)))))
 	   
 	   (defun ,named (,@in-names)
 	     (declare (type AbstractTensor ,@in-names))
@@ -446,17 +441,4 @@ Or
   :where (X[~] Grad[~] -> X[~])
   :asif :function
   :named multiply-grads-static)
-
-(defmodel (SinModel (self) :on-call-> ((self x) (cl-waffe2/base-impl:!sin x))))
-(defmodel-as (SinModel) :where (X[~] -> Out[~]) :asif :node :named !sinmodel :differentiable t)
-
-(defmodel-as (Multiply-Gradients)
-  :where (X[~] Grad[~] -> out[~])
-  :asif :node
-  :named !mgrad
-  :differentiable t)
-
-;; Backward?
-;; -> Test
-;; Backward ... In-place のせいで うまく動かない・・・
 

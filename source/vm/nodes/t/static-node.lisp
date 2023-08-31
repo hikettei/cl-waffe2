@@ -5,6 +5,8 @@
 
 ;; Is composite differentiable?
 
+;; define-opで書き直す
+
 (defmodel (SinModel (self)
 	   :where ([~] -> [~])
 	   :on-call-> ((self x)
