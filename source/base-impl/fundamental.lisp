@@ -577,9 +577,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 			 ;; The result is returned.
 			 `(progn
-			    ;; Tell top compiling funtion what composite to use for the compiled-function
-			    (cl-waffe2/vm.generic-tensor::declare-compiled-composite ,compiled-model)
-			    
+			    ;; Tell top compiling funtion what composite to use for the compiled-function			    
 			    ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))

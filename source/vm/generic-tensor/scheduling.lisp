@@ -47,6 +47,7 @@
 	   :input)) ;; :chain = auto-generated
       (T :input))))
 
+;; Unused:
 (defun trace-and-explore-nodes! (out-tensor)
   "Incf tensor-ref-n
 tensor-ref-n indicates that how many times the tensor was used in the node."

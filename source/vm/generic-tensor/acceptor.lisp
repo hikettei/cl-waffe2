@@ -6,7 +6,17 @@
 ;;  With regard to cl-waffe2 VM/IR, see :cl-waffe2/vm package.
 ;;
 
-(defparameter *no-grad* nil "If t, no gradients are made for backwards.")
+(defparameter *no-grad* nil "
+## [parameter] `*no-grad*`
+
+Ensures that back-propagation is not invoked inside the scope for which this parameter is set to T, with the following effects:
+
+- Save For Backward is forcibly ignored.
+
+- Computational nodes for back propagation are not compiled.
+
+In default, set to nil. See also the `with-no-grad` macro to explict this state.
+")
 
 (defmacro with-no-grad (&body body)
   "
@@ -16,7 +26,7 @@
 (with-no-grad &body body)
 ```
 
-Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built nodes are regarded as: no gradients are made for backwards.
+Set T to `*no-grad*` during the execution of body
 "
   `(let ((*no-grad* t))
      ,@body))

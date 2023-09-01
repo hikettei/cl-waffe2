@@ -5,14 +5,6 @@
 ;; https://www.cspp.cc.u-tokyo.ac.jp/hanawa/class/spc2016s/sp20160426.pdf
 ;; https://www.r-ccs.riken.jp/wp/wp-content/uploads/2020/09/katagiri190516.pdf
 
-;; 3D/4D ... 次元行列の並列化
-;; メモリの局所性を高めたい
-
-;; [TODO] Benchmarking on Loop Fusion + Lparallel
-;; Loop Collapseが有効になった場合でもFusionの効果あるかも？
-;; とりあえずベンチマークから考えてみる
-;; TODO: Fusing Several Backwards To Reduce Temporary arrays
-
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))
@@ -44,6 +36,8 @@
       (top-sort-helper var (detach-p var))
       (reverse top-sort))))
 
+
+;; Autograd:
 
 ;; sort-and-prune-for-backward:
 ;;     tp-sorted   => Pruned

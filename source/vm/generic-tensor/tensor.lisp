@@ -1,11 +1,11 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; Here we provide two macros:
-;; define-tensor (Tensors and Backend are strongly combined.)
-;; CFFI-Style
-;; Column-Major And Row-Major
-;; TODO: Detect it: (make-tensor `(10 a)) <- say: use (make-input)
+;;
+;; 
+;; AbstractTensor | Multiple Backends
+;;
+;;
 
 (defparameter *using-backend*
   `()
@@ -32,9 +32,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (or (find 'ScalarTensor *using-backend*
 	    :test #'(lambda (x y) (subtypep y x)))
       'ScalarTensor))
-;; orig-shape    ... An using size of storage vec.
-;; visible-shape ... The shape treated in network
-;; actual-shape  ... visible-shape ignored broarcasting
+
+;; orig-shape    ... The shape of storage vec.
+;; visible-shape ... The viewed shape
+;; actual-shape  ... visible-shape but broadcasting is ignored.
 
 (defclass AbstractTensor ()
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
@@ -275,35 +276,38 @@ Tensors has a two state:
 
 "))
 
+;; [TODO] Add -> Documentations
+(defgeneric tensor-finalizer (tensor)
+  (:documentation "
+## [generic] tensor-finalizer
+
+```lisp
+(tensor-finalizer tensor
+```
+
+(TODO)"))
+
+(defun dummy-finalizer ())
+(defmethod tensor-finalizer ((tensor AbstractTensor))
+  (if (next-method-p)
+      (call-next-method)
+      #'dummy-finalizer))
 
 (defgeneric current-backend-state (backend-name)
-  (:documentation "The generic function current-backend-state is used to rendering (show-backends) function."))
+  (:documentation "
+## [generic] current-backend-state
+
+```lisp
+(current-backend-state backend-name)
+```
+
+The generic function current-backend-state is used to rendering (show-backends) function.
+"))
 
 (defmethod current-backend-state ((backend-name t))
   (if (next-method-p)
       (call-next-method)
       "No status."))
-
-(defun sync-permute! (tensor)
-  (declare (type AbstractTensor tensor))
-  (macrolet ((apply-permute (accessor tensor)
-	       `(loop with copy = (copy-list ,accessor)
-		      with rank = (1- (length (shape ,tensor)))
-		      for o in (tensor-permute-order ,tensor)
-		      for kth upfrom 0
-		      do (let ((pos (- rank o)))
-			   (setf (nth kth ,accessor)
-				 (nth pos copy))))))
-    (apply-permute (tensor-stride tensor) tensor)
-    (apply-permute (tensor-view tensor) tensor)
-    (apply-permute (slot-value tensor 'visible-shape) tensor)
-    (apply-permute (slot-value tensor 'orig-shape) tensor)
-    
-    (when (and (slot-value tensor 'input-shape)
-	       ;; [Bug] Sometime, The rank of InputShape and its actual shape does not match. However in that case, input shape is no longer needed. so ignore it.
-	       (= (dims tensor) (length (tensor-input-shape tensor))))
-      (apply-permute (slot-value tensor 'input-shape) tensor))
-    nil))
 
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
@@ -313,17 +317,11 @@ Tensors has a two state:
   (declare (type AbstractTensor tensor))
   (length (shape tensor)))
 
-(defmethod tensor-delete ((tensor AbstractTensor))
-  ""
-  nil
-  )
-
 (defun permuted-p (tensor)
   (declare (type AbstractTensor)
 	   (optimize (speed 3)))
   (let ((a (copy-list (tensor-permute-order tensor))))
     (not (equal (sort a #'>) (tensor-permute-order tensor)))))
-	   
 
 ;; Inline
 (declaim (inline tensor-vec))
@@ -379,62 +377,13 @@ Note:
   (declare (type AbstractTensor tensor))
   (write-vec new-value tensor))
 
-(defun make-gradient-adder (target shape &key (use-input nil))
-  "Returns a instant-kernel to add the new-gradient to given target."
-
-  (let ((out (make-input shape nil
-			 :create-from use-input
-			 :dtype (dtype target)
-			 :order (order target))))
-    (let ((*no-grad* t))
-      (let* ((node-out (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype (grad target))) (grad target) out))
-	     (forward-fn (compile-forward-kernel node-out :compile-mode :default))) ;; TODO: Make it :fastest
-	#'(lambda (new-value)
-	    (assert (equal (shape new-value) shape)
-		    nil
-		    "Attempted to add a new grad: ~a to ~a but failed due to shaping problems."
-		    (shape new-value)
-		    shape)
-	    (embody-actual-tensor out new-value)
-	    (state-reset! node-out)
-	    (funcall forward-fn)
-	    nil)))))
-
-(defun make-gradient-adder-scal (target)
-  #'(lambda (new-value)
-      (assert (scalar-p new-value)
-	      nil
-	      "Attempted to add a new grad but failed because the gradient isn't scalar")
-      (incf (tensor-vec (grad target)) (tensor-vec new-value))
-      nil))
-
-;; Not anymore used
-(defun make-gradient-resetter (tensor)
-  (let ((*no-grad* t))
-    (let* ((out (cl-waffe2/vm.nodes:forward
-		 (cl-waffe2/base-impl:ScalarMul (dtype tensor))
-		 (grad tensor)
-		 (make-tensor (coerce 0 (dtype->lisp-type (dtype tensor))))))
-	   (code (compile-forward-kernel out :compile-mode :fastest)))
-      #'(lambda ()
-	  (state-reset! out)
-	  (funcall code)
-	  nil))))
-
-(defun make-gradient-resetter-scal (tensor)
-  (let ((resetwith (coerce 0 (dtype->lisp-type (dtype tensor)))))
-    #'(lambda ()
-	(setf (tensor-vec (grad tensor)) resetwith))))
-
 ;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p    (getf initargs :scalar-p))
 	(view        (getf initargs :view))
 	(order       (getf initargs :order))
 	(orig-shape  (getf initargs :shape))
-	(create-from (getf initargs :create-from))
-	;(need-copy?  (getf initargs :slot-info-copied))
-	)
+	(create-from (getf initargs :create-from)))
 
     (when *detect-runtime-creation-tensor*
       (when *runtime-mode-p*
@@ -507,35 +456,6 @@ Note:
       (setf (gradient-adder tensor) nil
 	    (gradient-resetter tensor) nil))))
 
-(defun init-optimizer-utils! (tensor)
-  "Initializes Gradient Adders/Resetters"
-  (declare (type AbstractTensor))
-  
-;;  (when (slot-value tensor 'requires-grad)
-;;    (if (scalar-p tensor)
-;;	  (set-grad (make-tensor 0
-;;				 :dtype (dtype tensor)
-;;				 :requires-grad nil)
-;;		    tensor)
-;;	  (set-grad (make-tensor
-;;		     (tensor-visible-shape tensor)
-;;		     :dtype (dtype tensor)
-;;		     :requires-grad nil
-;;		     :order (order tensor))
-;;		    tensor)))
-  
-  (when (and (slot-value tensor 'requires-grad)
-	     (null (gradient-adder tensor)))
-    (if (scalar-p tensor)
-	(setf (gradient-adder tensor)
-	      (make-gradient-adder-scal tensor)
-	      (gradient-resetter tensor)
-	      (make-gradient-resetter-scal tensor))
-	(setf (gradient-adder tensor)
-	      (make-gradient-adder tensor (tensor-visible-shape tensor))
-	      (gradient-resetter tensor)
-	      (make-gradient-resetter tensor)))))
-
 (defun transfer-vec-information (from to)
   "Transfer information that makes a vec vec"
   (declare (type AbstractTensor from to))
@@ -547,16 +467,7 @@ Note:
 	;;(slot-value to 'input-shape) (slot-value from 'input-shape)
 	)
   nil)
-  
 
-(defmethod add-grads ((tensor AbstractTensor) new-value)
-  "tensor's gradient += new-value"
-  (assert (slot-value tensor 'requires-grad)
-	  nil
-	  "Assertion Failed with requires-grad = t")
-  (funcall (gradient-adder tensor) new-value))
-
-;; (defmethod init-grads ())
 (defmacro assure-dimensions (mat1 mat2)
   "Does nothing if mat1 and mat2 has a completely the same shape, otherwise throws shaping-error."
   `(if (equal (the list (shape ,mat1)) (the list (shape ,mat2)))
@@ -903,6 +814,27 @@ Note that view is only created for Tensors, not a Scalar.
 		 :vec (vec tensor)
 		 :slot-info-copied t))
 
+(defun sync-permute! (tensor)
+  (declare (type AbstractTensor tensor))
+  (macrolet ((apply-permute (accessor tensor)
+	       `(loop with copy = (copy-list ,accessor)
+		      with rank = (1- (length (shape ,tensor)))
+		      for o in (tensor-permute-order ,tensor)
+		      for kth upfrom 0
+		      do (let ((pos (- rank o)))
+			   (setf (nth kth ,accessor)
+				 (nth pos copy))))))
+    (apply-permute (tensor-stride tensor) tensor)
+    (apply-permute (tensor-view tensor) tensor)
+    (apply-permute (slot-value tensor 'visible-shape) tensor)
+    (apply-permute (slot-value tensor 'orig-shape) tensor)
+    
+    (when (and (slot-value tensor 'input-shape)
+	       ;; [Bug] Sometime, The rank of InputShape and its actual shape does not match. However in that case, input shape is no longer needed. so ignore it.
+	       (= (dims tensor) (length (tensor-input-shape tensor))))
+      (apply-permute (slot-value tensor 'input-shape) tensor))
+    nil))
+
 (defun permute-computable-p (old-order new-order)
   (equal (sort (copy-list old-order) #'<)
 	 (sort (copy-list new-order) #'<)))
@@ -920,34 +852,6 @@ Note that view is only created for Tensors, not a Scalar.
 			    (nth i new-orders))))
 	new-orders)))
 
-#|
-(defun test-permute-syntax ()
-  (print (apply-flexible-subscript
-	  `(1 2 3 4 5)
-	  `(1 2 4 5)
-	  (position :~ `(1 2 :~ 4 5))))
-  (print (apply-flexible-subscript
-	  `(1 2 3 4 5)
-	  `(5 1)
-	  (position :~ `(1 :~ 5))))
-
-  (print (apply-flexible-subscript
-	  `(1 2 3 4 5)
-	  `(5 1)
-	  (position :~ `(5 1 :~))))
-
-  (print (apply-flexible-subscript
-	  `(4 3 2 1 0)
-	  `(0 1)
-	  (position :~ `(:~ 0 1))))
-
-  (print (apply-flexible-subscript
-	  `(4 3 2 1 0)
-	  `(3 4)
-	  (position :~ `(3 4 :~)))))
-|#
-
-;; Reference: https://stackoverflow.com/questions/32034237/how-does-numpys-transpose-method-permute-the-axes-of-an-array
 (defun permute* (tensor &rest orders)
   "
 Shuffles the order of axes of the tensor.
@@ -1124,10 +1028,9 @@ The function parameter computes all the previous nodes of the given tensor if an
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
-
-;; FixME:
-;; The Problem is that: after calling forward :around, set-save-for-backward is called.
-
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Save for backward
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun system-lazy-set-save-for-backward (tensor)
   ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
@@ -1150,10 +1053,16 @@ The function parameter computes all the previous nodes of the given tensor if an
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 
-;; Exports
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Optimazations
+;;
+;;  Hook Optimizer -> Call Optimizer -> Reset-Grad
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 (defun hook-optimizer! (tensor optimizer)
   "
 ## [function] hook-optimizer!
+
 "
   (declare (type AbstractTensor tensor)
 	   (type cl-waffe2/optimizers:AbstractOptimizer optimizer))
@@ -1163,6 +1072,7 @@ The function parameter computes all the previous nodes of the given tensor if an
 (defun call-optimizer! (tensor)
   "
 ## [function] call-optimizer!
+
 "
   (declare (type AbstractTensor))
   (when (slot-value tensor 'requires-grad)
@@ -1171,20 +1081,16 @@ The function parameter computes all the previous nodes of the given tensor if an
 (defun reset-grad! (tensor)
   "
 ## [function] reset-grad!
+
 "
   (declare (type AbstractTensor tensor))
-  (when (slot-value tensor 'requires-grad)
-    (if (gradient-resetter tensor)
-	(funcall (gradient-resetter tensor))
-	(if (scalar-p tensor)
-	    (let ((zero (make-tensor 0 :dtype (dtype tensor))))
-	      (setf (tensor-vec (grad tensor)) (tensor-vec zero)))
-	    (with-no-grad
-	      (run-node!
-	       (cl-waffe2/vm.nodes:forward
-		(cl-waffe2/base-impl:ScalarMul (dtype tensor))
-		(grad tensor)
-		(make-tensor 0 :dtype (dtype tensor)))))))))
+  (if (scalar-p tensor)
+      (setf (tensor-vec tensor)
+	    (make-tensor 0
+			 :dtype (dtype tensor)))
+      nil))
+	    
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun shape-with-broadcastable (tensor)
   "

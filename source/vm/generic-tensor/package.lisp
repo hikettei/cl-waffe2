@@ -21,6 +21,7 @@
 
    #:current-backend-state
 
+   #:tensor-finalizer
    #:tensor-grad-count
    #:tensor-backward
    #:read-result
