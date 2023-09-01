@@ -559,7 +559,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 	     :forward ((self x)
 		       (let ((compiled-model (or
 					      (proceed-compiled-model self)
-					      (vm-build x :compile-mode (compile-mode self)))))
+					      (build x :compile-mode (compile-mode self)))))
 			 ;; Compiled-Composite
 			 (setf (proceed-compiled-model self) compiled-model)
 			 
@@ -660,7 +660,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 `T` (which indicates backward is succeed)
 "
   (declare (type AbstractTensor tensor))
-  (let ((compiled-model (vm-build tensor :compile-mode compile-mode)))
+  (let ((compiled-model (build tensor :compile-mode compile-mode)))
     (forward compiled-model)
     (backward compiled-model)))
 

@@ -57,8 +57,12 @@
 ;; 2. SAVE_FOR_BACKWARD目的のMoveTensorNodeを削除 -> In-place mutationを有効化 + backwardのdisassembleを幾分か綺麗に + defmodel-asをすればallocした領域再利用が可能 (+ define-instant-composite suru)
 ;; 3. Testを全て通す
 ;; 4. valuesの取り扱いを綺麗にする + VMの仕様を綺麗にする
+;; 5. これで3000行くらいいらないコードを消せると思う
+;; 6. これでテストをパラメーター変えないで済むから、LakefileとRoswellが不要になるので削除する
+;; 7. acceptor.lispとInterepreter.lispあたりのコードを削除する(帰ったら)
+;; 8. Backward関連のIssue -> 4.に関係するから帰ったら直す
 
-;; (defnode (System-Lazy-Values X Y
+;; (Defnode (System-Lazy-Values X Y
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   

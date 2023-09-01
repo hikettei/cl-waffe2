@@ -495,15 +495,16 @@ The definition/implementation of nodes could be invaild."
 	      (loop for shape in (shape input)
 		    for kth-dim upfrom 0
 		    if (symbolp shape)
-		      do (push `(',shape (nth ,kth-dim (shape ,input))) set-input-forms)))
+		      do (push (list shape kth-dim input) set-input-forms)))
 	  inputs)
 
     (values
      ;; [FixME] Eliminate this compile in the future release.
-     (compile nil
-	      `(lambda ()
-		 (with-adjustable-symbols (,@set-input-forms)
-		   (cl-waffe2/vm:accept-instructions ',forward-iseq))))
+     #'(lambda ()
+	 (with-adjustable-symbol-scope
+	   (loop for form in set-input-forms do
+	     (register-adjustable-shape (car form) (nth (second form) (shape (third form)))))
+	   (cl-waffe2/vm:accept-instructions forward-iseq)))
      variables
      set-input-forms)))
 
@@ -523,12 +524,14 @@ The definition/implementation of nodes could be invaild."
     (error "Can't construct backward, because the shape of tensor is undetermined: ~a
 
 Try again with: (with-no-grad ...) " (shape toplevel)))
-  
-  (let* ((body (if set-input-forms
-		   `(with-adjustable-symbols (,@set-input-forms)
-		      (cl-waffe2/vm:accept-instructions ',backward-iseq))
-		   `(cl-waffe2/vm:accept-instructions ',backward-iseq))))
-    (compile nil `(lambda () ,body t))))
+
+  (if set-input-forms
+      #'(lambda ()
+	  (with-adjustable-symbol-scope
+	    (loop for form in set-input-forms do
+	      (register-adjustable-shape (car form) (nth (second form) (shape (third form)))))
+	    (cl-waffe2/vm:accept-instructions backward-iseq)))
+      #'(lambda () (cl-waffe2/vm:accept-instructions backward-iseq))))
 
 ;; ==========================================
 ;; General-Purpose APIs

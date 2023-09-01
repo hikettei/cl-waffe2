@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+;; [TODO] Composite-Functionを削除する
+
 ;; I'm depcrecated with Composite-Function
 ;; Should be deleted in the future release:
 
