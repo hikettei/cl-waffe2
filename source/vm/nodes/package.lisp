@@ -43,29 +43,34 @@
 		#:system-lazy-read-save-for-backward
 		#:scalar-p)
   (:export
+   ;; External JIT
    #:on-finalizing-compiling
    #:on-finished-compiling
+   
    #:node-output-shape
    #:create-subscript-p
    #:composite-where
-   #:define-composite-function
+
    #:forward
    #:backward
+
    #:compiler-expand-backward
    #:expand-backward
-   #:expand-backward-instant
-   #:call-instant-backward
+   
    #:node-passed-p
    #:ignore-shape-error
+
    #:out-scalar-p
+
    #:with-instant-kernel
    #:with-shape-checkpoint
+
    #:make-errorpoint
    #:node-local-variables
    #:declare-local-variables)
 
   (:export
-   #:define-static-node
+   #:define-static-node ;; <- DELETE
    #:set-save-for-backward
    #:read-save-for-backward
    #:with-reading-save4bw

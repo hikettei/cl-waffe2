@@ -112,8 +112,7 @@
    )
 
   (:export
-   #:make-vm-function
-   #:compile-forward-chain)
+   #:make-vm-function)
   
   (:export
    #:movetensor-p
@@ -126,9 +125,7 @@
    #:compiled-variables
    #:nodevariables-parameters
    #:build
-   #:vm-build
    #:reset-compiled-function-cache!
-   #:run-node!
    #:set-input
    #:get-input)
 

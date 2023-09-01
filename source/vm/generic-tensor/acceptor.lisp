@@ -7,8 +7,6 @@
 
 (defparameter *no-grad* nil "If t, no gradients are made for backwards.")
 
-(defparameter *calling-backward-mode* nil)
-
 (defmacro with-no-grad (&body body)
   "
 ## [macro] with-no-grad
@@ -97,21 +95,6 @@ Variables:
 	 (render-table table out)))
      (length (nodevariables-tmp-variables node))
      (length (nodevariables-parameters node)))))
-
-;; ↓ All fixed, nevermind.
-;; ==============================================================================================================================
-;; [FixME] Someone destructs (tensor-input-shape tensor) in toplevel (destructs = permute* shuffles the order of it)
-;; I tried harder, but I couldn't find which function shuffles it, but I've confirmed other slots (strides, visible-shape, views...) are NEVER affected.
-;; I know this solution is literally UGLY, but decided to create a LUT (*shape-input-table*, id->first input-shape), and ignore
-;; destructed input-shape.
-;; This sometime may result an unexcepted behaviour, but:
-;; tensor-id is created by (gensym), so assured that never conflicts.
-;; (i.e.: Once the tensor(id=A) is initialized as `(A B), no one can create another tensor whose id=A)
-;; As long as we don't add any strange features, I think we'll be fine.
-;; One of my concern is that: when allocating a cache tensor for InputTensor, we must not use input-shape.
-;; ==============================================================================================================================
-
-;;(defparameter *shape-input-table* (make-hash-table) "Things to be deleted in the future release.")
 
 (defun embody-input (nodevars variable-name actual-tensor)
   "(embody-input variables :a tensor)
@@ -312,167 +295,6 @@ permute-order : ~a
         (nth (tensor-out-n tensor) (the list (statecontainer-forward-result (tensor-state tensor))))
 	tensor)))
 
-;; Set *runtime-shape-inspection* = t to detect run-time shape-error
-(defun compile-forward-chain (toplevel
-			      &key
-				(stop-me nil)
-				(called-with-vars nil))
-  "
-## [function] compile-forward-chain
-
-Tracing until one of variables reached a toplevel tensor (detach-p is t or no backwards), returning an S-expression which can be compiled by processing systems.
-"
-  (declare (type AbstractTensor toplevel))
-
-  (when (or stop-me (null (tensor-state toplevel)))
-    (return-from compile-forward-chain toplevel))
-
-  (when (detach-p toplevel)
-    ;; After reading 
-    (setq stop-me t))
-  
-  (let* ((state (tensor-state toplevel))
-	 (vars  (tensor-variables toplevel))
-	 (node  (tensor-backward toplevel))
-	 (fw-compiled (statecontainer-forward-out-form state)))
-
-    (when (compiled-kernel-cache-p fw-compiled)
-      (push fw-compiled *kernel-storeroom*))
-    
-    (let ((next-states (map 'list #'(lambda (x) (compile-forward-chain x :stop-me stop-me :called-with-vars toplevel)) vars)))
-      
-      ;;
-      ;; f(x, y)
-      ;; x <- x.func
-      ;; y <- y.func
-      ;; f(x.func, y.func)
-
-      ;; Tensors to use is determined when compiled
-      ;; InputTensor ... Symbols(A, B) is changed, alloc is changed.
-
-      
-      (register-variables (tensor-variables toplevel))
-
-      `(progn
-	 
-	 ;; The Operation hasn't done yet:
-	 ;; The code below seems ugly...
-	 (when (or (null (statecontainer-forward-result (tensor-state ,toplevel)))
-		   (when *calling-backward-mode*
-		     (let ((out (statecontainer-backward-result (tensor-state ,toplevel))))
-		       (car out))))
-
-	   ;; Seems ugly:
-	   ;; Judge the tensor is created when forward time or backward time
-	   (when (and *calling-backward-mode*
-		      (not (car (statecontainer-backward-result (tensor-state ,toplevel)))))
-	     (setf (statecontainer-backward-result (tensor-state ,toplevel))
-		   (list (null (statecontainer-forward-result (tensor-state ,toplevel))))))
-
-
-	   ;; Calls an event: on-finalizing-compiling
-	   ;; If JIT is implemented by user, expand user defined forms
-	   
-	   (setf (statecontainer-forward-result (tensor-state ,toplevel))
-		 (multiple-value-list (call-kernel ,fw-compiled ,@(loop for arg in next-states collect arg)))))
-
-	 ,(when (tensor-backward toplevel)
-	    (cl-waffe2/vm.nodes:on-finalizing-compiling
-	     (tensor-backward toplevel)
-	     toplevel
-	     called-with-vars
-	     nil))
-	 
-
-	 ;; TODO UPDATE
-	 ,(when (and node
-		     *runtime-shape-inspection*)
-	    `(unless *calling-backward-mode*
-	       (assert
-		(runtime-shape-inspection
-		 (nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node)) ;; Declared output shape
-		 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,toplevel)))) ;; Output shape compiled
-		nil
-		"Assertion Failed.: Detected Shape-Error in runtime.
-At      : ~a
-Returned: ~a
-Declared: ~a
-
-The definition/implementation of nodes could be invaild."
-		,node
-		(nth ,(tensor-out-n toplevel) ',(cl-waffe2/vm.nodes:node-output-shape node))
-		(shape (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,toplevel))))))) ;; Output shape compiled
-	 
-	 (nth ,(tensor-out-n toplevel) (statecontainer-forward-result (tensor-state ,toplevel)))))))
-
-(defun compile-backward-chain (toplevel past-dy)
-  "Constructs the computation node for backwards recursively."
-  (declare (type AbstractTensor toplevel past-dy))
-
-  (when (null (tensor-backward toplevel))
-    ;; Gradient-add-form here?
-    (return-from compile-backward-chain
-      (when (slot-value toplevel 'requires-grad)
-	(init-optimizer-utils! toplevel)
-	;; We receive gradients as vec permuted (see MoveTensorNode)
-	`(add-grads ,toplevel ,(tensor-id past-dy)))))
-
-  ;; Not anymore used.
-  #|
-	(if t;(not (permuted-p past-dy))
-	    `(add-grads ,toplevel ,(tensor-id past-dy))
-	    (progn
-	      ;; The function gradient-adder is compiler for default permutation tensors
-	      ;; So if the gradients are given as permuted, we need to recompile gradient-adder.
-	      (setf (gradient-adder toplevel)
-		    (make-gradient-adder
-		     toplevel
-		     (shape toplevel)
-		     :use-input
-		     past-dy))
-	      ;; X.grad += permute*(value, 0 1 ...)
-	      ;; ^ recompiling is needed!
-	      `(add-grads ,toplevel ,(tensor-id past-dy)))))))
- |#
-
-  ;; with-shape-checkout: at where node, the backward error was occured?
-  (cl-waffe2/vm.nodes:with-shape-checkpoint (:backward (tensor-backward toplevel))
-    ;; In order to restore tensors' backwards for a future printing error place, keep them saving at backwards-tmp.
-
-    ;; The backward function is: g(dout) -> x.grad, y.grad where/dx/dy is a constant parameter. dout is a variable.
-    (let* ((outs (apply
-		  ;; (backward self dout dx dy dz ...)
-		  ;; -> (backward self dout)
-		  #'cl-waffe2/vm.nodes:expand-backward
-		  ;; Here, we trace the definition of backward.
-		  (tensor-backward toplevel)
-		  past-dy
-		  (tensor-variables toplevel)))
-	   (next-dys   (map 'list #'car outs))
-	   (outs       (map 'list #'cdr outs)))
-
-      ;; tensor-id used here never conflicts
-      ;; because each time backward goes deeper, the new tensor-id is generated.
-      `(let (,@(loop for kernel in outs
-		     for out in next-dys
-		     for var in (tensor-variables toplevel)
-		     if (and kernel (ancestor-param-p var))
-		       ;; g_x(dout_past, x_next) -> dout_next, g_y ...
-		       collect `(,(tensor-id out) (funcall (the function ,kernel) ,(tensor-id past-dy)))))
-	 (declare (ignorable ,@(loop for o in next-dys
-				     for v in (tensor-variables toplevel)
-				     if (and o (ancestor-param-p v))
-				       collect (tensor-id o))))
-	 ;; Explore deeper, or ,if any, add grads to the parameter
-	 ,@(loop for var in (tensor-variables toplevel)
-		 for kernel in outs
-		 for next-dy in next-dys
-		 if (and kernel
-			 (ancestor-param-p var))
-		   collect (compile-backward-chain var next-dy))))))
-
-;; Toplevel
-;; This is not for users.
 (defun compile-forward-kernel (forward-iseq
 			       variables
 			       &key

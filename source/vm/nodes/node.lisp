@@ -458,23 +458,6 @@ inputs      ... inputs called with
 		  ,(with-no-grad
 		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
 
-(defun expand-backward-instant (node dout compile-option &rest inputs-out)
-  (detach dout t)
-  (let* ((inputs-in (loop for input in inputs-out
-			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
-	 ;; Tracing User-Defined-Backward, still not yet compiled.
-	 (out-kernels (apply #'backward node dout inputs-in))
-	 ;; out-kernels = (list x.g y.g)
-	 (out-kernels (loop with argn fixnum = (length inputs-in)
-			    for x in out-kernels
-			    for y in inputs-out
-			    for i upfrom 0
-			    collect (adjust-bw-place x y argn i))))
-    (loop for kernel in out-kernels
-	  collect
-	  (when kernel
-	    (list dout kernel compile-option inputs-out)))))
-
 (defun compiler-expand-backward (node dout &rest inputs-out)
   (let* ((inputs-in (loop for input in inputs-out
 			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
@@ -487,14 +470,6 @@ inputs      ... inputs called with
 			    for i upfrom 0
 			    collect (adjust-bw-place x y argn i))))
     out-kernels))
-
-(defun call-instant-backward (outs)
-  (multiple-value-bind (dout kernel compile-option inputs-out) (apply #'values outs)
-    (with-no-grad
-      (prog1
-	  (cl-waffe2/vm.generic-tensor:run-node! kernel :compile-option compile-option)
-	(detach dout nil)
-	(map 'list #'(lambda (x) (detach x nil)) inputs-out)))))
 
 
 ;; the method backward constructs backward function

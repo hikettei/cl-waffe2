@@ -61,6 +61,7 @@
 ;; 6. これでテストをパラメーター変えないで済むから、LakefileとRoswellが不要になるので削除する
 ;; 7. acceptor.lispとInterepreter.lispあたりのコードを削除する(帰ったら)
 ;; 8. Backward関連のIssue -> 4.に関係するから帰ったら直す
+;; 9. tensor-finalize methodを追加
 
 ;; (Defnode (System-Lazy-Values X Y
 
