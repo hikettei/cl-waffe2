@@ -11,7 +11,7 @@
 ;;  2. After replaced IR
 
 ;; For example, (!add (!mul 2.0 x) y) should be expressed as (axpy! 2.0 x 0.0 y) to reduce instructions.
-;; defpath is the macro to achieve this ^
+;; defpath is the macro to achieve this ^ (i.e.: Partially applying Symbolic Differentiation like Theano autodiff)
 
 ;; ~~~ Developing Cycle with cl-waffe2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  1. Declare the new device (e.g.: CPUTensor)

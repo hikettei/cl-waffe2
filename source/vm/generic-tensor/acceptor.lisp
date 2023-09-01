@@ -3,6 +3,7 @@
 
 ;;
 ;; acceptor.lisp provides an compiler of given nodes, and general-purpose APIs to handle with cl-waffe2 nodes.
+;;  With regard to cl-waffe2 VM/IR, see :cl-waffe2/vm package.
 ;;
 
 (defparameter *no-grad* nil "If t, no gradients are made for backwards.")
@@ -16,17 +17,26 @@
 ```
 
 Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built nodes are regarded as: no gradients are made for backwards.
-
 "
   `(let ((*no-grad* t))
      ,@body))
 
 
-;; StateContainer is a structure which accompany with Tensors
-;; and is used to share:
-;; Forward/Backward Forms
-;; Their computation results
+;; [AbstractNode -> cl-waffe2 IR]
+;;
+;;  1. [forward] X Y... -> Produce StateContainer
+;;  2. [build]          -> Reading the value of StateContainer, cl-waffe2 creates a Compiled-Kernel structure
+;;  3. [opt]            -> After sorting/replacing the nodes, cl-waffe2 creates a InstructionsSeq, which is a list of compiled-kenrel.
+;;
+
 (defstruct (StateContainer)
+  "StateContainer is a structure which stores:
+
+Forward  Kernel
+backward Kernel  > These Information are used to compile/find out cl-waffe2 IR
+The result
+    ...
+Tensors created with the forward method has a this structure and accessible with tensor-state function."
   (state :initialized :type (member :initialized :forwarded :backwarded))
   (forward-out-form nil :type Compiled-Kernel)
   (forward-result   nil :type list)
@@ -46,6 +56,7 @@ Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built
 		 adjustable-symbol-table
 		 variables
 		 tmp-variables)))
+  "Registers all dynamic shapes used in the computation node. Usually accompanish with Compiled-Composite"
   (parameters parameters :type list)
   (symbols       symbols :type list)   ;; 'a -> current-size 'b -> current-size
   (adjustable-symbol adjustable-symbol-table :type hash-table) ;; 'a -> max-alloc-size 'b -> max-alloc-size
@@ -253,35 +264,9 @@ permute-order : ~a
                 tree)
         tree)))
 
-(defun register-variables (list)
-  ;; Registers Parameter/Variables If any.
-  (dolist (tensor list)
-    (when (typep tensor 'AbstractTensor)
-      (unless (find tensor *node-parameters-tmp* :test #'equal)
-	  (push tensor *node-parameters-tmp*)))))
-
-(defun declare-compiled-composite (model)
-  "Extends into *node-parameters-info*, about the given model's variable informations."
-  (declare (type Compiled-Composite model))
-  (let ((variables-info (compiled-variables model)))
-    (register-variables
-     (nodevariables-tmp-variables variables-info))
-    (register-variables
-     (nodevariables-parameters variables-info))
-    nil))
-
-(defparameter *runtime-shape-inspection* nil)
-
 ;; ==============================================================================
 ;; Kernel Constructor | General-Purpose APIs
 ;; ==============================================================================
-
-(defun runtime-shape-inspection (declared-shape tensor)
-  (declare (type list declared-shape)
-	   (type AbstractTensor tensor)
-	   (optimize (speed 3)))
-
-  (shape-equal-list declared-shape (shape tensor)))
 
 ;; TODO: read-result should be inlined
 (declaim (inline read-result)
@@ -329,13 +314,6 @@ permute-order : ~a
 	   (cl-waffe2/vm:accept-instructions forward-iseq)))
      variables
      set-input-forms)))
-
-;; TODO: In order to backward with make-input, expand with-adjustable-symbols is needed. <- Do it at toplevel
-(defun make-vm-function (toplevel)
-  (optimize-computation-node! toplevel :speed 1)
-
-  `(progn
-     ,(compile-forward-chain toplevel)))
 
 (defun compile-backward-kernel (toplevel backward-iseq &key (compile-mode :default) (set-input-forms))
   (declare (type compile-option-t compile-mode)
