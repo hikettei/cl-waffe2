@@ -69,7 +69,6 @@
 	       
 	       (:file "vm/generic-tensor/acceptor")
 	       (:file "vm/generic-tensor/tensor")
-	       (:file "vm/generic-tensor/interpreter")
 	       (:file "vm/generic-tensor/lut")
 	       
 	       (:file "vm/generic-tensor/scheduling")

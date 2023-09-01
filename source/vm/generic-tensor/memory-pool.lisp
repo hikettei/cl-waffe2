@@ -47,15 +47,16 @@
 (declaim (inline get-from-memory-pool))
 
 (defparameter *thread-memory-pool*
-  (make-hash-table);;(tg:make-weak-hash-table :weakness :key)
+  (make-hash-table)
   "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
-(defvar       *thread-pool-lock*   (make-lock "thread cache lock"))
+
+(defvar *thread-pool-lock* (make-lock "thread cache lock"))
 
 ;; It was originally (defvar *adjustable-shape-table* nil)
 ;; If there's any shape-error related to static composite functions, doubt this:
 (defparameter *adjustable-shape-table* (make-hash-table) "An hash-table: Symbol -> Size.") ;; (A -> 10, B -> 10)
 
-(defvar *current-shape-state*    nil) ;; Global Adjustable-Shape-State
+(defvar *current-shape-state* nil) ;; Global Adjustable-Shape-State
 
 (defstruct Memory-Pool
   (temporary-rooms (make-hash-table) :type hash-table))
@@ -75,8 +76,7 @@
 		   (let ((val (gethash target-symbol old-table)))
 		     (if (and (typep val 'fixnum)
 			      (typep current-val 'fixnum))
-		       ;; The tensor is created as BATCH-SIZE=100, Now the operation is going udner BATCH_SIZE=10			  
-
+			 ;; Ex: The tensor is created as BATCH-SIZE=100, and now the operation is going udner BATCH_SIZE=10...
 			 (< val current-val)
 			 t)))
 	       current-keys current-vals))))
