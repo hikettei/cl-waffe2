@@ -7,11 +7,11 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
+	    (:constructor make-wfop (op self node args &key (out-to nil) (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
-WfInstruction is a data structure to express `cl-waffe2 IR`.
+WfInstruction is the lowest data structure to represent instructions, and sometimes introduced as a `cl-waffe2 IR`.
 
 Instruction: Sets the result of λ function op called with `args`, into `self.state.forward_result`. So, Operations basically follow this format:
 
@@ -29,8 +29,9 @@ out_target <- λ(Args1 Args2 Args3) ...
 
 `wfop-args[list of AbstractTensor]` corresponds with `(tensor-variable wfop-self)`. tensors to be called with: `arg1 arg2 arg3...`.
 "
-  (op   op   :type function)
+  (op   op   :type function)  
   (node node :type (or function string null AbstractNode))
+  (out-to    out-to :type list)
   (self self :type AbstractTensor)
   (args args :type list)
   (bw-is-leaf-p nil :type boolean)
@@ -46,12 +47,14 @@ out_target <- λ(Args1 Args2 Args3) ...
 
 (defmethod print-object ((inst WFInstruction) stream)
   (format stream
-	  "~a~a : ~a <= op(~a)>~%"
+	  "~a~a : ~a<= op(~a)>~%"
 	  (instruction-opname inst)
 	  (with-output-to-string (out)
 	    (dotimes (i (- *opname-indent-to* (length (instruction-opname inst)))) (princ " " out)))
-	  (tensor-id (wfop-self inst))
-	  ;;(shape (wfop-self inst))
+	  (with-output-to-string (out)
+	    (dolist (o (wfop-out-to inst))
+	      (princ (tensor-id o) out)
+	      (princ " " out)))
 	  (if (>= (length (wfop-args inst)) *omit-args-n*)
 	      (format nil "..., x~a,..." (length (wfop-args inst)))
 	      (with-output-to-string (out)
@@ -146,6 +149,8 @@ out_target <- λ(Args1 Args2 Args3) ...
 ;;
 ;; The algorithm that detects such a node is simple:
 ;;
+
+;; [TODO] Eliminate MoveTensor(SAVE_FOR_BACKWARD), and enable in-place-mutation even when training mode.
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
 

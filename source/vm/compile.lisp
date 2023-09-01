@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/vm)
 
+;; [TODO] Optimize compiling time, benchmark it!
 
 ;; Provides a compiler from cl-waffe2 IR -> Instruction Sequence
 
@@ -18,7 +19,7 @@
 ;; Z <- Y
 
 
-(defparameter *vm-compile-option* :default)
+(defparameter *vm-compile-option* :fastest)
 
 (declaim (ftype (function (AbstractTensor) (or null WFInstruction)) ir->instruction))
 (defun ir->instruction (tensor)
@@ -38,7 +39,8 @@
        (tensor-variables tensor))
       tensor
       (tensor-backward tensor)
-      (tensor-variables tensor)))))
+      (tensor-variables tensor)
+      :out-to (node-out-to (tensor-backward tensor))))))
 
 ;;
 ;; Avoid duplicate compilation:
@@ -55,9 +57,12 @@
 
 (defun node-compile-into-vm (toplevel &key (fuse-p nil))
   "Set fuse-p=t to apply view-reordering and fuse operations"
+  (declare (type AbstractTensor toplevel)
+	   (optimize (speed 3)))
   (let ((instruction-seq)
-	(variable-leaves))
-
+	(variable-leaves)
+	(seen nil))
+    (declare (type list instruction-seq variable-leaves seen))
     ;; sorted-node
     ;; old
     ;; ...
@@ -70,7 +75,14 @@
 	    do (push tensor variable-leaves) ;; Register as a variable
 	  else
 	    do (when (not (detach-p tensor))
-		 (push (ir->instruction tensor) instruction-seq)
+
+		 (when (null (find (tensor-iid tensor) seen :test #'eq))
+		   (push (ir->instruction tensor) instruction-seq)
+		   ;; Add to seen
+		   (let ((bw (tensor-backward tensor)))
+		     (when bw
+		       (dolist (v (node-out-to bw))
+			 (push (tensor-iid v) seen)))))
 
 		 ;; Ask each devices if applying JIT?
 		 (let ((result (cl-waffe2/vm.nodes::on-finalizing-compiling
@@ -80,6 +92,7 @@
 				nil)))
 		   (when result
 		     (push
+		      ;; Embedding Lisp Code generated from JITxxxTensor.
 		      (make-wfop
 		       (compile
 			nil

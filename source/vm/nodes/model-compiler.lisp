@@ -50,6 +50,14 @@
 ;;      PR into (DEVELOP)
 ;; 目標3 : MoveTensorNode(SAVE_FOR_BACKWARD)を排除 + ADの数値的安定性向上とFuseOps
 
+;; Proceed : compile-forward-and-backwardは十分早い + 数値安定性のためにTopologicalSort/defpathは必須 + defmodel-asがある ... -> コードの量減らすためにも、重複した実装なくすためにもbuild呼び出す方針で良くね？+ buildのcompile nilを削除する (defmodel-asみたいに) + proceedのInterpreter廃止する
+
+;; 今からやる：
+;; 1. Proceed/Interepreterの廃止 (define-opだけ使えば問題ない)
+;; 2. SAVE_FOR_BACKWARD目的のMoveTensorNodeを削除 -> In-place mutationを有効化 + backwardのdisassembleを幾分か綺麗に + defmodel-asをすればallocした領域再利用が可能 (+ define-instant-composite suru)
+;; 3. Testを全て通す
+;; 4. valuesの取り扱いを綺麗にする + VMの仕様を綺麗にする
+
 ;; (defnode (System-Lazy-Values X Y
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -192,7 +200,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 		(loop for arg of-type AbstractTensor in received-arguments
 		      for place                      in input-tensors do
 			;; Update the argument
-			(cl-waffe2/vm::write-result place (list arg))
+			(cl-waffe2/vm::write-result (list place) (list arg))
 			;; Update the shape
 			(loop for place-name in (shape place)
 			      for act-val    in (shape arg) do

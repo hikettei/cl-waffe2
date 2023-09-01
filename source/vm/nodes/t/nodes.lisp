@@ -118,6 +118,10 @@
 
     (proceed-backward
      (call (OpMulTest-Scalar) a b))
+
+    (cl-waffe2/vm:disassemble-waffe2-ir
+     (call (OpMulTest-Scalar) a b)
+     )
     
     (and
      (= (tensor-vec (grad a)) 3)
@@ -150,6 +154,10 @@
 	 (= 2 (tensor-vec (grad b))))))
   (is (diff-test-proceed))
   (is (diff-test-vm)))
+
+;; define-op: 返す引数が複数だと二回も計算しちゃうことになる・・・ (forward backward)
+;; VM      -> 
+;; Proceed ->
 
 (define-op (SwapNode (self)
 	    :out-scalar-p t

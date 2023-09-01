@@ -12,6 +12,7 @@
 ;; Loop Collapseが有効になった場合でもFusionの効果あるかも？
 ;; とりあえずベンチマークから考えてみる
 ;; TODO: Fusing Several Backwards To Reduce Temporary arrays
+
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))
@@ -56,10 +57,11 @@
 ;;        |                 |
 ;;       out               out
 (defun sort-and-prune-for-backward (toplevel dout-toplevel leaves fuse-p)
-  (declare (type AbstractTensor toplevel))
+  (declare (type AbstractTensor toplevel)
+	   (optimize (speed 3)))
   (let ((seen nil))
     (labels ((top-sort-helper (var prev-gradient)
-	       (let ((encounter-x (find (tensor-iid var) seen :test #'eql))
+	       (let ((encounter-x (find (tensor-iid var) seen :test #'eq))
 		     (found-param  (or (null (tensor-backward var))
 				       (null (tensor-variables var)))))
 		 (if (or encounter-x found-param)
@@ -83,14 +85,18 @@
 			       (let* ((result (top-sort-helper prev grad)))
 				 (when result
 				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth leaves fuse-p)
-				     (setq above-sort
-					   `(,@above-sort
-					     ,(make-wfop
-					       bwnode
-					       grad
-					       iseq-printer
-					       (list prev-gradient))			
-					     ,@result))))))
+				     (when (not (find (tensor-iid grad) seen :test #'eq))
+				       (dolist (v (node-out-to (tensor-backward grad)))
+					 (push (tensor-iid v) seen))
+				       (setq above-sort
+					     `(,@above-sort
+					       ,(make-wfop
+						 bwnode
+						 grad
+						 iseq-printer
+						 (list prev-gradient)
+						 :out-to (node-out-to (tensor-backward grad)))
+					     ,@result)))))))
 		       above-sort)))))
       (top-sort-helper toplevel dout-toplevel))))
 
@@ -229,4 +235,6 @@ op2 ..  E <- F(X, Y, Z)
 	(let* ((inst-list (apply #'collect-fused-ops fused-p))
 	       (prev-vars (map 'list (compose #'tensor-id #'wfop-self) inst-list)))
 	  (not (find (tensor-id (wfop-self instruction)) prev-vars))))))
+
+(defun node-out-to (node) (cl-waffe2/vm.nodes::node-out-to node))
 

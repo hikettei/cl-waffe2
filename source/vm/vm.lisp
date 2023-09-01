@@ -14,11 +14,11 @@
 	       tensor)))
     (the AbstractTensor res)))
 
-(declaim (ftype (function (AbstractTensor list) t) write-result))
-(defun write-result (tensor result)
-  (let* ((state (tensor-state tensor)))
-    ;; StateContainer should exist
-    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result)))
+(declaim (ftype (function (list list) t) write-result))
+(defun write-result (tensors results)
+  (loop for tensor of-type AbstractTensor in tensors do
+	  (let* ((state (tensor-state tensor)))
+	    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) results))))
 
 (declaim (ftype (function (WFInstruction) list) apply-instruction))
 (defun apply-instruction (instruction)
@@ -29,7 +29,7 @@
     (the function (wfop-op instruction))
     (map 'list #'maybe-read-result (wfop-args instruction)))))
 
-(declaim (ftype (function (list) (or null AbstractTensor)) accept-instructions))
+(declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)
   "
 ## [function] accept-instructions
@@ -48,9 +48,9 @@ Evaluates generated cl-waffe2 IR sequence.
   (when iseq
     (loop for inst of-type WFInstruction in iseq
 	  ;; TODO: Runtime Shape Inspection etc...
-	  do (write-result (wfop-self inst) (apply-instruction inst))
+	  do (write-result (wfop-out-to inst) (apply-instruction inst))
 	  finally
-	     (return-from accept-instructions (maybe-read-result (wfop-self inst))))))
+	     (return-from accept-instructions (apply #'values (map 'list #'maybe-read-result (wfop-out-to inst)))))))
 
 (defparameter *under-benchmark-set* nil "(list sorted-node profiled-table) If there's any") 
 
@@ -76,7 +76,7 @@ Evaluates generated cl-waffe2 IR sequence.
 	 (declare (optimize (speed 3))
 		  ;; inline accept-instructions?
 		  (type AbstractTensor dout))
-	 (write-result dout-input (list (maybe-read-result dout)))
+	 (write-result (list dout-input) (list (maybe-read-result dout)))
 	 (if iseq
 	     (if *under-benchmark-set*
 		 (benchmark-accept-instructions iseq)
@@ -197,7 +197,7 @@ CL-WAFFE2-REPL>
 	(loop with *under-benchmark-set* = (list sort-by-node profiled-result inst->node-table)
 	      for inst of-type WFInstruction in iseq
 	      do (let ((start-time (get-internal-real-time)))
-		   (write-result (wfop-self inst) (apply-instruction inst))
+		   (write-result (wfop-out-to inst) (apply-instruction inst))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
 		     (let* ((end-time (get-internal-real-time))

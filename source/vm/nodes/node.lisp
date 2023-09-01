@@ -22,6 +22,7 @@
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (excepted-output-shape :initform nil :type list :accessor node-output-shape)
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean)
+   (out-to    :initform nil :accessor node-out-to)
    (out-sizes :initform nil :accessor node-out-sizes))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
 
@@ -289,7 +290,8 @@ butgot: ~a"
 			       (setf (tensor-variables next-tensor) inputs)
 			       next-tensor))))
 
-	(setf (node-out-sizes node) (map 'list #'shape next-tensor))
+	(setf (node-out-sizes node) (map 'list #'shape next-tensor)
+	      (node-out-to    node) next-tensor)
 	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)
