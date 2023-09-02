@@ -156,7 +156,11 @@ reject-when=nil, or (apply reject-when inputs)=t"
 
 
 (defmacro with-devices ((&rest backend-priority) &body body)
-  "The macro `with-devices` declares the priority of dispatching nodes.
+  "
+## [macro] with-devices
+
+
+The macro `with-devices` declares the priority of dispatching nodes.
 
 ### Input
 

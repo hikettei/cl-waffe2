@@ -46,7 +46,8 @@
    ;; External JIT
    #:on-finalizing-compiling
    #:on-finished-compiling
-   
+
+   #:node-sv4bw
    #:node-output-shape
    #:create-subscript-p
    #:composite-where

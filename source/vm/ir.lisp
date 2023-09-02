@@ -7,7 +7,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (out-to nil) (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
@@ -34,6 +34,7 @@ out_target <- λ(Args1 Args2 Args3) ...
   (out-to    out-to :type list)
   (self self :type AbstractTensor)
   (args args :type list)
+  (sv4bw sv4bw :type list)
   (bw-is-leaf-p nil :type boolean)
   (call-with-view call-with-view :type (or null cl-waffe2/vm.generic-tensor::Ranked-Loop))
   (fuse-prev fuse-prev :type (or null list))
@@ -59,15 +60,22 @@ out_target <- λ(Args1 Args2 Args3) ...
 	      (format nil "..., x~a,..." (length (wfop-args inst)))
 	      (with-output-to-string (out)
 		(dotimes (i (length (wfop-args inst)))
-		  (let ((var (nth i (wfop-args inst))))
-		    (format out "~a~a~a~a"
+		  (let ((var (nth i (wfop-args inst)))
+			(sv4 (and (not *no-grad*) (nth i (wfop-sv4bw inst)))))
+		    (format out "~a~a~a~a~a~a"
 			    (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-				"<Param>"
+				"{Param}"
 				(if (eql (cl-waffe2/vm.generic-tensor:tensor-attribute var) :chain)
 				    ""
-				    "<Input>"))
+				    "{Input}"))
+			    (if sv4
+				"SV4BW("
+				"")
 			    (tensor-id var)
 			    (shape var)
+			    (if sv4
+				")"
+				"")
 			    (if (nth (1+ i) (wfop-args inst))
 				" "
 				""))))))))
@@ -154,6 +162,7 @@ out_target <- λ(Args1 Args2 Args3) ...
 (defun apply-in-place-mutation! (iseq leaves)
   (declare (type list iseq leaves))
 
+  ;; [TODO] Enable this function under every condition.
   (when (not *no-grad*)
     (return-from apply-in-place-mutation!))
   

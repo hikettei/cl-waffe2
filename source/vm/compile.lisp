@@ -40,7 +40,8 @@
       tensor
       (tensor-backward tensor)
       (tensor-variables tensor)
-      :out-to (node-out-to (tensor-backward tensor))))))
+      :out-to (node-out-to (tensor-backward tensor))
+      :sv4bw  (node-sv4bw (tensor-backward tensor))))))
 
 ;;
 ;; Avoid duplicate compilation:
@@ -254,8 +255,8 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 			 (length iseq)
 			 (length (remove-duplicates tensor-ids)))))))
 
-      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%"  (conc-iseq-str iseq-fw))
+      (format stream "~%disassemble-waffe2-ir:~% [Forward ISeq]: ~%~a~%"  (conc-iseq-str iseq-fw))
 
-      (format stream "~%== [disassemble-waffe2-ir: Backward] ======~%~a~%" (conc-iseq-str iseq-bw))
+      (format stream "~% [Backward ISeq]: ~%~a~%" (conc-iseq-str iseq-bw))
 
       t)))

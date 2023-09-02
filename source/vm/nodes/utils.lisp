@@ -190,3 +190,15 @@ Return:
 	     for tens in tensors do
 	       (setf (detach-p tens) s)))))
 
+(defun make-grad-gensym () (intern (symbol-name (gensym "Chain")) "KEYWORD"))
+
+
+(defun parse-broadcasted-shape (shapes)
+  (flet ((apply-refine (list)
+	   (loop for s in list
+		 unless (and *enable-broadcasting-auto* ;; not created by broadcast
+			     (equal s -1))
+		   collect (if (equal s -1)
+			       1
+			       s))))
+    (map 'list #'apply-refine shapes)))

@@ -1,12 +1,14 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-;; TODO: Error Printings
 (defparameter *enable-broadcasting-auto* t) ;; This parameter never exported/modified by users, just used to prevent recursively call of forward
 (defparameter *restart-variable-from* nil)
 
+
 (defclass AbstractNode ()
-  ((local-variables :accessor node-local-variables :type list :initform nil)
+  ((local-variables :accessor node-local-variables :type list :initform nil) ;; <- [Refactor] Not Used
+
+   ;; Shape Transmission States
    (function-node
     :initarg
     :function-node
@@ -17,11 +19,18 @@
     :function-node1
     :reader abstractnode-node1
     :type (or null function)) ;; [x y] [y z] -> [z x], ~ is removed. If ~ isn't used at function-node, set nil
+
+   ;; Broadcasting
    (uprank-state :initform nil :initarg :uprank-state :reader uprank-state :type list)
    (transmission-state :initarg :transmission-state :reader transmission-state :type list)
+   
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
-   (excepted-output-shape :initform nil :type list :accessor node-output-shape)
-   (passed-at-least-once :initform nil :accessor node-passed-p :type boolean)
+   (excepted-output-shape :initform nil :type list :accessor node-output-shape) ;; <- Debug Information
+   (passed-at-least-once :initform nil :accessor node-passed-p :type boolean)   ;;
+
+   (sv4bw-places :initform nil :type list :accessor node-sv4bw) ;; (list AbstractTensor ...)
+   
+   ;; For cl-waffe2 VM
    (out-to    :initform nil :accessor node-out-to)
    (out-sizes :initform nil :accessor node-out-sizes))
   (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
@@ -33,12 +42,12 @@ AbstractNode must possess following:
    2. Slots (for passing forward/backward)
 
    3. Variables (for building computation nodes)
+
+   4. Save For Backward States/Places
 "))
 
-;; Unused?
-(defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape)
-  ""
-  (funcall (abstractnode-node node) previous-shape))
+
+(defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape) (funcall (abstractnode-node node) previous-shape))
 
 (defun describe-problem-at (error-node inputs outputs &aux (saved-state (checkpoint-node-at *shape-error-when*)))
   (case (checkpoint-state *shape-error-when*)
@@ -115,24 +124,22 @@ Here's a list of reports.
 	   for n upfrom 2
 	   do (format out "~%~%~a. ~a" n err)))))
 
-(defun make-grad-gensym ()
-  (intern (symbol-name (gensym "Chain")) "KEYWORD"))
-
 ;; Forward:  f(input-state) -> output-state
 ;; Backward: g(output-state) -> input-state
 
-(defgeneric forward  (node &rest inputs))
-(defgeneric backward (node &rest inputs))
+(defgeneric forward  (node &rest inputs) (:documentation "
+## [generic] forward
 
-(defun parse-broadcasted-shape (shapes)
-  (flet ((apply-refine (list)
-	   (loop for s in list
-		 unless (and *enable-broadcasting-auto* ;; not created by broadcast
-			     (equal s -1))
-		   collect (if (equal s -1)
-			       1
-			       s))))
-    (map 'list #'apply-refine shapes)))
+(TODO)
+
+"))
+
+(defgeneric backward (node &rest inputs) (:documentation "
+## [generic] backward
+
+(TODO)
+
+"))
 
 ;; Optim:
 ;;
@@ -143,31 +150,34 @@ Here's a list of reports.
 ;;    (3 3)
 ;;
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Forward Mode Network Construction
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			       
-;; ugh... steadly it gets ugly...
-;; Enhancement: !t is matmul-dedicated, therefore (!add (!t x) y) is invaild.
-;; Enhancement: A[~] -> B[~] <- replace A with input-name.
 (defmethod forward :around ((node AbstractNode) &rest inputs)
-  ;; Update Computation Nodes
-
-  ;; TODO: Put warning when !t without matmul
+  ;; With the forward method, AbstractNode is invoked and
+  ;;  1. Dispatches broadcasting-auto
+  ;;  2. Records the computation node lazily
+  ;;  3. Detects Shapeing-Error
+  ;;  4. Adds save4bw
+  
   (assert (every #'(lambda (x) (typep x 'AbstractTensor)) inputs)
       nil
       "(forward node &rest inputs)
                       ^ every input should be AbstractTensor
 butgot: ~a"
       (find 'AbstractTensor inputs :test #'(lambda (x y) (not (typep y x)))))
-     
+
 
   (let* ((save-for-backward (node-save-for-backward node))
 	 (inputs (or (when *restart-variable-from* inputs) ;; No additional save-for-backward is created.
+		     ;; attribute Save4backward states
 		     (loop for i in inputs
-			   for k upfrom 0
-			   if (and
-			       (not *no-grad*)
-			       (cl-waffe2/vm.generic-tensor::ancestor-param-p i)
-			       (nth k save-for-backward)) ;; If T?
-			     collect (let ((*enable-broadcasting-auto* nil)) (system-lazy-set-save-for-backward i))
+			   for nth upfrom 0
+			   if (and (not *no-grad*)
+				   (cl-waffe2/vm.generic-tensor::ancestor-param-p i)
+				   (nth nth save-for-backward)) ;; The node declared as so?
+			     collect (system-lazy-set-save-for-backward i)
 			   else
 			     collect i)))
 	 (transition-function     (abstractnode-node node))  ;; original subscript
@@ -292,24 +302,29 @@ butgot: ~a"
 
 	(setf (node-out-sizes node) (map 'list #'shape next-tensor)
 	      (node-out-to    node) next-tensor)
+
+	;; Register what variables should be saved? or to where?
+	(setf (node-sv4bw node)
+	      (map 'list #'system-lazy-read-save-for-backward inputs))
 	(apply #'values next-tensor)))))
 
 (defmethod forward ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))
   ;; Describe More Errors.
-  (error "Couldn't step forward because ~a forward is undefined.
+  (error "
+forward: Couldn't step forward step of ~a because it is undefined.
 
-Make sure that the node has been initialised using the constructor automatically generated by the defnode macro.
-
-(DO NOT USE make-instance for defnode) but use:
-
-(~a &rest inputs).
-
-In cl-waffe, AbstractNode (i.e.: nodes defined by defnode itself), doesn't have a definition of forward and backward.
-Use the define-impl macro to give definitions for the node and forward them.
+(~a ...)
+    └── Make sure that the node is created by this constructor
+        which is automatically defined by the defnode macro.
 "
 	 node
 	 (class-name (class-of node))))
+
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Reverse Mode Graph-Level Netowork Construction
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 ;; cl-waffe2 backward semantics:
@@ -472,8 +487,10 @@ inputs      ... inputs called with
     out-kernels))
 
 
-;; the method backward constructs backward function
-;; Constructing chains will be done at vm/generic-tensor/acceptor.lisp
+;; 1. Forward ModeでSaveForBackwardを読むように
+;; backward dout x y z...でλ関数を返すようにする
+;; 上のコード消す
+
 (defmethod backward :around ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))
   (when (not *no-grad*)
@@ -483,6 +500,6 @@ inputs      ... inputs called with
 
 (defmethod backward ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))
-  (error "Couldn't step backward because ~a backward is undefined." node))
-
+  (error "backward: The computation node for reverse mode is disconnected at the ~a node.
+This is because no any backward definition is provides for it. Make sure that your node has a :backward slot." node))
 

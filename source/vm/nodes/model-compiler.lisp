@@ -7,7 +7,16 @@
 ;;
 
 
-;; TODO: cl-waffe2/viz ... Terminalでも綺麗に表示したい
+;;[TODO]
+;;- InstantCompositeとdefmodel-asベースの逆伝播でdisassembleを簡略化
+;;- SaveForBackwardをノードから除外する
+;;- defmodel-asを呼び出すのはwith-memory-pool直下で + save_for_backward以外は使いまわしたりしておk
+;;- 全てのDocstringを見て回る + 更新
+;- with-devicesはサブクラスだけ
+;;- define-opを全面的に押し出す: cache-when-compiled=nilするくらいなら最初から関数で + apply-with-rankで
+;;- proceedをたくさん使ってもコンパイル時間走らないように
+
+;; TODO: cl-waffe2/viz ... Terminalでも綺麗に表示したい (OK)
 ;; TODO: Export APIs and add to the docs
 ;; TODO: Remove this: MoveTensorNode(SAVE_FOR_BACKWARD) and then, fuseOps (e.g.: ReLuTensorNode, Log1pNode)
 
@@ -16,12 +25,12 @@
 ;; TODO: Update memory-pool. (add use-state attribute) for proceed
 ;; TODO: Update (backward toplevel) or (diff! toplevel)?
 
-;; TODO: tensors: tensor-delete, dummy-gc-finalize
+;; TODO: tensors: tensor-delete, dummy-gc-finalize (OK)
 
-;; TODO: delete define-composite-function
+;; TODO: delete define-composite-function (OK)
 ;; TODO: Test defmodel-as, documentations
 
-;; TODO: proceed ... TpSort
+;; TODO: proceed ... TpSort (OK)
 
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
 ;; TODO: defmodel/defnode系のマクロ ... エラー表示を見やすく
@@ -53,7 +62,7 @@
 ;; Proceed : compile-forward-and-backwardは十分早い + 数値安定性のためにTopologicalSort/defpathは必須 + defmodel-asがある ... -> コードの量減らすためにも、重複した実装なくすためにもbuild呼び出す方針で良くね？+ buildのcompile nilを削除する (defmodel-asみたいに) + proceedのInterpreter廃止する
 
 ;; 今からやる：
-;; 1. Proceed/Interepreterの廃止 (define-opだけ使えば問題ない)
+;; 1. Proceed/Interepreterの廃止 (define-opだけ使えば問題ない) OK
 ;; 2. SAVE_FOR_BACKWARD目的のMoveTensorNodeを削除 -> In-place mutationを有効化 + backwardのdisassembleを幾分か綺麗に + defmodel-asをすればallocした領域再利用が可能 (+ define-instant-composite suru)
 ;; 3. Testを全て通す
 ;; 4. valuesの取り扱いを綺麗にする + VMの仕様を綺麗にする

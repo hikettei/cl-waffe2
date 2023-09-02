@@ -1028,28 +1028,18 @@ The function parameter computes all the previous nodes of the given tensor if an
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;;  Save for backward
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  APIs for save_for_backward (cl-waffe2 VM, internal usage)
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun system-lazy-set-save-for-backward (tensor)
-  ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
+  (when (save-for-backward-space tensor)
+    (warn "System-Lazy-Set-Save-For-Backward: The given tensor ~a has already the place for save4backward. Overwriting." tensor))
+  
+  (let ((tensor-clone (make-clone tensor nil)))
+    (setf (save-for-backward-space tensor) tensor-clone)
+    tensor))
 
-  (let ((space-tmp (make-clone tensor nil nil)))
-    (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
-
-      ;; For compiler to use this info.
-      (setf (cl-waffe2/base-impl:mv-lazy-sv4bw
-	     (tensor-backward result))
-	    t)
-      ;; If tensor is arguments (of toplevel)...
-      (setf (save-for-backward-space result) tensor)
-      ;; Keep The Tensor Broadcastable!
-      (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
-      ;; (!matmul (!flexible (randn `(3 5))) (!t (randn `(3 3 5))))
-      ;; !! Before and after save4bw, result == tensor.
-      result)))
-	
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 

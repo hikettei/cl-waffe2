@@ -1,7 +1,32 @@
 
 (in-package :cl-waffe2/vm)
 
-(declaim (inline maybe-read-result write-result apply-instruction))
+(declaim (inline maybe-read-result write-result apply-instruction apply-inst-sv4bw))
+
+(defmodel (SV4BW-Copier (self)
+	   :on-call-> ((self x y)
+		       (declare (ignore self))
+		       (with-no-grad
+			 (cl-waffe2/base-impl:!move x y :force t)))))
+
+(defmodel-as (SV4BW-Copier)
+  :where (A[~] B[~] -> OUT[~])
+  :asif :function :named %vm-move)
+
+(declaim (ftype (function (WfInstruction) t) apply-inst-sv4bw))
+(defun apply-inst-sv4bw (instruction)
+  (declare (type WfInstruction instruction)
+	   (optimize (speed 3)))
+  (when (not *no-grad*)
+    (let ((variables (map 'list #'maybe-read-result (wfop-args instruction)))
+	  (places    (wfop-sv4bw instruction)))
+      (loop for var   in variables
+	    for place in places
+	    if (and place var) do
+	      ;; Place <- Var
+	      (%vm-move place var))))
+  nil)
+
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
 (defun maybe-read-result (tensor)
   (declare (type AbstractTensor tensor))
@@ -48,7 +73,8 @@ Evaluates generated cl-waffe2 IR sequence.
   (when iseq
     (loop for inst of-type WFInstruction in iseq
 	  ;; TODO: Runtime Shape Inspection etc...
-	  do (write-result (wfop-out-to inst) (apply-instruction inst))
+	  do (apply-inst-sv4bw inst)
+	     (write-result (wfop-out-to inst) (apply-instruction inst))
 	  finally
 	     (return-from accept-instructions (apply #'values (map 'list #'maybe-read-result (wfop-out-to inst)))))))
 
@@ -197,6 +223,7 @@ CL-WAFFE2-REPL>
 	(loop with *under-benchmark-set* = (list sort-by-node profiled-result inst->node-table)
 	      for inst of-type WFInstruction in iseq
 	      do (let ((start-time (get-internal-real-time)))
+		   (apply-inst-sv4bw inst)
 		   (write-result (wfop-out-to inst) (apply-instruction inst))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
