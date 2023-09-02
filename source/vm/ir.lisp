@@ -168,9 +168,9 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 ;; The algorithm that detects such a node is simple:
 ;;
 
-;; [TODO] Eliminate MoveTensor(SAVE_FOR_BACKWARD), and enable in-place-mutation even when training mode.
-(defun apply-in-place-mutation! (iseq leaves)
+(defun apply-in-place-mutation! (iseq leaves &key (reverse-iseq nil))
   (declare (type list iseq leaves)
+	   (type boolean reverse-iseq)
 	   (optimize (speed 3)))
    
   (let ((ref-table (make-hash-table)))
@@ -214,7 +214,9 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		     move-p
 		     ;; As far as I remember, this condition is intended that the copying for re-aranging memory-layout?
 		     ;; But it could be possible to delete it, and delete more MoveTensorNode, especially for viewed tensor.
-		     (not (movetensor-save-for-backward node)) ;; when :force=t, never deleted.
+		     (if reverse-iseq
+			 t
+			 (not (movetensor-save-for-backward node))) ;; when :force=t, never deleted.
 		     )
 		;; Invoking this form == The MoveTensorNode can be deleted as long as ref-table condition is ok.
 		;; If the instruction corresponds with MoveTensorNode or MoveScalarTensorNode
@@ -228,20 +230,25 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 
 		  ;; The condition to become [deleted] is:
 		  ;; tensor_to_be_copied is the last reference in the computation node
-		  (when (and
-			 (numberp (gethash (tensor-id target) ref-table))
-			 (= 0 (the fixnum (gethash (tensor-id target) ref-table))))
+		  (when (or reverse-iseq
+			    (and
+			     (numberp (gethash (tensor-id target) ref-table))
+			     (= 0 (the fixnum (gethash (tensor-id target) ref-table)))))
 		    ;; Replace op with the lambda function just returning y
 
-		    ;;(print "SET:")
-		    ;;(print instruction)
-		    (setf (wfop-op instruction) #'(lambda (x y)
-						    (declare (ignore x))
-						    y))
+		    ;; The target is allocated:
+		    (if (and reverse-iseq
+			     (cl-waffe2/vm.generic-tensor::vec (car (wfop-args instruction))))
+			(setf (wfop-op instruction)
+			      #'(lambda (x y)
+				  (setf (tensor-vec x) (tensor-vec y)) y))
+			(setf (wfop-op instruction) #'(lambda (x y)
+							(declare (ignore x))
+							y)))
 		    (setf (movetensor-ignore-me (wfop-node instruction)) t))))
 
-	      ;; Counting up the ref-table
-	      ;; OUT <- OP(arg1, arg2, arg3)
+		;; Counting up the ref-table
+		;; OUT <- OP(arg1, arg2, arg3)
 
 	      ;; OUT ... set ref-n=0 because the value is overwritten by OP
 	      ;; arg1 arg2 arg3 ... set +=1 as long as registered in the table.
@@ -249,7 +256,9 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	      (mapc #'(lambda (arg)
 			(when (numberp (gethash (tensor-id arg) ref-table))
 			  (incf (the fixnum (gethash (tensor-id arg) ref-table)))))
-		    (wfop-args instruction))
+		    (if (and reverse-iseq move-p (= (length (wfop-args instruction)) 3))
+			(cdr (wfop-args instruction))
+			(wfop-args instruction)))
 
 	      (let ((out-to (wfop-out-to instruction)))
 		(dolist (out out-to)

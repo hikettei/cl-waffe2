@@ -56,7 +56,8 @@
 		       (let ((*node-indent* (+ 4 *node-indent*)))
 			 (format out "        ~a" i)))))))
      out-to
-     dir)))
+     dir
+     iseq)))
 
 (defun tensor-compiled-kernel (tensor)
   (when (tensor-state tensor)
@@ -234,7 +235,7 @@ op2 ..  E <- F(X, Y, Z)
 		   (incf (tensor-grad-count tensor) 1)
 		   (node-compile-into-vm
 		    (forward
-		     (cl-waffe2/base-impl:MoveTensorNode (dtype tensor) :save-for-backward t)
+		     (cl-waffe2/base-impl:MoveTensorNode (dtype tensor))
 		     (grad tensor)
 		     grad)))
 		 (progn

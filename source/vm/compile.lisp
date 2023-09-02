@@ -144,7 +144,7 @@
 	       ;; Backward_Kernel + Gradient_Adders (If Any)
 	       (when (and (cl-waffe2/vm.generic-tensor::ancestor-param-p self)
 			  (tensor-backward self))
-		 (multiple-value-bind (bw-function node out-to directions) (make-backward-wfinst self)
+		 (multiple-value-bind (bw-function node out-to directions bw-iseq) (make-backward-wfinst self)
 		   (if (null bw-function)
 		       nil
 		       (progn
@@ -154,13 +154,15 @@
 			       if dir
 				 do (set-dout arg o)
 				    (init-state-container! o))
-
-			 (list
-			  (make-wfop bw-function ;; ... dout var1 var2
-				     self
-				     node
-				     `(,(get-dout self) ,@args)
-				     :out-to (loop for o in out-to if o collect o)))))))
+			 ;; MoveTensorBackward is inlined in order to get in-place mutation
+			 (if nil;;(movetensor-p (wfop-node inst))
+			     bw-iseq
+			     (list
+			      (make-wfop bw-function ;; ... dout var1 var2
+					 self
+					 node
+					 `(,(get-dout self) ,@args)
+					 :out-to (loop for o in out-to if o collect o))))))))
 	       ;; Expand Gradient Adders
 	       (loop for var in args
 		     if (and (slot-value var 'requires-grad) (get-dout var))
@@ -210,6 +212,8 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
 		 (forward->reverse-mode iseq-forward dout))))
+	
+	(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
 
 	;; Initializes Gradient Resetter
 	(mapc
