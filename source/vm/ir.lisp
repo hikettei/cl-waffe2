@@ -214,9 +214,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		     move-p
 		     ;; As far as I remember, this condition is intended that the copying for re-aranging memory-layout?
 		     ;; But it could be possible to delete it, and delete more MoveTensorNode, especially for viewed tensor.
-		     (if reverse-iseq
-			 t
-			 (not (movetensor-save-for-backward node))) ;; when :force=t, never deleted.
+		     (not (movetensor-save-for-backward node)) ;; when :force=t, never deleted.
 		     )
 		;; Invoking this form == The MoveTensorNode can be deleted as long as ref-table condition is ok.
 		;; If the instruction corresponds with MoveTensorNode or MoveScalarTensorNode
@@ -237,7 +235,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		    ;; Replace op with the lambda function just returning y
 
 		    ;; The target is allocated:
-		    (if (and reverse-iseq
+		    (if (and reverse-iseq			     
 			     (cl-waffe2/vm.generic-tensor::vec (car (wfop-args instruction))))
 			(setf (wfop-op instruction)
 			      #'(lambda (x y)
