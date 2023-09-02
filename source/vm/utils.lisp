@@ -39,15 +39,12 @@
 
 ;; Autograd:
 (defun make-backward-wfinst (tensor)
-  (multiple-value-bind (bw-kernel iseq out-to) (make-backward tensor)
-    (declare (type function bw-kernel))
+  (multiple-value-bind (bw-kernel iseq out-to dir) (make-backward tensor)
+    (declare (type (or null function) bw-kernel))
+    (when (null bw-kernel) (return-from make-backward-wfinst nil))
+    
     (values
-     #'(lambda (dout &rest args)
-	 (declare (optimize (speed 3))
-		  (type AbstractTensor dout))
-	 (if *under-benchmark-set*
-	     (apply bw-kernel dout args)
-	     (apply bw-kernel dout args)))
+     bw-kernel
      #'(lambda ()
 	 (format nil "Block -> ~a-BACKWARD {
 ~a    }
@@ -58,7 +55,8 @@
 		     (dolist (i iseq)
 		       (let ((*node-indent* (+ 4 *node-indent*)))
 			 (format out "        ~a" i)))))))
-     out-to)))
+     out-to
+     dir)))
 
 (defun tensor-compiled-kernel (tensor)
   (when (tensor-state tensor)
@@ -199,8 +197,9 @@ op2 ..  E <- F(X, Y, Z)
 (defun node-out-to (node) (cl-waffe2/vm.nodes::node-out-to node))
 
 (defun init-state-container! (tensor)
-  (setf (tensor-state tensor)
-	(make-statecontainer :forward-out-form (make-compiled-kernel))))
+  (when (null (tensor-state tensor))
+    (setf (tensor-state tensor)
+	  (make-statecontainer :forward-out-form (make-compiled-kernel)))))
 
 (defun %vm-wrap-tensor (tensor)
   (init-state-container! tensor)
@@ -232,6 +231,7 @@ op2 ..  E <- F(X, Y, Z)
 		 grad)))
 	     (if (= (tensor-grad-count tensor) 0)
 		 (progn
+		   (incf (tensor-grad-count tensor) 1)
 		   (node-compile-into-vm
 		    (forward
 		     (cl-waffe2/base-impl:MoveTensorNode (dtype tensor) :save-for-backward t)

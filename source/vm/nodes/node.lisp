@@ -177,7 +177,9 @@ butgot: ~a"
 			   if (and (not *no-grad*)
 				   (cl-waffe2/vm.generic-tensor::ancestor-param-p i)
 				   (nth nth save-for-backward)) ;; The node declared as so?
-			     collect (system-lazy-set-save-for-backward i)
+			     collect (or
+				       (system-lazy-set-save-for-backward i)
+				       i)
 			   else
 			     collect i)))
 	 (transition-function     (abstractnode-node node))  ;; original subscript
@@ -518,13 +520,19 @@ inputs      ... inputs called with
 					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
 	  (dout (cl-waffe2/vm.generic-tensor::make-clone tensor nil nil)))
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
+	     (out-toplevels (if (null out-toplevels)
+				(return-from make-backward)
+				out-toplevels))
 	     (toplevel (loop for top in out-toplevels
-			     for var in variables
-			     collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
-				       top)))
-	     (toplevel (apply #'!system-lazy-values
-			      (loop for top in toplevel
-				    if top collect top)))
+			      for var in variables
+			      collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
+					top)))
+	     (directions (loop for var in out-toplevels if var collect t else collect nil))
+	     (out-toplevels (loop for top in toplevel
+				  for out in out-toplevels
+				  if top collect out))
+	     (toplevel (loop for top in toplevel if top collect top))
+	     (toplevel (if toplevel (apply #'!system-lazy-values toplevel)))
 	     (fw-iseq  (cl-waffe2/vm:compile-forward-and-backward toplevel
 								  :need-backward nil
 								  :fuse-p t
@@ -533,6 +541,7 @@ inputs      ... inputs called with
 	;; Ignore-shape-errorでout-toplevelsのランクおかしくなったりしないといいのだが・・・
 	;; [TODO] ここでLazyValuesしながらCompile ... lazyValuesどれか一つのtensorでも他の値もまとめてコンパイルできない？ Disassemble it
 	;; (print fw-iseq)
+	
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)
 	     (cl-waffe2/vm.generic-tensor::with-memory-pool
@@ -555,7 +564,8 @@ inputs      ... inputs called with
 		 (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
 	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
 	 fw-iseq
-	 out-toplevels)))))
+	 out-toplevels
+	 directions)))))
 
 (defmethod backward :around ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))

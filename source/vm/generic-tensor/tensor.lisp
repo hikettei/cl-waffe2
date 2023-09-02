@@ -1033,12 +1033,11 @@ The function parameter computes all the previous nodes of the given tensor if an
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun system-lazy-set-save-for-backward (tensor)
-  (when (save-for-backward-space tensor)
-    (warn "System-Lazy-Set-Save-For-Backward: The given tensor ~a has already the place for save4backward. Overwriting." tensor))
-  
-  (let ((tensor-clone (make-clone tensor nil)))
-    (setf (save-for-backward-space tensor) tensor-clone)
-    tensor))
+  (if (save-for-backward-space tensor)
+      nil
+      (let ((tensor-clone (make-clone tensor nil)))
+	(setf (save-for-backward-space tensor) tensor-clone)
+	tensor)))
 
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
