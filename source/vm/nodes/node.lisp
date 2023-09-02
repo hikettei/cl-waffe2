@@ -520,7 +520,7 @@ inputs      ... inputs called with
 					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
 	  (dout (cl-waffe2/vm.generic-tensor::make-clone tensor nil nil)))
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
-	     (out-toplevels (if (null out-toplevels)
+	     (out-toplevels (if (every #'null out-toplevels) ;; no gradients?
 				(return-from make-backward)
 				out-toplevels))
 	     (toplevel (loop for top in out-toplevels
@@ -533,11 +533,15 @@ inputs      ... inputs called with
 				  if top collect out))
 	     (toplevel (loop for top in toplevel if top collect top))
 	     (toplevel (if toplevel (apply #'!system-lazy-values toplevel)))
-	     (fw-iseq  (cl-waffe2/vm:compile-forward-and-backward toplevel
-								  :need-backward nil
-								  :fuse-p t
-								  :compile-mode :fastest)))
+	     (compiled  (multiple-value-list
+			(cl-waffe2/vm:compile-forward-and-backward toplevel
+								   :need-backward nil
+								   :fuse-p t
+								   :compile-mode :fastest)))
+	     (fw-iseq (car compiled))
+	     (leaves  (third compiled)))
 
+	(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
 	;; Ignore-shape-errorでout-toplevelsのランクおかしくなったりしないといいのだが・・・
 	;; [TODO] ここでLazyValuesしながらCompile ... lazyValuesどれか一つのtensorでも他の値もまとめてコンパイルできない？ Disassemble it
 	;; (print fw-iseq)
@@ -550,7 +554,7 @@ inputs      ... inputs called with
 		     for var     in variables
 		     for place   in in-tensors
 		     if (system-lazy-read-save-for-backward var)
-		       do (when (null (cl-waffe2/vm.generic-tensor::vec var))
+		       do (when (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
 			    (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
 				   var))
 		     else		     

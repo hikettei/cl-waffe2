@@ -135,7 +135,7 @@
 	   (setf (tensor-iid tensor) val)))
 
     (loop for inst of-type WfInstruction in iseq
-	  if (null (find (tensor-iid (wfop-self inst)) seen :test #'eq))
+	  if t;(null (find (tensor-iid (wfop-self inst)) seen :test #'eq))
 	    append
 	    (let* ((self   (wfop-self   inst))
 		   (args   (wfop-args   inst)))
@@ -197,10 +197,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
     (multiple-value-bind (iseq-forward leaves)
 	(node-compile-into-vm toplevel :fuse-p fuse-p)
 
-      ;; [TODO] Testing the line below carefully:
-      ;; In-place mutation is working??
-      (when (not fuse-p) ;; avoid twice-time applying
-	(apply-in-place-mutation! iseq-forward leaves))
+      (apply-in-place-mutation! iseq-forward leaves)
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
 	     (dout (when need-backward
