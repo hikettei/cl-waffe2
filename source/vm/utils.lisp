@@ -232,3 +232,16 @@ op2 ..  E <- F(X, Y, Z)
 
 (defun node-out-to (node) (cl-waffe2/vm.nodes::node-out-to node))
 
+(defun init-state-container! (tensor)
+  (setf (tensor-state tensor)
+	(make-statecontainer :forward-out-form (make-compiled-kernel))))
+
+(defun %vm-wrap-tensor (tensor)
+  (init-state-container! tensor)
+  (make-wfop
+   #'(lambda () tensor)
+   tensor
+   #'(lambda () "Tensor: ~a" (tensor-id tensor) (shape tensor))
+   nil
+   :out-to (list tensor)))
+

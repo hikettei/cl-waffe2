@@ -106,7 +106,13 @@
 		      instruction-seq)))))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
-
+    
+    ;; When no instructions is provided for toplevel
+    ;; Just Return toplevel tensor.
+    
+    (when (null instruction-seq)
+      (setq instruction-seq (list (%vm-wrap-tensor toplevel))))
+    
     (if fuse-p
 	(values
 	 (reverse
@@ -148,7 +154,6 @@
 (defun sv4bw-p (node)
   (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
        (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
-
 
 (defun trace-backward-network (toplevel leaves dout-toplevel fuse-p)
   (declare (type AbstractTensor toplevel dout-toplevel))

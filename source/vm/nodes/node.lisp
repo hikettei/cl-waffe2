@@ -490,13 +490,68 @@ inputs      ... inputs called with
 ;; 1. Forward ModeでSaveForBackwardを読むように
 ;; backward dout x y z...でλ関数を返すようにする
 ;; 上のコード消す
+;; Backwardが呼ばれたかの検査をVMが担当するべき
+
+;; A -> B C D ここのコピーはVMの担当である
+;; doutいらないかも
+(defun make-backward (tensor)
+  "
+## [function] make-backward
+
+```lisp
+(make-backward tensor)
+```
+"
+  (let ((node (tensor-backward tensor))
+	(variables (tensor-variables tensor)))
+    (declare (type AbstractNode node)
+	     (type list variables))
+
+    ;; これでPermutionとかコンパイルできる？
+    
+    (assert (every #'(lambda (x) (typep x 'AbstractTensor)) variables)
+	nil
+	"make-backward: all variables should be AbstractTensor.")
+
+    (let ((in-tensors (loop for var in variables
+			    collect (or (system-lazy-read-save-for-backward var)
+					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
+	  (dout (cl-waffe2/vm.generic-tensor::make-clone tensor nil nil)))
+      (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
+	     (toplevel (loop for top in out-toplevels
+			     for var in variables
+			     collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
+				       top)))
+	     (toplevel (apply #'!system-lazy-values
+			      (loop for top in toplevel
+				    if top collect top)))
+	     (fw-iseq  (cl-waffe2/vm:compile-forward-and-backward toplevel
+								  :need-backward nil
+								  :fuse-p t
+								  :compile-mode :fastest)))
+
+	;; Ignore-shape-errorでout-toplevelsのランクおかしくなったりしないといいのだが・・・
+	;; [TODO] ここでLazyValuesしながらCompile ... lazyValuesどれか一つのtensorでも他の値もまとめてコンパイルできない？ Disassemble it
+	;; (print fw-iseq)
+	#'(lambda (dout-runtime &rest inputs-runtime)
+	    (cl-waffe2/vm.generic-tensor::with-memory-pool
+	      (setf (tensor-vec dout) (tensor-vec dout-runtime))
+	      (loop for act-val in inputs-runtime
+		    for place   in in-tensors do
+		      (setf (tensor-vec place) (tensor-vec act-val)))
+
+	      (cl-waffe2/vm:accept-instructions fw-iseq)
+	      ;; When quitting mem-pool, the result is never freed.
+	      (loop for out-val in out-toplevels do
+		(cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
+	      (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))))))
 
 (defmethod backward :around ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))
   (when (not *no-grad*)
     (with-no-grad
       (with-shape-checkpoint (:backward node)
-	(multiple-value-list (call-next-method))))))
+	(call-next-method)))))
 
 (defmethod backward ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))

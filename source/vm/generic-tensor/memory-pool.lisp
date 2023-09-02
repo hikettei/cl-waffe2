@@ -189,7 +189,7 @@
      (unwind-protect (progn ,@body)
        (let ((extended-tensors (exit-memory-pool)))
 	 (dolist (pair extended-tensors)
-	   (set-mem-pool key value))))))
+	   (set-mem-pool (symbol-name (car pair)) (cdr pair)))))))
 
 (defun get-mem-pool (key)
   (declare (type string key))

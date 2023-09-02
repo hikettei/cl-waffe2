@@ -84,4 +84,5 @@
 
     (format stream "~%~a"
 	    (with-output-to-string (out)
-	      (explore-node out toplevel)))))
+	      (explore-node out toplevel)))
+    toplevel))

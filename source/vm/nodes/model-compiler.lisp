@@ -8,6 +8,7 @@
 
 
 ;;[TODO]
+;;- dynamic-shapingとか考えないで普通にdefine-by-runっぽく動かせない？
 ;;- InstantCompositeとdefmodel-asベースの逆伝播でdisassembleを簡略化
 ;;- SaveForBackwardをノードから除外する
 ;;- defmodel-asを呼び出すのはwith-memory-pool直下で + save_for_backward以外は使いまわしたりしておk
@@ -313,7 +314,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	     (let* (,@(loop for name in in-names
 			    collect `(,name (if (cl-waffe2/vm.generic-tensor:ancestor-param-p ,name)
 						(cl-waffe2/vm.generic-tensor:parameter ,name)
-						,name))))
+						,name)))) ;; [FixME] <- name is detached? for reducint compiling time!
 	       (setf (slot-value ,self 'variables) (list ,@in-names))
 	       (multiple-value-bind (fw-iseq bw-iseq leaves dout) (cl-waffe2/vm:compile-forward-and-backward
 								   (call ,target-model ,@in-names)
@@ -477,3 +478,4 @@ Or
 
 
 )
+

@@ -518,3 +518,15 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 	  (compiled-backward model)
 	  (compiled-variables model)))
 
+;;
+;; [fw, bw, leaves = build(toplevel)]
+;;
+
+;;
+;; [TODO]
+;;  diff! compute!
+;; (let ((a (compute! top)))
+;;         (diff! a))) ...
+;;
+;;
+

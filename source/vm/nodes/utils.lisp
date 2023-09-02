@@ -181,14 +181,14 @@ Return:
 		   slots))
        slots))
 
-(defmacro with-detach-tensors ((&rest tensors) &body body)
-  `(let ((detach-state (map 'list #'detach-p ,tensors)))
-     (map 'list #'(lambda (x) (setf (detach-p x) t)) ,tensors)
-     (prog1
-	 ,@body
+(defmacro with-detach-tensors ((tensors) &body body)
+  `(let ((detach-state (map 'list #'cl-waffe2/vm.generic-tensor:detach-p ,tensors)))
+     (map 'list #'(lambda (x) (setf (cl-waffe2/vm.generic-tensor:detach-p x) t)) ,tensors)
+     (unwind-protect
+	  (progn ,@body)
        (loop for s in detach-state
-	     for tens in tensors do
-	       (setf (detach-p tens) s)))))
+	     for tens in ,tensors do
+	       (setf (cl-waffe2/vm.generic-tensor:detach-p tens) s)))))
 
 (defun make-grad-gensym () (intern (symbol-name (gensym "Chain")) "KEYWORD"))
 
@@ -202,3 +202,15 @@ Return:
 			       1
 			       s))))
     (map 'list #'apply-refine shapes)))
+
+(defnode (System-Lazy-Pair (self a b)
+	  :where (A[a-size] B[b-size] -> A[a-size] B[a-size] where a-size = (shape a) b-size = (shape b)))
+  (setf (ignore-shape-error self) t))
+
+(define-impl-op (System-Lazy-Pair :device t) :forward ((self a b) (values a b)))
+
+(defun !system-lazy-pair (a b)
+  (call (System-Lazy-pair a b) a b))
+
+(defun !system-lazy-values (&rest args)
+  (reduce #'!system-lazy-pair args))
