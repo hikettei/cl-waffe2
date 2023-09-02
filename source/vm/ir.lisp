@@ -96,7 +96,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	      (funcall (wfop-node inst))
 	      (if (movetensor-p (wfop-node inst))
 		  (if (movetensor-ignore-me (wfop-node inst))
-		      "SET{Pruned}"
+		      "Setq{Pruned}"
 		      (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
 			  (if (scalar-p (wfop-self inst))
 			      "MoveScalarNode(SAVE_FOR_BACKWARD)"
@@ -113,7 +113,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	       (funcall (wfop-node inst))
 	       (if (movetensor-p (wfop-node inst))
 		   (if (movetensor-ignore-me (wfop-node inst))
-		       "SET{Pruned}"
+		       "Setq{Pruned}"
 		       (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
 			   (if (scalar-p (wfop-self inst))
 			       "MoveScalarNode(SAVE_FOR_BACKWARD)"

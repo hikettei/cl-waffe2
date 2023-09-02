@@ -204,10 +204,10 @@ op2 ..  E <- F(X, Y, Z)
 (defun %vm-wrap-tensor (tensor)
   (init-state-container! tensor)
   (make-wfop
-   #'(lambda () tensor)
+   #'(lambda (x) (declare (ignore x)) tensor)
    tensor
-   #'(lambda () "Tensor: ~a" (tensor-id tensor) (shape tensor))
-   nil
+   #'(lambda () (format nil "Setq{Internal}"))
+   (list tensor)
    :out-to (list tensor)))
 
 

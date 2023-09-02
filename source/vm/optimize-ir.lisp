@@ -269,4 +269,6 @@ The operation will continue until count=limit or there's no changes."
   (declare (type list iseq)
 	   (type list leaves))
 
+  ;; 最後のTensorの使用地点を特定する O(n^2)
+  ;; ^ 下からTraceすればO(n)
   nil)

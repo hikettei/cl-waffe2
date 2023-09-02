@@ -366,6 +366,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 			      collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
 					top)))
 	     (directions (loop for var in out-toplevels if var collect t else collect nil))
+	     (out-toplevels-pswise out-toplevels)
 	     (out-toplevels (loop for top in toplevel
 				  for out in out-toplevels
 				  if top collect out))
@@ -380,9 +381,6 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	     (leaves  (third compiled)))
 
 	(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
-	;; Ignore-shape-errorでout-toplevelsのランクおかしくなったりしないといいのだが・・・
-	;; [TODO] ここでLazyValuesしながらCompile ... lazyValuesどれか一つのtensorでも他の値もまとめてコンパイルできない？ Disassemble it
-	;; (print fw-iseq)
 	
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)
@@ -407,7 +405,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	       
 	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
 	 fw-iseq
-	 out-toplevels
+	 out-toplevels-pswise
 	 directions)))))
 
 (defmethod backward :around ((node AbstractNode) &rest inputs)

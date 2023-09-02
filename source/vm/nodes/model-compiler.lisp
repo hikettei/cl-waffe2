@@ -8,6 +8,7 @@
 
 
 ;;[TODO]
+;;- retain_graph
 ;;- dynamic-shapingとか考えないで普通にdefine-by-runっぽく動かせない？
 ;;- InstantCompositeとdefmodel-asベースの逆伝播でdisassembleを簡略化
 ;;- SaveForBackwardをノードから除外する

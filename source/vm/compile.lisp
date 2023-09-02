@@ -121,7 +121,7 @@
 	 variable-leaves)
 	(values instruction-seq variable-leaves))))
 
-(defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table)) (seen nil))
+(defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table :test #'eq)))
   (declare (type list iseq)
 	   (type AbstractTensor dout-toplevel))
 
@@ -129,13 +129,14 @@
   ;; BW: g(dout, x1, x2, ...)
 
   (flet ((get-dout (tensor)
-	   (or (gethash (tensor-iid tensor) dout-table) 
-	       dout-toplevel))
+	   (gethash (tensor-iid tensor) dout-table))
 	 (set-dout (tensor val)
-	   (setf (tensor-iid tensor) val)))
+	   (setf (gethash (tensor-iid tensor) dout-table) val)))
 
+    (set-dout (wfop-self (car iseq)) dout-toplevel)
+    
     (loop for inst of-type WfInstruction in iseq
-	  if t;(null (find (tensor-iid (wfop-self inst)) seen :test #'eq))
+	  if (get-dout (wfop-self inst))
 	    append
 	    (let* ((self   (wfop-self   inst))
 		   (args   (wfop-args   inst)))
@@ -145,29 +146,24 @@
 			  (tensor-backward self))
 		 (multiple-value-bind (bw-function node out-to directions) (make-backward-wfinst self)
 		   (if (null bw-function)
+		       nil
 		       (progn
-			 (loop for arg in args do
-			   (push (tensor-iid arg) seen)))
-		       (progn
-			 (loop for grad-p in directions
-			       for arg in args
-			       if (not grad-p) ;; detach
-				 do (push (tensor-iid arg) seen))
-			 
 			 (loop for arg in args
 			       for o   in out-to
-			       do (set-dout arg o)
-				  (init-state-container! o))
+			       for dir in directions
+			       if dir
+				 do (set-dout arg o)
+				    (init-state-container! o))
 
 			 (list
 			  (make-wfop bw-function ;; ... dout var1 var2
 				     self
 				     node
 				     `(,(get-dout self) ,@args)
-				     :out-to out-to))))))
+				     :out-to (loop for o in out-to if o collect o)))))))
 	       ;; Expand Gradient Adders
 	       (loop for var in args
-		     if (and (slot-value var 'requires-grad))
+		     if (and (slot-value var 'requires-grad) (get-dout var))
 		       append (expand-gradient-adder var (get-dout var))))))))
 
 
@@ -276,7 +272,7 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 			 (length iseq)
 			 (length (remove-duplicates tensor-ids))
 			 (length (remove-duplicates scal-ids)))))))
-
+      
       (format stream "~%disassemble-waffe2-ir:~% [Forward]: ~%~a~%" (conc-iseq-str iseq-fw))
 
       (format stream "~% [Pullback]: ~%~a~%" (conc-iseq-str iseq-bw))
