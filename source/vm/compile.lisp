@@ -235,6 +235,12 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		leaves
 		dout)))))
 
+(defun findout-origin (table tensor)
+  (let ((last-ref (tensor-id tensor)))
+    (loop while t do
+      (if (null (gethash last-ref table))
+	  (return-from findout-origin last-ref)
+	  (setq last-ref (gethash last-ref table))))))
 
 (defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
   "
@@ -252,19 +258,27 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
     (declare (ignore leaves))
     
     (flet ((conc-iseq-str (iseq)
-	     (let ((tensor-ids))
+	     (let ((tensor-ids)
+		   (scal-ids)
+		   (tensor-table (make-hash-table)))
 	       (with-output-to-string (out)
 		 (with-indent-to iseq
 		   (dolist (i iseq)
+		     (when (and (movetensor-p (wfop-node i))
+				(movetensor-ignore-me (wfop-node i)))
+		       (setf (gethash (tensor-id (wfop-self i)) tensor-table) (tensor-id (second (wfop-args i)))))
 		     (dolist (var (wfop-args i))
-		       (push (tensor-id var) tensor-ids))
+		       (if (scalar-p var)
+			   (push (tensor-id var) scal-ids)
+			   (push (findout-origin tensor-table var) tensor-ids)))
 		     (princ i out)))
-		 (format out "~%~a Instructions | ~a Tensors~%"
+		 (format out "~%~a Instructions | ~a Tensors | ~a Scalars~%"
 			 (length iseq)
-			 (length (remove-duplicates tensor-ids)))))))
+			 (length (remove-duplicates tensor-ids))
+			 (length (remove-duplicates scal-ids)))))))
 
-      (format stream "~%disassemble-waffe2-ir:~% [Forward ISeq]: ~%~a~%"  (conc-iseq-str iseq-fw))
+      (format stream "~%disassemble-waffe2-ir:~% [Forward]: ~%~a~%" (conc-iseq-str iseq-fw))
 
-      (format stream "~% [Backward ISeq]: ~%~a~%" (conc-iseq-str iseq-bw))
+      (format stream "~% [Pullback]: ~%~a~%" (conc-iseq-str iseq-bw))
 
       t)))

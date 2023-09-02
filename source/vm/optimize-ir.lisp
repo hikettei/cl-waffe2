@@ -186,7 +186,9 @@ Not replaced until the `query-list` matches everything, including the order.
 (defun apply-path-fusion (iseq &key (limit 3) (count 0))
   "`apply-path-fusions` start searching all replaceable combination of InstructionSeq declared via `defpath`, and replaces the IR.
 The operation will continue until count=limit or there's no changes."
-  (declare (type list iseq))
+  (declare (type list iseq)
+	   (type fixnum limit count)
+	   (optimize (speed 3)))
 
   ;; Count exceeds limit
   (when (>= count limit)
@@ -261,3 +263,10 @@ The operation will continue until count=limit or there's no changes."
 	  iseq
 	  (apply-path-fusion iseq :limit limit :count (1+ count))))))
 
+;; [TODO] Static Allocation Scheduling
+
+(defun schedule-static-allocation! (iseq leaves)
+  (declare (type list iseq)
+	   (type list leaves))
+
+  nil)

@@ -57,30 +57,31 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	    (with-output-to-string (out)
 	      (dolist (o (wfop-out-to inst))
 		(if (slot-value o 'cl-waffe2/vm.generic-tensor:requires-grad)
-		    (princ "{Param}" out)
+		    (princ "<Param>" out)
 		    (when (not (eql (cl-waffe2/vm.generic-tensor:tensor-attribute o) :chain))
-		      (princ "{Input}" out)))		      
+		      (princ "<Input>" out)))		      
 		(princ (tensor-id o) out)
 		(princ " " out)))
 	    (if ignored-p
 		(with-output-to-string (out)
-		  (format out "~a~a" (tensor-id (second (wfop-args inst))) (shape (second (wfop-args inst)))))
+		  (format out "~a{~(~a~), ~a}" (tensor-id (second (wfop-args inst))) (dtype (second (wfop-args inst))) (shape (second (wfop-args inst)))))
 		(if (>= (length (wfop-args inst)) *omit-args-n*)
 		    (format nil "..., x~a,..." (length (wfop-args inst)))
 		    (with-output-to-string (out)
 		      (dotimes (i (length (wfop-args inst)))
 			(let ((var (nth i (wfop-args inst)))
 			      (sv4 (and (not *no-grad*) (nth i (wfop-sv4bw inst)))))
-			  (format out "~a~a~a~a~a~a"
+			  (format out "~a~a~a{~(~a~), ~a}~a~a" ;;
 				  (if (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-				      "{Param}"
+				      "<Param>"
 				      (if (eql (cl-waffe2/vm.generic-tensor:tensor-attribute var) :chain)
 					  ""
-					  "{Input}"))
+					  "<Input>"))
 				  (if sv4
 				      "SV4BW("
 				      "")
 				  (tensor-id var)
+				  (dtype var)
 				  (shape var)
 				  (if sv4
 				      ")"
@@ -90,12 +91,12 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 				      ""))))))))))
 
 (defmethod instruction-opname ((inst WFInstruction))
-  (format nil "<WfInst[Compiled: ~a]"
+  (format nil "<WfInst[op=~a]"
 	  (if (functionp (wfop-node inst))
 	      (funcall (wfop-node inst))
 	      (if (movetensor-p (wfop-node inst))
 		  (if (movetensor-ignore-me (wfop-node inst))
-		      "<DELETED>"
+		      "SET{Pruned}"
 		      (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
 			  (if (scalar-p (wfop-self inst))
 			      "MoveScalarNode(SAVE_FOR_BACKWARD)"
@@ -112,7 +113,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	       (funcall (wfop-node inst))
 	       (if (movetensor-p (wfop-node inst))
 		   (if (movetensor-ignore-me (wfop-node inst))
-		       "<DELETED>"
+		       "SET{Pruned}"
 		       (if (cl-waffe2/base-impl:mv-lazy-sv4bw (wfop-node inst))
 			   (if (scalar-p (wfop-self inst))
 			       "MoveScalarNode(SAVE_FOR_BACKWARD)"
@@ -169,7 +170,8 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 
 ;; [TODO] Eliminate MoveTensor(SAVE_FOR_BACKWARD), and enable in-place-mutation even when training mode.
 (defun apply-in-place-mutation! (iseq leaves)
-  (declare (type list iseq leaves))
+  (declare (type list iseq leaves)
+	   (optimize (speed 3)))
    
   (let ((ref-table (make-hash-table)))
 
@@ -228,7 +230,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		  ;; tensor_to_be_copied is the last reference in the computation node
 		  (when (and
 			 (numberp (gethash (tensor-id target) ref-table))
-			 (= 0 (gethash (tensor-id target) ref-table)))
+			 (= 0 (the fixnum (gethash (tensor-id target) ref-table))))
 		    ;; Replace op with the lambda function just returning y
 
 		    ;;(print "SET:")
@@ -246,7 +248,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	      
 	      (mapc #'(lambda (arg)
 			(when (numberp (gethash (tensor-id arg) ref-table))
-			  (incf (gethash (tensor-id arg) ref-table))))
+			  (incf (the fixnum (gethash (tensor-id arg) ref-table)))))
 		    (wfop-args instruction))
 
 	      (let ((out-to (wfop-out-to instruction)))
@@ -255,7 +257,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		    (setf (gethash (tensor-id out) ref-table) 0)))))))
   nil)
 
-
+;; 
 (defun f-test (x y)
   (let* ((a (!expt x 3))
 	 (b (!expt y 2))

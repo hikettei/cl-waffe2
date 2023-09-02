@@ -203,14 +203,15 @@ Return:
 			       s))))
     (map 'list #'apply-refine shapes)))
 
-(defnode (System-Lazy-Pair (self a b)
+(defnode (System-Lazy-Cons (self a b)
 	  :where (A[a-size] B[b-size] -> A[a-size] B[a-size] where a-size = (shape a) b-size = (shape b)))
   (setf (ignore-shape-error self) t))
 
-(define-impl-op (System-Lazy-Pair :device t) :forward ((self a b) (values a b)))
+(define-impl-op (System-Lazy-Cons :device t) :forward ((self a b) (values a b)))
 
-(defun !system-lazy-pair (a b)
-  (call (System-Lazy-pair a b) a b))
+(defun !system-lazy-cons (a b)
+  (call (System-Lazy-Cons a b) a b))
 
 (defun !system-lazy-values (&rest args)
-  (reduce #'!system-lazy-pair args))
+  (reduce #'!system-lazy-cons args))
+

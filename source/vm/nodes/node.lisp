@@ -323,171 +323,9 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	 node
 	 (class-name (class-of node))))
 
-
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Reverse Mode Graph-Level Netowork Construction
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-;; cl-waffe2 backward semantics:
-;; It is nothing but a topdown AD. (Comments below is just for myself.)
-;; There's a five kinds of operations used in deep-learning (for convinience I call it so)
-;; 1. f(x) (e.g.: sin/cos etc...)
-;; 2. f(x, y) (e.g.: axpy add sub)
-;; 3. f_swap(x, y) (e.g.: gemm. mul, div, save-for-backward=t)
-;; 4. Matmul
-;; 5. View/Broadcsting (e.g.: !view !sum !flexible)
-;;
-;; == [Memo] ================================================
-;;
-;; Keep in-place operation for f_swap(x, y) backward (e.g.: Mul/DivNode), with numerical stability?
-;;
-;; MulTensorNode with Parameter Argument, requires 3 times copy:
-;; 1. x_clone to avoid being parameter destructed
-;; 2. x_save_for_backward to compute backward.
-;;
-;; g(dout, x_input, y_input) = MulTensorNode.backward
-;; = Move(x_place, dout*y_input), Move(y_place, dout*x_input)
-;;
-;; (If x_place were x_input, the second operation won't performed well because x_input is invaild.)
-;;
-;; where x_input is 
-;; 1. x_save_for_backward If corresponding save-for-backward is t.
-;; 2. x                   otherwise (being destructed by other node, just cache place.)
-;; 
-;; where x_place is
-;; 1. Node.variables[0]
-;;
-;; Memo: Separate x_place and x_input
-;; ==========================================================
-;;
-;; in-place operation for f(x, y) backward (e.g.: Axpy)
-;; g(dout, x_in, y_in) = AxpyNode.backward
-;; = Move(x_place, dout), Move(y_place, dout)
-;; Here, x_place/y_place never share the same pointer, that is, it works as a brunching.
-;;
-;; ==========================================================
-;;
-;; one-arg function, f(x) (e.g.: SinNode)
-;; g(dout, x_in) = Move(x_place, cos(x_in)) where x_in = x_save_for_backward, x_place is SinNode.variables[0]
-;;
-;; ==========================================================
-;;
-;; MoveTensorNode's backward
-;;
-;; !move is defined as: Move(place, target)
-;; g(dout, x_in, y_in) = (nil, Move(y_place, y_in))
-;;
-;; y_in = (previous dout)
-;; y_place =
-;; 1. Copy of Node.variables[0] If the argument is Parameter/ExistTensor, which is NEVER allowed to modify.
-;; 2. ChainTMP otherwise
-;;
-
-(defun select-return-place (place argn nth-trying)
-  (if (or ;;(tensor-projected-p place)
-       (not (= argn nth-trying)))
-      (make-input (shape place) nil
-		  :create-from place
-		  :dtype (dtype place)
-		  :order (order place)
-		  :scalar-p (scalar-p place))
-      place))
-
-
-(defun adjust-bw-place (bw-node place argn nth-trying &key (force-move nil))
-  "If the bw-node ends with MoveTensorNode, return itself, otherwise add MoveTensorNode."
-  
-  (when bw-node
-    (if (and
-	 (not force-move)
-	 (movetensor-p (tensor-backward bw-node)))
-	bw-node
-	(with-shape-checkpoint (:moving (tensor-backward bw-node))
-	  (let ((out (cl-waffe2/base-impl:!move
-		      (select-return-place place argn nth-trying)
-		      bw-node
-		      :force t)))
-	    
-	    ;; F(x, y, ...)
-	    ;; x.state = :chain / :input?
-
-	    (if (eql (cl-waffe2/vm.generic-tensor::tensor-attribute place) :chain)
-		out
-		;; when bw-node... -> chain not connected well...?
-		bw-node)))))) ;; Make-copy
-
-(defun expand-backward (node dout &rest inputs-out)
-  "
-## [function] expand-backward
-
-Constructs an backward function of the given node, with inputs.
-
-Returns an lambda-function(dout) (not being compiled) with following the template below.
-
-[dout_input] [x_input] [y_input] <- x_input/y_input is involved by compiling, because what tensor to use is determined when compiling time.
-
-    |            |           |
-   [ User Defined Backward Ops ]
-                 |
-      (values ∂out/∂x ∂out/∂y )
-                 |
-  [Move(x_in, ∂out/∂x)], [Move(y_in, ∂out/∂y)] (If the User-Defined-Backward Ops is ends with MoveTensorNode, this form is ignored.)
-
-Lambda-Function:
-Input : dout-past
-Output: NIL
-
-Inputs:
-
-out-kernels ... nodes of user defined backward
-inputs      ... inputs called with
-"
-
-  ;;FIX: REDUCE COMPILE TIME!
-  
-  ;; Collecting x_in
-
-  (detach dout t)
-  (let* ((inputs-in (loop for input in inputs-out
-			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
-	 ;; Tracing User-Defined-Backward, still not yet compiled.
-	 (out-kernels (apply #'backward node dout inputs-in))
-	 (dout-place  (gensym "dout"))
-	 ;; out-kernels = (list x.g y.g)
-	 (out-kernels (loop with argn fixnum = (length inputs-in)
-			    for x in out-kernels
-			    for y in inputs-out
-			    for i upfrom 0
-			    collect (adjust-bw-place x y argn i))))
-    
-    (loop for kernel in out-kernels
-	  collect
-	  (when kernel
-	    (let ((out (cl-waffe2/vm.generic-tensor:make-clone kernel)))
-	      (cons
-	       out
-	       `(named-lambda ,(symb (class-name (class-of node)) '-backward) (,dout-place)
-		  (cl-waffe2/vm.generic-tensor:embody-actual-tensor
-		   ,dout
-		   ,dout-place)
-		  
-		  ,(with-no-grad
-		     (cl-waffe2/vm.generic-tensor:make-vm-function kernel)))))))))
-
-(defun compiler-expand-backward (node dout &rest inputs-out)
-  (let* ((inputs-in (loop for input in inputs-out
-			  collect (detach (or (system-lazy-read-save-for-backward input) input) t)))
-	 ;; Tracing User-Defined-Backward, still not yet compiled.
-	 (out-kernels (apply #'backward node dout inputs-in))
-	 ;; out-kernels = (list x.g y.g)
-	 (out-kernels (loop with argn fixnum = (length inputs-in)
-			    for x in out-kernels
-			    for y in inputs-out
-			    for i upfrom 0
-			    collect (adjust-bw-place x y argn i))))
-    out-kernels))
-
 
 ;; 1. Forward ModeでSaveForBackwardを読むように
 ;; backward dout x y z...でλ関数を返すようにする
@@ -554,9 +392,9 @@ inputs      ... inputs called with
 		     for var     in variables
 		     for place   in in-tensors
 		     if (system-lazy-read-save-for-backward var)
-		       do (when (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
-			    (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
-				   var))
+		       do (if (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
+			      (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
+				     var))
 		     else		     
 		       do (setf (tensor-vec place) (tensor-vec act-val)))
 
@@ -566,6 +404,7 @@ inputs      ... inputs called with
 	       ;; When quitting mem-pool, the result is never freed.
 	       (loop for out-val in out-toplevels do
 		 (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
+	       
 	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
 	 fw-iseq
 	 out-toplevels

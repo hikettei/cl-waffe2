@@ -74,7 +74,7 @@
 ;; 9. tensor-finalize methodを追加
 ;; 10. 重複したAPIを全て削除する！ cl-waffe2/vm下の機能をもっと簡潔に！！集約した分ドキュメントをしっかり記述する...
 ;; 11. Theano-likeなAutodiff achieved by defpath macro.
-
+;; 12. そのうち再コンパイルのコストがぐんと下がる PyTorch likeに使える + ある関数を定義するのにNativeの実装が必要ない(cuz it relies on JIT)
 ;; (Defnode (System-Lazy-Values X Y
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

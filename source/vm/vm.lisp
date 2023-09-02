@@ -257,7 +257,7 @@ CL-WAFFE2-REPL>
 			 (dotimes (i (- longest-time-width (length time))) (princ " " out))
 			 (princ "| " out)
 			 (princ i out))))
-		   (format out "~%~a Instructions | ~a Tensors | SV4BW(...) Overhead: ~a(s) ~%"
+		   (format out "~%~a Instructions | ~a Tensors | Overheads due to SV4BW(...) -> ~a(s) ~%"
 			   (length iseq)
 			   (length (remove-duplicates tensor-ids))
 			   (float (/ sv4bw-time n-sample))))))))
