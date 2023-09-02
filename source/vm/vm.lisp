@@ -213,6 +213,7 @@ CL-WAFFE2-REPL>
 
   (let* ((inst->node-table (or (third *under-benchmark-set*) (make-hash-table))) ;; NodeIID -> NodeName
 	 (result)
+	 (sv4bw-time 0)
 	 (longest-time-width 0)
 	 (total 0.0)
 	 (avg 0.0)
@@ -222,8 +223,12 @@ CL-WAFFE2-REPL>
       (when iseq
 	(loop with *under-benchmark-set* = (list sort-by-node profiled-result inst->node-table)
 	      for inst of-type WFInstruction in iseq
-	      do (let ((start-time (get-internal-real-time)))
+	      do (let ((start-time (get-internal-real-time))) ;; Measuring save4bwtime
 		   (apply-inst-sv4bw inst)
+		   (let ((end-time (get-internal-real-time)))
+		     (incf sv4bw-time (/ (- end-time start-time) internal-time-units-per-second))))
+		     
+		 (let ((start-time (get-internal-real-time)))  
 		   (write-result (wfop-out-to inst) (apply-instruction inst))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
@@ -287,9 +292,10 @@ CL-WAFFE2-REPL>
 			 (dotimes (i (- longest-time-width (length time))) (princ " " out))
 			 (princ "| " out)
 			 (princ i out))))
-		   (format out "~%~a Instructions | ~a Tensors~%"
+		   (format out "~%~a Instructions | ~a Tensors | SV4BW(...) Overhead: ~a(s) ~%"
 			   (length iseq)
-			   (length (remove-duplicates tensor-ids))))))))
+			   (length (remove-duplicates tensor-ids))
+			   (float (/ sv4bw-time n-sample))))))))
       
       (format stream "~a~% Total Time: ~a sec~%~%" (conc-iseq-str iseq) total)
 
