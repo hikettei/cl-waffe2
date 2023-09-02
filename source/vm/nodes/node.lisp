@@ -533,18 +533,29 @@ inputs      ... inputs called with
 	;; Ignore-shape-errorでout-toplevelsのランクおかしくなったりしないといいのだが・・・
 	;; [TODO] ここでLazyValuesしながらCompile ... lazyValuesどれか一つのtensorでも他の値もまとめてコンパイルできない？ Disassemble it
 	;; (print fw-iseq)
-	#'(lambda (dout-runtime &rest inputs-runtime)
-	    (cl-waffe2/vm.generic-tensor::with-memory-pool
-	      (setf (tensor-vec dout) (tensor-vec dout-runtime))
-	      (loop for act-val in inputs-runtime
-		    for place   in in-tensors do
-		      (setf (tensor-vec place) (tensor-vec act-val)))
+	(values
+	 #'(lambda (dout-runtime &rest inputs-runtime)
+	     (cl-waffe2/vm.generic-tensor::with-memory-pool
+	       (setf (tensor-vec dout) (tensor-vec dout-runtime))
+	       (loop for act-val in inputs-runtime
+		     for var     in variables
+		     for place   in in-tensors
+		     if (system-lazy-read-save-for-backward var)
+		       do (when (null (cl-waffe2/vm.generic-tensor::vec var))
+			    (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
+				   var))
+		     else		     
+		       do (setf (tensor-vec place) (tensor-vec act-val)))
 
-	      (cl-waffe2/vm:accept-instructions fw-iseq)
-	      ;; When quitting mem-pool, the result is never freed.
-	      (loop for out-val in out-toplevels do
-		(cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
-	      (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))))))
+	       (if cl-waffe2/vm::*under-benchmark-set* ;; If benchmarking mode, extends the state and proceed benchmarking...
+		   (cl-waffe2/vm::benchmark-accept-instructions fw-iseq)
+		   (cl-waffe2/vm:accept-instructions fw-iseq))
+	       ;; When quitting mem-pool, the result is never freed.
+	       (loop for out-val in out-toplevels do
+		 (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
+	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
+	 fw-iseq
+	 out-toplevels)))))
 
 (defmethod backward :around ((node AbstractNode) &rest inputs)
   (declare (ignore inputs))

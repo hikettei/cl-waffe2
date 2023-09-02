@@ -38,61 +38,27 @@
 
 
 ;; Autograd:
-
-;; sort-and-prune-for-backward:
-;;     tp-sorted   => Pruned
-;;        X    x
-;;      copy(x)|
-;;          \ /             x
-;;     X    sin             |
-;;   copy(x) |     =>      sin
-;;      \   /               |
-;;       sin               sin
-;;        |                 |
-;;       out               out
-(defun sort-and-prune-for-backward (toplevel dout-toplevel leaves fuse-p)
-  (declare (type AbstractTensor toplevel)
-	   (optimize (speed 3)))
-  (let ((seen nil))
-    (labels ((top-sort-helper (var prev-gradient)
-	       (let ((encounter-x (find (tensor-iid var) seen :test #'eq))
-		     (found-param  (or (null (tensor-backward var))
-				       (null (tensor-variables var)))))
-		 (if (or encounter-x found-param)
-		     (cond
-		       (encounter-x nil)
-		       (found-param
-			(when (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-			  ;; Gradient Adder wo tukuru
-			  `(,@(expand-gradient-adder var prev-gradient)))))
-		     (let ((bw (apply
-				#'cl-waffe2/vm.nodes:compiler-expand-backward
-			        (tensor-backward var)
-				prev-gradient
-				(tensor-variables var)))
-			   (above-sort nil))
-		       (push (tensor-iid var) seen)
-		       (loop for prev in (tensor-variables var)
-			     for grad in bw
-			     for nth fixnum upfrom 0
-			     if grad do
-			       (let* ((result (top-sort-helper prev grad)))
-				 (when result
-				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth leaves fuse-p)
-				     (when (not (find (tensor-iid grad) seen :test #'eq))
-				       (dolist (v (node-out-to (tensor-backward grad)))
-					 (push (tensor-iid v) seen))
-				       (setq above-sort
-					     `(,@above-sort
-					       ,(make-wfop
-						 bwnode
-						 grad
-						 iseq-printer
-						 (list prev-gradient)
-						 :out-to (node-out-to (tensor-backward grad)))
-					     ,@result)))))))
-		       above-sort)))))
-      (top-sort-helper toplevel dout-toplevel))))
+(defun make-backward-wfinst (tensor)
+  (multiple-value-bind (bw-kernel iseq out-to) (make-backward tensor)
+    (declare (type function bw-kernel))
+    (values
+     #'(lambda (dout &rest args)
+	 (declare (optimize (speed 3))
+		  (type AbstractTensor dout))
+	 (if *under-benchmark-set*
+	     (apply bw-kernel dout args)
+	     (apply bw-kernel dout args)))
+     #'(lambda ()
+	 (format nil "Block -> ~a-BACKWARD {
+~a    }
+  "
+		 (class-name (class-of (tensor-backward tensor)))
+		 (with-output-to-string (out)
+		   (with-indent-to iseq
+		     (dolist (i iseq)
+		       (let ((*node-indent* (+ 4 *node-indent*)))
+			 (format out "        ~a" i)))))))
+     out-to)))
 
 (defun tensor-compiled-kernel (tensor)
   (when (tensor-state tensor)
@@ -245,3 +211,36 @@ op2 ..  E <- F(X, Y, Z)
    nil
    :out-to (list tensor)))
 
+
+(defun sv4bw-p (node)
+  (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
+       (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
+
+
+(defun expand-gradient-adder (tensor grad)
+  ;; Tensor += Grad
+  (setf (detach-p grad) t)
+  (prog1
+      (let ((*no-grad* t))
+	(reverse
+	 (if (scalar-p tensor)
+	     (progn
+	       (node-compile-into-vm
+		(forward
+		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
+		 (grad tensor)
+		 grad)))
+	     (if (= (tensor-grad-count tensor) 0)
+		 (progn
+		   (node-compile-into-vm
+		    (forward
+		     (cl-waffe2/base-impl:MoveTensorNode (dtype tensor) :save-for-backward t)
+		     (grad tensor)
+		     grad)))
+		 (progn
+		   (node-compile-into-vm
+		    (forward
+		     (cl-waffe2/base-impl:AddNode (dtype tensor))
+		     (grad tensor)
+		     grad)))))))
+    (setf (detach-p grad) nil)))

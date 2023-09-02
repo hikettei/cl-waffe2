@@ -44,6 +44,7 @@
 		#:scalar-p)
   (:export
    ;; External JIT
+   #:make-backward
    #:on-finalizing-compiling
    #:on-finished-compiling
 
@@ -54,9 +55,6 @@
 
    #:forward
    #:backward
-
-   #:compiler-expand-backward
-   #:expand-backward
    
    #:node-passed-p
    #:ignore-shape-error
@@ -71,7 +69,6 @@
    #:declare-local-variables)
 
   (:export
-   #:define-static-node ;; <- DELETE
    #:set-save-for-backward
    #:read-save-for-backward
    #:with-reading-save4bw
@@ -94,6 +91,7 @@
    #:with-devices
    #:with-single-device
    #:*facet-monopoly-mode*)
+
   (:export
    #:defnode
    #:define-impl

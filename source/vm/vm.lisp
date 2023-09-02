@@ -80,46 +80,6 @@ Evaluates generated cl-waffe2 IR sequence.
 
 (defparameter *under-benchmark-set* nil "(list sorted-node profiled-table) If there's any") 
 
-(defun make-backward-instruction (toplevel dout-mock nth leaves fuse-p)
-  (let* ((dout-input (make-input (shape dout-mock) nil
-				 :create-from dout-mock
-				 :scalar-p (scalar-p dout-mock)
-				 :dtype (dtype dout-mock)
-				 :order (order dout-mock)))
-	 (bw (nth nth
-		  (apply
-		   #'compiler-expand-backward
-		   (tensor-backward toplevel)
-		   dout-input
-		   (tensor-variables toplevel))))
-	 (iseq (reverse (node-compile-into-vm bw :fuse-p fuse-p))))
-    (when (not fuse-p)
-      (apply-in-place-mutation! iseq leaves))
-    (setf (tensor-state dout-input)
-	  (make-statecontainer :forward-out-form (make-compiled-kernel)))
-    (values
-     #'(lambda (dout)
-	 (declare (optimize (speed 3))
-		  ;; inline accept-instructions?
-		  (type AbstractTensor dout))
-	 (write-result (list dout-input) (list (maybe-read-result dout)))
-	 (if iseq
-	     (if *under-benchmark-set*
-		 (benchmark-accept-instructions iseq)
-		 (accept-instructions iseq))
-	     dout))
-     #'(lambda ()
-	 (format nil "Block -> ~a-BACKWARD {
-~a    }
-  "
-		 (class-name (class-of (tensor-backward toplevel)))
-		 (with-output-to-string (out)
-		   (with-indent-to iseq
-		     (dolist (i iseq)
-		       (let ((*node-indent* (+ 4 *node-indent*)))
-			 (format out "        ~a" i))))))))))
-
-
 ;; TODO: Measure memory-usage
 ;; TODO: Include this to the documents
 (defun benchmark-accept-instructions (iseq

@@ -121,44 +121,43 @@
 	 variable-leaves)
 	(values instruction-seq variable-leaves))))
 
-(defun expand-gradient-adder (tensor grad)
-  ;; Tensor += Grad
-  (setf (detach-p grad) t)
-  (prog1
-      (let ((*no-grad* t))
-	(reverse
-	 (if (scalar-p tensor)
-	     (progn
-	       (node-compile-into-vm
-		(forward
-		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
-		 (grad tensor)
-		 grad)))
-	     (if (= (tensor-grad-count tensor) 0)
-		 (progn
-		   (node-compile-into-vm
-		    (forward
-		     (cl-waffe2/base-impl:MoveTensorNode (dtype tensor) :save-for-backward t)
-		     (grad tensor)
-		     grad)))
-		 (progn
-		   (node-compile-into-vm
-		    (forward
-		     (cl-waffe2/base-impl:AddNode (dtype tensor))
-		     (grad tensor)
-		     grad)))))))
-    (setf (detach-p grad) nil)))
+(defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table)))
+  (declare (type list iseq)
+	   (type AbstractTensor dout-toplevel))
 
-;; copy(sin(x, copy(x))) <- ???
+  ;; WfInstruction: Op(Arg1 Arg2) -> Out1 Out2 ...
+  ;; BW: g(dout, x1, x2, ...)
 
-(defun sv4bw-p (node)
-  (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
-       (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
+  ;; tensor-iid or tensor-id
+  (flet ((get-dout (tensor)
+	   (or (gethash (tensor-iid tensor) dout-table) 
+	       dout-toplevel))
+	 (set-dout (tensor val)
+	   (setf (tensor-iid tensor) val)))
 
-(defun trace-backward-network (toplevel leaves dout-toplevel fuse-p)
-  (declare (type AbstractTensor toplevel dout-toplevel))
+    (loop for inst of-type WfInstruction in iseq
+	  append
+	  (let* ((self   (wfop-self   inst))
+		 (args   (wfop-args   inst)))
+	    (append
+	     ;; Backward_Kernel + Gradient_Adders (If Any)
 
-  (sort-and-prune-for-backward toplevel dout-toplevel leaves fuse-p))
+	     (multiple-value-bind (bw-function node out-to) (make-backward-wfinst self)
+	       (loop for arg in args
+		     for o   in out-to
+		     do (set-dout arg o))
+
+	       (list
+		(make-wfop bw-function ;; ... dout var1 var2
+			   self
+			   node
+			   `(,(get-dout self) ,@args)
+			   :out-to (map 'list #'get-dout args))))
+	     ;; Expand Gradient Adders
+	     (loop for var in args
+		   if (slot-value var 'requires-grad)
+		     append (expand-gradient-adder var (get-dout var))))))))
+
 
 (defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
@@ -205,7 +204,9 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
-		 (trace-backward-network toplevel leaves dout fuse-p))))
+		 (forward->reverse-mode iseq-forward dout))))
+
+	;; Initializes Gradient Resetter
 	(mapc
 	 #'(lambda (tensor)
 	     (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
@@ -213,13 +214,6 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		     (if (scalar-p tensor)
 			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
 			 #'(lambda () (setf (tensor-grad-count tensor) 0))))))
-	
-	;;		 (let* ((*no-grad* t)
-	;;			(out (when (not (some #'symbolp (shape toplevel)))
-	 ;;			       (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0)))))
-	 ;;		   (when (not (some #'symbolp (shape toplevel)))
-	 ;;		     #'(lambda ()
-	 ;;			 (forward out))))))))
 	 leaves)
 
 	(values (reverse iseq-forward)
