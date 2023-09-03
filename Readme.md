@@ -20,13 +20,20 @@
 
 # cl-waffe2
 
-> ⚠️ cl-waffe2 is still in the experimental stage, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
+> ⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-cl-waffe2 is a user-extensible Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime. Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two valid functions to compile/execute nodes: `proceed` and `build`. With the `proceed` function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and this operation is differentiable. On the other hand, the function `build` will generate the sequence of `cl-waffe2 IR`, which works fast, and is easy to apply further `FuseOps` with the route declared by the `defpath` macro.
-
-Portability to other devices is a significant concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.
+cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, powered by `JIT Compiler`.
 
 Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](https://github.com/hikettei/cl-waffe).
+
+### ✨Features
+
+- cl-waffe2 brings `AbstractTensor` to Common Lisp.
+- Extensible: Operations can be extended/reimplemented with any matrix operation libraries you like! Plus, No code rewriting when changing devices.
+- Inlining:  Anyone can write a optimized loop iteration, for example, `Loop Collapse` and `Loop Fusion`, computing offsets in advance, and scheduling multi-threading by `lparallel`.
+- Profiling: Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
+- Nodes: Systematic macros for building computation nodes and easy to visualize!
+- 👏 Its core part and VM are 100% written on **ANSI Common Lisp**.
 
 ### Workloads
 
