@@ -89,25 +89,25 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 				(dx (!div (!mul dy z) coeff)))
 			   (values dx))))))
 
-(define-composite-function (Softmax-Cross-Entropy-Forward)  static-softmax-cross-entropy-forward)
-(define-composite-function (Softmax-Cross-Entropy-Backward) static-softmax-cross-entropy-backward)
+(defmodel-as (Softmax-Cross-Entropy-Forward) :asif :function :named static-softmax-cross-entropy-forward)
+(defmodel-as (Softmax-Cross-Entropy-Backward) :asif :function :named static-softmax-cross-entropy-backward)
 
-(define-static-node (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow t))
-		     :slots ((delta :initarg :delta :reader delta)
-			     (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
-		     :save-for-backward-names (x labels)
-		     
-		     :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
-		     :forward ((self x labels)
-			       (with-setting-save4bw ((x x) (labels labels)) self
-				 (static-softmax-cross-entropy-forward x labels)))
-		     :backward ((self dout)
-				(with-reading-save4bw ((x x) (labels labels)) self
-				  (static-softmax-cross-entropy-backward
-				   dout
-				   x
-				   labels
-				   (make-tensor (car (last (shape x) 2)) :dtype (dtype x)))))))
+(define-op (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow t))
+	    :slots ((delta :initarg :delta :reader delta)
+		    (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
+	    :save-for-backward-names (x labels)
+	    
+	    :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
+	    :forward ((self x labels)
+		      (with-setting-save4bw ((x x) (labels labels)) self
+			(static-softmax-cross-entropy-forward x labels)))
+	    :backward ((self dout)
+		       (with-reading-save4bw ((x x) (labels labels)) self
+			 (static-softmax-cross-entropy-backward
+			  dout
+			  x
+			  labels
+			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x)))))))
 
 
 (defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction :mean))

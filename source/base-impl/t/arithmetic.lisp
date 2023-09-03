@@ -141,15 +141,13 @@
 ;; A.grad = (!matmul dout db.t)
 ;; B.grad = (!matmul da.t dout)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(defun matmul-dx (dout y)
+  (proceed (!matmul dout (!t y))))
   
-  (defun matmul-dx (dout y)
-    (proceed (!matmul dout (!t y))))
-  
-  (defun matmul-dy (dout x)
-    (proceed (!matmul (!t x) dout)))
 
-)
+(defun matmul-dy (dout x)
+  (proceed (!matmul (!t x) dout)))
+
 
 (define-tester matmul-backward-test-square-sparse :dense
   (let ((a (parameter (ax+b `(3 3) 1 0 :order :column)))
@@ -215,27 +213,27 @@
         (every #'= (tensor-vec (grad a))
 	       #(9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0)))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (export 'matmul-test-set)
-  (defmacro matmul-test-set (backend)
-    `(eval-when (:compile-toplevel :load-toplevel :execute)
-       (matmul-tester ,backend)
-       (transpose-matmul-tester ,backend)
-       (matmul-tester-mnk ,backend)
-       (matmul-tester-mnk1 ,backend)
-       (matmul-both-transposed ,backend)
+;;(eval-when (:compile-toplevel :load-toplevel :execute)
+(export 'matmul-test-set)
+(defmacro matmul-test-set (backend)
+  `(progn;;eval-when (:compile-toplevel :load-toplevel :execute)
+     (matmul-tester ,backend)
+     (transpose-matmul-tester ,backend)
+     (matmul-tester-mnk ,backend)
+     (matmul-tester-mnk1 ,backend)
+     (matmul-both-transposed ,backend)
 
-       (matmul-test-form-test ,backend)
-       (matmul-backward-test-square-sparse ,backend)
-       (matmul-backward-test-square-dense ,backend)
+     (matmul-test-form-test ,backend)
+     (matmul-backward-test-square-sparse ,backend)
+     (matmul-backward-test-square-dense ,backend)
 
-       
-       )))
+     
+     ))
 
-(ss-add-tester nil)
-(ss-sub-tester nil)
-(ss-mul-tester nil)
-(ss-div-tester nil)
+(ss-add-tester ScalarTensor)
+(ss-sub-tester ScalarTensor)
+(ss-mul-tester ScalarTensor)
+(ss-div-tester ScalarTensor)
 
 (define-tester max-tester :all
   (let ((a (ax+b `(9 9) 1 0)))
@@ -362,33 +360,32 @@
 
 
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (export 'comparison-test-set)
+(export 'comparison-test-set)
 
-  (defmacro comparison-test-set (backend)
-    `(progn
-       (lt-tester ,backend)
-       (lt-tester1 ,backend)
-       (le-tester ,backend)
-       (le-tester1 ,backend)
+(defmacro comparison-test-set (backend)
+  `(progn
+     (lt-tester ,backend)
+     (lt-tester1 ,backend)
+     (le-tester ,backend)
+     (le-tester1 ,backend)
 
-       (gt-tester ,backend)
-       (gt-tester1 ,backend)
-       (ge-tester ,backend)
-       (ge-tester1 ,backend)
+     (gt-tester ,backend)
+     (gt-tester1 ,backend)
+     (ge-tester ,backend)
+     (ge-tester1 ,backend)
 
-       (eq-tester ,backend)
+     (eq-tester ,backend)
 
-       (slt-tester ,backend)
-       (slt-tester1 ,backend)
-       (sle-tester ,backend)
-       (sle-tester1 ,backend)
+     (slt-tester ,backend)
+     (slt-tester1 ,backend)
+     (sle-tester ,backend)
+     (sle-tester1 ,backend)
 
-       (sgt-tester ,backend)
-       (sgt-tester1 ,backend)
-       (sge-tester ,backend)
-       (sge-tester1 ,backend)
+     (sgt-tester ,backend)
+     (sgt-tester1 ,backend)
+     (sge-tester ,backend)
+     (sge-tester1 ,backend)
+     
+     (seq-tester ,backend)
 
-       (seq-tester ,backend)
-
-       )))
+     ))

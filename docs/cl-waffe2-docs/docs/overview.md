@@ -1,6 +1,8 @@
 
 # A road to cl-waffe2
 
+**This tutorial is OUT OF DATE!! I will update it when I have a time.**
+
 ## Project Structure
 
 Thank you for having interest in my project. Before we start the tutorial, let me explain the structure of cl-waffe2 package.

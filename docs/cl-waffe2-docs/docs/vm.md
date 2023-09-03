@@ -96,7 +96,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 
 ## Return
 
-`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node])`
+`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout)`
 
 ## [function] accept-instructions
 

@@ -3,7 +3,6 @@
 
 ;; TODO: ====================================================
 ;; In accordance with refactoring of defnode, :where, add this feature: checking the number of arguments, number of outputs reading :where. (At: forward :around)
-;; せっかく:whereで関数宣言してるのに安全性関連の機能が貧弱すぎる・・・⇦self書き忘れとか検知する、エラー内容が普通にうざい
 ;; Add Backward tests to define-static-node
 ;; Memo: (call (StaticNode) (parameter (randn `(10 10)))) is n't working for backward
 ;; But (call (StaticNode) (!copy (parameter (randn `(10 10))))) is working.
@@ -11,17 +10,6 @@
 ;; ===========================================================
 ;; Static Composite ==========================================
 ;; ===========================================================
-
-(defmodel (Save-For-Backward-Static (self)
-	   :where (Place[~] Tensor[~] -> [~])
-	   :on-call-> ((self place tensor)
-		       (declare (ignore self))
-		       (cl-waffe2/base-impl:!move place tensor :force t))))
-
-(define-composite-function (Save-For-Backward-Static) move-and-save-for-backward-static)
-
-;; ==========================================================
-
 
 ;; Parameters
 (defparameter *under-composite-node-mode* 0 "Incf 1 when go deeper with compis-temode, If count>=2, save-for-backwards are ignored.")
@@ -187,188 +175,145 @@ Saves the given tensors to save-place, in the currently working node.
 	    input-forms)
      ,@body))
 
-;; ==================================================================
-
-(defmacro define-static-node ((name
-			       (self-name &rest constructor-args)
-			       &key
-				 (where nil)
-				 (slots nil)
-				 (out-scalar-p nil)
-				 (save-for-backward-names nil)
-				 (forward nil)
-				 (backward nil)
-				 (documentation ""))
-			      &body constructor-body)
+(defmacro define-op ((name
+		      (self &rest constructor-args)
+		      &key
+			(where nil)
+			(slots nil)
+			(out-scalar-p nil)
+			(save-for-backward-names nil)
+			(forward nil)
+			(backward nil)
+			(extends-fw nil)
+			(extends-bw nil)
+			(documentation ""))
+		     &body constructor-body)
   "
-## [macro] define-static-node
+## [macro] define-op
+
+`define-op` = `defnode` + `define-impl-op`
+
+Defines a differentiable AbstractNode which its definition is given by a function.
 
 ```lisp
-(define-static-node ((name
-                          (self-name &rest constructor-args)
-			       &key
-				 (where nil)
-				 (slots nil)
-				 (out-scalar-p nil)
-				 (save-for-backward-names nil)
-				 (forward nil)
-				 (backward nil)
-				 (documentation \"\"))
-			      &body constructor-body))
+(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends-fw extends-bw) &body body)
 ```
 
-Defines a differentiable AbstractNode, but its forward/backward is defined by statcically notation.
+### Effects
 
-### Inputs
+This macro defines:
 
-1. `save-for-backward-names` ... an list of save-for-backwards (e.g.: `:save-for-backward-names (x y)`)
-
-2. `backward` ... should be this form: `((self dout) ... (values x.grad y.grad ...))`
+1. two `AbstractNodes` named `name` and `name-backward` (if backward is given)
 
 ### Example
 
-This macro differs from other `defnode` series macros, because the definition can be used in the same way for defun.
-
 ```lisp
-(define-static-node (Static-Sin (self)
-             :where (A[~] -> OUT[~])
-             :save-for-backward-names (x-input)
-             :forward ((self x)
-                       (print \"Hi :) the operation sin is executed.\")
-                       (with-setting-save4bw ((x-input x))
-                            (proceed (!sin x))))
-             :backward ((self dout)
-                (with-reading-save4bw ((x x-input))
-                       (values (proceed (!mul (!cos x) dout)))))))
+(define-op (TestAdd-Scalar (self)
+	    :where (A[scal] B[scal] -> A[scal] where scal = 1)
+            :out-scalar-p t
+	    :forward ((self a b)
+		      (make-tensor
+		       (+ (tensor-vec a)
+			  (tensor-vec b))))
+	    :backward ((self dy)
+		       (values dy dy))))
 ```
-
-Calling `Static-Sin` but the `print` function is still not yet called.
-
-```lisp
-(call (Static-Sin) (randn `(3 3)))
-{CPUTENSOR[float] :shape (3 3) :named ChainTMP22057 
-  :vec-state [maybe-not-computed]
-  <<Not-Embodied (3 3) Tensor>>
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: STATIC-SIN-T (A[~] -> OUT[~])>}
-```
-
-The moment someone accept the computation node and invoked it, `print` is called.
-
-```lisp
-(proceed *)
-
-Hi :) the operation sin is executed.
-{CPUTENSOR[float] :shape (3 3) :named ChainTMP22130 
-  :vec-state [computed]
-  ((-0.44811794 -0.8374244  -0.9075781)
-   (-0.9591228  0.58454794  0.9774129)
-   (-0.8381093  -0.36447936 0.9476587))
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
-```
-
-But what if one wants to save the given tensors for a future call of backward? Yes, to do this, the functions `set-save-for-backward` and `read-save-for-backward` is available. :)
 "
+  (declare (type list save-for-backward-names))
+  (when (null where)
+    (error "define-op: The where declaration isn't provided.
+            (define-op (name (self ...)
+                             :where (A[i j] -> B[i j])
+                                └── Fill this form
+                    ...))"))
 
-  ;; TODO: Checking the number of arguments
-  ;; TODO: set-save-for-backward
-  ;; TODO: gradtmp space
-  
-  (let ((forward-args  (car forward))
-	(backward-args (car backward))
-	(forward-body  (cdr forward))
-	(backward-body (cdr backward))
-	(backward-node-name (symb name '-backward))
+  (multiple-value-bind (fw-in bw-in fw-state bw-state let-binding) (parse-subscript where)
+    (declare (ignore let-binding fw-state bw-state bw-in))
 
-	(forward-flet-name (symb name '-forward-body))
-	(backward-flet-name (symb name '-backward-body))
-	(result-tmp (gensym))
+    (let* ((forward-args  (car forward))
+	   (backward-args (car backward))
+	   (forward-body  (cdr forward))
+	   (backward-body (cdr backward))
+	   	
+	   (backward-node-name (symb name '-backward))
+	   (save-for-backward-slots
+	     (loop for s in save-for-backward-names
+		   collect `(,s :initform nil :type (or null AbstractTensor)))))
 
-	(save-for-backward-slots
-	  (loop for s in save-for-backward-names
-		collect `(,s :initform nil :type (or null AbstractTensor)))))
-    
-    `(progn
-       ;; Called only when backward-mode
-       (define-and-impl-node (,backward-node-name (self forward-self)
-			      :device t
-			      ;; Temporary Restores Nodes used in forward.
-			      :cache-when-compiled nil
-			      :slots ((forward-self :initarg :forward-self :reader read-forward-self))
-			      ;; forward -> backward => backward -> forward
-			      :where ,(where->backward where)
-			      :forward ((,@backward-args)
-					;; Swapping (self args...) -> (forward-self args...)
-					(flet ((,backward-flet-name (,@backward-args)
-						 (declare (ignorable ,(car backward-args)))
-						 (with-composite-node-mode ,(car backward-args)
-						   (locally ,@backward-body))))
-					  (multiple-value-bind (,@backward-args)
-					      (apply #'values (list (read-forward-self ,(car backward-args)) ,@(cdr backward-args)))
-					    ;; FixME: Static Backward with multiple arguments?
-					    ;; (setf self.backward-result = result)
-					    `(let ((,',result-tmp (multiple-value-list (funcall ,#',backward-flet-name ,,@backward-args))))
-					       (setf (backward-result ,,(car backward-args))
-						     (list ,,@(loop for i upfrom 0 below (length (cdr forward-args)) collect nil)))
-					       
-					       ;; backward-result = (AbstractTensor AbstractTensor) x n_input_args
-					       ;; nil isn't allowed
+      (when (not (= (length forward-args) (1+ (length fw-in))))
+	(error "define-op: The number of arguments in forward doesn't match with declared in :where.
+:where -> ~a
+butgot -> ~a"
+	       fw-in
+	       forward-args))
 
-					       ;; (car backward-args) = self
-					       ;; nil = set forward args for a while,
-					       ;; the node pruned later.
-					       (loop for arg in (cdr (forward-args ,,(car backward-args)))
-						     for nth fixnum upfrom 0
-						     do
-						     (setf (nth nth (backward-result ,,(car backward-args)))
-							   (or (nth nth ,',result-tmp) arg)))
-					       (nth 0 (backward-result ,,(car backward-args)))))))))
+      (when (and backward
+		 (not (= (length backward-args) 2)))
+	(error "define-op: The number of arguments in backward should be 2.
+                (define-op (name (self ...)
+                                 ...
+                                 :backward ((self dy)
+                                              └── Check here
+                                            ...
+                                            (values ...))))"))
 
-       ;; Note:
-       ;; 1. define-static-node内でbackwardを(values nil tensor1)とする
-       ;; 2. 遅延評価しながらBackwardを構築するとき、コンパイル時に上の関数の返り値がわからない
-       ;; 3. とりあえず入力と同じTensorを用いてBackwardを構築する
-       ;; 4. ↑ はPruneされると思うけど... 万一計算のーどが繋がっちゃった時にWarningを出す必要がある。
-       ;; This is a main part of composite-node.
-       
-       (define-and-impl-node (,name (,self-name ,@constructor-args)
-			      :device t
-			      :where ,where
-			      :slots (,@slots
-				      ,@save-for-backward-slots
-				      (forward-arguments :initform nil :accessor forward-args)
-				      (backward-result :initform nil :accessor backward-result))
-			      :out-scalar-p ,out-scalar-p
-			      :documentation ,documentation
-			      :cache-when-compiled nil
-			      :forward ((,@forward-args)
-					(flet ((,forward-flet-name (,@forward-args)
-						 (declare (ignorable ,(car forward-args)))
-						 (with-composite-node-mode ,(car forward-args)
-						   (locally ,@forward-body))))
-					  `(progn
-					     (setf (forward-args ,,(car forward-args)) (list ,,@forward-args))
-					     (funcall ,#',forward-flet-name ,,@forward-args))))
-			      :backward ((,@backward-args) ;; = self dout
-					 ;; Initializes backward node with (Backward self)
-					 (let ((bw-node (,backward-node-name ,(car backward-args))))
-					   ;; First-Argument = Forward of Backward-Node
-					   ;; Cdr-Th Argument = Instant-Kernel
-					   (values
-					    ,@(loop for nth fixnum upfrom 0
-						    for input-var in (cdr forward-args) ;; forward-args = (self x y z ...)
-						    if (= nth 0) ;; for first argument
-						      collect `(forward bw-node ,@(cdr backward-args))
-						    else
-						      ;; reads the result of first call.
-						      collect `(with-instant-kernel ,(second backward-args) ;; = dout
-								 `(nth ,,nth (backward-result ,,(car backward-args)))))))))
-	 ,@constructor-body))))
+      (with-gensyms (fw-self dout in-shape out-shape)
+	(setq in-shape (intern (symbol-name in-shape) *package*))
+	(setq out-shape (intern (symbol-name out-shape) *package*))
+	`(progn
+	   ;; Declares AbstractNode
+	   (defnode (,name (,self ,@constructor-args)
+		     :where ,where
+		     :out-scalar-p ,out-scalar-p
+		     :slots (,@slots
+			     ,@save-for-backward-slots)
+		     :extends ,extends-fw
+		     :documentation ,documentation)
+	     ,@constructor-body)
+	   
+	   (defnode (,backward-node-name (,self ,fw-self ,in-shape ,out-shape)
+		     ;; where : DOUT X [BW-SHAPES[0]] Y -> ... X Y...
+		     :out-scalar-p ,out-scalar-p
+		     :where (,dout [,(symb dout '-size)]
+				   ,@(loop for fw-tensor-name in fw-in
+					   for n fixnum upfrom 0
+					   append
+					   `(,fw-tensor-name [,(symb 'in-shapes n)]))
+				   ->
+				   ,@(loop for fw-tensor-name in fw-in
+					   for n fixnum upfrom 0
+					   append
+					   `(,(symb fw-tensor-name '-grad) [,(symb 'in-shapes n)]))
+				   where
+				   ,(symb dout '-size)
+				   =
+				   (nth 0 ,out-shape)
+				   ,@(loop for fw-tensor-name in fw-in
+					   for n fixnum upfrom 0
+					   append
+					   `(,(symb 'in-shapes n) = (nth ,n ,in-shape))))
+		     :slots ((fw-self :initform nil))
+		     :extends ,extends-bw)
+	     (setf (slot-value ,self 'fw-self) ,fw-self
+		   (ignore-shape-error ,self) t))
+	   
+	   (define-impl-op (,name :device t)
+			   :forward ((,@forward-args)
+				     (with-composite-node-mode ,(car forward-args)
+				       ,@forward-body))
+			   
+			   :backward ((,self ,dout ,@(cdr forward-args))
+				      (let ((,in-shape (map 'list #'shape (list ,@(cdr forward-args))))
+					    (,out-shape (node-out-sizes ,self)))
+					(call
+					 (,backward-node-name ,self ,in-shape ,out-shape)
+					 ,dout
+					 ,@(cdr forward-args)))))
 
+	   (define-impl-op (,backward-node-name :device t)
+			   :forward ((,@backward-args ,@(cdr forward-args)) ;; self dout x y ...
+				     (let ((,(car backward-args) (slot-value ,(car backward-args) 'fw-self)))
+       				       (with-composite-node-mode ,(car backward-args)
+					 ,@backward-body)))))))))
 
-;; To Add: define-impl-static
-;; To Add: define-dynamic-node (Embedding defined-by-run nodes with AD)
 

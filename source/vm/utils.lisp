@@ -5,13 +5,6 @@
 ;; https://www.cspp.cc.u-tokyo.ac.jp/hanawa/class/spc2016s/sp20160426.pdf
 ;; https://www.r-ccs.riken.jp/wp/wp-content/uploads/2020/09/katagiri190516.pdf
 
-;; 3D/4D ... 次元行列の並列化
-;; メモリの局所性を高めたい
-
-;; [TODO] Benchmarking on Loop Fusion + Lparallel
-;; Loop Collapseが有効になった場合でもFusionの効果あるかも？
-;; とりあえずベンチマークから考えてみる
-;; TODO: Fusing Several Backwards To Reduce Temporary arrays
 (defun compose (&rest fns)
   (if fns
       (let ((fn1 (car (last fns)))
@@ -44,55 +37,27 @@
       (reverse top-sort))))
 
 
-;; sort-and-prune-for-backward:
-;;     tp-sorted   => Pruned
-;;        X    x
-;;      copy(x)|
-;;          \ /             x
-;;     X    sin             |
-;;   copy(x) |     =>      sin
-;;      \   /               |
-;;       sin               sin
-;;        |                 |
-;;       out               out
-(defun sort-and-prune-for-backward (toplevel dout-toplevel leaves fuse-p)
-  (declare (type AbstractTensor toplevel))
-  (let ((seen nil))
-    (labels ((top-sort-helper (var prev-gradient)
-	       (let ((encounter-x (find (tensor-iid var) seen :test #'eql))
-		     (found-param  (or (null (tensor-backward var))
-				       (null (tensor-variables var)))))
-		 (if (or encounter-x found-param)
-		     (cond
-		       (encounter-x nil)
-		       (found-param
-			(when (slot-value var 'cl-waffe2/vm.generic-tensor::requires-grad)
-			  ;; Gradient Adder wo tukuru
-			  `(,@(expand-gradient-adder var prev-gradient)))))
-		     (let ((bw (apply
-				#'cl-waffe2/vm.nodes:compiler-expand-backward
-			        (tensor-backward var)
-				prev-gradient
-				(tensor-variables var)))
-			   (above-sort nil))
-		       (push (tensor-iid var) seen)
-		       (loop for prev in (tensor-variables var)
-			     for grad in bw
-			     for nth fixnum upfrom 0
-			     if grad do
-			       (let* ((result (top-sort-helper prev grad)))
-				 (when result
-				   (multiple-value-bind (bwnode iseq-printer) (make-backward-instruction var prev-gradient nth leaves fuse-p)
-				     (setq above-sort
-					   `(,@above-sort
-					     ,(make-wfop
-					       bwnode
-					       grad
-					       iseq-printer
-					       (list prev-gradient))			
-					     ,@result))))))
-		       above-sort)))))
-      (top-sort-helper toplevel dout-toplevel))))
+;; Autograd:
+(defun make-backward-wfinst (tensor dout-prev)
+  (multiple-value-bind (bw-kernel iseq out-to dir) (make-backward tensor dout-prev)
+    (declare (type (or null function) bw-kernel))
+    (when (null bw-kernel) (return-from make-backward-wfinst nil))
+    
+    (values
+     bw-kernel
+     #'(lambda ()
+	 (format nil "Block -> ~a-BACKWARD {
+~a    }
+  "
+		 (class-name (class-of (tensor-backward tensor)))
+		 (with-output-to-string (out)
+		   (with-indent-to iseq
+		     (dolist (i iseq)
+		       (let ((*node-indent* (+ 4 *node-indent*)))
+			 (format out "        ~a" i)))))))
+     out-to
+     dir
+     iseq)))
 
 (defun tensor-compiled-kernel (tensor)
   (when (tensor-state tensor)
@@ -230,3 +195,57 @@ op2 ..  E <- F(X, Y, Z)
 	       (prev-vars (map 'list (compose #'tensor-id #'wfop-self) inst-list)))
 	  (not (find (tensor-id (wfop-self instruction)) prev-vars))))))
 
+(defun node-out-to (node) (cl-waffe2/vm.nodes::node-out-to node))
+
+(defun init-state-container! (tensor)
+  (when (null (tensor-state tensor))
+    (setf (tensor-state tensor)
+	  (make-statecontainer :forward-out-form (make-compiled-kernel)))))
+
+(defun %vm-wrap-tensor (tensor)
+  (init-state-container! tensor)
+  (make-wfop
+   #'(lambda (x) (declare (ignore x)) tensor)
+   tensor
+   #'(lambda () (format nil "Setq{Internal}"))
+   (list tensor)
+   :out-to (list tensor)))
+
+
+(defun sv4bw-p (node)
+  (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
+       (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
+
+
+(defun expand-gradient-adder (tensor grad)
+  ;; Tensor += Grad
+  (setf (detach-p grad) t)
+  (prog1
+      (let ((*no-grad* t))
+	(reverse
+	 (if (scalar-p tensor)
+	     (progn
+	       (node-compile-into-vm
+		(forward
+		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
+		 (grad tensor)
+		 grad)))
+	     (if (= (tensor-grad-count tensor) 0)
+		 (progn
+		   (incf (tensor-grad-count tensor) 1)
+		   (node-compile-into-vm
+		    (forward
+		     (cl-waffe2/base-impl:MoveTensorNode
+		      (dtype tensor)
+		      :save-for-backward
+		      (or (tensor-projected-p grad)
+			  (cl-waffe2/vm.generic-tensor::permuted-p  grad)))
+		     (grad tensor)
+		     grad)))
+		 (progn
+		   (node-compile-into-vm
+		    (forward
+		     (cl-waffe2/base-impl:AddNode (dtype tensor))
+		     (grad tensor)
+		     grad)))))))
+    (setf (detach-p grad) nil)))

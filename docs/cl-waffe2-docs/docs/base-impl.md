@@ -688,7 +688,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 ## [function] proceed-bench
 
 ```lisp
-(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil))
+(proceed-bench tensor &key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil) (fuse-p t))
 ```
 
 Invokes `cl-waffe2 VM` with benchmarking the forward and (if specified) backward.

@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/vm)
 
+;; [TODO] Optimize compiling time, benchmark it!
 
 ;; Provides a compiler from cl-waffe2 IR -> Instruction Sequence
 
@@ -18,7 +19,7 @@
 ;; Z <- Y
 
 
-(defparameter *vm-compile-option* :default)
+(defparameter *vm-compile-option* :fastest)
 
 (declaim (ftype (function (AbstractTensor) (or null WFInstruction)) ir->instruction))
 (defun ir->instruction (tensor)
@@ -38,7 +39,9 @@
        (tensor-variables tensor))
       tensor
       (tensor-backward tensor)
-      (tensor-variables tensor)))))
+      (tensor-variables tensor)
+      :out-to (node-out-to (tensor-backward tensor))
+      :sv4bw  (node-sv4bw (tensor-backward tensor))))))
 
 ;;
 ;; Avoid duplicate compilation:
@@ -55,9 +58,12 @@
 
 (defun node-compile-into-vm (toplevel &key (fuse-p nil))
   "Set fuse-p=t to apply view-reordering and fuse operations"
+  (declare (type AbstractTensor toplevel)
+	   (optimize (speed 3)))
   (let ((instruction-seq)
-	(variable-leaves))
-
+	(variable-leaves)
+	(seen nil))
+    (declare (type list instruction-seq variable-leaves seen))
     ;; sorted-node
     ;; old
     ;; ...
@@ -70,7 +76,14 @@
 	    do (push tensor variable-leaves) ;; Register as a variable
 	  else
 	    do (when (not (detach-p tensor))
-		 (push (ir->instruction tensor) instruction-seq)
+
+		 (when (null (find (the symbol (tensor-iid tensor)) seen :test #'eql))
+		   (push (ir->instruction tensor) instruction-seq)
+		   ;; Add to seen
+		   (let ((bw (tensor-backward tensor)))
+		     (when bw
+		       (dolist (v (node-out-to bw))
+			 (push (tensor-iid v) seen)))))
 
 		 ;; Ask each devices if applying JIT?
 		 (let ((result (cl-waffe2/vm.nodes::on-finalizing-compiling
@@ -80,6 +93,7 @@
 				nil)))
 		   (when result
 		     (push
+		      ;; Embedding Lisp Code generated from JITxxxTensor.
 		      (make-wfop
 		       (compile
 			nil
@@ -92,7 +106,13 @@
 		      instruction-seq)))))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
-
+    
+    ;; When no instructions is provided for toplevel
+    ;; Just Return toplevel tensor.
+    
+    (when (null instruction-seq)
+      (setq instruction-seq (list (%vm-wrap-tensor toplevel))))
+    
     (if fuse-p
 	(values
 	 (reverse
@@ -101,38 +121,53 @@
 	 variable-leaves)
 	(values instruction-seq variable-leaves))))
 
-(defun expand-gradient-adder (tensor grad)
-  ;; Tensor += Grad
-  (setf (detach-p grad) t)
-  (prog1
-      (let ((*no-grad* t))
-	(reverse
-	 (if (scalar-p tensor)
-	     (progn
-	       (node-compile-into-vm
-		(forward
-		 (cl-waffe2/base-impl::ScalarAndScalarAdd)
-		 (grad tensor)
-		 grad)))
-	     (progn
-	       (node-compile-into-vm
-		(forward
-		 (cl-waffe2/base-impl:AddNode (dtype tensor))
-		 (grad tensor)
-		 grad))))))
-    (setf (detach-p grad) nil)))
+(defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table :test #'eql)))
+  (declare (type list iseq)
+	   (optimize (speed 3))
+	   (type AbstractTensor dout-toplevel))
 
-;; copy(sin(x, copy(x))) <- ???
+  ;; WfInstruction: Op(Arg1 Arg2) -> Out1 Out2 ...
+  ;; BW: g(dout, x1, x2, ...)
 
-(defun sv4bw-p (node)
-  (and (movetensor-p node) ;; MoveTensor(SAVE_FOR_BACKWARD) isn't subject to backward. just move tensors
-       (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
+  (flet ((get-dout (tensor)
+	   (gethash (tensor-iid tensor) dout-table))
+	 (set-dout (tensor val)
+	   (setf (gethash (tensor-iid tensor) dout-table) val)))
 
+    (set-dout (wfop-self (car iseq)) dout-toplevel)
 
-(defun trace-backward-network (toplevel leaves dout-toplevel fuse-p)
-  (declare (type AbstractTensor toplevel dout-toplevel))
+    (loop for inst of-type WfInstruction in iseq
+	  if (get-dout (wfop-self inst))
+	    append
+	    (let* ((self   (wfop-self   inst))
+		   (args   (wfop-args   inst)))
+	      (append
+	       ;; Backward_Kernel + Gradient_Adders (If Any)
+	       (when (and (cl-waffe2/vm.generic-tensor::ancestor-param-p self)
+			  (tensor-backward self)
+			  (get-dout (wfop-self inst)))
+		 (multiple-value-bind (bw-function node out-to directions bw-iseq) (make-backward-wfinst self (get-dout (wfop-self inst)))
+		   (when bw-function
+		     (loop for arg in args
+			   for o   in out-to
+			   for dir in directions
+			   if dir
+			     do (set-dout arg o)
+				(init-state-container! o))
+		     ;; MoveTensorBackward is inlined in order to get in-place mutation
+		     (if nil;;(movetensor-p (wfop-node inst))
+			 bw-iseq
+			 (list
+			  (make-wfop bw-function ;; ... dout var1 var2
+				     self
+				     node
+				     `(,(get-dout self) ,@args)
+				     :out-to (loop for o in out-to if o collect o)))))))
+	       ;; Expand Gradient Adders
+	       (loop for var in args
+		     if (and (slot-value var 'requires-grad) (get-dout var))
+		       append (expand-gradient-adder var (get-dout var))))))))
 
-  (sort-and-prune-for-backward toplevel dout-toplevel leaves fuse-p))
 
 (defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
@@ -151,7 +186,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 
 ## Return
 
-`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node])`
+`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout)`
 "
   (declare (type AbstractTensor toplevel))
   ;; fuse-p is intentionally disabled forcibly for a while
@@ -159,35 +194,55 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
   (let ((*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
     (multiple-value-bind (iseq-forward leaves)
 	(node-compile-into-vm toplevel :fuse-p fuse-p)
+      ;; Set grad-count=0 if any
+      (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
+      
+      (apply-in-place-mutation! iseq-forward leaves)
 
-      ;; [TODO] Testing the line below carefully:
-      ;; In-place mutation is working??
-      (when (not fuse-p) ;; avoid twice-time applying
-	(apply-in-place-mutation! iseq-forward leaves))
-
-      (let* ((dout (when need-backward
+      (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
+	     (dout (when need-backward
 		     (if (scalar-p toplevel)
 			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
-			 (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel)))))
+			 (if out-symbol-p
+			     (forward (cl-waffe2/base-impl:ScalarAdd (dtype toplevel))
+				      (make-input (shape toplevel) nil
+						  :dtype (dtype toplevel)
+						  :order (order toplevel))
+				      (make-tensor 1 :dtype (dtype toplevel)))
+			     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))))
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
-		 (trace-backward-network toplevel leaves dout fuse-p))))
+		 (forward->reverse-mode iseq-forward dout))))
+	
+	(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
 
+	;; Initializes Gradient Resetter
 	(mapc
 	 #'(lambda (tensor)
 	     (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
 	       (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
 		     (if (scalar-p tensor)
 			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
-			 (let* ((*no-grad* t)
-				(out (build (cl-waffe2/base-impl:A*=scal (grad tensor) 0))))
-			   #'(lambda ()
-			       (forward out)))))))
+			 #'(lambda () (setf (tensor-grad-count tensor) 0))))))
 	 leaves)
 
-	(values (reverse iseq-forward) backward-iseq leaves)))))
+	(values (reverse iseq-forward)
+		(if (and need-backward out-symbol-p (not (scalar-p toplevel)))
+		    (append ;; dout = 0, so add 1
+		     (reverse
+		      (node-compile-into-vm dout))		     
+		     backward-iseq)
+		    backward-iseq)
+		leaves
+		dout)))))
 
+(defun findout-origin (table tensor)
+  (let ((last-ref (tensor-id tensor)))
+    (loop while t do
+      (if (null (gethash last-ref table))
+	  (return-from findout-origin last-ref)
+	  (setq last-ref (gethash last-ref table))))))
 
 (defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
   "
@@ -205,19 +260,27 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
     (declare (ignore leaves))
     
     (flet ((conc-iseq-str (iseq)
-	     (let ((tensor-ids))
+	     (let ((tensor-ids)
+		   (scal-ids)
+		   (tensor-table (make-hash-table)))
 	       (with-output-to-string (out)
 		 (with-indent-to iseq
 		   (dolist (i iseq)
+		     (when (and (movetensor-p (wfop-node i))
+				(movetensor-ignore-me (wfop-node i)))
+		       (setf (gethash (tensor-id (wfop-self i)) tensor-table) (tensor-id (second (wfop-args i)))))
 		     (dolist (var (wfop-args i))
-		       (push (tensor-id var) tensor-ids))
+		       (if (scalar-p var)
+			   (push (tensor-id var) scal-ids)
+			   (push (findout-origin tensor-table var) tensor-ids)))
 		     (princ i out)))
-		 (format out "~%~a Instructions | ~a Tensors~%"
+		 (format out "~%~a Instructions | ~a Tensors | ~a Scalars~%"
 			 (length iseq)
-			 (length (remove-duplicates tensor-ids)))))))
+			 (length (remove-duplicates tensor-ids))
+			 (length (remove-duplicates scal-ids)))))))
+      
+      (format stream "~%disassemble-waffe2-ir:~% [Forward]: ~%~a~%" (conc-iseq-str iseq-fw))
 
-      (format stream "~%== [disassemble-waffe2-ir: Forward] ======~%~a~%"  (conc-iseq-str iseq-fw))
-
-      (format stream "~%== [disassemble-waffe2-ir: Backward] ======~%~a~%" (conc-iseq-str iseq-bw))
+      (format stream "~% [Pullback]: ~%~a~%" (conc-iseq-str iseq-bw))
 
       t)))

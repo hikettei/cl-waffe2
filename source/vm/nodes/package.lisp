@@ -34,6 +34,7 @@
 		#:dtype
 		#:make-statecontainer
 		#:tensor-projected-p
+		#:tensor-iid
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
@@ -42,29 +43,32 @@
 		#:system-lazy-read-save-for-backward
 		#:scalar-p)
   (:export
+   ;; External JIT
+   #:make-backward
    #:on-finalizing-compiling
    #:on-finished-compiling
+
+   #:node-sv4bw
    #:node-output-shape
    #:create-subscript-p
    #:composite-where
-   #:define-composite-function
+
    #:forward
    #:backward
-   #:compiler-expand-backward
-   #:expand-backward
-   #:expand-backward-instant
-   #:call-instant-backward
+   
    #:node-passed-p
    #:ignore-shape-error
+
    #:out-scalar-p
+
    #:with-instant-kernel
    #:with-shape-checkpoint
+
    #:make-errorpoint
    #:node-local-variables
    #:declare-local-variables)
 
   (:export
-   #:define-static-node
    #:set-save-for-backward
    #:read-save-for-backward
    #:with-reading-save4bw
@@ -72,6 +76,7 @@
 
   (:export
    #:defmodel
+   #:defmodel-as
    #:Composite
    #:composite-traced-p
    #:composite-input-size
@@ -86,10 +91,14 @@
    #:with-devices
    #:with-single-device
    #:*facet-monopoly-mode*)
+
   (:export
    #:defnode
    #:define-impl
-   #:define-and-impl-node)
+   #:define-and-impl-node
+
+   #:define-impl-op
+   #:define-op)
   ;; Reject-p-utils
   (:export
    #:supported-dtypes-are)

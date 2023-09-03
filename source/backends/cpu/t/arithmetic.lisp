@@ -3,7 +3,7 @@
 
 (in-suite :test-backends-cpu)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
+;(eval-when (:compile-toplevel :load-toplevel :execute)
   
 (add-tester CPUTensor)
 (sub-tester CPUTensor)
@@ -16,7 +16,7 @@
 (comparison-test-set CPUTensor)
 
 (mathematical-test-set CPUTensor)
-)
+;)
 
 (defun max-diff-test ()
   (let ((a (parameter (cl-waffe2/distributions:ax+b `(16 16) 1 0))))

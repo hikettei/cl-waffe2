@@ -22,7 +22,7 @@ Param_{new}\\gets{Param - Param_{grad}\\times{lr}}
 		       ;; Composite Function: Side Effects on Param?
 		       (A-=B param (A*=scal grad lr)))))
 
-(define-composite-function (SGD-Compute-Form) step-sgd :compile-mode :default)
+(defmodel-as (SGD-Compute-Form) :asif :function :named step-sgd)
 
 (defmethod step-optimize ((optimizer SGD))
   (let* ((lr    (make-tensor (sgd-lr optimizer)))

@@ -68,6 +68,7 @@
 
 ;; An unit of compiled funciton.
 (defstruct Compiled-Kernel
+  (op   nil :type (or null function))
   (name nil :type symbol)            ;; SinNode-CPUTENSOR
   (body nil :type list)              ;; (named-lambda ... () ...)
   (cache-when-compiled nil :type boolean)
@@ -164,7 +165,8 @@ TensorViewNameN depicts the path call-with-view traced.
 
 (defun make-funcallable-kernel (compiled-function compile-option)
   (declare (type Compiled-Kernel compiled-function))
-  (compile nil (make-funcallable-kernel-form compiled-function compile-option)))
+  (or (compiled-kernel-op compiled-function) ;; Already provides lambda function?
+      (compile nil (make-funcallable-kernel-form compiled-function compile-option))))
 
 (defun place-cached-kernels (&rest body)
   "

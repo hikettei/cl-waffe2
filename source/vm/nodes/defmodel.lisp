@@ -11,36 +11,26 @@
    (traced?     :initform nil :type boolean :accessor composite-traced-p)
    (input-size  :initform nil :type list :accessor  composite-input-size)
    (output-size :initform nil :type list :accessor composite-output-size))
-  (:documentation "Composite is a fundamental datatype for all neural network models. The name composite is so named because it is used to bundle computation nodes constructed by defnode.
+  (:documentation "
 
-In cl-waffe2, All models should be a subtype of this class, and shall return a forward propagation computation node using the **call** function.
+## [class] Composite
 
-In order to define your model with Composite, two methods are available.
+Its `call` bundles several AbstractNode. It is not only used to represent a neural network but also convert nodes into functions or abstractnodes. You can forward composites with `(call composite arg1 arg2...)`. For the most case, composites are defined by the defmodel macro.
 
-### Extend Composite Class (Slightly Complicated)
+### [generic] on-print-object
 
-First, define your class with extending Composite Class.
-
-```lisp
-(defclass LinearModel (Composite)
-   ((weight ...) ; <- set parameters here.
-    (bias   ...))
+```
+(on-print-object model stream)
 ```
 
-Second, define forwarrd step with overriding call method.
+This generic function is used to customize how the model is printed on the display.
 
-```lisp
-(defmethod call ((model LinearModel) &rest inputs)
-     ... )
 ```
-
-It should work like:
-
-```(call (make-instance 'LinearModel in-features out-features) args1 ...) ```
-
-### Using defmodel macro
-
-The defmodel macro simplifies the above redundant notation and also solves the problem that call can only use &rest as an argument. Therefore, I'm depcrecated with the method above, instead, use defmacro. For detailed usage, see the documentation of defmacro.
+<Composite: NAME{...}(
+    [...] <- The content of here is depends on on-print-object
+    [PARAMTETERS]
+)
+```
 "))
 
 (defgeneric call (model &rest inputs) (:documentation "
@@ -108,7 +98,8 @@ Every time the composite is rendered, this function is called.
     [...] <- The content of here is depends on on-print-object
     [PARAMTETERS]
 )
-```"))
+```
+"))
 
 (defmethod on-print-object ((model Composite) stream))
 
@@ -225,6 +216,7 @@ Predicts next output given inputs.
 		      (try-rank-error (gensym))
 		      (self-place1 (gensym)))
   "
+## [macro] defmodel
 ```
 (defmodel ((name
 	     (self-name &rest constructor-arguments)
@@ -237,34 +229,23 @@ Predicts next output given inputs.
 		    &body constructor-body)
 ```
 
-`defmodel` defines a new `Composite` class which describes network structures with using lazy-evaluated tensor. Viewing the set of `AbstractNode` as a single cohesive entity, you can formulate the forward propagation in `on-call->` keyword.
-
-`Composite` is used as a `neural network model` if used as a merely data structure, but combined with `define-composite-function`, `Composite` can also define a single statically-operation function from a set of nodes.
-
-A new `Composite` class is initialized with `(name &rest inputs)` function, being called with a `call` method.
-
-### Effects
-
-1. defines a class named **name**
-
-2. defines a function named **name** with the constructor-arguments and constructor-body.
+Defines a composite named `name`, and constructor function which also named `name` and receives `constructor-arguments` as arguments. The main process of its forward process is described in the `on-call->` slots.
 
 ### Inputs
 
-  1. `name[Symbol]` the macro defines an class and constructor function named after it.
+`name[Symbol]` the macro defines an class and constructor function named after it.
 
-  2. `(self-name &rest constructor-arguments)` An initializer form of `constructor function`.
+`(self-name &rest constructor-arguments)` An initializer form of `constructor function`.
 
-  3. `slots ((slot-option1) (slot-option2) ...)` Parameters of the inherited Composite class. It has the same syntax as defclass slots
+`slots ((slot-option1) (slot-option2) ...)` Parameters of the inherited Composite class. It has the same syntax as defclass slots`
 
-  4. `initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...` Unlike structures, CLOS classes are somewhat more cumbersome to initialise. To make this simple, this argument was introduced. Describe here initializer form in advance.
+`initargs (:accessor-name1 accessor-init-form1 :accessor-name2 accessor-init-form2 ...)` Unlike structures, CLOS classes are somewhat more cumbersome to initialise parameters. To make this process simple, put here initializer forms in advance likewise we do `(make-instance class-name ...)`.
 
-  5. `documentation[String]`
+`documentation[String]`
 
-  6. `on-call-> [One of: nil symbol-name function list]`
-     on-call-> is used to control the behaviour of **call** function.
+`on-call-> [One of: nil symbol-name function list]` The main proces of its forward process, later called with `(call model ...)` method. This method must be continuous from the given arguments.
 
-  7. `where[Subscript DSL] (Optional)` Describe the state of the Tensor before and after `on-call->`
+`where[Subscript DSL] (Optional)` If you're planning to use `defmodel-as` macro, this form is needed.
 
 ### Example
 
@@ -296,7 +277,7 @@ A new `Composite` class is initialized with `(name &rest inputs)` function, bein
 	                      (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
                            (!div (!exp x1) z)))))
 
-;; Using Lazily...
+;; Keep Using Lazily...
 (proceed (call (Softmax-Model) (randn `(10 10)))
 {CPUTENSOR[float] :shape (10 10) :named ChainTMP33497 
   :vec-state [computed]
@@ -309,11 +290,10 @@ A new `Composite` class is initialized with `(name &rest inputs)` function, bein
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 
+(defmodel-as (Softmax-Model) :asif :function :named softmax-static)
 
-;; Defines a statically working function.
-(define-composite-function (Softmax-Model) !softmax-static)
-
-(!softmax-static (randn `(10 10)))
+;; No compiling overhead
+(softmax-static (randn `(10 10)))
 
 {CPUTENSOR[float] :shape (10 10) :named ChainTMP33788 
   ((0.16722792   0.018530384  0.014159603  ~ 0.035353966  0.06128503   0.13559735)                    
@@ -326,21 +306,16 @@ A new `Composite` class is initialized with `(name &rest inputs)` function, bein
   :backward NIL}
 ```
 
-### How to use on-call-> form?
+### Dispatching on-call-> method
 
-In the keyword `on-call->`, describe the behaviour when called with a `call` function following this forms:
+- `on-call-> is nil` In that case, users must define the call definiton manually like `(defmethod call ((model YourComposite) arg1 arg2) ...)`.
 
-### `on-call->` = nil
-
-In that case, cl-waffe2 calls the `call` method when doing forward propagation of the model.
-
-### `on-call->` is a symbol-name
-
-cl-waffe2 calls the function named `symbol-name`.
-
-For example, setting `:on-call-> = call-example-layer` and defining a `call-example-layer` method.
+- `on-call-> is symbol` In that case, the composite invokes the method named `symbol` when call is invoked.
 
 ```lisp
+;; Set :on-call-> call-example-layer
+
+
 (defmethod call-example-layer ((model ExampleLayer) x y)
     (print \"call-example-layer is used!\"))
 ```
@@ -349,19 +324,14 @@ For example, setting `:on-call-> = call-example-layer` and defining a `call-exam
 (call (ExampleLayer 10) tensor) ;; call-example-layer is used!
 ```
 
-### on-call-> is a function name or a lambda.
-
-cl-waffe2 calls the given lambda function as a forward propagation.
-
 ### `on-call->` is a list
 
-
+Directly defines a `call` method. Arguments must be: `(self arg1 arg2...)`
 ```lisp
-(Example)
-:on-call-> ((self x) (!sin x))
+...
+    :on-call-> ((self x)
+                (!sin x))
 ```
-
-This argument is expanded into `#'(lambda ,@on-call->)` and works as well as 3.
 "
   (declare (type (or symbol function list null) on-call->))
   (let ((use-linter-p (not (null where)))
@@ -510,9 +480,11 @@ An constructor function for ~a."
 
 (defun composite-input-tensor (composite ~
 			       &key
+				 (input-shape nil) ;; set any list if composite doesn't have any
 				 (inputs nil)
 				 (dtype :float)
 				 (order :column)
+				 (argument-names nil)
 				 (scalar-p-list nil))
   "Returns an list of InputTensor which is used to trace the computation nodes."
   (declare (type Composite composite)
@@ -528,13 +500,13 @@ An constructor function for ~a."
 	       ~)))
     #'read~
     
-    (let ((input-shape (composite-input-size composite)))
+    (let ((input-shape (or input-shape (composite-input-size composite))))
       (loop for i upfrom 0
 	    for x in input-shape
 	    collect
 	    ;; Hmm, in order to reuse compiled kernel, (shape (nth i inputs)) isn'g the best choise...
 	    (let ((res (make-input (shape (nth i inputs));;(where-arg->shape (read~ ~ i) x)
-				   (->keyword (nth-subscript i))
+				   (or (nth i argument-names) (->keyword (nth-subscript i)))
 				   :create-from (nth i inputs)
 				   :scalar-p (read-state scalar-p-list i)
 				   :dtype (read-state dtype i)

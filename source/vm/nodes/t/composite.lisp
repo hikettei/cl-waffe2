@@ -4,109 +4,84 @@
 (defun M= (tensor1 tensor2)
   (every #'= (tensor-vec tensor1) (tensor-vec tensor2)))
 
-(defmodel (SumUpComposite (self)
-	   :where ([~] -> [scal] where scal = 1)
+(defmodel (SinModel (self) :on-call-> ((self x) (declare (ignore self)) (cl-waffe2/base-impl:!sin x))))
+(defmodel-as (SinModel) :where (X[~] -> Out[~]) :asif :function :named sin-static1)
+
+(defmodel (Softmax2DTestModel (self)
+	   :where (A[x y] -> OUT[x y])
+	   :on-call-> ((self a)
+		       (declare (ignore self))
+		       (!softmax a))))
+
+(defmodel-as (Softmax2DTestModel)
+  :asif :function
+  :named softmax-2d-f)
+
+(defmodel-as (Softmax2DTestModel)
+  :asif :node
+  :named !softmax-2d-f)
+
+(defmodel (SumUpModel (self)
 	   :on-call-> ((self x)
 		       (declare (ignore self))
-		       (!sum x))))
+		       (->scal (!sum x)))))
 
-(defmodel (SumUp2DComposite (self)
-	   :where (X[a b] -> [scal] where scal = 1)
+(defmodel (MeanUpModel (self)
 	   :on-call-> ((self x)
 		       (declare (ignore self))
-		       (!sum x))))
+		       (->scal (!mean x)))))
 
-;; This case: The dispatching of function settles on a pattern
-(define-composite-function (SumUp2DComposite) !sumup-2d-float :dtype :float)
+(defmodel-as (SumUpModel)  :where (A[~] -> out[one] where one = 1) :named sumup-static :asif :function)
+(defmodel-as (MeanUpModel) :where (A[~] -> out[one] where one = 1) :named meanup-static :asif :function)
 
-(define-composite-function (SumUpComposite) !sumup-float :dtype :float)
+(defmodel-as (SumUpModel)  :where (A[~] -> out[one] where one = 1) :named !sumup-static :asif :node :differentiable t)
+(defmodel-as (MeanUpModel) :where (A[~] -> out[one] where one = 1) :named !meanup-static :asif :node :differentiable t)
 
-(define-composite-function (SumUpComposite) !sumup-generic)
+(defmodel-as (SinModel) :where (A[~] -> B[~]) :named !sinmodel :asif :node :differentiable t)
 
+(test defmodel->function-reduction-test
+  (is (= 100 (tensor-vec (sumup-static  (ax+b `(10 10) 0 1)))))
+  (is (= 1   (tensor-vec   (meanup-static (ax+b `(10 10) 0 1))))))
 
-(defun composite-fundamental-function-test ()
-  (let ((a (randn `(10 10))))
-    (M= (proceed (!sum a))
-	(!sumup-2d-float a))))
+(test defmodel->function-test
+  (is (M= (proceed (!sin (ax+b `(10 10) 0 1)))
+	  (sin-static1 (ax+b `(10 10) 0 1))))
+  (is (M= (proceed (!softmax (ax+b `(10 10) 0 1)))
+	  (softmax-2d-f (ax+b `(10 10) 0 1))))
+  (is (M= (proceed (!sin (ax+b `(10 10 10) 0 1)))
+	  (sin-static1 (ax+b `(10 10 10) 0 1))))
+  (is (M= (proceed (!softmax (ax+b `(10 5) 0 1)))
+	  (softmax-2d-f (ax+b `(10 5) 0 1)))))
 
-(defun composite-rank-dispatch (rank)
-  (let* ((shape (loop for r upfrom 0 below rank
-		      collect 10))
-	 (a (randn shape)))
-    (M= (proceed (!sum a))
-	(!sumup-float a))))
+(test defmodel->node-forward
+  (is (= 100 (tensor-vec (proceed (!sumup-static (ax+b `(10 10) 0 1))))))
+  (is (= 1 (tensor-vec (proceed (!meanup-static (ax+b `(10 10) 0 1))))))
+  (is (M= (proceed (!softmax      (ax+b `(10 10) 0 1)))
+	  (proceed (!softmax-2d-f (ax+b `(10 10) 0 1))))))
 
-(defun composite-dtype-dispatch (dtype)
-  (let* ((a (ax+b `(10 10) 0 1 :dtype dtype)))
-    (M= (proceed (!sum a))
-	(!sumup-generic a))))
+(defun defmodel->node-diff-1 ()
+  (let ((a (parameter (ax+b `(3 5) 0 1))))
+    (proceed-backward
+     (!sinmodel a))
+    (< (- (cos 1) (mref (grad a) 0 0)) 0.00001)))
 
-(test composite-function
-  (is (composite-fundamental-function-test)))
+(defun defmodel->node-diff-1-vm ()
+  (let ((a (parameter (ax+b `(3 5) 0 1))))
+    (let ((model (build (!sinmodel a))))
+      (forward model)
+      (backward model))
+    (< (- (cos 1) (mref (grad a) 0 0)) 0.00001)))
 
-(test composite-rank-dispatching-test
-  (is (composite-rank-dispatch 1))
-  (is (composite-rank-dispatch 2))
-  (is (composite-rank-dispatch 3))
-  (is (composite-rank-dispatch 4))
-  (is (composite-rank-dispatch 5))
-  (is (composite-rank-dispatch 6))
-  (is (composite-rank-dispatch 7))
-  (is (composite-rank-dispatch 8))
-  (is (composite-rank-dispatch 9)))
+(defun defmodel->node-diff-2 ()
+  (let ((a (parameter (ax+b `(3 5) 0 1))))
+    (proceed-backward
+     (!sumup-static a))
+    (= 1 (vref (grad a) 0))))
 
-(test composite-dtype-dispatching-test
-  (is (composite-dtype-dispatch :double))
-  (is (composite-dtype-dispatch :float))
-  (is (composite-dtype-dispatch :uint32))
-  (is (composite-dtype-dispatch :int32))
-  (is (composite-dtype-dispatch :int16))
-  (is (composite-dtype-dispatch :uint16))
-  (is (composite-dtype-dispatch :uint8))
-  (is (composite-dtype-dispatch :int8)))
-  
+(test defmodel-as-diff-test
+  (is (defmodel->node-diff-1))
+  (is (defmodel->node-diff-1-vm))
+  (is (defmodel->node-diff-2)))
 
-;; Complex Node Test
-
-(defun composed-node (x y)
-  (!mul
-   (!sin (!add x y))
-   (!cos (!add x y))))
-
-(defmodel (ComposedFunction (self)
-	   :where (A[~] B[~] -> [~])
-	   :on-call-> ((self x y)
-		       (declare (ignore self))
-		       (composed-node x y))))
-
-(define-composite-function (ComposedFunction) !composed)
-
-;; Add: Dtype Checker
-;; どこかのCopyがResetされていない・・・？
-(defun test-composed-function (a b a1 b1)
-    (M= (proceed (composed-node a b))
-        (!composed a1 b1)))
-
-;; No Side Effects?
-(test test-composed-function
-  (is (test-composed-function
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       ))
-  (is (test-composed-function
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       ))
-  (is (test-composed-function
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       (ax+b `(3 3) 0 1)
-       )))
-
-;; composite-function -> composite-function Test
-
+;; TODO:    Loop Collapse
+;; Support: lazy-values
