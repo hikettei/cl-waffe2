@@ -7,45 +7,21 @@
 ;;
 
 
-;;[TODO]
-;;- retain_graph
-;;- dynamic-shapingとか考えないで普通にdefine-by-runっぽく動かせない？
-;;- defmodel-asを呼び出すのはwith-memory-pool直下で + save_for_backward以外は使いまわしたりしておk
-;;- define-opを全面的に押し出す: cache-when-compiled=nilするくらいなら最初から関数で + apply-with-rankで
-;;- proceedをたくさん使ってもコンパイル時間走らないように
-;;- defpath FusionOp
-
-;; TODO: (backward AbstractTensor) ;; -> PyTorch/Chainer Mode (i.e.: Pure define by run Mode with no compiling-time ahead)
-
-;; TODO: Update memory-pool. (add use-state attribute) for proceed
+;; [TODO]
+;;- retain_graph option
+;;- Theano likeな動作を目指したい
+;;-  defmodel-as, AbstractNodeのcache
+;;-  Dynamically ShapeとControl Flowでもいいけど、コンパイル速度をもっと高速化してPyTorch-likeに動かす方針も可能っぽい
+;;     -> キャッシュできないdefine-implをdefine-impl-opで全て置き換えることでcompile nilのオーバーヘッドが0になる
+;;     -> call-with-viewのFunction Version apply-rank-iterみたいなのでランクつき演算
+;;     -> defpathでFusionOpをすればSoTAに近い性能目指せるか？
+;;     -> AD: (log 1 + x)とかのFusionで数値的安定性の保証
+;;     -> define-by-run modeでRNN
+;;  memory-pool
+;;   IR: Block内部でAllocateしたTensorはmemory-poolを出たときにFreeする
 
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
-;; TODO: defpathでSymbolic Differentiation
 ;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
-
-
-;; 目標1 : defmodel-asと (backward toplevel) でdefine-by-runっぽく動作 + RNNを動作させる
-;; 目標2 : memory-pool ... メモリリーク排除, 使う終わったcacheを使い回す, finalizeとかちゃんとする
-;;      PR into (DEVELOP)
-;; 目標3 : MoveTensorNode(SAVE_FOR_BACKWARD)を排除 + ADの数値的安定性向上とFuseOps
-
-;; Proceed : compile-forward-and-backwardは十分早い + 数値安定性のためにTopologicalSort/defpathは必須 + defmodel-asがある ... -> コードの量減らすためにも、重複した実装なくすためにもbuild呼び出す方針で良くね？+ buildのcompile nilを削除する (defmodel-asみたいに) + proceedのInterpreter廃止する
-
-;; 今からやる：
-;; 1. Proceed/Interepreterの廃止 (define-opだけ使えば問題ない) OK
-;; 2. SAVE_FOR_BACKWARD目的のMoveTensorNodeを削除 -> In-place mutationを有効化 + backwardのdisassembleを幾分か綺麗に + defmodel-asをすればallocした領域再利用が可能 (+ define-instant-composite suru)
-;; 3. Testを全て通す
-;; 4. valuesの取り扱いを綺麗にする + VMの仕様を綺麗にする
-;; 5. これで3000行くらいいらないコードを消せると思う
-;; 6. これでテストをパラメーター変えないで済むから、LakefileとRoswellが不要になるので削除する
-;; 7. acceptor.lispとInterepreter.lispあたりのコードを削除する(帰ったら)
-;; 8. Backward関連のIssue -> 4.に関係するから帰ったら直す
-;; 9. tensor-finalize methodを追加
-;; 10. 重複したAPIを全て削除する！ cl-waffe2/vm下の機能をもっと簡潔に！！集約した分ドキュメントをしっかり記述する...
-;; 11. Theano-likeなAutodiff achieved by defpath macro.
-;; 12. そのうち再コンパイルのコストがぐんと下がる PyTorch likeに使える + ある関数を定義するのにNativeの実装が必要ない(cuz it relies on JIT)
-;; (Defnode (System-Lazy-Values X Y
-
 
 (defparameter *model-function-cache-form* (make-hash-table))
   
