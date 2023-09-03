@@ -26,7 +26,7 @@ cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environ
 
 Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](https://github.com/hikettei/cl-waffe).
 
-### ✨Features
+## ✨Features
 
 - cl-waffe2 brings `AbstractTensor` to Common Lisp.
 - Extensible: Operations can be extended/reimplemented with any matrix operation libraries you like! Plus, No code rewriting when changing devices.
@@ -35,246 +35,38 @@ Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](h
 - Nodes: Systematic macros for building computation nodes and easy to visualize!
 - 👏 Its core part and VM are 100% written on **ANSI Common Lisp**.
 
-### Workloads
+## Quicklook
 
-- [x] Establish a baseline for generic matrix operations from zero for Common Lisp, as practised by Julia.
-    - Four data structures used in deep learning: `AbstractNode` `AbstractTensor` `AbstractOptimizer`, and `AbstractTrainer`.
-    - Fundamental APIs: `View API/Broadcasting/Permution` `NDArrays with multidimensional offsets` `build/proceed` `facet of tensors`
-    - Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)
-    - For experiments, implement a backend that runs at minimum speed: `LispTensor`.
-
-- [ ] ~~Construct JIT Compiler from cl-waffe2 to `C` (OK). and fuse operations and loops. + Multi-Threading (work in progress)~~
-
-- [ ] Add basic computation nodes for controlling nodes: `MapNode` `IfNode` etc...
-
-# Concepts
-
-## Frontend and Backend Separation
-
-In the design phase, cl-waffe2 separates the `cl-waffe2/base-impl` package, which provides an abstract definition of operations (i.e.: the definition of `AbstractNode` by using the `defnode` macro), from each `cl-waffe2/backends` package, which gives its implementation (e.g.: `define-impl` macro). Your programme builds the network by dynamically referring to the `*using-device*` parameter while deciding which implementation of `AbstractTensor` to use. This allows users to implement existing backend (or create a new one) re-implementations and extensions of instructions without any constraints.
-
-For example, an AbstractTensor that works with Common Lisp standard arrays can be created as follows:
+In the simplest example, the `build` function traces and compiles the network from the endpoints of the computation nodes. 
 
 ```lisp
-;; MyTensor extends CPUTensor extends AbstractTensor
-(defclass MyTensor (CPUTensor) nil)
-```
+(let ((a (make-input `(A B) :A))
+      (b (make-input `(A B) :B)))
+  (let ((model (build (!sum (!mul a b)) :inputs `(:A :B))))
+    (print model)
+    ;; model is a compiled function: f(a b)
+    (forward model (randn `(3 3)) (randn `(3 3)))))
 
-The `with-devices` macro is used to declare the devices to be used along with their priority, computation nodes build based on it.
+;;<Compiled-Composite
+;;    forward  : forward(model A B) -> CPUTENSOR{FLOAT}(1 1)
+;;    backward : backward(model) -> t
+;;    inputs:
+;;        A -> (A B)
+;;        B -> (A B)
+;;>
 
-```lisp
-(with-devices (MyTensor CPUTensor)
-    ;; Under this scope, Priority = (MyTensor -> CPUTensor)
-    (!add (randn `(3 3)) (randn `(3 3))))
-
-{MYTENSOR[float] :shape (3 3) :named ChainTMP12737 
-  :vec-state [maybe-not-computed]
-  <<Not-Embodied (3 3) Tensor>>
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
-
-;; Proceed is a differentiable operation which compiles/evaluates previous computation nodes.
-(proceed *) ;; MyTensor has no any implementation for AddNode, so CPUTensor is returned.
-
-{CPUTENSOR[float] :shape (3 3) :named ChainTMP12759 
-  :vec-state [computed]
-  ((-0.9171257  0.4143868   0.9511917)
-   (2.224929    1.4860398   0.8402364)
-   (0.051592022 0.5673465   -0.46694738))
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
-```
-
-This helps Common Lisp, a dynamically typed language, to use valuable information such as matrix rank and shape in advance, to detect shape errors before performing operations, or to generate optimal codes.
-
-See [this section](https://hikettei.github.io/cl-waffe2/base-impl-nodes/) for the specifications under which computation nodes are defined.
-
-## Lazy-evaluation and Extensible JIT Compiler
-
-cl-waffe2 is a lazy-evaluation first framework in which each computation node is represented by `AbstractNode` and `S-expression` with the strong restrict of `A <- Op(B, C, ...)`. That is, cl-waffe2 specializes on computing DAGs in a efficient way (e.g.: in-place mutation, computing offsets in advance, no runtime allocation, and more...). In addition to that, it allows the creation of compilers to external languages by extending the device, making it easy to create compilers to C (provides as `JITCPUTensor` in standard) and CUDA.
-
-See also:
-
-- https://hikettei.github.io/cl-waffe2/overview/#in-place-optimizing
-- https://hikettei.github.io/cl-waffe2/vm/
-- https://hikettei.github.io/cl-waffe2/cpu-jit-tensor-backend/
-
-## Powerful Network Description Features
-
-The most fundamental unit of calculation in cl-waffe2 is `AbstractNode`, and it provides utilities such as combining and compositing them. For example, `call->` composes all given nodes while `call` can call a single node. Later, it can be named and defined by `defsequence`. Owing to the lazy evaluation of cl-waffe2, functions can be used like nodes via the `(asnode function &rest args)` macro.
-
-```lisp
-(call-> (randn `(1 32))
-        (LinearLayer 32 16)
-        (asnode #'!softmax)
-        (asnode #'!add 0.1))
-```
-
-```lisp
-(defsequence CNN (&key
-            (out-channels1 4)
-	    (out-channels2 16))
-    (Conv2D 1 out-channels1 `(3 3))
-    (asnode #'!relu)     
-    (MaxPool2D `(2 2))
-    (Conv2D out-channels1 out-channels2 `(5 5))
-    (asnode #'!relu)
-    (MaxPool2D `(2 2))
-    (asnode #'!reshape t (* 16 4 4)) 
-    (LinearLayer (* 16 4 4) 10))
-```
-
-`Composite` is a data structure which binds several `AbstractNode`, defined by `defmodel`.
-
-```lisp
-(defmodel (Softmax-Model (self)
-       :where (X[~] -> OUT[~])
-       :on-call-> ((self x)
-                   (declare (ignore self))
-                   (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
-                          (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
-                      (!div (!exp x1) z)))))
-```
-
-`Composites` can be used not only as merely subroutines, but also for compiling several nodes in advance.
-
-For example, just use `call` to compile later.
-
-```lisp
-(call (Softmax-Model) (randn `(10 10)))
-
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP13029 
-  :vec-state [maybe-not-computed]
-  <<Not-Embodied (10 10) Tensor>>
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: DIVNODE-LISPTENSOR (A[~] B[~] -> A[~])>}
-
-(proceed *) ;; Being Compiler Later, by proceed or build
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP13158 
-  :vec-state [computed]
-  ((0.05213483   0.11118897   0.107058994  ~ 0.1897892    0.055277593  0.028915826)                    
-   (0.0025042535 0.3952663    0.0109358365 ~ 0.033085804  0.04627693   0.14064543)   
-                 ...
-   (0.067338936  0.06604112   0.065211095  ~ 0.051910892  0.10963429   0.060249455)
-   (0.029982507  0.31893584   0.18214627   ~ 0.015864253  0.2993634    0.02982553))
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
-```
-
-Use the `define-composite-function` macro to define a function that works statically.
-
-```lisp
-(define-composite-function (Softmax-Model) !softmax-static)
-
-(time (!softmax-static (randn `(10 10))))
-Evaluation took:
-  0.000 seconds of real time
-  0.000460 seconds of total run time (0.000418 user, 0.000042 system)
-  100.00% CPU
-  1,073,976 processor cycles
-  32,512 bytes consed
-  
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP13578 
-  ((0.06095955   0.06010023   0.03573166   ~ 0.01910117   0.036269512  0.03422032)                    
-   (0.3116705    0.041012052  0.012784039  ~ 0.08029219   0.062023237  0.03468513)   
-                 ...
-   (0.057693116  0.19069833   0.061993677  ~ 0.20243406   0.02019287   0.07737376)
-   (0.35623857   0.038911298  0.028082697  ~ 0.050502267  0.024571734  0.10532298))
-  :facet :input
-  :requires-grad NIL
-  :backward NIL}
-```
-
-If you are not comfortable writing macros to create your own forward and backward propagation, there are various means, such as `define-static-node`. they're working by just wrapping the `define-impl` macro. For details, visit the docs: https://hikettei.github.io/cl-waffe2/overview/#network-units-node-and-composite.
-
-## All in the simple APIs
-
-Except that you need to call `proceed` or `build` when you need results, cl-waffe2 APIs are designed to be high-level and eazy to use likewise popular libraries: Numpy/PyTorch. Also, this is intended to work with REPL.
-
-```lisp
-(!add (randn `(3 3)) (randn `(3 3)))
-
-(!matmul (ax+b `(3 5) 1 0) (!t (ax+b `(3 5) 1 0)))
-
-(let ((a (parameter (ax+b `(3 5 2) 1 0))))
-      (proceed-backward
-        (!mean
-            (!permute a (torch-order 0 2 1))))) ;; the equivalent to (!permute a 2 0 1)
-```
-
-See also: https://hikettei.github.io/cl-waffe2/base-impl/
-
-cl-waffe2 can trace the network everywhere. the combination of a lazy evaluation and node definition mechanisms allows all the shapes of the network to be specified without the need to write special code.
-
-```lisp
-(defsequence MLP-Sequence (in-features hidden-dim out-features
-               &key (activation #'!tanh))
-         "3 Layers MLP"
-         (LinearLayer in-features hidden-dim)
-         (asnode activation)
-         (LinearLayer hidden-dim hidden-dim)
-         (asnode activation)
-         (LinearLayer hidden-dim out-features)
-         (asnode #'!softmax))
-```
-
-will produce:
-
-```lisp
-(MLP-Sequence 784 512 256)
-
-<Composite: MLP-SEQUENCE{W23852}(
-    <<6 Layers Sequence>>
-
-[1/6]          ↓ 
-<Composite: LINEARLAYER{W23682}(
-    <Input : ((~ BATCH-SIZE 784)) -> Output: ((~ BATCH-SIZE 512))>
-
-    WEIGHTS -> (512 784)
-    BIAS    -> (512)
-)>
-[2/6]          ↓ 
-<Composite: ENCAPSULATED-NODE{W23680}(
-    #<FUNCTION !TANH>
-)>
-[3/6]          ↓ 
-<Composite: LINEARLAYER{W23510}(
-    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 512))>
-
-    WEIGHTS -> (512 512)
-    BIAS    -> (512)
-)>
-[4/6]          ↓ 
-<Composite: ENCAPSULATED-NODE{W23508}(
-    #<FUNCTION !TANH>
-)>
-[5/6]          ↓ 
-<Composite: LINEARLAYER{W23338}(
-    <Input : ((~ BATCH-SIZE 512)) -> Output: ((~ BATCH-SIZE 256))>
-
-    WEIGHTS -> (256 512)
-    BIAS    -> (256)
-)>
-[6/6]          ↓ 
-<Composite: ENCAPSULATED-NODE{W23336}(
-    #<FUNCTION CL-WAFFE2/NN:!SOFTMAX>
-)>)>
+;;{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP646587 
+;;  ((1.0858848))
+;;  :facet :input
+;;  :requires-grad NIL
+;;  :backward NIL} 
 ```
 
 # Experiments
 
 (TODO)
 
-Training time/accuracy with MNIST/Cifar-10 by MLP/CNN compared to Keras/Tensorflow/PyTorch.
-
-Note that training speed still has room for improvement!
-
 # References/Acknowledgments
-
 
 ・All comments on this Reddit post: [Does anyone have any interest in my deep-learning framework?](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/).
 
