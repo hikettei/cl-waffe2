@@ -92,7 +92,7 @@
 	     (randn `(100 784)))
 	    (randn `(100 10))))
      :n-sample 1000
-     :backward nil)
+     :backward t)
     model))
 
 ;; PyTorch ... 7sec

@@ -64,7 +64,6 @@
      (loop for nth-epoch fixnum upfrom 0 below iter-num
 	   do (minimize! trainer)))))
 
-(with-devices (JITCPUTensor JITCPUScalarTensor CPUTensor)
-  (train)) 
+(train)
 
 

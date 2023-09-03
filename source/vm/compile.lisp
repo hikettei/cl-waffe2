@@ -196,8 +196,14 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	(node-compile-into-vm toplevel :fuse-p fuse-p)
       ;; Set grad-count=0 if any
       (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
-      
-      (apply-in-place-mutation! iseq-forward leaves)
+
+      ;; [FixME] In the training mode, apply-in-place-mutation! will produce the destruction of gradients...
+      ;; Analyze and pursuit for the reason and update the algorithm.
+
+      (when (or (null (ancestor-param-p toplevel))
+		*no-grad*
+		(not need-backward))
+	(apply-in-place-mutation! iseq-forward leaves))
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
 	     (dout (when need-backward
