@@ -224,7 +224,7 @@ This function is also used to adjust memory alignment of tensor."
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
 		     (res (!move dx (apply #'!view dout inp-sub))))		
-		(values nil (apply #'!view res out-sub)))))
+		(values nil (->contiguous (apply #'!view res out-sub))))))
 
 
 (defun !view (tensor &rest subscripts)

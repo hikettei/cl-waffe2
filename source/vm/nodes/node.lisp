@@ -328,34 +328,23 @@ forward: Couldn't step forward step of ~a because it is undefined.
 ;;  Reverse Mode Graph-Level Netowork Construction
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; 1. Forward ModeでSaveForBackwardを読むように
-;; backward dout x y z...でλ関数を返すようにする
-;; 上のコード消す
-;; Backwardが呼ばれたかの検査をVMが担当するべき
-
-;; A -> B C D ここのコピーはVMの担当である
-;; doutいらないかも
-(defun make-backward (tensor)
+(defun make-backward (tensor dout)
   "
 ## [function] make-backward
 
 ```lisp
-(make-backward tensor)
+(make-backward tensor dout)
 ```
 "
   (let ((node (tensor-backward tensor))
 	(variables (tensor-variables tensor)))
     (declare (type AbstractNode node)
-	     (type list variables))
-    
-    (assert (every #'(lambda (x) (typep x 'AbstractTensor)) variables)
-	nil
-	"make-backward: all variables should be AbstractTensor.")
+	     (type list variables))    
 
     (let ((in-tensors (loop for var in variables
 			    collect (or (system-lazy-read-save-for-backward var)
 					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
-	  (dout (cl-waffe2/vm.generic-tensor::make-clone tensor nil nil)))
+	  (dout (cl-waffe2/vm.generic-tensor::make-clone dout)))
       (setf (tensor-protect-me dout) t)
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
 	     (out-toplevels (if (every #'null out-toplevels) ;; no gradients?
@@ -402,7 +391,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	       ;; When quitting mem-pool, the result is never freed.
 	       (loop for out-val in out-toplevels do
 		 (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
-	       
+
 	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
 	 fw-iseq
 	 out-toplevels-pswise

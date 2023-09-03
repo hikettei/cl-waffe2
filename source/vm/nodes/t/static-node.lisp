@@ -36,7 +36,7 @@
 			(!sin-static x)))
 	    :backward ((self dout)
 		       (with-reading-save4bw ((x x))
-			 (!mul-static dout (!cos-static x))))))
+			 (values (!mul-static dout (!cos-static x)))))))
 
 (defun test-composite-diff ()
   (let ((a (parameter (ax+b `(3 3) 0 1))))
@@ -68,10 +68,10 @@
     (forward model)
     (backward model)
     (let ((f1 (~= (vref (grad a) 0) grad)))
-      (forward model)
+      (forward model)    
       (backward model)
       (and f1
-	   (~= (vref (grad a) 0) (+ grad grad))))))
+	   (~= (vref (grad a) 0) (+ grad))))))
 
 (test composite-static-function-diff-test
   (is (test-composite-diff))

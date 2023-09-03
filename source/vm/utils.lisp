@@ -38,8 +38,8 @@
 
 
 ;; Autograd:
-(defun make-backward-wfinst (tensor)
-  (multiple-value-bind (bw-kernel iseq out-to dir) (make-backward tensor)
+(defun make-backward-wfinst (tensor dout-prev)
+  (multiple-value-bind (bw-kernel iseq out-to dir) (make-backward tensor dout-prev)
     (declare (type (or null function) bw-kernel))
     (when (null bw-kernel) (return-from make-backward-wfinst nil))
     

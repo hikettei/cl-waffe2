@@ -77,7 +77,7 @@
 	  else
 	    do (when (not (detach-p tensor))
 
-		 (when (null (find (tensor-iid tensor) seen :test #'eq))
+		 (when (null (find (the symbol (tensor-iid tensor)) seen :test #'eql))
 		   (push (ir->instruction tensor) instruction-seq)
 		   ;; Add to seen
 		   (let ((bw (tensor-backward tensor)))
@@ -121,8 +121,9 @@
 	 variable-leaves)
 	(values instruction-seq variable-leaves))))
 
-(defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table :test #'eq)))
+(defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table :test #'eql)))
   (declare (type list iseq)
+	   (optimize (speed 3))
 	   (type AbstractTensor dout-toplevel))
 
   ;; WfInstruction: Op(Arg1 Arg2) -> Out1 Out2 ...
@@ -134,7 +135,7 @@
 	   (setf (gethash (tensor-iid tensor) dout-table) val)))
 
     (set-dout (wfop-self (car iseq)) dout-toplevel)
-    
+
     (loop for inst of-type WfInstruction in iseq
 	  if (get-dout (wfop-self inst))
 	    append
@@ -143,26 +144,25 @@
 	      (append
 	       ;; Backward_Kernel + Gradient_Adders (If Any)
 	       (when (and (cl-waffe2/vm.generic-tensor::ancestor-param-p self)
-			  (tensor-backward self))
-		 (multiple-value-bind (bw-function node out-to directions bw-iseq) (make-backward-wfinst self)
-		   (if (null bw-function)
-		       nil
-		       (progn
-			 (loop for arg in args
-			       for o   in out-to
-			       for dir in directions
-			       if dir
-				 do (set-dout arg o)
-				    (init-state-container! o))
-			 ;; MoveTensorBackward is inlined in order to get in-place mutation
-			 (if nil;;(movetensor-p (wfop-node inst))
-			     bw-iseq
-			     (list
-			      (make-wfop bw-function ;; ... dout var1 var2
-					 self
-					 node
-					 `(,(get-dout self) ,@args)
-					 :out-to (loop for o in out-to if o collect o))))))))
+			  (tensor-backward self)
+			  (get-dout (wfop-self inst)))
+		 (multiple-value-bind (bw-function node out-to directions bw-iseq) (make-backward-wfinst self (get-dout (wfop-self inst)))
+		   (when bw-function
+		     (loop for arg in args
+			   for o   in out-to
+			   for dir in directions
+			   if dir
+			     do (set-dout arg o)
+				(init-state-container! o))
+		     ;; MoveTensorBackward is inlined in order to get in-place mutation
+		     (if nil;;(movetensor-p (wfop-node inst))
+			 bw-iseq
+			 (list
+			  (make-wfop bw-function ;; ... dout var1 var2
+				     self
+				     node
+				     `(,(get-dout self) ,@args)
+				     :out-to (loop for o in out-to if o collect o)))))))
 	       ;; Expand Gradient Adders
 	       (loop for var in args
 		     if (and (slot-value var 'requires-grad) (get-dout var))
