@@ -1,11 +1,11 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; Here we provide two macros:
-;; define-tensor (Tensors and Backend are strongly combined.)
-;; CFFI-Style
-;; Column-Major And Row-Major
-;; TODO: Detect it: (make-tensor `(10 a)) <- say: use (make-input)
+;;
+;; 
+;; AbstractTensor | Multiple Backends
+;;
+;;
 
 (defparameter *using-backend*
   `()
@@ -32,9 +32,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
   (or (find 'ScalarTensor *using-backend*
 	    :test #'(lambda (x y) (subtypep y x)))
       'ScalarTensor))
-;; orig-shape    ... An using size of storage vec.
-;; visible-shape ... The shape treated in network
-;; actual-shape  ... visible-shape ignored broarcasting
+
+;; orig-shape    ... The shape of storage vec.
+;; visible-shape ... The viewed shape
+;; actual-shape  ... visible-shape but broadcasting is ignored.
 
 (defclass AbstractTensor ()
   ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
@@ -73,7 +74,10 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
    (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
+
    (grad :initform nil :reader grad :writer set-grad)
+   (grad-count :initform 0 :type fixnum :accessor tensor-grad-count)
+   
    (gradient-adder    :accessor gradient-adder)
    (gradient-resetter :accessor gradient-resetter)
 
@@ -94,213 +98,235 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
    (input-shape :initarg :input-shape :initform nil :reader tensor-input-shape))
   (:documentation "
-AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.
+## [class] AbstractTensor
 
-The class provides the fundamental and necessary features for tensors.
+AbstractTensor is a CLOS class that Wraps existing data structures such as matrices in an abstract class in automatic differential programming using cl-waffe2, and further adds information about computation nodes, gradients, etc.
 
-1. Lazy-Evaluated and Multi-Dimensional APIs, stride computations.
-
-2. `View APIs` multi-dimensional offsets
-
-3. To construct backward, AbstractTensor records variables called with.
-'
-4. `vec` container.
-
-5. an space for saving gradients, copies for backward.
-
-6. Lazy-Evaluated Shapings
-
-7. Trace Informations for JIT to create well-optimized computation node.
-
-### Creating a new backend.
-
-Users can create a new backend by extending this abstract class.
+Tensors can be created by the `make-tensor` function.
 
 ```lisp
-(defclass MyBackend (AbstractNode) nil)
+(make-tensor `(3 3))
 ```
 
-To use the `MyBackend` as a tensor, users also has to override these methods:
-
-1. `initialize-instance` ... An allocator for tensor's vec.
-
-2. `vref` `(setf vref)` ... an generic function to access/write tensor's vec.
+Plus, InputTensors (lazy-evaluated tensors), which is used to delay allocation timing, to use dynamic shaping, and to store the result, can be created by the `make-input` function.
 
 ```lisp
-;; TODO: Establish a common API for initargs
-(defmethod initialize-instance :before ((tensor MyBackend)
+(make-input `(3 3) :A) ;; Set :A=nil to register as a temporary space.
+```
+
+As an applied use, users can create new `AbstractTensor` that inherit from AbstractTensor. In addition, inheriting existing AbstractTensors (e.g.: `LispTensor` for CL Standard Array) allows reusing descriptions such as allocations.
+
+```lisp
+(defclass MyOriginalTensor (AbstractTensor) nil)
+(defclass MyCPUTensor      (LispTensor) nil)
+```
+
+Declare the priority of the device to be used with the with-devices macro.
+
+```lisp
+;; Higher <-> Lower
+(with-devices (MyCPUTensor MyOriginalTensor CPUTensor)
+    (make-tensor `(10 10)))
+```
+
+All available devices can be accessed with the `(show-backends)` function, and they can only be used as devices together if they are shown to have an inheritance relationship.
+
+If a completely new Tensor is defined from AbstractTensor, cl-waffe2 can handle it completely in a fast form by writing the following additional information.
+
+- Allocator: `initialize-instance :before method`
+
+- Storage Accessor: `vref` and `(setf vref)` method
+
+- Finalizer: `tensor-finalizer` method
+
+- (Optional) Backend State: `current-backend-state` method
+
+- (Optional) a `cl-waffe2/vm:defpath` macro to enable device-specific optimization.
+
+This is the simplest case of `MyTensor` which works on CL Standard Array.
+
+```lisp
+(defclass MyTensor (AbstractTensor) nil)
+
+;; Allocators satisfy the following properties
+;; 1. When facet is not `:exist`, do nothing.
+;; 2. If `vec` is specified as an argument, use this, and do not allocate any tensors.
+;; 3. Otherwise, allocate the tensor with:
+;;     1. Dtype -> :dtype
+;;     2. Size  -> :shape (must be 1D on the memory)
+;;     3. initial-element -> :initial-element
+(defmethod initialize-instance :before ((tensor MyTensor)
 					&rest initargs
 					&key &allow-other-keys)
-  ;; if projected-p -> alloc new vec
   (let* ((shape (getf initargs :shape))
- 	 (dtype (dtype->lisp-type (getf initargs :dtype)))
+	 (dtype (dtype->lisp-type (getf initargs :dtype)))
 	 (vec   (getf initargs :vec))
 	 (facet (getf initargs :facet))
 	 (initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
     (when (eql facet :exist)
       (if vec
 	  (setf (tensor-vec tensor) vec)
-	  (setf (tensor-vec tensor) ;; vec can be anything.
+	  (setf (tensor-vec tensor)
 		(make-array
 		 (apply #'* shape)
 		 :element-type dtype
 		 :initial-element initial-element))))))
-```
 
-```lisp
-(defmethod vref ((tensor MyBackend) index)
+;; vref reads the index th element of storage vec, this is must be a setfable.
+;; Leave the annoying and complicated stride/offset computations to cl-waffe2!
+(defmethod vref ((tensor MyTensor) index)
+  (declare (type fixnum index))
   (aref (tensor-vec tensor) index))
 
-(defmethod (setf vref) (new-value (tensor MyBackend) index)
+(defmethod (setf vref) (new-value (tensor MyTensor) index)
+  (declare (type fixnum index))
   (setf (aref (tensor-vec tensor) index) new-value))
+
+
+;; The method should return a lambda function, if its storage vector isn't gc-reachable.
+;; Finalizers are called when quitting (with-memory-pool ...) macro.
+(defmethod tensor-finalizer ((tensor MyTensor))
+    ;; Returning a dummy finalizer
+    #'(lambda ()))
+
+;; The function (show-backends) will display all devices and their information
+;; If you want to put something, override this method and return a string.
+(defmethod current-backend-state ((backend-name (eql 'MyTensor)))
+  \"Hello This is an demo\")
+
+;; For FusionOp and defpath macro usage, see the :cl-waffe2/vm docs.
 ```
 
-Now, the name `MyBackend` is available as a brand-new cl-waffe2 backend!
+`MyTensor` is now recognised as a usable device, so operations can be defined using the define-impl and define-impl-op macros.
 
-Users can define a new implementation following `(define-impl (Name :device MyBackend) ...)`
 
-(See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)
-
-Note: add `print-tensor-state` method like: `(defmethod current-backend-state (device (eql 'YourDeviceName)) \"It is working\")` in order for `(show-backends)` function display your backends state.
-
-```lisp
-(defmethod current-backend-state ((backend-name (eql 'YourBackendName)))
-  \"This is MyTensor\")
-```
 ### [function] shape
 
-Returns a visible shape of tensor
+`(shape tensor)` returns a visible shape of the given tensor.
 
 ### [function] dims
 
-Returns the number of axes of tensor
+`(dims tensor)` returns a rank of the given tensor.
 
 ### [function] total
 
-Returns the number of total visible elements in tensor.
+`(total tensor)` returns the number of total visible elements of the giventensor.
 
 ### [slot] orig-shape (List)
 
-the original shape of `vec`. `(apply #'* orig-shape)` must correspond with the number of total elements of `vec`.
+stores the shape of storage vec.
 
-### [slot] initial-offset (fixnum)
+### [accessor] initial-offset (fixnum)
+
+stores the offset of the tensor. In default, set to 0. Shape testing, for example, does not work, so use with caution.
 
 `(tensor-initial-offset tensor)`
 
-Offset is forced to be added. default: 0
-
 ### [slot] stride (list)
 
-An stride of tensor, can be chosen from `:column` `:row`.
-
-This slot can be accessed by `(tensor-stride object)`.
+`(tensor-stride tensor)` stores the stride of tensor.
 
 ### [slot] visible-shape (list)
 
-An shape of visible-area of tensor, visible-area is that an viewed size of tensor.
-
-Can be accessed by `(shape object)`
+`(shape tensor)`
 
 ### [slot] view (list)
 
-An list of multidimensional offsets, view.
+Returns a list of ViewInstruction, created by the function `(view tensor ...)` or `(!view tensor ...)` to create a backward.
 
-Can be accessed by `(tensor-view object)`
+`(tensor-view tensor)`
 
 ### [slot] projected-p (boolean)
 
 Set t if `(apply #'* orig-shape) == (apply #'* visible-shape)` otherwise set nil.
 
-If t, the tensor is produced by `!view` or `view` functions.
+If t, the tensor is created by `!view` or `view` functions.
 
 ### [slot] scalar-p
 
-If t, the tensor is regarded as a Scalar.
+Set t if the tensor should be represented as a scalar. In cl-waffe2, it's not a pretty thing but scalars are represented as a `(apply #'* shape)=1` tensors. ranks are anything but for the most case, returns 1.
 
 ### [slot] detach-p
 
-If t, JIT compilers stop tracing at the tensor.
+Set T to detach the tensor at a certain position.
 
 ### [slot] state
 
-Stores a corresponding `StateContainer`.
+(tensor-state tensor) stores `StateContainer`.
 
 ### [slot] variables
 
-`(tensor-variables object)`
-
-Records variables called with the tensor.
+`(tensor-variables tensor)` stores the previous variables if the tensor is created by any operation.
 
 ### [slot] tensor-id (symbol)
 
-Corresponding variable name that used in JIT compiler.
+Indicates where the Tensor is stored, (e.g. in a virtual machine). In-place operations inherit tensor-id from variables called with, and should not be used for topological sorting.
+
+### [slot] tensor-iid (symbol)
+
+It holds an ID that is guaranteed to be absolutely unique to the processing system generated by gensym. Used for topological sorting.
 
 ### [slot] grad (AbstractTensor)
 
-If the tensor is a parameter, (i.e.: requires-grad t) and backward propagation has called, the gradients has set to this slot.
-
-Reader: `(grad object)`.  Writer: `(set-grad object value)`
+If the tensor is created by (parameter ...) or with `:requires-grad=t`, `(grad tensor)` will return a gradient.
 
 ### [slot] backward (AbstractNode)
 
-the node called with.
+`(tensor-backward tensor)` returns a abstractnode if the tensor is created by any operation.
 
 ### [slot] requires-grad (Boolean)
 
-If t, the tensor become a `parameter` that gradients are saved.
+Set T to hold the gradients.
 
 ### [slot] ancestor-param-p (Boolean)
 
-If t, the tensor has created by `parameter` or tensors whose ancestor-param-p=t.
+Set T if compilers can reach any tensors with `:requires-grad=t`, by tracing the tensor.
 
-### [slot] flexible-p (Boolean)
+### [slot] flexible-p (Fixnum or Null)
 
-Set fixnum to add broadcastable axis.
+Indicates the position of broadcastable axis.
 
 ### [slot] facet (keyword)
 
-Tensors has a two state:
+AbstractTensors in cl-waffe2 has a two state: `ExistTensor` and `InputTensor`. `ExistTensor` is a just tensor with allocated storage vec, made by make-tensor function. On the other hand InputTensor is a lazy-evaluated tensor, allocation won't be done until it is needed.
 
-1. :input
+:exist to ExitTensor, :input to InputTensor.
 
-2. :exist
+### [method] mref
 
-`:exist` tensor is a just normal state, which `vec` is already allocated.
+`(mref tensor &rest subscripts)` will reads a cetrain position of storage vec. This is setfable. In terms of performance, it is much faster way to edit a storage vec that using `(change-facet)` function and convert into other forms.
 
-`:input` tensor is a lazy-evaluated tensor, which allocation will be done until they're really needed. (often used as a cache, or training data.)
-...
+### Hooking Optimizers and Optimizing Parameters
+
+(TODO)
+
 
 "))
 
 
+(defgeneric tensor-finalizer (tensor))
+
+(defun dummy-finalizer ())
+(defmethod tensor-finalizer ((tensor AbstractTensor))
+  (if (next-method-p)
+      (call-next-method)
+      #'dummy-finalizer))
+
 (defgeneric current-backend-state (backend-name)
-  (:documentation "The generic function current-backend-state is used to rendering (show-backends) function."))
+  (:documentation "
+## [generic] current-backend-state
+
+```lisp
+(current-backend-state backend-name)
+```
+
+The generic function current-backend-state is used to rendering (show-backends) function.
+"))
 
 (defmethod current-backend-state ((backend-name t))
   (if (next-method-p)
       (call-next-method)
       "No status."))
-
-(defun sync-permute! (tensor)
-  (declare (type AbstractTensor tensor))
-  (macrolet ((apply-permute (accessor tensor)
-	       `(loop with copy = (copy-list ,accessor)
-		      with rank = (1- (length (shape ,tensor)))
-		      for o in (tensor-permute-order ,tensor)
-		      for kth upfrom 0
-		      do (let ((pos (- rank o)))
-			   (setf (nth kth ,accessor)
-				 (nth pos copy))))))
-    (apply-permute (tensor-stride tensor) tensor)
-    (apply-permute (tensor-view tensor) tensor)
-    (apply-permute (slot-value tensor 'visible-shape) tensor)
-    (apply-permute (slot-value tensor 'orig-shape) tensor)
-    
-    (when (and (slot-value tensor 'input-shape)
-	       ;; [Bug] Sometime, The rank of InputShape and its actual shape does not match. However in that case, input shape is no longer needed. so ignore it.
-	       (= (dims tensor) (length (tensor-input-shape tensor))))
-      (apply-permute (slot-value tensor 'input-shape) tensor))
-    nil))
 
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
@@ -310,17 +336,11 @@ Tensors has a two state:
   (declare (type AbstractTensor tensor))
   (length (shape tensor)))
 
-(defmethod tensor-delete ((tensor AbstractTensor))
-  ""
-  nil
-  )
-
 (defun permuted-p (tensor)
   (declare (type AbstractTensor)
 	   (optimize (speed 3)))
   (let ((a (copy-list (tensor-permute-order tensor))))
     (not (equal (sort a #'>) (tensor-permute-order tensor)))))
-	   
 
 ;; Inline
 (declaim (inline tensor-vec))
@@ -329,27 +349,15 @@ Tensors has a two state:
 
 ## [function] tensor-vec
 
-The function tensor-vec has a multiple behaviours depending on the state of tensor.
-
-1. If the given tensor is existing, or is input but allocated. -> Returns the given tensor's vec.
-
-2. If the given tensor is Input, and still not yet being accessed. -> Allocates the new area for matrix, and set tensor's vec slot it. The allocated area of tensor is returned.
-
-In a short words:
-
-```
-In general, tensor-vec is a function where:
-  Input  -> AbstractTensor
-  Output -> The tensor's vec slot (depends on their kernel)
+```lisp
+(tensor-vec tensor)
 ```
 
-By using `tensor-vec`, allocation of InputTensor will be done until they're really needed.
+If the given tensor is a ExistTensor, returns its storage vec.
 
-Note:
+If the given tensor is a InputTensor, allocates the area for tensor and return its storage vec.
 
-1. this function is inlined.
-
-2. this function is setfable
+This function is setfable and inlined.
 "
   (declare (type AbstractTensor tensor))
 
@@ -376,61 +384,13 @@ Note:
   (declare (type AbstractTensor tensor))
   (write-vec new-value tensor))
 
-(defun make-gradient-adder (target shape &key (use-input nil))
-  "Returns a instant-kernel to add the new-gradient to given target."
-
-  (let ((out (make-input shape nil
-			 :create-from use-input
-			 :dtype (dtype target)
-			 :order (order target))))
-    (let ((*no-grad* t))
-      (let* ((node-out (cl-waffe2/vm.nodes:forward (cl-waffe2/base-impl:AddNode (dtype (grad target))) (grad target) out))
-	     (forward-fn (compile-forward-kernel node-out :compile-mode :default))) ;; TODO: Make it :fastest
-	#'(lambda (new-value)
-	    (assert (equal (shape new-value) shape)
-		    nil
-		    "Attempted to add a new grad: ~a to ~a but failed due to shaping problems."
-		    (shape new-value)
-		    shape)
-	    (embody-actual-tensor out new-value)
-	    (state-reset! node-out)
-	    (funcall forward-fn)
-	    nil)))))
-
-(defun make-gradient-adder-scal (target)
-  #'(lambda (new-value)
-      (assert (scalar-p new-value)
-	      nil
-	      "Attempted to add a new grad but failed because the gradient isn't scalar")
-      (incf (tensor-vec (grad target)) (tensor-vec new-value))
-      nil))
-
-(defun make-gradient-resetter (tensor)
-  (let ((*no-grad* t))
-    (let* ((out (cl-waffe2/vm.nodes:forward
-		 (cl-waffe2/base-impl:ScalarMul (dtype tensor))
-		 (grad tensor)
-		 (make-tensor (coerce 0 (dtype->lisp-type (dtype tensor))))))
-	   (code (compile-forward-kernel out :compile-mode :fastest)))
-      #'(lambda ()
-	  (state-reset! out)
-	  (funcall code)
-	  nil))))
-
-(defun make-gradient-resetter-scal (tensor)
-  (let ((resetwith (coerce 0 (dtype->lisp-type (dtype tensor)))))
-    #'(lambda ()
-	(setf (tensor-vec (grad tensor)) resetwith))))
-
 ;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p    (getf initargs :scalar-p))
 	(view        (getf initargs :view))
 	(order       (getf initargs :order))
 	(orig-shape  (getf initargs :shape))
-	(create-from (getf initargs :create-from))
-	;(need-copy?  (getf initargs :slot-info-copied))
-	)
+	(create-from (getf initargs :create-from)))
 
     (when *detect-runtime-creation-tensor*
       (when *runtime-mode-p*
@@ -503,35 +463,6 @@ Note:
       (setf (gradient-adder tensor) nil
 	    (gradient-resetter tensor) nil))))
 
-(defun init-optimizer-utils! (tensor)
-  "Initializes Gradient Adders/Resetters"
-  (declare (type AbstractTensor))
-  
-;;  (when (slot-value tensor 'requires-grad)
-;;    (if (scalar-p tensor)
-;;	  (set-grad (make-tensor 0
-;;				 :dtype (dtype tensor)
-;;				 :requires-grad nil)
-;;		    tensor)
-;;	  (set-grad (make-tensor
-;;		     (tensor-visible-shape tensor)
-;;		     :dtype (dtype tensor)
-;;		     :requires-grad nil
-;;		     :order (order tensor))
-;;		    tensor)))
-  
-  (when (and (slot-value tensor 'requires-grad)
-	     (null (gradient-adder tensor)))
-    (if (scalar-p tensor)
-	(setf (gradient-adder tensor)
-	      (make-gradient-adder-scal tensor)
-	      (gradient-resetter tensor)
-	      (make-gradient-resetter-scal tensor))
-	(setf (gradient-adder tensor)
-	      (make-gradient-adder tensor (tensor-visible-shape tensor))
-	      (gradient-resetter tensor)
-	      (make-gradient-resetter tensor)))))
-
 (defun transfer-vec-information (from to)
   "Transfer information that makes a vec vec"
   (declare (type AbstractTensor from to))
@@ -543,16 +474,7 @@ Note:
 	;;(slot-value to 'input-shape) (slot-value from 'input-shape)
 	)
   nil)
-  
 
-(defmethod add-grads ((tensor AbstractTensor) new-value)
-  "tensor's gradient += new-value"
-  (assert (slot-value tensor 'requires-grad)
-	  nil
-	  "Assertion Failed with requires-grad = t")
-  (funcall (gradient-adder tensor) new-value))
-
-;; (defmethod init-grads ())
 (defmacro assure-dimensions (mat1 mat2)
   "Does nothing if mat1 and mat2 has a completely the same shape, otherwise throws shaping-error."
   `(if (equal (the list (shape ,mat1)) (the list (shape ,mat2)))
@@ -584,34 +506,34 @@ Note:
 		      (requires-grad nil)
 		      (dtype *default-dtype*)
 		      (view nil)
-		      (order *default-order*)
+		      (order *default-order*) ;; TODO (retain-grads nil)
 		      (initial-element))
   "
 ## [function] make-tensor
 
 ```
 (make-tensor shape-or-scalar
-		   &key
-		      (requires-grad nil)
-		      (dtype *default-dtype*)
-		      (view nil)
-		      (order *default-order*)
-		      (initial-element))
+	       &key
+		  (requires-grad nil)
+		  (dtype *default-dtype*)
+		  (view nil)
+		  (order *default-order*)
+		  (initial-element nil))
 ```
 
-Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*`) to know what device to use, the function `make-tensor` creates and allocate a new matrix instantly.
+Created a new ExistTensor of a device of `(car *using-backend*)`.
 
-### Input
+### Inputs
 
-1. `shape-or-scalar (Any)` set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
+1. `shape-or-scalar`[Anything] If set to list, creates a new matrix. Otherwise (e.g.: set to fixnum), creates a ScalarTensor. In that case, cl-waffe2 uses the highest priority device from `*using-backends*` parameter that inherits from the `ScalarTensor` class.
 
-2. `requires-grad` (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
+2. `requires-grad`[Boolean] Set t to holds a gradients. `(parameter tensor)` will also do the same work. Under `(with-no-grad ...)` macro. This is set to nil forcibly.
 
-3. `dtype` (keyword) Set dtype you wanna use. See also: (Dtype API)
+3. `dtype`[keyword] Set keyword indicating a type of elements.
 
-4. `order` (member :column :row)
+4. `order`[keyword] set keyword indicating the order of elments from `:column` or `:row`. in default set to `:column`.
 
-5. `initial-element` (Optional)
+5. `initial-element`[Anything] Set anything which you want to set as a initial element.
 "
   (declare (type list view))
   (if (typep shape-or-scalar 'list)
@@ -645,25 +567,25 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
   "
 ## [function] make-input
 
-Referring a first-priority of `*using-backend*` (i.e.: car part), the function make-input creates a InputTensor.
+```lisp
+(make-input shape named &key (created-from nil) (scalar-p nil) (dtype *default-dtype*) (order *default-order*))
+```
 
-In contrast to `make-tensor`, allocation of `vec` is lazy-evaluated, and `shape` can include symbols. (Lazy-Evaluated Shape).
-
-For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or `(make-input (list 256) nil)` is called, the memory-usage is the same until `(tensor-vec tensor)` is called but the moment `(tensor-vec tensor)` is called, the first one would cause `CUDA OUT OF MEMORY` or something :(.
+Creates a new InputTensor. The allocation won't be done until the function `(tensor-vec tensor)` is called. In cl-waffe2, InputTensors can be applied for various things, for example, tracing the structure of computation node, used as a temporary tensor which can be pruned later by a compiler, as an argument of the computation node compiled by the `build` function. 
 
 ### Inputs
 
-`Shape` [list] consisted of fixnum or symbol. (e.g.: `(a 10)` is OK for make-input.)
+`Shape` [list] Set the shape of tensor. You can also use symbols if shapes can be changed later. The function `set-input` will update all symbols declared in the computation node, and accordingly, strides/shapes etc... will be also updated to minimise compiling-time overhead (use `build` and `forward` to do this). ScalarTensors aren't created by setting it=`<<Something but not a list>>`. Instead, set `scalar-p=t`.
 
-`Named` [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name to `InputTensor` (e.g.: `:training-data` `:train-x`).
+`Named` [keyword or null] Indicates the name of tensor. If set to keyword, This means the name of the argument when compiled into a function, which can be changed later. If set to nil, the name is filled with `gensym` indicating the index in the memory-pool.
 
-`scalar-p` [boolean] set t is the input is scalar.
+`scalar-p` [boolean] Set t to create a scalar.
 
-`dtype` [keyword] as it is.
+`dtype` [keyword] Set dtype.
 
-`order` [keyword] an member of :column :row
+`order` [keyword] Set order.
 
-`create-from[nil or AbstractTensor]` If you want to extend permute state/stride information, fill it.
+`create-from[nil or AbstractTensor]` The returned InputTensor will extend Permutions/Strides and so on from `create-from` if any.
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
@@ -688,7 +610,7 @@ This function is setfable."
   (declare (type list subscripts))
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
   (vref tensor
 	(+
 	 (tensor-initial-offset tensor)
@@ -709,7 +631,7 @@ This function is setfable."
   
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
 
   (setf (vref tensor
 	      (+
@@ -745,7 +667,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   (declare (type fixnum index))
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
   (aref (tensor-vec tensor) index))
 
 (defmethod (setf vref) (new-value (tensor AbstractTensor) index)
@@ -753,7 +675,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   (declare (type fixnum index))
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
   (setf (aref (tensor-vec tensor) index) new-value))
 
 ;; input <- actual
@@ -769,7 +691,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   
   (assert (vec actual-tensor)
 	  nil
-	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
+	  "Assertion Failed because the given actual-tensor doesn't have an existing vec.")
 
   (when (or (numberp (vec input-tensor))
 	    (numberp (vec actual-tensor)))
@@ -899,6 +821,27 @@ Note that view is only created for Tensors, not a Scalar.
 		 :vec (vec tensor)
 		 :slot-info-copied t))
 
+(defun sync-permute! (tensor)
+  (declare (type AbstractTensor tensor))
+  (macrolet ((apply-permute (accessor tensor)
+	       `(loop with copy = (copy-list ,accessor)
+		      with rank = (1- (length (shape ,tensor)))
+		      for o in (tensor-permute-order ,tensor)
+		      for kth upfrom 0
+		      do (let ((pos (- rank o)))
+			   (setf (nth kth ,accessor)
+				 (nth pos copy))))))
+    (apply-permute (tensor-stride tensor) tensor)
+    (apply-permute (tensor-view tensor) tensor)
+    (apply-permute (slot-value tensor 'visible-shape) tensor)
+    (apply-permute (slot-value tensor 'orig-shape) tensor)
+    
+    (when (and (slot-value tensor 'input-shape)
+	       ;; [Bug] Sometime, The rank of InputShape and its actual shape does not match. However in that case, input shape is no longer needed. so ignore it.
+	       (= (dims tensor) (length (tensor-input-shape tensor))))
+      (apply-permute (slot-value tensor 'input-shape) tensor))
+    nil))
+
 (defun permute-computable-p (old-order new-order)
   (equal (sort (copy-list old-order) #'<)
 	 (sort (copy-list new-order) #'<)))
@@ -916,34 +859,6 @@ Note that view is only created for Tensors, not a Scalar.
 			    (nth i new-orders))))
 	new-orders)))
 
-#|
-(defun test-permute-syntax ()
-  (print (apply-flexible-subscript
-	  `(1 2 3 4 5)
-	  `(1 2 4 5)
-	  (position :~ `(1 2 :~ 4 5))))
-  (print (apply-flexible-subscript
-	  `(1 2 3 4 5)
-	  `(5 1)
-	  (position :~ `(1 :~ 5))))
-
-  (print (apply-flexible-subscript
-	  `(1 2 3 4 5)
-	  `(5 1)
-	  (position :~ `(5 1 :~))))
-
-  (print (apply-flexible-subscript
-	  `(4 3 2 1 0)
-	  `(0 1)
-	  (position :~ `(:~ 0 1))))
-
-  (print (apply-flexible-subscript
-	  `(4 3 2 1 0)
-	  `(3 4)
-	  (position :~ `(3 4 :~)))))
-|#
-
-;; Reference: https://stackoverflow.com/questions/32034237/how-does-numpys-transpose-method-permute-the-axes-of-an-array
 (defun permute* (tensor &rest orders)
   "
 Shuffles the order of axes of the tensor.
@@ -1008,21 +923,19 @@ See also: `!permute`
 
 (defun parameter (tensor)
   "
-
 ## [function] parameter
 
 ```
 (parameter tensor)
 ```
 
-The function parameter computes all the previous nodes of the given tensor if any, returning the new tensor with `requires-grad=t`.
+Creates a new tensor with :requires-grad=t from the given tensor. If the tensor is remained to be computed, parameter will use the result from `proceed`.
 
 ### Example
 
 ```lisp
 (parameter (randn `(3 3)))
 ```
-
 "
   
   (declare (type AbstractTensor tensor))
@@ -1120,36 +1033,42 @@ The function parameter computes all the previous nodes of the given tensor if an
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
-
-;; FixME:
-;; The Problem is that: after calling forward :around, set-save-for-backward is called.
-
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  APIs for save_for_backward (cl-waffe2 VM, internal usage)
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun system-lazy-set-save-for-backward (tensor)
-  ;; FIXME: How to ignore save-for-backward when predicting? compiling again?
+  (if (save-for-backward-space tensor)
+      nil
+      (let ((tensor-clone (make-clone tensor nil)))
+	(setf (save-for-backward-space tensor) tensor-clone)
+	tensor)))
 
-  (let ((space-tmp (make-clone tensor nil nil)))
-    (let* ((result (cl-waffe2/base-impl:!move space-tmp tensor :force t)))
-
-      ;; For compiler to use this info.
-      (setf (cl-waffe2/base-impl:mv-lazy-sv4bw
-	     (tensor-backward result))
-	    t)
-      ;; If tensor is arguments (of toplevel)...
-      (setf (save-for-backward-space result) tensor)
-      ;; Keep The Tensor Broadcastable!
-      (setf (tensor-flexible-p result) (tensor-flexible-p tensor))
-      ;; (!matmul (!flexible (randn `(3 5))) (!t (randn `(3 3 5))))
-      ;; !! Before and after save4bw, result == tensor.
-      result)))
-	
 (defun system-lazy-read-save-for-backward (tensor)
   (save-for-backward-space tensor))
 
-;; Exports
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Optimazations
+;;
+;;  Hook Optimizer -> Call Optimizer -> Reset-Grad
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 (defun hook-optimizer! (tensor optimizer)
   "
 ## [function] hook-optimizer!
+
+```lisp
+(hook-optimizer! tensor optimizer)
+```
+
+Hooks the optimizer to the tensor.
+
+### Inputs
+
+tensor[AbstractTensor]
+
+optimizer[AbstractOptimizer]
+
 "
   (declare (type AbstractTensor tensor)
 	   (type cl-waffe2/optimizers:AbstractOptimizer optimizer))
@@ -1159,28 +1078,33 @@ The function parameter computes all the previous nodes of the given tensor if an
 (defun call-optimizer! (tensor)
   "
 ## [function] call-optimizer!
+
+```lisp
+(call-optimizer! tensor)
+```
+
+Reading the `(grad tensor)`, the function invokes the optimizer hooked to the tensor.
 "
   (declare (type AbstractTensor))
   (when (slot-value tensor 'requires-grad)
+    (when (null (tensor-optimizer tensor))
+      (error "The tensor ~a has no optimizer hooked. Call (hook-optimizer! tensor optimizer) in advance."
+	     tensor))
     (cl-waffe2/optimizers:step-optimize (tensor-optimizer tensor))))
 
 (defun reset-grad! (tensor)
   "
 ## [function] reset-grad!
+
+Resets the gradient of the tensor with zero.
 "
   (declare (type AbstractTensor tensor))
   (when (slot-value tensor 'requires-grad)
-    (if (gradient-resetter tensor)
-	(funcall (gradient-resetter tensor))
-	(if (scalar-p tensor)
-	    (let ((zero (make-tensor 0 :dtype (dtype tensor))))
-	      (setf (tensor-vec (grad tensor)) (tensor-vec zero)))
-	    (with-no-grad
-	      (run-node!
-	       (cl-waffe2/vm.nodes:forward
-		(cl-waffe2/base-impl:ScalarMul (dtype tensor))
-		(grad tensor)
-		(make-tensor 0 :dtype (dtype tensor)))))))))
+    (if (scalar-p tensor)
+	(setf (tensor-vec tensor) (make-tensor 0 :dtype (dtype tensor)))
+	nil)))
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun shape-with-broadcastable (tensor)
   "

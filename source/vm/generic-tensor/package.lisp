@@ -3,7 +3,7 @@
 
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl :lparallel :bordeaux-threads :cl-waffe2/threads)
-
+  
   (:export
    ;;#:*cache-directory*
    #:with-memory-pool
@@ -20,7 +20,9 @@
    #:ScalarTensor
 
    #:current-backend-state
-   
+
+   #:tensor-finalizer
+   #:tensor-grad-count
    #:tensor-backward
    #:read-result
    #:tensor-variables
@@ -111,8 +113,7 @@
    )
 
   (:export
-   #:make-vm-function
-   #:compile-forward-chain)
+   #:make-vm-function)
   
   (:export
    #:movetensor-p
@@ -125,9 +126,8 @@
    #:compiled-variables
    #:nodevariables-parameters
    #:build
-   #:vm-build
    #:reset-compiled-function-cache!
-   #:run-node!
+   #:model-parameters
    #:set-input
    #:get-input)
 

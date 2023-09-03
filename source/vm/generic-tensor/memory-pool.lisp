@@ -47,15 +47,25 @@
 (declaim (inline get-from-memory-pool))
 
 (defparameter *thread-memory-pool*
-  (make-hash-table);;(tg:make-weak-hash-table :weakness :key)
+  (make-hash-table)
   "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
-(defvar       *thread-pool-lock*   (make-lock "thread cache lock"))
+
+(defvar *thread-pool-lock* (make-lock "thread cache lock"))
 
 ;; It was originally (defvar *adjustable-shape-table* nil)
 ;; If there's any shape-error related to static composite functions, doubt this:
 (defparameter *adjustable-shape-table* (make-hash-table) "An hash-table: Symbol -> Size.") ;; (A -> 10, B -> 10)
 
-(defvar *current-shape-state*    nil) ;; Global Adjustable-Shape-State
+(defvar *current-shape-state* nil) ;; Global Adjustable-Shape-State
+
+;; [TODO] No Runtime Allocation
+(deftype mem-pool-state-t ()
+  "
+:save-for-backward ...  Room for save4backward
+:tmp               ...  When quitting with-mem-pool, the value of :tmp is freed or reused.
+:input             ...  When quitting with-mem-pool, the room is extended to the superior scope.
+"
+  `(or null (and keyword (member :save-for-backward :tmp :input))))
 
 (defstruct Memory-Pool
   (temporary-rooms (make-hash-table) :type hash-table))
@@ -64,7 +74,6 @@
   ;; An copy of *adjustable-shape-table* to detect shape changing later.
   (state (alexandria:copy-hash-table *adjustable-shape-table*) :type hash-table))
 
-;; Could be slightly slow...
 (defun adjustable-shape-compatible (old-state)
   (declare (type Adjustable-Shape-state old-state)
 	   (optimize (speed 3)))
@@ -75,8 +84,7 @@
 		   (let ((val (gethash target-symbol old-table)))
 		     (if (and (typep val 'fixnum)
 			      (typep current-val 'fixnum))
-		       ;; The tensor is created as BATCH-SIZE=100, Now the operation is going udner BATCH_SIZE=10			  
-
+			 ;; Ex: The tensor is created as BATCH-SIZE=100, and now the operation is going udner BATCH_SIZE=10...
 			 (< val current-val)
 			 t)))
 	       current-keys current-vals))))
@@ -89,20 +97,24 @@
 	(with-lock-held (*thread-pool-lock*)
 	  (setf (gethash (current-thread) *thread-memory-pool*) (make-memory-pool))))))
 
+
+;; [TODO] Add: :gradient :cache :input
+;;        Add: if the facet=:cache, reuse
+
 (defstruct (Temporary-Room
 	    (:constructor make-room
 		(input-tensor
 		 &aux
 		   (shape-first (shape input-tensor)))))
   ;; Adjustable Tensor Size
+  (state nil :type mem-pool-state-t)
   (shape-first shape-first :type list)
   (size (apply #'* (translate-adjustable-shape (shape input-tensor))) :type fixnum)
   (cache-tensor input-tensor :type AbstractTensor))
 
 (defun print-current-memory-pool (&key (stream t))
-  (let ((pool (current-memory-pool)))
-    (print pool stream)
-    nil))
+  (print (current-memory-pool) stream)
+  nil)
 
 (defmethod print-object ((pool Memory-Pool) stream)
   (let ((exist-tensors)
@@ -142,23 +154,44 @@
   ;; TODO:
   ;; (maphash ... tensor-delete)
   ;; Maybe:: CUDA Foreign Pointers aren't gc-reachable??
-  (setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
+  (exit-memory-pool)
+  ;;(setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
   #+sbcl(sb-ext:gc :full t)
   )
 
-(defmacro with-memory-pool (&body body)
-  "
-## [macro] with-memory-pool
+(defun exit-memory-pool ()
+  "Return: An list of AbstractTensor which wants to be registered to the superior scope"
+  (let ((extended))
+    (maphash
+     #'(lambda (thread-idx thread-memory-pool)
+	 (declare (ignore thread-idx))
+	 (maphash
+	  #'(lambda (key room)
+	      (let ((state (temporary-room-state room))
+		    (tensor (temporary-room-cache-tensor room)))
+		;; state = :tmp :input :save-for-backward
+		(if (or (null state)
+			(eql state :tmp)
+			(eql state :save-for-backward))
+		    (funcall (tensor-finalizer tensor))
+		    (push (cons key room) extended))))
+	  
+	  (memory-pool-temporary-rooms thread-memory-pool)))
+     *thread-memory-pool*)
 
-Creates a new scope of memory-pool.
+    (setf *thread-memory-pool* (make-hash-table))
+    extended))
 
-After the body exists, all the temporary tensors in the pool is freed.
-"
-  `(let ((*thread-memory-pool* (make-hash-table)));;(tg:make-weak-hash-table :weakness :key)))
-     (unwind-protect (progn ,@body)
-       (free-current-memory-pool))))
+;; Users do not have to use this macro.
+(defmacro with-memory-pool (&body body &aux (result (gensym)))
+  ""
+  `(let* ((,result
+	    (let ((*thread-memory-pool* (make-hash-table)))
+	      (multiple-value-list (progn ,@body)))))
+     (dolist (i (exit-memory-pool))
+       (set-mem-pool (symbol-name (car i)) (cdr i)))
+     (apply #'values ,result)))
 
-;; To USE :EQL instead of equal, String->Keyword
 (defun get-mem-pool (key)
   (declare (type string key))
   (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool))))
@@ -246,18 +279,18 @@ Usage:
 
   `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table)))
 	  (*current-shape-state*    (make-adjustable-shape-state)))
-     
-     ;;(print "========")
-     ;;(maphash #'(lambda (key val)
-     ;;		  (format t "KEY: ~a   VAL: ~a~%" key val))
-     ;;	      *adjustable-shape-table*)
-     
-     ;;(unless (typep ,symbol-value 'fixnum)
-     ;;  (error "with-adjustalbe-symbol: Attempted to register an symbol, ~a (TODO More clear error)" ,symbol-value))
 
      (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
 	 
      ,@body))
+
+(defmacro with-adjustable-symbol-scope (&body body)
+  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table))))
+	  (*current-shape-state*    (make-adjustable-shape-state)))
+     ,@body))
+
+(defun register-adjustable-shape (symbol value)
+  (setf (gethash symbol *adjustable-shape-table*) value))
 
 (defmacro with-adjustable-symbols ((&rest forms) &body body)
   (labels ((expand-form (rest-forms)
@@ -311,13 +344,8 @@ Usage:
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3)))
 
-  ;; The number of call cases:
-
-  ;;  Much Higher  <->    Low
-  ;;    ChainTMP        ScalarTensor
-
   (cond
-    ((scalar-p tensor)
+    ((scalar-p tensor) ;; As of ScalarTensor, memory-usage = O(1)
      (if (vec tensor)
 	 (vec tensor)
 	 (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
@@ -347,4 +375,14 @@ Usage:
      (error "get-from-memory-pool failed: ~a isn't embodied." tensor))
     (T
      (error "get-from-memory-pool failed: because the given tensor isn't one of: ScalarTensor InputTensor(ChainTMP)"))))
+
+(defun write-mempool-state (tensor attribute)
+  (declare (type AbstractTensor tensor)
+	   (type mem-pool-state-t attribute))
+
+  (let ((room (get-mem-pool (tensor-name tensor))))
+    (when room ;; When room=nil, there's no need to consider whether the tensor will be freed or not.
+      (setf (temporary-room-state room) attribute)))
+  nil)
+
 

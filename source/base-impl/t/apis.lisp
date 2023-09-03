@@ -231,3 +231,4 @@
 		(!mul (!t a) (ax+b `(3 3) 1 0)))
 	       (tensor-vec (grad a))))))
 
+

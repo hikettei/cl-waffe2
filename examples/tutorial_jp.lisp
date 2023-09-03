@@ -110,7 +110,6 @@
    :cl-waffe2/backends.lisp     ;; cl-waffe2実装の一つ 全てCommon Lispで記述され、環境に依存しない。汎用性第一
    :cl-waffe2/backends.cpu      ;; cl-waffe2実装の一つ OpenBLAS等外部ライブラリを呼び出す。速度第一
    :cl-waffe2/backends.jit.cpu  ;; cl-waffe2 -> C/C++へのJITコンパイラ
-   :cl-waffe2/backends.jit.lisp ;; (将来廃止にする予定) cl-waffe2実装の一つ cl-waffe2プログラムをCommon LispプログラムにJITするサンプルと実装を提供 (まだバグが多い・・・) with-no-grad宣言かじゃないと動かないです。
 
    ))
 
@@ -437,10 +436,10 @@ Variables:
 ;; 普通にcallでCompositeを呼び出すことも可能ですし
 (print (proceed-time (call (Softmax-Model) (randn `(10 10)))))
 
-;; define-composite-functionマクロで事前にコンパイルしておき
-;; それ以降は静的に動作する関数を作ることもできます
+;; Compositeはdefmodel-asマクロを介してNodeやFunctionに変換することができます。
+;; トップレベルで呼び出せばコンパイルされた関数をキャッシュすることになります。
 
-(define-composite-function (Softmax-Model) !softmax-static)
+(defmodel-as (Softmax-Model) :asif :function :named !softmax-static)
 
 (print (!softmax-static (randn `(10 10))))
 
@@ -617,16 +616,16 @@ Variables:
 ;; with-setting-save4bw, with-reading-save4bwマクロを用いるかで、逆伝播の計算時に必要な計算ノードをコピーする必要があります。
 
 ;; Example: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-(define-static-node (Static-Sin (self)
-		     :where (A[~] -> OUT[~])
-		     :save-for-backward-names (x-input)
-		     :forward ((self x)
-			       (print "Hi :) the operation sin is executed.")
-			       (with-setting-save4bw ((x-input x))
-				 (proceed (!sin x))))
-		     :backward ((self dout)
-				(with-reading-save4bw ((x x-input))
-				  (values (proceed (!mul (!cos x) dout)))))))
+(define-op (Static-Sin (self)
+	    :where (A[~] -> OUT[~])
+	    :save-for-backward-names (x-input)
+	    :forward ((self x)
+		      (print "Hi :) the operation sin is executed.")
+		      (with-setting-save4bw ((x-input x))
+			(proceed (!sin x))))
+	    :backward ((self dout)
+		       (with-reading-save4bw ((x x-input))
+			 (values (proceed (!mul (!cos x) dout)))))))
 
 ;; 言い忘れたましたが、cl-waffe2のマクロで定義したデータ構造は
 ;; 全て定義名と同じ名前の関数がコンストラクタとして定義されています。
@@ -1186,17 +1185,17 @@ Previous dout:
 
 ;;Evaluation took:
 ;;  0.000 seconds of real time
-;;  0.000877 seconds of total run time (0.000860 user, 0.000017 system)
+;;  0.000314 seconds of total run time (0.000258 user, 0.000056 system)
 ;;  100.00% CPU
-;;  2,016,762 processor cycles
-;;  250,192 bytes consed
+;;  720,772 processor cycles
+;;  260,960 bytes consed
   
 ;;Proceed-Time: Without allocation time:
 ;;Evaluation took:
 ;;  0.000 seconds of real time
-;;  0.000008 seconds of total run time (0.000008 user, 0.000000 system)
+;;  0.000100 seconds of total run time (0.000100 user, 0.000000 system)
 ;;  100.00% CPU
-;;  16,988 processor cycles
+;;  227,324 processor cycles
 ;;  0 bytes consed
 
 ;; JITCPUTensor

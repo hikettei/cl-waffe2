@@ -224,7 +224,7 @@ This function is also used to adjust memory alignment of tensor."
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
 		     (res (!move dx (apply #'!view dout inp-sub))))		
-		(values nil (apply #'!view res out-sub)))))
+		(values nil (->contiguous (apply #'!view res out-sub))))))
 
 
 (defun !view (tensor &rest subscripts)
@@ -559,7 +559,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 	     :forward ((self x)
 		       (let ((compiled-model (or
 					      (proceed-compiled-model self)
-					      (vm-build x :compile-mode (compile-mode self)))))
+					      (build x :compile-mode (compile-mode self)))))
 			 ;; Compiled-Composite
 			 (setf (proceed-compiled-model self) compiled-model)
 			 
@@ -577,9 +577,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 			 ;; The result is returned.
 			 `(progn
-			    ;; Tell top compiling funtion what composite to use for the compiled-function
-			    (cl-waffe2/vm.generic-tensor::declare-compiled-composite ,compiled-model)
-			    
+			    ;; Tell top compiling funtion what composite to use for the compiled-function			    
 			    ,x)))
 	     :backward ((self dout dx)
 			(declare (ignore dx))
@@ -660,7 +658,7 @@ The function proceed-backward calls forward and backwrd of the tensor.
 `T` (which indicates backward is succeed)
 "
   (declare (type AbstractTensor tensor))
-  (let ((compiled-model (vm-build tensor :compile-mode compile-mode)))
+  (let ((compiled-model (build tensor :compile-mode compile-mode)))
     (forward compiled-model)
     (backward compiled-model)))
 

@@ -208,13 +208,9 @@ None.
 			   ops
 			   prep
 			   f)
-		  ;; Note: !copy is only needed when backward will be used.
-		  ;; Note: The usage of forward below seems a little tricky
 		  (forward (,node-name (dtype x))
-			   (!copy x)
-			   (if *no-grad*
-			       y ;; !copy y is always ignored.
-			       (!copy y)))))))
+			   (!copy x) ;; Later, In-place mutation should work if unnecessary
+			   y)))))
   
   (define-arithmetic-node-caller
       !matrix-add
@@ -297,7 +293,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
 			   document)
 		  (forward (,node-name (dtype x))
 			   (!copy x)
-			   (!copy (number->stensor scalar x)))))))
+			   (number->stensor scalar x))))))
   (define-scalar-mat-node-caller
       !scalar-add ScalarAdd
     "X_{copy}\\gets{X + scalar}")
@@ -415,7 +411,7 @@ x_{copy}\\gets{x ~a y}
 			   op)
 		  (forward (,node-name)
 			   (!copy (number->stensor x y))  ;; Returns X
-			   (!copy (number->stensor y x))) ;; Returns Y
+			   (number->stensor y x)) ;; Returns Y
 		  ))))
   (define-sas-op !sas-add ScalarAndScalarAdd "+")
   (define-sas-op !sas-sub ScalarAndScalarSub "-")

@@ -1,6 +1,14 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+(defun map-tree (fn tree)
+  (let ((tree (funcall fn tree)))
+    (if (listp tree)
+        (mapcar (lambda (subtree)
+                  (map-tree fn subtree))
+                tree)
+        tree)))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
@@ -98,6 +106,7 @@
 	 (out (if broadcasted-p
 		  (apply #'view out broadcasts)
 		  out)))
+    
     (setf (tensor-initial-offset out) (tensor-initial-offset tensor))
     out))
 

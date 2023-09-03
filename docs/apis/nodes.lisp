@@ -1,28 +1,55 @@
 
 (in-package :cl-waffe2.docs)
 
-(with-page *nodes* "Formulate Neural Networks"
-  (insert "The package `:cl-waffe2/vm.nodes` provides a fundamental system for building neural networks using `AbstractTensor`.
+(with-page *nodes* "Formulating Computation Nodes"
+  (insert "The package `:cl-waffe2/vm.nodes` provides a features on `AbstractNode` and `Composite`, which is a fundamental data structure to represent computation node. `AbstractNode` is the smallest unit of the operation in the network, and `Composite` is a class which bundles several `AbstractNodes` (`Composite=nn.Module or Model` in other frameworks).
 
-This package can be divided into three main parts.
+The role of node and model is completely different. To perform operations with `AbstractNode` we have to step a two steps: `General Definition` and `Device Specific Implementations`. `AbstractNode` is defined by the macro `defnode` with its specifications but forward implementation. The macro `define-impl` or `define-impl-op` will provide device-specific implementations for each AbstractTensor. The differences between `define-impl` and `define-impl-op` is that: The :forward definition is given by a macro or a function respectively. With `define-impl` macro and the `call-with-view` function, you can create a operation which optimizes, fuses, and collapses  the order of iteration, schedules multi-threading, and computes view offsets in advance with a simple form.
 
-1. Shaping APIs (`:where`)
-2. defnode  (The smallest unit of differentiable operations)
-3. defmodel (Operations consisted of defnode, and static functions)
+On the other hand, since `Composite` is user to bundle several nodes, it is not only used to juse represent Neural Network Model (e.g.: `LinearLayer` `Conv2D`...) but compiled into `function` or `AbstractNode` with the `defmodel-as` macro by tracing its computation node declared in the `:call->` method. However, to do this, you have to declare these information in advance: `The rank/shape of tensors, the number of arguments, and which operations are In-place?`. This is also true for `AbstractNode` and cl-waffe2 introduced an small DSL to represent this, `Subscript DSL (:where ...)`.
 
+In short word, Subscript DSL is used to:
+
+- For AbstractNode, declares the transmission states of the operation (MUST)
+
+- For Composite, in order to trace the network, it declares the transmission state of operation (Optional)
+
+Accordingly, this document is divided to three sections.
+
+- The specification of Subscript DSL
+
+- AbstractNode
+
+- Composite
+
+And an overview of APIs is here:
+
+```lisp
+[AbstractNode] The fundamental unit of forward/backward propagations.
+ defnode - Declares a general definition of AbstractNode
+      L define-impl     Implements a AbstractNode. Its forward definition is given as a macro (to inline/call-with-view), later (compile nil body) is called, and cached when :compile-when-cache=t.
+      L define-impl-op  Implements as a lambda function.
+
+define-op = defnode + define-impl-op
+
+[Composite] Bundles several AbstractNodes, defined by defmodel macro.
+  defmodel - Defines a new Composite
+     L defmodel-as Redefining the existing Composite as a function or AbstractNode to reduce compiling time, to use cl-waffe2 as a define-by-run library.
+```
+
+cl-waffe2 VM sorts and compiles the network of `AbstractNode` into a `cl-waffe2 IR (Extended Wengert List)` and operations are performed. And, `AbstractNode` is used to represent an blueprint of lambda functions. Both of AbstractNode and Composite are the CLOS class.
 ")
 
   (macrolet ((with-doc (name type &body body)
-	       `(with-section (format nil "~(~a~)" (symbol-name ,name))
+	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
 
-    (with-section "Shaping API"
+    (with-section "Representing shapes before and after the operation."
       (insert "
-
 When defining an operation in cl-waffe2 with a `defnode` macro, the shape of the matrix used in the operation must also be defined in the `:where` keyword.
 
-This is a Shaping API, and responsible for shape inspection of all operations.
+This is a Shaping API, and responsible for shape inspection of all operations, and tracing the network.
 
 ## Introducing Subscript DSL
 
@@ -322,297 +349,33 @@ Example: (TODO)
 
 "))
 
-    (with-section "[macro] defnode"
-      (insert "
+    (with-section "AbstractNode")
 
-```lisp
-(defnode ((abstract-name
-		   (self &rest constructor-arguments)
-		    &key
-		      (where t)
-		      (out-scalar-p nil)
-                      (save-for-backward nil)
-		      (slots nil)
-		      (backward nil)
-		      (documentation \"\"))
-		   &body constructor-body))
-```
+    (insert (documentation (find-class 'AbstractNode) 't))
 
-`defnode` is a macro to define computation nodes in cl-waffe2, which is a subclass of `AbstractNode`.
-
-The class defined is named after `abstract-name`, and they possess the following datum:
-
-1. Generic definition of forward, including `Subscript DSL`, (whch is transimission state of the operation), and `slots` which is shared at forward and backward time.
-
-2. (Optional) Generic definition of backward.
-
-### Inputs
-
-1. `abstract-name` the macro defines a new class named after it.
-
-2. `where`  the place to put Subscript DSL
-
-3. `save-for-backward` corresponding position of input arguments will produce a copy, which is used at backward time.
- 
-4. `backward` (Optional) Any back-propagation described in define-impl is disabled; instead, the definitions given here are used.
-
-5. `documentation` docstring
-
-6. `out-scalar-p` Set t If the returned tensor is ScalarTensor. This can be dynamically modified via the accessor `(out-scalar-p self)`.
-
-### Effects
- 
-1. Defines a class named `abstract-name`
-
-2. Defines a function which is used to initialize the node named `abstract-name`
-
-### Useful Tips
-
-In order to simplify parameter initialisation, if the keyword name of the :initarg is the same as the keyword name of the argument, the initialisation code is automatically generated.
-
-```lisp
-(defnode (ExampleNode (self arg)
-            :slots ((arg :initarg :arg))))
-
-(slot-value (ExampleNode 10) 'arg) ;; => 10
-```
-
-### When to define backward?
-
-The backward follows this format:
-
-```lisp
-((self dout dx dy ... dn)
- (values dx.grad dy.grad ... dn.grad))
-```
-
-`dout` is a previous node's gradient, and `dx dy ... dn` is a variables that used when forward. No guarantee that `dx dy ... dn` isn't being destructed due to in-place operation. If you need them in order to compute gradients, set `:save-for-backward (t t ... t)` at `define-impl` macro.
-
-Find the partial derivative of each variable according to the derivative of the composite function.
-
-The definition of backward must be placed either of defnode or define-impl.
-Basically, if the original defnode describes the backward, define-impl's backward is ignored.
-
-```lisp
-1.
-=================================================================
-AddNode (defnode) <- Place Backward
-   |
-   |-> (AddNode :CPUTensor)  (define-impl)
-   |-> (AddNode :LispTensor) (define-impl)
-   |-> (AddNode :CUDATensor) (define-impl)
-=================================================================
-
-2.
-=================================================================
-AddNode (defnode) <- Backward=nil
-   |
-   |-> (AddNode :CPUTensor)  (define-impl) <- place backward
-   |-> (AddNode :LispTensor) (define-impl) <- place backward
-   |-> (AddNode :CUDATensor) (define-impl) <- place backward
-=================================================================
-```
-
-Depending on `*using-backend*`, the implementation to use is determined at node-building time. See also: with-devices.
-
-### How to define backward?
-
-```math
-g(dout, dx_{in}, dy_{in}, ..., dn_{in}) \\triangleq \\\\
- Move(dx_{out}, {dout} \\times {dx_{grad}}),\\\\
- Move(dx_{out}, {dout} \\times {dy_{grad}}),\\\\
- ...,\\\\
- Move(dx_{out}, {dout} \\times {dn_{grad}})
-```
-
-```lisp
-:save-for-backward (t t)
-:backward ((self dout dx dy)
-           (values
-               (!mul dout dy)
-               (!mul dout dx)))
-```
-
-`self` is a place to pass the node class. `dout` is a `AbstractTensor` of previous node's gradient. `dx, dy, ..., dn` are variables used in forward. In the case of the tensor is computed as `In-place`, there's no guarantee that variables aren't destructed. So, to ensure that variables remains as it was, set `:save-for-backward` at corresponding positions if the variable is needed to compute gradient.
-
-According to `the derivative of the composite function`, `:backward` definition should return next node's `dout` following this form:
-
-`(values dx.grad dy.grad ... dn.grad)`
-
-After the computing, cl-waffe2 automatically selects where to store the result, and moves it.
-
-```math
-\\begin{equation}
-  x_{in}=
-  \\begin{cases}
-    x_{saveforbackward} & \\text{SaveForBackward is t} \\\\
-    \\text{x} & \\text{otherwise}
-  \\end{cases}
-\\end{equation}
-```
-
-```math
-\\begin{equation}
-  x_{out}=
-  \\begin{cases}
-    x_{copy} & \\text{If the tensor is a ExistTensor or cause conflicts} \\\\
-    \\text{x} & \\text{If the tensor make no conflicts.}
-  \\end{cases}
-\\end{equation}
-```
-
-(`x` is a variable called with `(forward node &rest inputs)` function.)
-
-
-### Example
-
-```lisp
-
-(defnode (MatMulNode (myself dtype &key transpose-a transpose-b)
-	  :where (A[~~ i j] B[~~ j k] C[~~ i k] -> C[~~ i k])
-	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
-		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
-          :documentation \"gemm\"
-	  :backward ((self dout da db do)
-		     (declare (ignore do))
-		     (values
-		      (!matmul dout (!t db))
-		      (!matmul (!t da) dout)
-		      nil))))
-
-(MatmulNode :float)
-;; <Node: MATMULNODE-CPUTENSOR (A[~~ I J] B[~~ J K] C[~~ I K] -> C[~~ I K])>
-```
-
-"))
-
-    (with-section "[macro] define-impl"
-      (insert "
-```lisp
-(define-impl ((abstract-name
-			&key
-			  (device t)
-                          (cache-when-compiled t)
-			  (reject-p nil))
-		       &key
-			 save-for-backward
-			 forward
-			 backward)
-```
-
-Gives an implementation to `AbstractNode`.
-
-### Inputs
-
-1. `device` Set here symbol the impl working on. The symbol must be a subclass of `AbstractTensor`. If t, the impl has the highest priority assigned to all implementations.
-
-2. `reject-p[null or predicate]` Set here predicator, If the predicator is t, the implementation refures to be dispatched.
-
-3. `save-for-backward` The corresponding variable which is t will be made a copy when forward. (e.g.: `forward=(x y)` and `save-for-backward=(t nil)`, x is copied, y isn't copied.)
-
-4. `cache-when-compiled[boolean]` If t, `call-with-view` function used in `:forward` will be cached when compiling. Set nil to disable this behaviour.
-
-5. `forward` Place the expanded lisp-code for forward propagation.
-
-6. `backward` Place the definition of backward as the same forward of `defnode` does.
-
-### Tips: reject-p
-
-One of the practical usage of reject-p is to restrict dtypes that implementation can handle.
-
-reject-p takes an function: #'(lambda (&rest inputs) ...) where inputs is `constructor-arguments` in defnode. (e.g.: `(AddNode :float)` -> `inputs=(list :float)`).
-
-`AddNode` for CPUTensor only supports dense matrix.
-
-```lisp
-(define-impl (AddNode :device CPUTensor
-	     :reject-p (supported-dtypes-are 0 :float :double))
-	     :forward ((self x y)
-		       `(,@(expand-axpy-form x y)
-			     ,x)))
-```
-
-The macro `supported-dtypes-are` returns an predicator which returns nil if the first argument is the equivalent to `:float` or `:double`.
-
-### forward/backward
-
-forward/backward is given as:
-
-```lisp
-((self &rest arguments)
- body)
-```
-"))
+    (with-doc 'defnode 'macro)
+    (with-doc 'define-impl 'macro)
     
-    (with-section "[generic] forward"
-      (insert "```(forward node &rest inputs)```
-Reading an state of `*using-devies*` and the given nodes, the method `forward` returns a new tensor with applied the forward definition of a given `node` with inputs lazily.
-
-The moment `forward` is called, the computation node is constructed for building forward/backward kernel. Since then, `forward` is `AbstractNode` dedicated operation, not applied into calling `Composite`.
-
-### Example
-
-```lisp
-(forward (AddNode :float) (randn `(3 3)) (randn `(3 3)))
-
-{CPUTENSOR[float] :shape (3 3) :named ChainTMP31939 
-  :vec-state [maybe-not-computed]
-  ((0.109944925 0.42675912  1.9701254)
-   (1.5735719   0.7928889   1.1698933)
-   (0.08926714  0.0937486   -1.1063566))
-  :facet :input
-  :requires-grad NIL
-  :backward <Node: ADDNODE-CPUTENSOR (A[~~] B[~~] -> A[~~])>}
-```
-"))
-
-    (with-section "[class] defmodel"
-      (insert "~a" (documentation (macro-function 'defmodel) 'function)))
+    (with-doc 'define-impl-op 'macro)
+    (with-doc 'define-op 'macro)
     
-    ;;(with-doc 'defmodel 'macro)
+    (with-doc 'set-save-for-backward 'function)
+    (with-doc 'read-save-for-backward 'function)
 
-    (with-doc 'call 'function)
+    (with-doc 'with-reading-save4bw 'macro)
+    (with-doc 'with-setting-save4bw 'macro)
     
-    (with-doc 'with-devices 'macro
-      (insert "
+    (with-section "Composite")
 
-```lisp
-(with-devices (LispTensor CPUTensor)
-   (!add a b))
-```"))
+    (insert (documentation (find-class 'Composite) 't))
 
-    (with-section "[macro] define-and-impl-node"
-      (insert "~a" (documentation (macro-function 'define-and-impl-node) 'function)))
+    (with-doc 'defmodel    'macro)
+    (with-doc 'defmodel-as 'macro)
 
-    (with-section "[macro] define-composite-function"
-      (insert "~a" (documentation (macro-function 'define-composite-function) 'function)))
-
-    (insert "~a" (documentation (macro-function 'define-static-node) 'function))
-
-    (insert "~a" (documentation 'set-save-for-backward 'function))
-    (insert "~a" (documentation 'read-save-for-backward 'function))
+    (with-section "Events for Embedding JIT-Generated Code in runtime")
     
-    (insert "~a" (documentation (macro-function 'with-setting-save4bw) 'function))
-    (insert "~a" (documentation (macro-function 'with-reading-save4bw) 'function))
-
-    (insert "~a" (documentation #'on-finalizing-compiling 't))
-    (insert "~a" (documentation #'on-finished-compiling 't))
-
-
-    (with-section "[class] Composite"
-      (insert
-       "
-[class] Composite
-
-~a"
-       (documentation (find-class 'Composite) 't)))
-
-    (with-section "[class] AbstractNode"
-      (insert
-       "
-[class] AbstractNode
-
-~a"
-       (documentation (find-class 'AbstractNode) 't)))
-
-    (with-doc 'with-instant-kernel 'macro)))
+    (insert "~a"
+	    (documentation (car (c2mop:generic-function-methods #'on-finalizing-compiling)) 't))
+    (insert "~a"
+	    (documentation (car (c2mop:generic-function-methods #'on-finished-compiling)) 't))
+    ))

@@ -4,6 +4,13 @@
 ;; (TODO): Better Error Printing of Shape-Error
 ;; Memo: In Progress.
 
+;; [TODO] Update the error msg
+;;  V call or forward
+;; (call (Composite-Name) X Y) -> ...
+;;                        ^--- ...
+;;                          ^--- ...
+;;
+
 (defstruct Rank-Error
   "Rank Error"
   (position 0 :type fixnum)

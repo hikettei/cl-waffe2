@@ -163,7 +163,11 @@ Return:
   (loop for i in (composite-input-size composite)
 	collect (- (length i) (count '~ i :test #'symbol-eq))))
 
-
+(defun where->shapes (where)
+  "where -> (values ((i j) (j k)) ((i j k)))"
+  (multiple-value-bind (x y first-state out-state z) (parse-subscript where)
+    (declare (ignore x y z))
+    (values first-state out-state)))
 
 (defun collect-initarg-slots (slots constructor-arguments)
   (map 'list #'(lambda (slots)
@@ -177,4 +181,37 @@ Return:
 		   slots))
        slots))
 
+(defmacro with-detach-tensors ((tensors) &body body)
+  `(let ((detach-state (map 'list #'cl-waffe2/vm.generic-tensor:detach-p ,tensors)))
+     (map 'list #'(lambda (x) (setf (cl-waffe2/vm.generic-tensor:detach-p x) t)) ,tensors)
+     (unwind-protect
+	  (progn ,@body)
+       (loop for s in detach-state
+	     for tens in ,tensors do
+	       (setf (cl-waffe2/vm.generic-tensor:detach-p tens) s)))))
+
+(defun make-grad-gensym () (intern (symbol-name (gensym "Chain")) "KEYWORD"))
+
+
+(defun parse-broadcasted-shape (shapes)
+  (flet ((apply-refine (list)
+	   (loop for s in list
+		 unless (and *enable-broadcasting-auto* ;; not created by broadcast
+			     (equal s -1))
+		   collect (if (equal s -1)
+			       1
+			       s))))
+    (map 'list #'apply-refine shapes)))
+
+(defnode (System-Lazy-Cons (self a b)
+	  :where (A[a-size] B[b-size] -> A[a-size] B[a-size] where a-size = (shape a) b-size = (shape b)))
+  (setf (ignore-shape-error self) t))
+
+(define-impl-op (System-Lazy-Cons :device t) :forward ((self a b) (values a b)))
+
+(defun !system-lazy-cons (a b)
+  (call (System-Lazy-Cons a b) a b))
+
+(defun !system-lazy-values (&rest args)
+  (reduce #'!system-lazy-cons args))
 
