@@ -1221,7 +1221,7 @@ CL-WAFFE2-REPL&gt;
 <h3 id="output_1">Output</h3>
 <p><code>T</code> (which indicates backward is succeed)</p>
 <h2 id="function-proceed-bench">[function] proceed-bench</h2>
-<pre><code class="language-lisp">(proceed-bench tensor &amp;key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil))
+<pre><code class="language-lisp">(proceed-bench tensor &amp;key (compile-mode :default) (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10) (backward nil) (fuse-p t))
 </code></pre>
 <p>Invokes <code>cl-waffe2 VM</code> with benchmarking the forward and (if specified) backward.</p>
 <h3 id="input">Input</h3>
