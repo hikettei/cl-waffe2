@@ -98,6 +98,7 @@
 	 (out (if broadcasted-p
 		  (apply #'view out broadcasts)
 		  out)))
+    
     (setf (tensor-initial-offset out) (tensor-initial-offset tensor))
     out))
 

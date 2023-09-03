@@ -194,7 +194,9 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
   (let ((*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
     (multiple-value-bind (iseq-forward leaves)
 	(node-compile-into-vm toplevel :fuse-p fuse-p)
-
+      ;; Set grad-count=0 if any
+      (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
+      
       (apply-in-place-mutation! iseq-forward leaves)
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))

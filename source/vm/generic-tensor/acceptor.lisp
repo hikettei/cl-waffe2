@@ -49,7 +49,7 @@ The result
 Tensors created with the forward method has a this structure and accessible with tensor-state function."
   (state :initialized :type (member :initialized :forwarded :backwarded))
   (forward-out-form nil :type Compiled-Kernel)
-  (forward-result   nil :type list)
+  (forward-result   nil :type (or null AbstractTensor))
 
   (backward-input-variable)
   (backward-out-form nil :type list)
@@ -211,19 +211,6 @@ permute-order : ~a
 
       t)))
 
-(defun state-reset! (tensor)
-  "Resets tensor's result to get next round output."
-  (declare (type AbstractTensor tensor))
-  (if (tensor-state tensor)
-      (setf (statecontainer-forward-result  (tensor-state tensor)) nil
-	    (statecontainer-backward-result (tensor-state tensor)) nil)))
-
-(defun state-reset-bw! (tensor)
-  "Resets tensor's result to get next round output."
-  (declare (type AbstractTensor tensor))
-  (if (tensor-state tensor)
-      (setf (statecontainer-backward-result (tensor-state tensor)) nil)))
-
 (defvar *node-parameters-tmp* nil "An temporary variable to store all the variables used in the computation node.")
 
 (defun construct-variables-table (variables-list)
@@ -287,7 +274,7 @@ permute-order : ~a
 
   (let ((state (tensor-state tensor)))
     (if state
-        (nth (tensor-out-n tensor) (the list (statecontainer-forward-result (tensor-state tensor))))
+        (statecontainer-forward-result (tensor-state tensor))
 	tensor)))
 
 (defun compile-forward-kernel (forward-iseq

@@ -346,8 +346,6 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	(variables (tensor-variables tensor)))
     (declare (type AbstractNode node)
 	     (type list variables))
-
-    ;; これでPermutionとかコンパイルできる？
     
     (assert (every #'(lambda (x) (typep x 'AbstractTensor)) variables)
 	nil
@@ -357,6 +355,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 			    collect (or (system-lazy-read-save-for-backward var)
 					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
 	  (dout (cl-waffe2/vm.generic-tensor::make-clone tensor nil nil)))
+      (setf (tensor-protect-me dout) t)
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
 	     (out-toplevels (if (every #'null out-toplevels) ;; no gradients?
 				(return-from make-backward)

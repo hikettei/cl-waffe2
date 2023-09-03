@@ -134,12 +134,6 @@
 
 	       (:file "base-impl/utils")
 	       
-	       (:file "backends/JITLispTensor/package")
-	       (:file "backends/JITLispTensor/compiler")
-	       (:file "backends/JITLispTensor/tensor")
-	       (:file "backends/JITLispTensor/jit")
-	       (:file "backends/JITLispTensor/delayed-node-impls")
-
 	       (:file "package")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
@@ -229,9 +223,6 @@
 	       (:file "backends/JITCPUTensor/t/package")
 	       (:file "backends/JITCPUTensor/t/jit")
 	       
-	       (:file "backends/JITLispTensor/t/package")
-	       (:file "backends/JITLispTensor/t/compiler")
-
 	       (:file "nn/t/package")
 	       (:file "nn/t/conv")
 	       (:file "nn/t/activation")

@@ -214,6 +214,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		     move-p
 		     ;; As far as I remember, this condition is intended that the copying for re-aranging memory-layout?
 		     ;; But it could be possible to delete it, and delete more MoveTensorNode, especially for viewed tensor.
+		     (not (tensor-protect-me (second (wfop-args instruction))))
 		     (not (movetensor-save-for-backward node)) ;; when :force=t, never deleted.
 		     )
 		;; Invoking this form == The MoveTensorNode can be deleted as long as ref-table condition is ok.
