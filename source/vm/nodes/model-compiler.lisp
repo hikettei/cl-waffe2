@@ -8,6 +8,7 @@
 
 
 ;;[TODO]
+;; - IRの生成する命令には二種類ある（マクロから、関数から）
 ;;- retain_graph
 ;;- dynamic-shapingとか考えないで普通にdefine-by-runっぽく動かせない？
 ;;- InstantCompositeとdefmodel-asベースの逆伝播でdisassembleを簡略化

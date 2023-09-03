@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; Utils for Graph
+;; Here, we provide utils for analyzing graphs
 
 (defun deterministic-p (tensor)
   "Returns t if tensor's node is deterministic
@@ -49,11 +49,3 @@
 	   :input)) ;; :chain = auto-generated
       (T :input))))
 
-(defun trace-and-explore-nodes! (out-tensor)
-  (error "to be deleted"))
-
-(defun trace-and-optimize-node! (out-tensor major n-cores)
-  (error "to be deleted"))
-
-(defun optimize-computation-node! (out-tensor major n-cores)
-  (error "to be deleted")) 

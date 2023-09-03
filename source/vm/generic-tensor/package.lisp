@@ -3,7 +3,7 @@
 
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl :lparallel :bordeaux-threads :cl-waffe2/threads)
-
+  
   (:export
    ;;#:*cache-directory*
    #:with-memory-pool
