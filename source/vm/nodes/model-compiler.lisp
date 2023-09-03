@@ -347,7 +347,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 (defmodel-as target-model &key (where nil) (asif :function) (named nil) (differentiable nil))
 ```
 
-Creates a new function or AbstractNode from `Composites`. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
+Redefines a Composite as a new function or AbstractNode specified in the `:asif` keyword. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
 
 ### Example
 
@@ -357,7 +357,7 @@ Creates a new function or AbstractNode from `Composites`. Further functions or `
 
 ### Inputs
 
-`target-model[Composite]` specify a initializing form of `Composite` to be redefined.
+`target-model[Composite]` a form to initialize the composite. This from is executed before running the code, and accordingly static.
 
 `where[Subscript DSL or null]` If the model has no `:where` declaration, this macro uses this `:where` form instead. Therefore, as long as `defmodel` provides `:where` declaration, this form should be OK if set as nil.
 

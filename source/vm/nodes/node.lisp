@@ -33,17 +33,18 @@
    ;; For cl-waffe2 VM
    (out-to    :initform nil :accessor node-out-to)
    (out-sizes :initform nil :accessor node-out-sizes))
-  (:documentation "The class AbstractNode is a fundamental object of describing computation nodes in cl-waffe.
+  (:documentation "
 
-AbstractNode must possess following:
+## [class] AbstractNode
 
-   1. Transimission State
+AbstractNode is a CLOS class to represent operations.
 
-   2. Slots (for passing forward/backward)
+Can be created by a function `(AbstractName ...)` declared by the defnode macro.
 
-   3. Variables (for building computation nodes)
+In order to step the computation: `(forward node arg1 arg2 ...)` (using a `call` instead of `forward` is ok)
 
-   4. Save For Backward States/Places
+And backward: `(backward node prev-gradient arg1 arg2 ...)`
+
 "))
 
 

@@ -250,7 +250,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 (defmacro defnode ((abstract-name
 		   (self &rest constructor-arguments)
 		    &key
-		      (where t)
+		      (where nil)
 		      (out-scalar-p nil)
 		      (slots nil)
 		      (save-for-backward nil)
@@ -261,74 +261,87 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 		   &aux (subscript-p  (gensym))
 		     (subscript-p1 (gensym))
 		     (constructor-arguments `(,self ,@constructor-arguments)))
-  "The macro defnode declares a generic definition of computation node named abstract-name.
+  "
+## [macro] defnode
 
-In general, a computation node in cl-waffe2 is defined as:
+```lisp
+(defnode (abstract-name
+		   (self &rest constructor-arguments)
+		    &key
+		      (where t)
+		      (out-scalar-p nil)
+		      (slots nil)
+		      (save-for-backward nil)
+		      (backward nil)
+		      (extends nil)
+		      (documentation \"\"))
+		   &body constructor-body)
+```
 
-   1. An data structure with both of forward and backward propagation.
-   2. The shape of the matrix before and after the calculation is declared with :where option.
-   3. Have a per-device implementation of forward propagation (sometimes backward)
+Declares a new `AbstractNode`.
 
-Effects:
+### Effects
+   - defines a class (subclass of `AbstractNode`) named `abstract-name`
+   - defines a fucntion which initializes the defined node.
 
-   - defines a class (extended AbstractNode) named abstract-name
-   - defines a constructor named abstract-name
+### Inputs
 
-Inputs:
+- `abstract-name`[symbol] indicates the name of class, and constructor.
+- extends[list] set a list of symbols, the class is defined with extending them.
 
-   - abstract-name[symbol]
-   - extends[list] set a list of classes that defined node class extends.
-   - (self &rest constructor-arguments)
-     The constructor will be defined as:
-     (defun ,abstract-name (self &rest constructor-arguments)
-           ,@construtor-body
-           self)
-   - slots[list] Describe here the slots node has. (the syntax is the same as defclass's slot.)
-   - where[list] Describe pointer movement and shape changes before and after an operation using a DSL with a special syntax.
-   - out-scalar-p [Boolean] Set t if the node returns a single ScalarTensor.
-   - backward [list, optional] declares the definition of backward. (See also: define-impl)
+- `(self &rest constructor-arguments)` declares the arguments of the constructor function, which `cosntructor-body` uses. 
 
-   - documentation [String]
-   - constructor-body [body] describe here the behaviour of constructor.
+- slots[list] Describe the slots which node has as if defclass. Tips: In order to make it shorter to create a constructor, if initargs (i.e.: `:initarg :XXX`) is the same as the keyword name of the argument, the initform is replaced with the argument.
 
-## How to use where phase?
+- where[SubscriptDSL] Put here the Subscript DSL (MUST)
 
-Place here a small DSL that describes the state of the tensor before and after the operation.
+- out-scalar-p [Boolean] Set t if the node returns a ScalarTensor.
 
-## Tips
+- backward [list] This form is optional. The backward receives arguments like: `(dout var1 var2...)` and return tensors which is lazy-evaluated. (See examples). You can set this form as nil, but in that case each `define-impl` and `define-impl-op` must have a backward slot.
 
-In order to simplify parameter initialisation, if the keyword name of the :initarg is the same as the keyword name of the argument, the initialisation code is automatically generated.
+- documentation [String]
 
+### Example
+
+```lisp
+;; Tips
 (defnode (ExampleNode (self arg)
             :slots ((arg :initarg :arg))))
 
 (slot-value (ExampleNode 10) 'arg) ;; => 10
 
-## Where to place backward?
+(defnode (MatMulNode-Revisit (myself dtype &key transpose-a transpose-b)
+	  :where (A[~ i j] B[~ j k] C[~ i k] -> C[~ i k])
+	  :slots ((transpose-a :initarg :transpose-a :type boolean :reader trans-a?)
+		  (transpose-b :initarg :transpose-b :type boolean :reader trans-b?))
+	  :backward ((self dout da db do)
+                     ;; dout=previous gradient, :save-for-backward is set to (t t nil).
+                     ;; so da/db is a copy of variable.
+		     (declare (ignore do))
+                     ;; Set nil to the direction gradients aren't produced.
+		     (values
+		      (!matmul dout (!t db))
+		      (!matmul (!t da) dout)
+		      nil))
+	  :documentation \"
+```math
+C\\gets{gemm(1.0, A, B, 0.0, C)}
+```
+\"))
+```
 
-1.
-=================================================================
-AddNode (defnode) <- Place Backward
-   |
-   |-> (AddNode :CPUTensor)  (define-impl)
-   |-> (AddNode :LispTensor) (define-impl)
-   |-> (AddNode :CUDATensor) (define-impl)
-=================================================================
-
-2.
-=================================================================
-AddNode (defnode) <- Backward=nil
-   |
-   |-> (AddNode :CPUTensor)  (define-impl) <- place backward
-   |-> (AddNode :LispTensor) (define-impl) <- place backward
-   |-> (AddNode :CUDATensor) (define-impl) <- place backward
-=================================================================
-
-The definition of backward must be placed either of defnode or define-impl.
-Basically, if the defnode describes the backward, define-impl's backward is ignored.
-
-Depending on *using-backend*, the implementation to use is determined at node-building time. See also: with-devices.
+You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...).
+`
 "
+
+  (when (null where)
+    (error "defnode: Subscript DSL is missing from declaration.
+
+    (defnode (~a (self ...)
+               :where ...
+                        L___  Fill this form!
+               ...)"       
+	   abstract-name))
   
   (let ((initarg-slots (map 'list #'(lambda (slots)
 				      ;; Auto-Generated Constructor is Enabled Only When:
@@ -421,28 +434,35 @@ Depending on *using-backend*, the implementation to use is determined at node-bu
 			 backward
 		       &aux
 			 (inputs (gensym "inputs")))
-  "Through the macro define-impl, the behaviour of nodes are described.
+  "
+## [macro] define-impl
 
-Follow these constraints:
+```lisp
+(define-impl (abstract-name &key (device t) (extends nil) (cache-when-compiled t) (reject-p nil))
+        &key (save-for-backward nil) (forward nil) (backward nil))
+```
 
-Memo: forward must return: a list (to be jit-compiled)
-      backward must return a values of computation nodes
+Defines an implementation of `abstract-name` which is already declared by `defnode` macro, with :forward=macro and later compiled.
 
-1. Arguments must be this format:
-   Forward  -> (node input-tensor1 input-tensor2 ...)
-   Backward -> (node dout dx dy)
+### Effects
 
-   Other parameters should be given as constructor.
+Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 
-extends[lisp] set a list of class names that defined class extends.
+### Inputs
 
-Note:
-When device=t
-save-for-backward's behaviour
+`device`[symbol or t] Set the name of AbstractTensor which the impl supports for. Set t to anything.
 
-reject-p = #'(lambda (&rest inputs) ~)
-Return t   -> reject
-Return nil -> ok
+`extends`[nil or list] In addition to extend `abstract-name`, the defined implementation will extends the given classses.
+
+`cache-when-compiled`[boolean] Set T to cache the forward definiton depending on dtypes, ranks, devices of arguments. You can set this to NIL but in terms of performance it is not recommended (runtime-compiling overhead is unignorable!) Instead, in that case, using `define-impl-op` would be nice.
+
+`save-for-backward`[list of boolean] For backward computation, the corresponding position of received variables will be produce a copy. You can check how it works with `(disassemble-waffe2-ir toplevel)` function and SV4BW(...) is exactly this. In backward, `((self dout x y) ...)` will receive the copy.
+
+`forward`[body] Follows this format: `((self arg1 arg2 ...) <<macro-body>>)` and the form must return S-expression later compiled by `(compile nil ...)
+
+`backward`[body] Follows this format: `((self prev-gradient arg1 arg2 ...) (values arg1.grad arg2.grad))` Note that the form is given by a function, and computation nodes are continuous. Not a macro.
+
+`reject-p`[nil or function] Set a lambda function returning nil or T. The function is called with arguments: `(function constructor-args1 constructor-args2 ...)`. In the case the function returned T, the method dispatching is ignored. You can use this method to ignore a certain dtype as a :forward arguments for example.
 "
   
   (let* ((forward-self-name (caar forward))
@@ -460,7 +480,9 @@ Return nil -> ok
       (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
 	      nil
-	      "Assertion Failed because the number of arguments of forward and backward, doesn't correspond.: ~a At ~a"
+	      "define-op: The number of arguments do not match: ~a At ~a.
+    :forward  should be -> (self arg1 arg2 ...)
+    :backward should be -> (self prev-grad arg1 arg2 ...)"
 	      backward-args
 	      abstract-name))
     
@@ -468,7 +490,7 @@ Return nil -> ok
        (progn
 	 (assert (or (eql ',device t) (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor))
 		 nil
-		 "Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
+		 "define-impl: Assetion Failed because the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
 		 ',abstract-name
 		 ',device))
        
@@ -513,11 +535,6 @@ Return nil -> ok
   (or (node-save-for-backward1 node)
       (node-save-for-backward2 node)))
 
-
-;; Not used anymore
-(defun declare-local-variables (self &rest tensors)
-  ""
-  (setf (node-local-variables self) tensors))
 
 (defmacro define-and-impl-node ((abstract-name
 				 (self &rest constructor-arguments)
@@ -583,8 +600,6 @@ Gives an implementation of `abstract-name` as a function form.
 ```lisp
 (define-impl-op ((abstract-name &key (device t) (extends nil) (reject-p nil)) &key forward backward))
 ```
-
-(TODO)
 "
   
   (let* ((forward-self-name  (caar forward))
