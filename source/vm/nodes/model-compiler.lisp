@@ -79,7 +79,11 @@
 ;; 12. そのうち再コンパイルのコストがぐんと下がる PyTorch likeに使える + ある関数を定義するのにNativeの実装が必要ない(cuz it relies on JIT)
 ;; (Defnode (System-Lazy-Values X Y
 
+;;(eval-when (:compile-toplevel :load-toplevel :execute)
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
+
+(defparameter *model-function-cache-form* (make-hash-table))
   
 (defun read-where-args (where)
   "where -> (A B) (C D)"
@@ -94,7 +98,6 @@
 	       for i upfrom 0
 	       collect (nth-subscript i))))))
 
-(defparameter *model-function-cache-form* (make-hash-table))
 ;; model-function-cache-form
 ;;                    L___ SoftmaxModel(Dtype) ...
 ;;                    L___  ...
@@ -245,7 +248,6 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 				   collect (- (length shape) (count '~ shape :test #'symbol-eq))))
 	   (body
 	     (progn
-	       (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
 	       `((declare (type AbstractTensor ,@arguments))
 		 (let* ((,dispatching-keys
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
@@ -259,10 +261,14 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 			 (setf (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*)) ,found-function)
 			 (funcall ,found-function ,@arguments))))))))
       (if defun-p
-	  `(defun ,named (,@arguments)
-	     ,@body)
-	  `(lambda (,@arguments)
-	     ,@body)))))
+	  `(progn
+	     (setf (gethash ,cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
+	     (defun ,named (,@arguments)
+	       ,@body))
+	  (progn
+	    (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
+	    `(lambda (,@arguments)
+	       ,@body))))))
 
 ;; (defclass AbstractStaticCompositeNode () nil)
 

@@ -141,25 +141,24 @@
     #'(lambda (x) (/ 1 x)))
   )
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (export 'mathematical-test-set)
-  (defmacro mathematical-test-set (&rest backend)
-    `(eval-when (:compile-toplevel :load-toplevel :execute)
-       (abs-tester ,@backend)
-       (sign-tester ,@backend)
-       (sqrt-tester ,@backend)
-       (square-tester ,@backend)
-       
-       (sin-tester ,@backend)
-       (cos-tester ,@backend)
-       ;;(tan-tester ,backend)
-       ;; To Add: trig func fam
+(export 'mathematical-test-set)
+(defmacro mathematical-test-set (&rest backend)
+  `(progn
+     (abs-tester ,@backend)
+     (sign-tester ,@backend)
+     (sqrt-tester ,@backend)
+     (square-tester ,@backend)
+     
+     (sin-tester ,@backend)
+     (cos-tester ,@backend)
+     ;;(tan-tester ,backend)
+     ;; To Add: trig func fam
 
-       (exp-tester ,@backend)
-       (log2-tester ,@backend)
-       (log10-tester ,@backend)
-       (logE-tester ,@backend)
-       ;; add: expt
-       )))
-			
+     (exp-tester ,@backend)
+     (log2-tester ,@backend)
+     (log10-tester ,@backend)
+     (logE-tester ,@backend)
+     ;; add: expt
+     ))
+	       	
 ;; ScalarTest here.
