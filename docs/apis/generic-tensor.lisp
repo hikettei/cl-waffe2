@@ -9,10 +9,10 @@
 
     (with-section "Working with AbstractTensor")
     
-    (insert (documentation (find-class 'AbstractTensor) 't))
-    (insert (documentation 'hook-optimizer!) 'function)
-    (insert (documentation 'call-optimizer!) 'function)
-    (insert (documentation 'reset-grad!) 'function)
+    (insert "~a" (documentation (find-class 'AbstractTensor) 't))
+    (insert "~a" (documentation 'hook-optimizer! 'function))
+    (insert "~a" (documentation 'call-optimizer! 'function))
+    (insert "~a" (documentation 'reset-grad! 'function))
     
     (insert (documentation 'tensor-vec 'function))
     
@@ -41,7 +41,7 @@
     (with-doc 'build 'function
       (with-examples
 	"(setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))"
-	"(build out :inputs `(:X :Y))"))
+	"(with-no-grad (build out :inputs `(:X :Y)))"))
 
     
     (insert "~a"

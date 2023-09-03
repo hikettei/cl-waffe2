@@ -255,9 +255,12 @@ permute-order : ~a
 
   
   (when (some #'symbolp (shape toplevel))
-    (error "Can't construct backward, because the shape of tensor is undetermined: ~a
+    (error "Can't construct backward, the top level shape still includes a symbol: ~a
 
-Try again with: (with-no-grad ...) " (shape toplevel)))
+If you don't need a backward kernel, could you try again with wrapping the build function with:
+    (with-no-grad
+        (build ...)) "
+	   (shape toplevel)))
 
   (if set-input-forms
       #'(lambda ()

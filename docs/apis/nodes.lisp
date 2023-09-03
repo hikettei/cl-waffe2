@@ -41,7 +41,7 @@ cl-waffe2 VM sorts and compiles the network of `AbstractNode` into a `cl-waffe2 
 ")
 
   (macrolet ((with-doc (name type &body body)
-	       `(with-section (format nil "~(~a~)" (symbol-name ,name))
+	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
 
@@ -365,7 +365,7 @@ Example: (TODO)
     (with-doc 'with-reading-save4bw 'macro)
     (with-doc 'with-setting-save4bw 'macro)
     
-    (with-seciton "Composite")
+    (with-section "Composite")
 
     (insert (documentation (find-class 'Composite) 't))
 
@@ -373,6 +373,7 @@ Example: (TODO)
     (with-doc 'defmodel-as 'macro)
 
     (with-section "Events for Embedding JIT-Generated Code in runtime")
+    
     (insert "~a"
 	    (documentation (car (c2mop:generic-function-methods #'on-finalizing-compiling)) 't))
     (insert "~a"

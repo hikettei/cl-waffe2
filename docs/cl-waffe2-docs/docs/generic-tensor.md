@@ -1,261 +1,277 @@
 
 # AbstractTensor
 
+## Working with AbstractTensor
+
 ## [class] AbstractTensor
 
-[class] `AbstractTensor`
+AbstractTensor is a CLOS class that Wraps existing data structures such as matrices in an abstract class in automatic differential programming using cl-waffe2, and further adds information about computation nodes, gradients, etc.
 
-
-AbstractTensor is a primal class for all devices. Each devices (e.g.: `ScalarTensor` `LispTensor` `CPUTensor` etc...) is a subclass of this.
-
-The class provides the fundamental and necessary features for tensors.
-
-1. Lazy-Evaluated and Multi-Dimensional APIs, stride computations.
-
-2. `View APIs` multi-dimensional offsets
-
-3. To construct backward, AbstractTensor records variables called with.
-'
-4. `vec` container.
-
-5. an space for saving gradients, copies for backward.
-
-6. Lazy-Evaluated Shapings
-
-7. Trace Informations for JIT to create well-optimized computation node.
-
-### Creating a new backend.
-
-Users can create a new backend by extending this abstract class.
+Tensors can be created by the `make-tensor` function.
 
 ```lisp
-(defclass MyBackend (AbstractNode) nil)
+(make-tensor `(3 3))
 ```
 
-To use the `MyBackend` as a tensor, users also has to override these methods:
-
-1. `initialize-instance` ... An allocator for tensor's vec.
-
-2. `vref` `(setf vref)` ... an generic function to access/write tensor's vec.
+Plus, InputTensors (lazy-evaluated tensors), which is used to delay allocation timing, to use dynamic shaping, and to store the result, can be created by the `make-input` function.
 
 ```lisp
-;; TODO: Establish a common API for initargs
-(defmethod initialize-instance :before ((tensor MyBackend)
+(make-input `(3 3) :A) ;; Set :A=nil to register as a temporary space.
+```
+
+As an applied use, users can create new `AbstractTensor` that inherit from AbstractTensor. In addition, inheriting existing AbstractTensors (e.g.: `LispTensor` for CL Standard Array) allows reusing descriptions such as allocations.
+
+```lisp
+(defclass MyOriginalTensor (AbstractTensor) nil)
+(defclass MyCPUTensor      (LispTensor) nil)
+```
+
+Declare the priority of the device to be used with the with-devices macro.
+
+```lisp
+;; Higher <-> Lower
+(with-devices (MyCPUTensor MyOriginalTensor CPUTensor)
+    (make-tensor `(10 10)))
+```
+
+All available devices can be accessed with the `(show-backends)` function, and they can only be used as devices together if they are shown to have an inheritance relationship.
+
+If a completely new Tensor is defined from AbstractTensor, cl-waffe2 can handle it completely in a fast form by writing the following additional information.
+
+- Allocator: `initialize-instance :before method`
+
+- Storage Accessor: `vref` and `(setf vref)` method
+
+- Finalizer: `tensor-finalizer` method
+
+- (Optional) Backend State: `current-backend-state` method
+
+- (Optional) a `cl-waffe2/vm:defpath` macro to enable device-specific optimization.
+
+This is the simplest case of `MyTensor` which works on CL Standard Array.
+
+```lisp
+(defclass MyTensor (AbstractTensor) nil)
+
+;; Allocators satisfy the following properties
+;; 1. When facet is not `:exist`, do nothing.
+;; 2. If `vec` is specified as an argument, use this, and do not allocate any tensors.
+;; 3. Otherwise, allocate the tensor with:
+;;     1. Dtype -> :dtype
+;;     2. Size  -> :shape (must be 1D on the memory)
+;;     3. initial-element -> :initial-element
+(defmethod initialize-instance :before ((tensor MyTensor)
 					&rest initargs
 					&key &allow-other-keys)
-  ;; if projected-p -> alloc new vec
   (let* ((shape (getf initargs :shape))
- 	 (dtype (dtype->lisp-type (getf initargs :dtype)))
+	 (dtype (dtype->lisp-type (getf initargs :dtype)))
 	 (vec   (getf initargs :vec))
 	 (facet (getf initargs :facet))
 	 (initial-element (coerce (or (getf initargs :initial-element) 0) dtype)))
     (when (eql facet :exist)
       (if vec
 	  (setf (tensor-vec tensor) vec)
-	  (setf (tensor-vec tensor) ;; vec can be anything.
+	  (setf (tensor-vec tensor)
 		(make-array
 		 (apply #'* shape)
 		 :element-type dtype
 		 :initial-element initial-element))))))
-```
 
-```lisp
-(defmethod vref ((tensor MyBackend) index)
+;; vref reads the index th element of storage vec, this is must be a setfable.
+;; Leave the annoying and complicated stride/offset computations to cl-waffe2!
+(defmethod vref ((tensor MyTensor) index)
+  (declare (type fixnum index))
   (aref (tensor-vec tensor) index))
 
-(defmethod (setf vref) (new-value (tensor MyBackend) index)
+(defmethod (setf vref) (new-value (tensor MyTensor) index)
+  (declare (type fixnum index))
   (setf (aref (tensor-vec tensor) index) new-value))
+
+
+;; The method should return a lambda function, if its storage vector isn't gc-reachable.
+;; Finalizers are called when quitting (with-memory-pool ...) macro.
+(defmethod tensor-finalizer ((tensor MyTensor))
+    ;; Returning a dummy finalizer
+    #'(lambda ()))
+
+;; The function (show-backends) will display all devices and their information
+;; If you want to put something, override this method and return a string.
+(defmethod current-backend-state ((backend-name (eql 'MyTensor)))
+  "Hello This is an demo")
+
+;; For FusionOp and defpath macro usage, see the :cl-waffe2/vm docs.
 ```
 
-Now, the name `MyBackend` is available as a brand-new cl-waffe2 backend!
+`MyTensor` is now recognised as a usable device, so operations can be defined using the define-impl and define-impl-op macros.
 
-Users can define a new implementation following `(define-impl (Name :device MyBackend) ...)`
 
-(See the examples to understand how this could be achieved at ./source/backends/lisp/tensor.lisp. or ./source/backends/cpu.)
-
-Note: add `print-tensor-state` method like: `(defmethod current-backend-state (device (eql 'YourDeviceName)) "It is working")` in order for `(show-backends)` function display your backends state.
-
-```lisp
-(defmethod current-backend-state ((backend-name (eql 'YourBackendName)))
-  "This is MyTensor")
-```
 ### [function] shape
 
-Returns a visible shape of tensor
+`(shape tensor)` returns a visible shape of the given tensor.
 
 ### [function] dims
 
-Returns the number of axes of tensor
+`(dims tensor)` returns a rank of the given tensor.
 
 ### [function] total
 
-Returns the number of total visible elements in tensor.
+`(total tensor)` returns the number of total visible elements of the giventensor.
 
 ### [slot] orig-shape (List)
 
-the original shape of `vec`. `(apply #'* orig-shape)` must correspond with the number of total elements of `vec`.
+stores the shape of storage vec.
 
-### [slot] initial-offset (fixnum)
+### [accessor] initial-offset (fixnum)
+
+stores the offset of the tensor. In default, set to 0. Shape testing, for example, does not work, so use with caution.
 
 `(tensor-initial-offset tensor)`
 
-Offset is forced to be added. default: 0
-
 ### [slot] stride (list)
 
-An stride of tensor, can be chosen from `:column` `:row`.
-
-This slot can be accessed by `(tensor-stride object)`.
+`(tensor-stride tensor)` stores the stride of tensor.
 
 ### [slot] visible-shape (list)
 
-An shape of visible-area of tensor, visible-area is that an viewed size of tensor.
-
-Can be accessed by `(shape object)`
+`(shape tensor)`
 
 ### [slot] view (list)
 
-An list of multidimensional offsets, view.
+Returns a list of ViewInstruction, created by the function `(view tensor ...)` or `(!view tensor ...)` to create a backward.
 
-Can be accessed by `(tensor-view object)`
+`(tensor-view tensor)`
 
 ### [slot] projected-p (boolean)
 
 Set t if `(apply #'* orig-shape) == (apply #'* visible-shape)` otherwise set nil.
 
-If t, the tensor is produced by `!view` or `view` functions.
+If t, the tensor is created by `!view` or `view` functions.
 
 ### [slot] scalar-p
 
-If t, the tensor is regarded as a Scalar.
+Set t if the tensor should be represented as a scalar. In cl-waffe2, it's not a pretty thing but scalars are represented as a `(apply #'* shape)=1` tensors. ranks are anything but for the most case, returns 1.
 
 ### [slot] detach-p
 
-If t, JIT compilers stop tracing at the tensor.
+Set T to detach the tensor at a certain position.
 
 ### [slot] state
 
-Stores a corresponding `StateContainer`.
+(tensor-state tensor) stores `StateContainer`.
 
 ### [slot] variables
 
-`(tensor-variables object)`
-
-Records variables called with the tensor.
+`(tensor-variables tensor)` stores the previous variables if the tensor is created by any operation.
 
 ### [slot] tensor-id (symbol)
 
-Corresponding variable name that used in JIT compiler.
+Indicates where the Tensor is stored, (e.g. in a virtual machine). In-place operations inherit tensor-id from variables called with, and should not be used for topological sorting.
+
+### [slot] tensor-iid (symbol)
+
+It holds an ID that is guaranteed to be absolutely unique to the processing system generated by gensym. Used for topological sorting.
 
 ### [slot] grad (AbstractTensor)
 
-If the tensor is a parameter, (i.e.: requires-grad t) and backward propagation has called, the gradients has set to this slot.
-
-Reader: `(grad object)`.  Writer: `(set-grad object value)`
+If the tensor is created by (parameter ...) or with `:requires-grad=t`, `(grad tensor)` will return a gradient.
 
 ### [slot] backward (AbstractNode)
 
-the node called with.
+`(tensor-backward tensor)` returns a abstractnode if the tensor is created by any operation.
 
 ### [slot] requires-grad (Boolean)
 
-If t, the tensor become a `parameter` that gradients are saved.
+Set T to hold the gradients.
 
 ### [slot] ancestor-param-p (Boolean)
 
-If t, the tensor has created by `parameter` or tensors whose ancestor-param-p=t.
+Set T if compilers can reach any tensors with `:requires-grad=t`, by tracing the tensor.
 
-### [slot] flexible-p (Boolean)
+### [slot] flexible-p (Fixnum or Null)
 
-Set fixnum to add broadcastable axis.
+Indicates the position of broadcastable axis.
 
 ### [slot] facet (keyword)
 
-Tensors has a two state:
+AbstractTensors in cl-waffe2 has a two state: `ExistTensor` and `InputTensor`. `ExistTensor` is a just tensor with allocated storage vec, made by make-tensor function. On the other hand InputTensor is a lazy-evaluated tensor, allocation won't be done until it is needed.
 
-1. :input
+:exist to ExitTensor, :input to InputTensor.
 
-2. :exist
+### [method] mref
 
-`:exist` tensor is a just normal state, which `vec` is already allocated.
+`(mref tensor &rest subscripts)` will reads a cetrain position of storage vec. This is setfable. In terms of performance, it is much faster way to edit a storage vec that using `(change-facet)` function and convert into other forms.
 
-`:input` tensor is a lazy-evaluated tensor, which allocation will be done until they're really needed. (often used as a cache, or training data.)
-...
+### Hooking Optimizers and Optimizing Parameters
+
+(TODO)
+
+
+
+## [function] hook-optimizer!
+
+```lisp
+(hook-optimizer! tensor optimizer)
+```
+
+Hooks the optimizer to the tensor.
+
+### Inputs
+
+tensor[AbstractTensor]
+
+optimizer[AbstractOptimizer]
+
+
+## [function] call-optimizer!
+
+```lisp
+(call-optimizer! tensor)
+```
+
+Reading the `(grad tensor)`, the function invokes the optimizer hooked to the tensor.
+
+## [function] reset-grad!
+
+Resets the gradient of the tensor with zero.
 
 
 ## [function] tensor-vec
 
-`(tensor-vec tensor)`
-
-Reading the `vec` of tensor.  Not until tensor-vec is called, the new area isn't allocated.
-## [function] mref
-
-`(mref tensor &rest subscripts)`
-
-The function mref is only used to print/initialize tensors, accessing the index of subscripts **with** considering views..
-
-If you cares about performance, dont' use `mref`, but `!view`.
-
-This function is setfable.
-## [generic] vref
-
-`(vref tensor index)`
-
-`vref` is a generic-function to access the `vec` slot of specific backends tensor, and returns `index`th element on `vec` slot **without** considering views.
-
-If you added a new backend with having different ptr-type (can't be accessed by aref), override this method and `(setf vref)`.
-
-### Example
-
 ```lisp
-(defmethod vref ((tensor YourBackend) index)
-    (aref (tensor-vec tensor) index))
-
-(defmethod (setf vref) (new-value (tensor YourBackend) index)
-    (setf (aref (tensor-vec tensor) index) new-value))
+(tensor-vec tensor)
 ```
 
-## An form of tensors in cl-waffe2
-There's a two type of tensors in cl-waffe2: `InputTensor` and `ExistTensor`, each state is called `facet` and the keyword `:input` `:exist` is dispatched respectively.
-### ExistTensor
-`ExistTensor` means a tensor with its vec **allocated** in the memory, that is, the same tensor as tensors you got when create a new tensor in `Numpy`, `PyTorch` or something.
+If the given tensor is a ExistTensor, returns its storage vec.
 
-`ExistTensor` can be created by the function `make-tensor`.
+If the given tensor is a InputTensor, allocates the area for tensor and return its storage vec.
 
-
-### InputTensor
-On the other hand, `InputTensor` is a tensor with its vec **unallocated** in the memory, in other words, this can be a `Lazy-Evaluated Tensor`.
-
-`InputTensor` is created by the function `make-input`, and its shape can include a symbol.
-
-In the network, `InputTensor` plays a role in being caches in the operation, or being a tensor that one may want to change its content later. (e.g.: training data).
-
+This function is setfable and inlined.
 
 ## [function] make-tensor
 
 ```
 (make-tensor shape-or-scalar
-		   &key
-		      (requires-grad nil)
-		      (dtype *default-dtype*)
-		      (view nil)
-		      (order *default-order*)
-		      (initial-element))
+	       &key
+		  (requires-grad nil)
+		  (dtype *default-dtype*)
+		  (view nil)
+		  (order *default-order*)
+		  (initial-element nil))
 ```
 
-Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*`) to know what device to use, the function `make-tensor` creates and allocate a new matrix instantly.
+Created a new ExistTensor of a device of `(car *using-backend*)`.
 
-### Input
+### Inputs
 
-1. `shape-or-scalar (Any)` set list (consisted of fixnum) here to create a matrix, otherwise the ScalarTensor is forcibly created.
+1. `shape-or-scalar`[Anything] If set to list, creates a new matrix. Otherwise (e.g.: set to fixnum), creates a ScalarTensor. In that case, cl-waffe2 uses the highest priority device from `*using-backends*` parameter that inherits from the `ScalarTensor` class.
 
-2. `requires-grad` (Boolean) Set t to create gradient. (e.g.: the tensor is needed to be optimized.)
+2. `requires-grad`[Boolean] Set t to holds a gradients. `(parameter tensor)` will also do the same work. Under `(with-no-grad ...)` macro. This is set to nil forcibly.
 
-3. `dtype` (keyword) Set dtype you wanna use. See also: (Dtype API)
+3. `dtype`[keyword] Set keyword indicating a type of elements.
 
-4. `order` (member :column :row)
+4. `order`[keyword] set keyword indicating the order of elments from `:column` or `:row`. in default set to `:column`.
 
-5. `initial-element` (Optional)
+5. `initial-element`[Anything] Set anything which you want to set as a initial element.
 
 ### Example
 
@@ -275,25 +291,25 @@ Refering a first-priority of  *using-backends* (i.e.: `car` of `*using-backends*
 
 ## [function] make-input
 
-Referring a first-priority of `*using-backend*` (i.e.: car part), the function make-input creates a InputTensor.
+```lisp
+(make-input shape named &key (created-from nil) (scalar-p nil) (dtype *default-dtype*) (order *default-order*))
+```
 
-In contrast to `make-tensor`, allocation of `vec` is lazy-evaluated, and `shape` can include symbols. (Lazy-Evaluated Shape).
-
-For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or `(make-input (list 256) nil)` is called, the memory-usage is the same until `(tensor-vec tensor)` is called but the moment `(tensor-vec tensor)` is called, the first one would cause `CUDA OUT OF MEMORY` or something :(.
+Creates a new InputTensor. The allocation won't be done until the function `(tensor-vec tensor)` is called. In cl-waffe2, InputTensors can be applied for various things, for example, tracing the structure of computation node, used as a temporary tensor which can be pruned later by a compiler, as an argument of the computation node compiled by the `build` function. 
 
 ### Inputs
 
-`Shape` [list] consisted of fixnum or symbol. (e.g.: `(a 10)` is OK for make-input.)
+`Shape` [list] Set the shape of tensor. You can also use symbols if shapes can be changed later. The function `set-input` will update all symbols declared in the computation node, and accordingly, strides/shapes etc... will be also updated to minimise compiling-time overhead (use `build` and `forward` to do this). ScalarTensors aren't created by setting it=`<<Something but not a list>>`. Instead, set `scalar-p=t`.
 
-`Named` [keyword] the name of input. If nil, the tensor is regarded as just cache. If you want to change the content of inputs later (e.g.: training data), set an appropriate name to `InputTensor` (e.g.: `:training-data` `:train-x`).
+`Named` [keyword or null] Indicates the name of tensor. If set to keyword, This means the name of the argument when compiled into a function, which can be changed later. If set to nil, the name is filled with `gensym` indicating the index in the memory-pool.
 
-`scalar-p` [boolean] set t is the input is scalar.
+`scalar-p` [boolean] Set t to create a scalar.
 
-`dtype` [keyword] as it is.
+`dtype` [keyword] Set dtype.
 
-`order` [keyword] an member of :column :row
+`order` [keyword] Set order.
 
-`create-from[nil or AbstractTensor]` If you want to extend permute state/stride information, fill it.
+`create-from[nil or AbstractTensor]` The returned InputTensor will extend Permutions/Strides and so on from `create-from` if any.
 
 ### Example
 
@@ -306,77 +322,104 @@ For example, whichever `(make-input (list 256 256 256 ... 256 256 256) nil)` or 
   :requires-grad NIL
   :backward NIL}
 ```
-The InputTensor named with a keyword is called `not-embodied tensor`, and can be changed its `vec` with `embody-input`
+
+## Manipulating Gradients
+
+## [parameter] `*no-grad*`
+
+Ensures that back-propagation is not invoked inside the scope for which this parameter is set to T, with the following effects:
+
+- Save For Backward is forcibly ignored.
+
+- Computational nodes for back propagation are not compiled.
+
+In default, set to nil. See also the `with-no-grad` macro to explict this state.
+
+## [macro] with-no-grad
+
+```lisp
+(with-no-grad &body body)
+```
+
+Set T to `*no-grad*` during the execution of body.
+
+## [function] parameter
+
+```
+(parameter tensor)
+```
+
+Creates a new tensor with :requires-grad=t from the given tensor. If the tensor is remained to be computed, parameter will use the result from `proceed`.
+
+### Example
+
+```lisp
+(parameter (randn `(3 3)))
+```
+
+## Building functions from AbstractTensor
+
 ## [class] Compiled-Composite
 
-Compiled-Composite is a `callable` CLOS class, and holds compiled forward/backward function of all the computation node to all the endpoints from the top of the models' neural network. Also, this class holds information of all variables used in the node.
+Stores information on computation nodes compiled by the build function. The user has to guarantee that this point is the end of the computation node. Therefore, it is not possible in principle to continue the computation node after this point. Forward and backward propagation can be invoked using the `forward` and `backward` methods respectively.
 
-It is NOT possible to construct a computation node after Compiled-Composite, If you need this, try consider using the function `cl-waffe2/base-impl:proceed`.
+```lisp
+;; Example
+(let ((model (build (!add 1 1))))
+      (forward model)
+      (backward model))
+```
 
-The class will appear in your project with calling the function `build`, set the toplevel node (e.g.: the result of criterion when the task is optimizing.) to the first argument. cl-waffe2 compiler will instantly construct an lambda function of forward/backward, which is invoked by calling `(forward compiled-composite)` or `(backward compiled-composite)` method.
+This class furthermore records information on lazy-evaluated tensors. The tensor is an argument to the function, which can change the input via the `set-input` method.
 
-See also: `build` `set-input` `get-input`.
+```lisp
+(let ((lazy-tensor (make-input `(10 10) :A)))
+    (let ((model (build (!sum lazy-tensor))))
+         (set-input model :A (randn `(10 10))) ;; :A = (randn `(10 10))
+         (get-input model :A)
+         (forward model)))
+```
 
-### Examples
+By passing argument information to the compiler at build time, arguments can be given together when the forward method is called.
 
-(TODO)
+```lisp
+(let ((a (make-input `(A B) :A))
+      (b (make-input `(A B) :B)))
+    (let ((model (build (!mul a b) :inputs `(:A :B))))
+          (forward model (randn `(3 3)) (randn `(3 3)))))
+```
 
+All tensors with `:requires-grad=t`, can be accessed by the `(model-parameters model)` method.
 
 ## [function] build
 
 ```lisp
-(build toplevel
-	      &key
-		(construct-backward? (not *no-grad*))
-		(compile-mode :fastest)
-                (fuse-ops t))
+(build toplevel &key (inputs nil) (construct-backward? (not *no-grad*)) (compile-mode :fastest) (fuse-ops t))
 ```
 
-Receiving the toplevel node in the neural network, the function `build` constructs a optimal forward/backward function, returning `Compiled-Composite`.
-
-### The constraints of toplevel tensor.
-
-The shape of topleve mustn't include a `symbol`.
-
-For example, this cl-waffe2 operation is invaild. because the function `(!sin x)` still returns `(A B)` tensor.
-
-```lisp
-(build (!sin (make-input `(A B) :Input)))
-```
-
-In order to build this operation correctly, calling `criterion` (intrinsically, `!sum` or `!mean`) is a vaild option for neural network tasks.
-
-```lisp
-(build (!sum (!sin (make-input `(A B) :input)))) ;; Passes Correctly!
-```
-
-After working with adjustable shape tensor, don't forget to embody the InputTensor!
-
-```lisp
-(let ((compiled-model (build (!sum (!sin (make-input `(A B) :input))))))
-    (set-input compiled-model :input (randn `(10 10)))
-    (forward compiled-model))
-```
+Compiles the given computation node starting from `toplevel`. The docstring of `Compiled-Composite` describes how this function are used in practical.
 
 ### Inputs
 
-`toplevel [AbstractTensor]` the end of nodes. for neural network tasks, this should be scalartensor or tensors with total elements is 1, but since cl-waffe2 is intended to be applied other tasks, cl-waffe2 never produce warning while other frameworks like PyTorch will return error if `<<(10 10)Tensor>>.backward()` is invoked for example.
+`toplevel [AbstractTensor]` The end of node. Any shapes could be OK even when constructing backward.
 
-`construct-backward?` [boolean] If t, the backward construction won't be done.
+`inputs[list]` Set a list of argument keywords here so that the method `forward` can receive arguments that have been lazily evaluated. The order is taken into account. (e.g.: Set to `(:A :B)` and forward can receive this: `(forward compiled-model (randn `(3 3)) (randn `(3 3)))`)
 
-`compile-mode`[compile-mode-t] an keyword to indicate compiling option.
+`construct-backward?` [boolean] Set t to build backward.
 
-`fuse-ops[boolean]` Set t to enable `Loop Fusion Optimizing`. It optimizes the locality of memories instead of a litte compiling overhead.
+`compile-mode`[compile-mode-t] an keyword indicating the compiling option. (No significant impact on execution speed but compile speed. for any case `:fastest` is the best solution.)
+
+`fuse-ops[boolean]` Set to enable `FusionOps` declared by `defpath`.
 
 ###Example
 **REPL:**
 ```lisp
-> (setq out (!add (randn `(10 10)) (make-input `(a 10) :X)))
+> (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1721 
+{CPUTENSOR[float] :shape (A 10) :named ChainTMP1195 
   :vec-state [maybe-not-computed]
-  <<Not-Embodied (10 10) Tensor>>
+  <<Not-Embodied (A 10) Tensor>>
   :facet :input
   :requires-grad NIL
   :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
@@ -384,33 +427,16 @@ After working with adjustable shape tensor, don't forget to embody the InputTens
 
 **REPL:**
 ```lisp
-> (multiple-value-list (build out))
+> (with-no-grad (build out :inputs `(:X :Y)))
 ```
 ```
-(<Compiled-Composite
-    forward:  #<FUNCTION (LAMBDA ()
-                           :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {53629DCB}>
-    backward: #<FUNCTION (LAMBDA ()
-                           :IN
-                           "/Users/hikettei/.cache/common-lisp/sbcl-2.3.4-macosx-x64/Users/hikettei/Desktop/cl-waffe-workspace/progs/develop/waffe2-develop-latest/cl-waffe2/docs/apis/generic-tensor.fasl") {534D6CBB}>
-
-+= [Tensors in the computation node] =======+
-
-Subscripts:
-     [A -> ?, max=?]
-
-
-Variables:
- NAMES |   SIZE  | 
-––––––––––––––––––
-   X   |  (A 10) | 
-
-
- - The number of tmp variables : 2
- - The number of parameters    : 0
-+========================================+
->)
+<Compiled-Composite
+    forward  : forward(model X Y) -> CPUTENSOR{FLOAT}(A 10)
+    backward : nil
+    inputs:
+        X -> (A 10)
+        Y -> (A 10)
+>
 ```
 
 ## [method] set-input
@@ -423,8 +449,6 @@ Embodies an `InputTensor` in the model. All unembodied tensors in the model can 
 
 `input-name` could be a keyword indicating input-tensor, `actual-value` is a `AbstractTensor` whose facet = `:exist` (created by `make-tensor`).
 
-
-
 ## [method] get-input
 
 ```
@@ -433,35 +457,7 @@ Embodies an `InputTensor` in the model. All unembodied tensors in the model can 
 
 Reading all variables in the computation node, the method get-input returns an corresponding `InputTensor` of model.
 
-
-## [parameter] `*no-grad*`
-[parameter] `*no-grad*`
-
-If t, no gradients are made for backwards.
-## [macro] with-no-grad
-
-```lisp
-(with-no-grad &body body)
-```
-
-Under the `body` execution, the macro sets `*no-grad*` = `t`, that is, the built nodes are regarded as: no gradients are made for backwards.
-
-
-
-## [function] parameter
-
-```
-(parameter tensor)
-```
-
-The function parameter computes all the previous nodes of the given tensor if any, returning the new tensor with `requires-grad=t`.
-
-### Example
-
-```lisp
-(parameter (randn `(3 3)))
-```
-
+## Creating a ranked function with computing views
 
 ## [function] call-with-view
 
@@ -547,14 +543,3 @@ Just an alias of `call-with-view` with this form:
 `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
   ,@body)
 ```
-NILNILNIL
-## [function] shape-equal
-
-a=1, b=k => T
-a=1, b=2 => NIL
-
-...Returns subscript-t if view is Subscript otherwise returns a view
-## Compiling Options
-TODO
-## Dtypes
-TODO
