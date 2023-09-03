@@ -35,7 +35,7 @@ Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](h
 - Nodes: Systematic macros for building computation nodes and easy to visualize!
 - 👏 Its core part and VM are 100% written on **ANSI Common Lisp**.
 
-## Quicklook
+## 🍃 Quicklook
 
 In the simplest example, the `build` function traces and compiles the network from the endpoints of the computation nodes. 
 
@@ -62,11 +62,11 @@ In the simplest example, the `build` function traces and compiles the network fr
 ;;  :backward NIL} 
 ```
 
-# Experiments
+# 📈 Experiments
 
 (TODO)
 
-# References/Acknowledgments
+# 📕 References/Acknowledgments
 
 ・All comments on this Reddit post: [Does anyone have any interest in my deep-learning framework?](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/).
 
