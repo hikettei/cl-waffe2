@@ -8,54 +8,21 @@
 
 
 ;;[TODO]
-;; - IRの生成する命令には二種類ある（マクロから、関数から）
 ;;- retain_graph
 ;;- dynamic-shapingとか考えないで普通にdefine-by-runっぽく動かせない？
-;;- InstantCompositeとdefmodel-asベースの逆伝播でdisassembleを簡略化
-;;- SaveForBackwardをノードから除外する
 ;;- defmodel-asを呼び出すのはwith-memory-pool直下で + save_for_backward以外は使いまわしたりしておk
-;;- 全てのDocstringを見て回る + 更新
-;- with-devicesはサブクラスだけ
 ;;- define-opを全面的に押し出す: cache-when-compiled=nilするくらいなら最初から関数で + apply-with-rankで
 ;;- proceedをたくさん使ってもコンパイル時間走らないように
-
-;; TODO: cl-waffe2/viz ... Terminalでも綺麗に表示したい (OK)
-;; TODO: Export APIs and add to the docs
-;; TODO: Remove this: MoveTensorNode(SAVE_FOR_BACKWARD) and then, fuseOps (e.g.: ReLuTensorNode, Log1pNode)
+;;- defpath FusionOp
 
 ;; TODO: (backward AbstractTensor) ;; -> PyTorch/Chainer Mode (i.e.: Pure define by run Mode with no compiling-time ahead)
 
 ;; TODO: Update memory-pool. (add use-state attribute) for proceed
-;; TODO: Update (backward toplevel) or (diff! toplevel)?
-
-;; TODO: tensors: tensor-delete, dummy-gc-finalize (OK)
-
-;; TODO: delete define-composite-function (OK)
-;; TODO: Test defmodel-as, documentations
-
-;; TODO: proceed ... TpSort (OK)
 
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
-;; TODO: defmodel/defnode系のマクロ ... エラー表示を見やすく
-;; TODO: define-static-model/define-op -> lambda関数を直接 (OK)
-
-;; TODO: lazy-values, return multiple arguments
-
 ;; TODO: defpathでSymbolic Differentiation
-
-;; defmodel-as (for abstractnode mo) 動かす
-;; proceed-backwardを十分高速に動かす+memory-leakしない
-;; -> RNNCellをIterateする
-
 ;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
 
-;; Memory-Poolの更新と合わせて：
-;; Gradientsの加算方法をどうにかする：
-;;  計算ノード内で最初の加算 -> MoveTensorNode使えばおk
-;;  それ以降 -> Add
-;;  GradientのReset -> パラメーターかカウンターを0に治すだけにする (tensor-grad-ref-count 0) instead of ScalarMul
-
-;; ModelのWhereが読めない問題: Encapsulate_NodeでCompositeを一度Wrapする?
 
 ;; 目標1 : defmodel-asと (backward toplevel) でdefine-by-runっぽく動作 + RNNを動作させる
 ;; 目標2 : memory-pool ... メモリリーク排除, 使う終わったcacheを使い回す, finalizeとかちゃんとする
@@ -79,9 +46,6 @@
 ;; 12. そのうち再コンパイルのコストがぐんと下がる PyTorch likeに使える + ある関数を定義するのにNativeの実装が必要ない(cuz it relies on JIT)
 ;; (Defnode (System-Lazy-Values X Y
 
-;;(eval-when (:compile-toplevel :load-toplevel :execute)
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defparameter *model-function-cache-form* (make-hash-table))
   
@@ -260,18 +224,16 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 			 ;; cache it
 			 (setf (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*)) ,found-function)
 			 (funcall ,found-function ,@arguments))))))))
+      (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
       (if defun-p
-	  `(progn
-	     (setf (gethash ,cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
+	  `(progn	     
 	     (defun ,named (,@arguments)
 	       ,@body))
 	  (progn
-	    (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
 	    `(lambda (,@arguments)
 	       ,@body))))))
 
 ;; (defclass AbstractStaticCompositeNode () nil)
-
 (defun expand-define->abstractnode (differentiable-p target-model where named)
   (let* ((composite-name (car target-model))
 	 (node-name (symb composite-name '-asnode)))
@@ -355,6 +317,8 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 
 Redefines a Composite as a new function or AbstractNode specified in the `:asif` keyword. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
 
+**Note that the expanded form includes eval function! So this macro should be placed in the toplevel!**
+
 ### Example
 
 ```lisp
@@ -363,7 +327,7 @@ Redefines a Composite as a new function or AbstractNode specified in the `:asif`
 
 ### Inputs
 
-`target-model[Composite]` a form to initialize the composite. This from is executed before running the code, and accordingly static.
+`target-model[Composite]` a form to initialize the composite. ~~This from is executed before running the code, and accordingly static.~~
 
 `where[Subscript DSL or null]` If the model has no `:where` declaration, this macro uses this `:where` form instead. Therefore, as long as `defmodel` provides `:where` declaration, this form should be OK if set as nil.
 
@@ -465,12 +429,13 @@ Or
 
     (case asif
       (:function
-       (expand-define->function-form
-	target-model where-decl-to-use (not (null named)) named))
+       `(eval
+	 (expand-define->function-form ',target-model ',where-decl-to-use ,(not (null named)) ',named)))
       (:node
        ;; [TODO]
-       (expand-define->abstractnode
-	differentiable target-model where-decl-to-use named)))))
+       `(eval
+	 (expand-define->abstractnode
+	  ,differentiable ',target-model ',where-decl-to-use ',named))))))
 
 ;; Utils for multiplying gradients
 (defmodel (Multiply-Gradients (self)
@@ -483,7 +448,3 @@ Or
   :where (X[~] Grad[~] -> X[~])
   :asif :function
   :named multiply-grads-static)
-
-
-)
-

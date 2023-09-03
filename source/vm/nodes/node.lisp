@@ -373,7 +373,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)
-	     (cl-waffe2/vm.generic-tensor::with-memory-pool
+	     (progn;;cl-waffe2/vm.generic-tensor::with-memory-pool
 	       (setf (tensor-vec dout) (tensor-vec dout-runtime))
 	       (loop for act-val in inputs-runtime
 		     for var     in variables
@@ -389,8 +389,8 @@ forward: Couldn't step forward step of ~a because it is undefined.
 		   (cl-waffe2/vm::benchmark-accept-instructions fw-iseq)
 		   (cl-waffe2/vm:accept-instructions fw-iseq))
 	       ;; When quitting mem-pool, the result is never freed.
-	       (loop for out-val in out-toplevels do
-		 (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
+	       ;;(loop for out-val in out-toplevels do
+		;; (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
 
 	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
 	 fw-iseq

@@ -610,7 +610,7 @@ This function is setfable."
   (declare (type list subscripts))
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
   (vref tensor
 	(+
 	 (tensor-initial-offset tensor)
@@ -631,7 +631,7 @@ This function is setfable."
   
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
 
   (setf (vref tensor
 	      (+
@@ -667,7 +667,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   (declare (type fixnum index))
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
   (aref (tensor-vec tensor) index))
 
 (defmethod (setf vref) (new-value (tensor AbstractTensor) index)
@@ -675,7 +675,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   (declare (type fixnum index))
   (assert (not (null (vec tensor)))
 	  nil
-	  "Can't reference tensors which doesn't have a existing vec.")
+	  "Can't reference tensors which doesn't have an existing vec.")
   (setf (aref (tensor-vec tensor) index) new-value))
 
 ;; input <- actual
@@ -691,7 +691,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
   
   (assert (vec actual-tensor)
 	  nil
-	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
+	  "Assertion Failed because the given actual-tensor doesn't have an existing vec.")
 
   (when (or (numberp (vec input-tensor))
 	    (numberp (vec actual-tensor)))

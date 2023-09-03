@@ -29,7 +29,6 @@
 
 (define-op (SinNode-Static (self)
 	    :where (A[~] -> A[~])
-
 	    :save-for-backward-names (x)
 	    :forward ((self x)
 		      (with-setting-save4bw ((x x))
@@ -61,17 +60,22 @@
 	     (~= (+ (cos 1))
 		 (vref (grad a) 0)))))))
 
+;; Composing define-op and lazy-evaluation
 (defun composite-with-build1 ()
   (let* ((a (parameter (ax+b `(3 3) 0 1)))
 	 (model (build (!sum (call (SinNode-Static) (!sin a)))))
 	 (grad (* (cos (sin 1)) (cos 1))))
     (forward model)
     (backward model)
+    ;(print (grad a))
     (let ((f1 (~= (vref (grad a) 0) grad)))
       (forward model)    
       (backward model)
+      ;(print f1)
+      ;(print (grad a))
+      ;(print grad)
       (and f1
-	   (~= (vref (grad a) 0) (+ grad))))))
+	   (~= (vref (grad a) 0) (+ grad grad))))))
 
 (test composite-static-function-diff-test
   (is (test-composite-diff))

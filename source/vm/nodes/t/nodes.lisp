@@ -118,10 +118,6 @@
 
     (proceed-backward
      (call (OpMulTest-Scalar) a b))
-
-    (cl-waffe2/vm:disassemble-waffe2-ir
-     (call (OpMulTest-Scalar) a b)
-     )
     
     (and
      (= (tensor-vec (grad a)) 3)

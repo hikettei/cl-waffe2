@@ -183,13 +183,14 @@
     extended))
 
 ;; Users do not have to use this macro.
-(defmacro with-memory-pool (&body body)
+(defmacro with-memory-pool (&body body &aux (result (gensym)))
   ""
-  `(let ((*thread-memory-pool* (make-hash-table)))
-     (unwind-protect (progn ,@body)
-       (let ((extended-tensors (exit-memory-pool)))
-	 (dolist (pair extended-tensors)
-	   (set-mem-pool (symbol-name (car pair)) (cdr pair)))))))
+  `(let* ((,result
+	    (let ((*thread-memory-pool* (make-hash-table)))
+	      (multiple-value-list (progn ,@body)))))
+     (dolist (i (exit-memory-pool))
+       (set-mem-pool (symbol-name (car i)) (cdr i)))
+     (apply #'values ,result)))
 
 (defun get-mem-pool (key)
   (declare (type string key))
