@@ -745,7 +745,11 @@ Just an alias of `call-with-view` with this form:
 	,at-least-dim
 	,kernel-applier))))
 
-;; [TODO] Use lparallel
+;; [TODO]
+;; 下の関数を最適化+正しく動かす
+;; define-opベースのAbstractNodeでViewを正しく使うためには以下の関数が鍵になる
+;; argmax/argminや!matmulなど、cache-when-compiled=nilになる関数は、define-opを使うことで、実行時にcompile nil
+;; を走らせる場合を0にする方針であるから、これは大事
 (declaim (inline call-with-view-function*))
 (defun call-with-view-function* (tensors at-least-dim kernel-applier)
   (declare (type list tensors)
