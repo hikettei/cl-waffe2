@@ -89,48 +89,24 @@ The NodeVariables structure stores the tensors and Shapes that have been lazily 
   (tmp-variables tmp-variables :type list))  ;; (make-input `(...) nil) i.e.: chaintmp
 
 (defmethod print-object ((node NodeVariables) stream)
-  (let* ((syms  (nodevariables-symbols node))
- 	 (vars  (nodevariables-variables node)) ;; Hash-Table
-	 (input-keys (alexandria:hash-table-keys vars))
-	 (table (make-print-table)))
+  (let* ((vars  (nodevariables-variables node)) 
+	 (input-keys (alexandria:hash-table-keys vars)))
+	 
     (format
      stream
-     "+= [Tensors in the computation node] =======+
-
-Subscripts:
-~a
-
-Variables:
-~a
-
- - The number of tmp variables : ~a
- - The number of parameters    : ~a
-+========================================+" ;; TODO: Print Number of Parameters
-     (with-output-to-string (out)
-       (loop for k downfrom (length syms) to 0 by 2
-	     if (nth k syms)
-	       do (format out "     [~a -> ~a, max=~a]~%"
-			  (nth k syms)
-			  (or (nth (1+ k) syms) "?")
-			  (or (gethash (nth k syms) (nodevariables-adjustable-symbol node)) "?"))))
+     "    inputs:
+~a"
 
      (with-output-to-string (out)
        (let ((first-row)
 	     (second-row))
-	 (push "NAMES" first-row)
-	 (push "SIZE"  second-row)
 	 (loop for k upfrom 0 below (length input-keys)
 	       do (push (nth k input-keys) first-row)
 		  (push (shape (gethash (nth k input-keys) vars)) second-row))
 	 
 	 (mapc #'(lambda (n s)
-		   (addrow! table
-			    (make-row `(,(format nil "~a" n)
-					,(format nil "~a" s)))))
-	       (reverse first-row) (reverse second-row))
-	 (render-table table out)))
-     (length (nodevariables-tmp-variables node))
-     (length (nodevariables-parameters node)))))
+		   (format out "        ~a -> ~a~%" n s))
+	       (reverse first-row) (reverse second-row)))))))
 
 (defun embody-input (nodevars variable-name actual-tensor)
   "
@@ -389,7 +365,8 @@ because there's still unembodied tensors:
                    └── The backward isn't compiled. Perhaps this is because the model is compiled under (with-no-grad ...) macro."))
 
   (let ((*runtime-mode-p* t))
-    (funcall (compiled-backward model))))
+    (funcall (compiled-backward model)))
+  t)
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)
   "
@@ -491,8 +468,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
   (format stream "<Compiled-Composite
     forward  : ~a
     backward : ~a
-~a
->"
+~a>"
 	  ;; Variables
 	  (if (compiled-inputs model)
 	      (with-output-to-string (out)
@@ -501,21 +477,9 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 		(format out ") -> ~a{~a}~a" (class-name (class-of (compiled-out model))) (dtype (compiled-out model)) (shape (compiled-out model))))
 	      (format nil "forward(model) -> ~a{~a}~a" (class-name (class-of (compiled-out model))) (dtype (compiled-out model)) (shape (compiled-out model))))
 	  (if (compiled-backward model)
-	      "backward(model)"
+	      "backward(model) -> t"
 	      "nil")
 	  (if (>= (length (alexandria:hash-table-keys (nodevariables-variables (compiled-variables model)))) 1)
 	      (compiled-variables model)
 	      "")))
-
-;;
-;; [fw, bw, leaves = build(toplevel)]
-;;
-
-;;
-;; [TODO]
-;;  diff! compute!
-;; (let ((a (compute! top)))
-;;         (diff! a))) ...
-;;
-;;
 
