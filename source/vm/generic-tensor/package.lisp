@@ -127,6 +127,7 @@
    #:nodevariables-parameters
    #:build
    #:reset-compiled-function-cache!
+   #:model-parameters
    #:set-input
    #:get-input)
 

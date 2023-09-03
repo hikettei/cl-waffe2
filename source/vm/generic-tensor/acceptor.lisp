@@ -309,7 +309,11 @@ By passing argument information to the compiler at build time, arguments can be 
           (forward model (randn `(3 3)) (randn `(3 3)))))
 ```
 
+All tensors with `:requires-grad=t`, can be accessed by the `(model-parameters model)` method.
 "))
+
+(defmethod model-parameters ((model Compiled-Composite))
+  (nodevariables-parameters (compiled-variables model)))
 
 (defun all-embodied? (model)
   "Invokes an simple-error when model has still unembodied tensor"

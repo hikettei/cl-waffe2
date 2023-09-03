@@ -10,8 +10,13 @@
     (with-section "Working with AbstractTensor")
     
     (insert (documentation (find-class 'AbstractTensor) 't))
+    (insert (documentation 'hook-optimizer!) 'function)
+    (insert (documentation 'call-optimizer!) 'function)
+    (insert (documentation 'reset-grad!) 'function)
+    
     (insert (documentation 'tensor-vec 'function))
-        
+    
+    
     (progn
       (with-doc 'make-tensor 'function
 	(with-example

@@ -1057,6 +1057,18 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   "
 ## [function] hook-optimizer!
 
+```lisp
+(hook-optimizer! tensor optimizer)
+```
+
+Hooks the optimizer to the tensor.
+
+### Inputs
+
+tensor[AbstractTensor]
+
+optimizer[AbstractOptimizer]
+
 "
   (declare (type AbstractTensor tensor)
 	   (type cl-waffe2/optimizers:AbstractOptimizer optimizer))
@@ -1067,23 +1079,31 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   "
 ## [function] call-optimizer!
 
+```lisp
+(call-optimizer! tensor)
+```
+
+Reading the `(grad tensor)`, the function invokes the optimizer hooked to the tensor.
 "
   (declare (type AbstractTensor))
   (when (slot-value tensor 'requires-grad)
+    (when (null (tensor-optimizer tensor))
+      (error "The tensor ~a has no optimizer hooked. Call (hook-optimizer! tensor optimizer) in advance."
+	     tensor))
     (cl-waffe2/optimizers:step-optimize (tensor-optimizer tensor))))
 
 (defun reset-grad! (tensor)
   "
 ## [function] reset-grad!
 
+Resets the gradient of the tensor with zero.
 "
   (declare (type AbstractTensor tensor))
-  (if (scalar-p tensor)
-      (setf (tensor-vec tensor)
-	    (make-tensor 0
-			 :dtype (dtype tensor)))
-      nil))
-	    
+  (when (slot-value tensor 'requires-grad)
+    (if (scalar-p tensor)
+	(setf (tensor-vec tensor) (make-tensor 0 :dtype (dtype tensor)))
+	nil)))
+
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun shape-with-broadcastable (tensor)
