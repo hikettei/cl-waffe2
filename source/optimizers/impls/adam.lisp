@@ -108,34 +108,3 @@ See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithm
        (make-tensor lr-t) ;; Runtime creation of ScalarTensor ... takes a little overhead (approx: 0.00013 sec * N_parameters)
        (make-tensor (eps-of optimizer))))))
 
-#|
-[TODO] Include this to the tests.
-
-(adam-test 1)
-(adam-test 2)
-(adam-test 3)
-(adam-test 4)
- ...
-(defun adam-test (N)
-  (let ((m (cl-waffe2/distributions:ax+b `(,n ,n) 0 0.00))
-	(v (cl-waffe2/distributions:ax+b `(,n ,n) 0 0.00))
-	(p (cl-waffe2/distributions:ax+b `(,n ,n) 0 0.0001))
-	(grad (cl-waffe2/distributions:ax+b `(,n ,n) 0 0.01))
-	(lr (make-tensor 0.01))
-	(beta1 (make-tensor 0.99))
-	(beta2 (make-tensor 0.9))
-	(eps (make-tensor 0.0001)))
-    (with-no-grad
-      (dotimes (i 1)
-	(apply-adam-step-m m grad beta1)
-	;;(print m)	      
-	(apply-adam-step-v v grad beta2)
-	;;(print v)  
-	
-	(apply-adam-step-param
-	 m v p lr eps)
-	)
-      p)))
-
-|#
-
