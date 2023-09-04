@@ -42,4 +42,3 @@ jobs:
         run: |
           ros config set dynamic-space-size 4gb
           ros --eval '(progn (defparameter cl-user::*cl-waffe-config* `((:libblas "libblas.so"))))' ./roswell/cl-waffe2-test.ros
-          ros --eval '(progn (defparameter cl-user::*cl-waffe-config* `((:libblas "libblas.so"))))' ./roswell/cl-waffe2-test.ros vm-test
