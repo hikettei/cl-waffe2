@@ -219,22 +219,19 @@
 	     ((self x y)
 	      ;; x <- y.
 	      ;; place val
-	      ;; If movetensor-ignore-me is T, return y.
 	      (let ((mover (matrix-move (dtype x))))
-		`(if (not (movetensor-ignore-me ,self))
-	       	     (progn
-		       ,(call-with-view
-			 #'(lambda (x-view y-view)
-			     `(funcall
-			       ,mover
-			       (tensor-vec ,x)
-			       (tensor-vec ,y)
-			       ,(offset-of x-view 0)
-			       ,(offset-of y-view 0)
-			       ,(stride-of x-view 0)
-			       ,(stride-of y-view 0)
-			       ,(size-of x-view 0)))
-			 `(,x ,y))
-		       ,x)
-		     ,y))))
+		`(progn
+		   ,(call-with-view
+		     #'(lambda (x-view y-view)
+			 `(funcall
+			   ,mover
+			   (tensor-vec ,x)
+			   (tensor-vec ,y)
+			   ,(offset-of x-view 0)
+			   ,(offset-of y-view 0)
+			   ,(stride-of x-view 0)
+			   ,(stride-of y-view 0)
+			   ,(size-of x-view 0)))
+		     `(,x ,y))
+		   ,x))))
 

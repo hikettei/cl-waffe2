@@ -136,15 +136,12 @@
 			 `(with-tensor-ptrs ((,x-ptr ,x)
 					     (,y-ptr ,y))
 			    (locally (declare (optimize (speed 1)))
-			      (if (not (movetensor-ignore-me ,self))
-				  (progn
-				    ,(if (or (eql (dtype x) :float)
-					     (eql (dtype x) :double))
-					 (expand-move-form x y x-ptr y-ptr)					 
-					 ;; *simd-extension-p*=t
-					 (expand-arithmetic-form x y x-ptr y-ptr :fname "copy"))
-				    ,x)
-				  ,y))))))
+			      ,(if (or (eql (dtype x) :float)
+				       (eql (dtype x) :double))
+				   (expand-move-form x y x-ptr y-ptr)					 
+				   ;; *simd-extension-p*=t
+				   (expand-arithmetic-form x y x-ptr y-ptr :fname "copy"))
+			      ,x)))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun simd-extension-p (&rest args)
