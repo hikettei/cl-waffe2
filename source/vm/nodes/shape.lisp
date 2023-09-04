@@ -305,11 +305,11 @@ Return: (values names subscripts where)
 (defun get-common-symbols (symbols)
   (remove-duplicates (flatten symbols) :test #'symbol-eq))
 
-(defun build-subscript-note (position called-as excepted butgot states)
+(defun build-subscript-note (nth-pos position called-as excepted butgot states)
   (make-shape-error-message
    :position position
    :in-short   (format nil "~a should be ~a but got ~a." called-as excepted butgot)
-   :content    (format nil "is ~a. ~a should be ~a but got ~a." states called-as excepted butgot)
+   :content    (format nil "the ~ath shape is ~a. ~a should be ~a but got ~a." nth-pos states called-as excepted butgot)
    :suggestion (format nil "In ~a, set ~a=~a." states called-as excepted)))
 
 
@@ -547,7 +547,7 @@ Example:
 							      (not
 							       (equal ,var (nth ,nth-arg ,shape))))
 						     (push
-						      (build-subscript-note ,i ',var ,var (nth ,nth-arg ,shape) ',subscript)
+						      (build-subscript-note ,nth-arg ,i ',var ,var (nth ,nth-arg ,shape) ',subscript)
 						      ,all-conditions))
 						   (num-major-setq ,var (nth ,nth-arg ,shape)))
 						  ((> (- (length ,shape) ,nth-arg) ,pos1)
@@ -564,7 +564,7 @@ Example:
 								(not
 								 (equal ,var (nth ,pos ,shape))))
 						       (push
-							(build-subscript-note ,i ',var ,var (nth ,nth-arg ,shape) ',subscript)
+							(build-subscript-note ,nth-arg ,i ',var ,var (nth ,nth-arg ,shape) ',subscript)
 							,all-conditions))
 						     (num-major-setq ,var (nth ,pos ,shape)))))
 				     else
@@ -586,14 +586,14 @@ Example:
 							 :content  (format nil "~~ is already determined as ~a but the tensor attempted to make it ~a."
 									   (nth ,pos ,undetermined-shape-tmp)
 									   (nth ,pos ,shape))
-							 :suggestion (format nil "the shape should be: ~a or broadcasted." (nth ,pos ,undetermined-shape-tmp)))
+							 :suggestion (format nil "the ~ath shape should be: ~a or broadcasted." (1+ ,pos) (nth ,pos ,undetermined-shape-tmp)))
 							,all-conditions)
 						       ;; the mismatch of dimehsions originated error.
 						       (push
 							(make-shape-error-message
 							 :position ,i
 							 :in-short "The length of ~~ do not match."
-							 :content (format nil "is ~a but it violates ~~ = ~a" ,shape (replace-nil ,undetermined-shape-tmp))
+							 :content (format nil "the ~ath shape is ~a but it violates ~~ = ~a" (1+ ,pos) ,shape (replace-nil ,undetermined-shape-tmp))
 							 :suggestion "")
 							,all-conditions)))
 						 (num-major-setf (nth ,pos ,undetermined-shape-tmp) (nth ,pos ,shape)))))))
