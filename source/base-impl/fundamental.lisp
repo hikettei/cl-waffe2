@@ -34,25 +34,12 @@ Moves all the visible elements of `B` into visible areas of `A`.
 A\\gets{B}
 ```
 
-### Behaviour
-
-All cl-waffe2 operations follow this rule: `Make a copy for now, disable later`. (e.g.: the function `(!add x y)` makes an copy of `x` and `y` for now, but this copy operation is ignored, if they're concluded not to be needed, by tracing computation node.)
-
-In order to disable a useless copy operations, MoveTensorNode must follow this behaviour:
-
-1. Reading (movetensor-ignore-me self) in runtime, the forward makes a copy of given tensor only after the slot is `nil`.
-
-2. Otherwise, return `B`
-
-Don't worry the allocation won't be done until `(tensor-vec A)` is called.
-
-For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for example) would be helpful!.
-
 ### Constructor
 
 `(MoveTensorNode dtype)`
 
 `dtype` dtype to use.
+
 "))
 
 (defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
