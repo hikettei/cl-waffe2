@@ -185,6 +185,9 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	    (warn "~a is not a subtype of cl-waffe2/vm.generic-tensor:AbstractTensor. If you want to extend device, extend this class first."
 		  x)))
       *using-backend*)
+
+     (when (null *using-backend*)
+       (warn "with-devices: *using-backend* is set to nil, which means no any tensor could be initialized!."))
      ,@body))
 
 (defmacro with-single-device ((device-name) &body body)
@@ -221,7 +224,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 
 	     (when *facet-monopoly-mode*
 	       (error 'node-not-found :node abstract-name))))
-
+  
   (error 'node-not-found :node abstract-name))
 
 
@@ -555,7 +558,6 @@ Gives an implementation of `abstract-name` as a function form.
 	 (backward-body (cdr backward))
 	 
 	 (impl-name     (subnode-name abstract-name device))
-	 
 	 (fw-name-vm    (symb abstract-name device '-vm-function)))
     
     (eval-when (:compile-toplevel :load-toplevel :execute)
