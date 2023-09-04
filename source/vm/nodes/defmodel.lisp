@@ -364,8 +364,7 @@ Directly defines a `call` method. Arguments must be: `(self arg1 arg2...)`
 				      "")
 				  documentation)))
 
-       (defmethod read-where ((model ,name))
-	 ',where)
+       (defmethod read-where ((model ,name)) ',where)
        
        ;; Creates a constructor named (linearlayer constructor-arguments)
        (defun ,name (,@constructor-arguments)

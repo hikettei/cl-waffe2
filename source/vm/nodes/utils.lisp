@@ -203,6 +203,8 @@ Return:
 			       s))))
     (map 'list #'apply-refine shapes)))
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 (defnode (System-Lazy-Cons (self a b)
 	  :where (A[a-size] B[b-size] -> A[a-size] B[a-size] where a-size = (shape a) b-size = (shape b)))
   (setf (ignore-shape-error self) t))
@@ -215,3 +217,6 @@ Return:
 (defun !system-lazy-values (&rest args)
   (reduce #'!system-lazy-cons args))
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(defun range (start end) (loop for i upfrom start below end collect i))

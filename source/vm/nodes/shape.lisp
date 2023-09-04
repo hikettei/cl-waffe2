@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-(defun range (start end)
-  (loop for i upfrom start below end collect i))
-
 (defun symbol-eq (x y)
   (and
    (symbolp x)
