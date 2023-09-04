@@ -399,6 +399,7 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 		(,(car constructor-arguments)
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(get-params (cdr constructor-arguments)))
+		   :where-decl ',where
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
 		   :uprank-state   (third ,subscript-p)
