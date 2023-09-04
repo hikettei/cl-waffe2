@@ -42,8 +42,12 @@ This generic function is used to customize how the model is printed on the displ
 `call` is a generic function which is used to `:forward`/`:on-call->` forms for an `AbstractNode`/`Composite` class respectively."))
 
 (defmethod call :before ((model Composite) &rest inputs)
-  (declare (ignore inputs))
   ;; Update States?
+
+  (let ((linter-p (read-where model)))
+    (when linter-p
+      (apply #'shape-compatible? model inputs)))
+  
   (assert (subtypep (class-of model) 'Composite)
 	  nil
 	  "Assertion Failed with call method, because the model ~a isn't subtype of cl-waffe2/vm.nodes:Composite." model))

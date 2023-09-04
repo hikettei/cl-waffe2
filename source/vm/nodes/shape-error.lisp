@@ -32,7 +32,6 @@
 	  (dtype      tensor)
 	  (shape tensor)))
 
-;; [TODO] 前後の計算ノードをPrintする
 (defun build-shape-error (forward-or-call model
 			  where-decl
 			  received predicted shape-error-list
@@ -75,7 +74,7 @@ Suggestion"
     (format out "[Shaping Error]:")
 
     (if (eql forward-or-call :call)
-	(format out " The Comosite ~a was called with invaild arguments." model-name)
+	(format out " The Composite ~a was called with invaild arguments." model-name)
 	(case (checkpoint-state *shape-error-when*)
 	  (:forward
 	   (format out " The AbstractNode ~a was called with invaild arguments." model-name))
