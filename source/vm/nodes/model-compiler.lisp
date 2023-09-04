@@ -394,6 +394,43 @@ Or
 	     asif
 	     (car target-model)))
 
+    ;; Check :where form
+    (multiple-value-bind (in-names out-names in-state out-state lets) (parse-subscript where-decl-to-use)
+      (declare (ignore lets))
+
+      (let ((in (or (null in-names)
+		    (not (= (length in-names) (length in-state)))))
+	    (out (or (null out-names)
+		     (not (= (length out-names) (length out-state))))))
+	(when (or in out)
+	  (error "defmodel-as: Every subscript should be given their own names by its :where.
+
+~a
+~a"
+		 (if in
+		     "Position: Before ->"
+		     "Position: After  ->")
+		 
+		 (if (null where)
+		     ;; From defmodel
+		     (format nil "
+    (defmodel (~a (self ...)
+                  ...
+                  :where ~a
+                          └── Specify the name to use. (e.g.: A[i j])
+                  ...))"
+			     (car target-model)
+			     where-decl-to-use)
+		     ;; From defmodel-as
+		     (format nil "
+    (defmodel-as ~a
+                  ...
+                  :where ~a
+                          └── Specify the name to use. (e.g.: A[i j])
+                  ...))"
+			     target-model
+			     where-decl-to-use))))))
+
     (when (and (read-where composite) where)
       (warn "defmodel-as: As both the composite ~a and defmodel-as form declared :where form, defmodel was used in preference.
 
@@ -421,6 +458,6 @@ Or
 			 (cl-waffe2/base-impl::A*=B X grad)))))
 
 (defmodel-as (Multiply-Gradients)
-  :where (X[~] Grad[~] -> X[~])
+  :where (X[~] Grad[~] -> OUT[~])
   :asif :function
   :named multiply-grads-static)

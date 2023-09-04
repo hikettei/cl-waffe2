@@ -417,7 +417,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :named ChainTMP1195 
+{CPUTENSOR[float] :shape (A 10) :named ChainTMP940 
   :vec-state [maybe-not-computed]
   <<Not-Embodied (A 10) Tensor>>
   :facet :input

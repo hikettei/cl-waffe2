@@ -7,7 +7,7 @@
 
 (defclass AbstractNode ()
   ((local-variables :accessor node-local-variables :type list :initform nil) ;; <- [Refactor] Not Used
-
+   (where-decl :initarg :where-decl :initform nil :accessor read-where)
    ;; Shape Transmission States
    (function-node
     :initarg
@@ -50,52 +50,6 @@ And backward: `(backward node prev-gradient arg1 arg2 ...)`
 
 (defmethod test-and-forward-shape ((node AbstractNode) &rest previous-shape) (funcall (abstractnode-node node) previous-shape))
 
-(defun describe-problem-at (error-node inputs outputs &aux (saved-state (checkpoint-node-at *shape-error-when*)))
-  (case (checkpoint-state *shape-error-when*)
-    (:forward
-     (format
-      nil
-      "Couldn't step forward because of shape-error.
-
-The operation was : ~a
-
-Input(s)            : ~a
-Predicted Output(s) : ~a"
-      error-node
-      (map 'list #'shape inputs)
-      outputs))
-    (:backward
-     (format
-      nil
-      "Shape-Error was detected during backward construction.
-
-When : building backward for ~a
-
-The operation was   : ~a
-
-Input(s)            : ~a
-Predicted Output(s) : ~a"
-      saved-state
-      error-node
-      (map 'list #'shape inputs)
-      outputs))
-    (:moving
-     (format
-      nil
-      "Attempted to construct backward, but the shape of inputs and gradients do not match.
-
-When : building backward for ~a
-The function backward returned a tensor with the shape of ~a.
-However, it should be ~a.
-
-== [Repeating The Same Contents] ==============================================
-The operation was: ~a
-"
-      ;; Saved-State should be MoveTensorNode...
-      saved-state
-      (shape (second inputs))
-      (shape (car    inputs))
-      error-node))))
 
 (defun describe-problems (error-node detected-errors inputs outputs)
   "Creates a report of shape-error"
@@ -104,26 +58,9 @@ The operation was: ~a
   ;; [Fix-Definition-And-Step]
   ;; [Replace-Shape-And-Step]
   ;; More Details:
-  ;; Displays [pre-|post-]computation node
+  ;; Displays [pre-|post-]computation node <<!!!
   ;; TODO: make it more intuitive....
-  (shaping-error
-   "~a
-
-Here's a list of reports.
-
-1. ~a
-
-~a
-~a"
-   (describe-problem-at error-node inputs outputs)
-   (car detected-errors)
-   (if (cdr detected-errors)
-       "Also, these reports could be helpful for you (calculated ignoring the first errors.)"
-       "")
-   (with-output-to-string (out)
-     (loop for err in (cdr detected-errors)
-	   for n upfrom 2
-	   do (format out "~%~%~a. ~a" n err)))))
+  (shaping-error "~a" (build-shape-error :forward error-node (read-where error-node) inputs outputs detected-errors)))
 
 ;; Forward:  f(input-state) -> output-state
 ;; Backward: g(output-state) -> input-state
@@ -328,6 +265,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 ;;  Reverse Mode Graph-Level Netowork Construction
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; [TODO] :backward Shape-Error Detection here?
 (defun make-backward (tensor dout)
   "
 ## [function] make-backward

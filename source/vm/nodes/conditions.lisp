@@ -44,9 +44,27 @@ Content  : ~a"
   ((node :initarg :node))
   (:report
    (lambda (c s)
-     (format s "Couldn't find any implementation of ~a for ~a.~a"
+     (format s "
+forward:
+  (forward (~a) ...)
+            └── Couldn't find any implementation
+
+  The AbstractNode ~a is undoubtedly declared by defnode, but cl-waffe2 couldn't find any valid implementation (given by define-impl) from current devices.
+
+    
+    Current Devices: ~a
+
+=>
+   1. Explict devices you want to use with the macro with-devices
+   2. Add an implementation to the node with whichever you like: define-impl or define-impl-op
+   ~a
+~a"
+	     (slot-value c 'node)
 	     (slot-value c 'node)
 	     *using-backend*
+	     (if (subtypep (slot-value c 'node) 'cl-waffe2/base-impl::MatmulNode)
+		 "3. OpenBLAS may not be loaded correctly if you want to use the CPUTensor backend."
+		 "")
 	     (if *facet-monopoly-mode*
 		 "~%With *facet-monopoly-mode* = t, cl-waffe only uses the first-priority device."
 		 "")))))

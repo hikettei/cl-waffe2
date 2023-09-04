@@ -104,14 +104,25 @@ reject-when=nil, or (apply reject-when inputs)=t"
   (when function
     (setf (gethash node-name *node-reject-case-table*) function)))
 
-(defun list-of-abstracttensor-p (list)
-  "Return t if LIST is non nil and contains only AbstractTensor."
-  (and (consp list)
-       (every #'(lambda (x) (subtypep x 'cl-waffe2/vm.generic-tensor:AbstractTensor)) list)))
+;; Is it ok?
+(defun env-parameter-p (sym) (equal (aref (symbol-name sym) 0) #\&))
 
-(deftype list-of-abstracttensor ()
-  `(and list (satisfies list-of-abstracttensor-p)))
-
+;; FixME there must be much clever way to do this.
+(defun get-params (list)
+  "Reading the given list, which is a form of arguments with defun, the function returns a list of symbols"
+  (delete-duplicates
+   (flatten
+    (loop for i fixnum upfrom 0 below (length list)
+	  collect (let ((sym (nth i list)))
+		    (typecase sym
+		      (symbol
+		       (if (env-parameter-p sym)
+			   nil
+			   sym))
+		      (list
+		       (if (= (length sym) 2)
+			   (car sym)
+			   (get-params sym)))))))))
 
 (defvar *call-with-view-route* nil)
 
@@ -133,27 +144,6 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)
 		   *call-with-view-route*)))
-
-;; Is it ok?
-(defun env-parameter-p (sym)
-  (equal (aref (symbol-name sym) 0) #\&))
-
-;; FixME there must be much clever way to do this.
-(defun get-params (list)
-  (delete-duplicates
-   (flatten
-    (loop for i fixnum upfrom 0 below (length list)
-	  collect (let ((sym (nth i list)))
-		    (typecase sym
-		      (symbol
-		       (if (env-parameter-p sym)
-			   nil
-			   sym))
-		      (list
-		       (if (= (length sym) 2)
-			   (car sym)
-			   (get-params sym)))))))))
-
 
 (defmacro with-devices ((&rest backend-priority) &body body)
   "
@@ -195,6 +185,9 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	    (warn "~a is not a subtype of cl-waffe2/vm.generic-tensor:AbstractTensor. If you want to extend device, extend this class first."
 		  x)))
       *using-backend*)
+
+     (when (null *using-backend*)
+       (warn "with-devices: *using-backend* is set to nil, which means no any tensor could be initialized!."))
      ,@body))
 
 (defmacro with-single-device ((device-name) &body body)
@@ -214,22 +207,24 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	    'cl-waffe2/vm.nodes.facets-tmp)))
 
 (defun determine-facet-of-nodes (abstract-name devices &rest inputs)
-  (declare (type list devices inputs)
+  "Dispathces one of the implementation of AbstractName reading the given devices and inputs"
+  (declare (optimize (speed 3))
+           (type list devices inputs)
 	   (type symbol abstract-name))
-  ;; ScalarTensor is forced to use.
+
+  ;; ScalarTensor and T is forcibly added to the last priority
+  ;; Reading the device name from higher to lower
   (loop for device in `(,@devices ScalarTensor t)
 	do (let ((node-name (subnode-name abstract-name device)))
-	     ;; JITLispTensor << LispTensor?
 	     (when (and
-		    (node-compatible-p node-name inputs)
-		    (subtypep node-name abstract-name))
-	       (return-from determine-facet-of-nodes
-		 node-name))
+		    (find-class node-name nil)
+		    (subtypep node-name abstract-name)
+		    (node-compatible-p node-name inputs))
+	       (return-from determine-facet-of-nodes node-name))
 
 	     (when *facet-monopoly-mode*
-	       (error 'node-not-found
-		      :node abstract-name))))
-
+	       (error 'node-not-found :node abstract-name))))
+  
   (error 'node-not-found :node abstract-name))
 
 
@@ -326,12 +321,9 @@ Declares a new `AbstractNode`.
 	  :documentation \"
 ```math
 C\\gets{gemm(1.0, A, B, 0.0, C)}
-```
-\"))
-```
+```\"))
 
-You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...).
-`
+You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...)`.
 "
 
   (when (null where)
@@ -407,9 +399,10 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 		(,(car constructor-arguments)
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(get-params (cdr constructor-arguments)))
+		   :where-decl ',where
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
-		   :uprank-state (third ,subscript-p)
+		   :uprank-state   (third ,subscript-p)
 		   :transmission-state (second ,subscript-p) ;; (second subscript-p) == (second subscript-p1)
 		   ,@(loop for slot in initarg-slots
 			   if slot
@@ -536,52 +529,6 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
       (node-save-for-backward2 node)))
 
 
-(defmacro define-and-impl-node ((abstract-name
-				 (self &rest constructor-arguments)
-				 &key
-				   (device t)
-				   (cache-when-compiled t)
-				   (reject-p nil)
-				   (where t)
-				   (out-scalar-p nil)
-				   (slots nil)
-				   (save-for-backward nil)
-				   (forward nil)
-				   (backward nil)
-				   (documentation ""))
-				&body constructor-body)
-  "
-```lisp
-(define-and-impl-node (abstract-name
-				 (self &rest constructor-arguments)
-				 &key
-				   (device t)
-				   (cache-when-compiled t)
-				   (reject-p nil)
-				   (where t)
-				   (out-scalar-p nil)
-				   (slots nil)
-				   (save-for-backward nil)
-				   (forward nil)
-				   (backward nil)
-				   (documentation \"\")))
-```
-
-Expands `defnode` and `define-impl` at the same time.
-"
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (defnode (,abstract-name (,self ,@constructor-arguments)
-	       :where ,where
-	       :out-scalar-p ,out-scalar-p
-	       :slots ,slots
-	       :save-for-backward ,save-for-backward
-	       :backward ,backward
-	       :documentation ,documentation)
-       ,@constructor-body)
-     (define-impl (,abstract-name :device ,device :cache-when-compiled ,cache-when-compiled :reject-p ,reject-p)
-		  :save-for-backward ,save-for-backward
-		  :forward ,forward)))
-
 (defmacro define-impl-op ((abstract-name
 			   &key
 			     (device t)
@@ -612,7 +559,6 @@ Gives an implementation of `abstract-name` as a function form.
 	 (backward-body (cdr backward))
 	 
 	 (impl-name     (subnode-name abstract-name device))
-	 
 	 (fw-name-vm    (symb abstract-name device '-vm-function)))
     
     (eval-when (:compile-toplevel :load-toplevel :execute)

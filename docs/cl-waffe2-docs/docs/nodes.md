@@ -418,12 +418,9 @@ Declares a new `AbstractNode`.
 	  :documentation "
 ```math
 C\gets{gemm(1.0, A, B, 0.0, C)}
-```
-"))
-```
+```"))
 
-You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...).
-`
+You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...)`.
 
 ## [macro] define-impl
 
@@ -682,6 +679,8 @@ Directly defines a `call` method. Arguments must be: `(self arg1 arg2...)`
 
 Redefines a Composite as a new function or AbstractNode specified in the `:asif` keyword. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
 
+**Note that the expanded form includes eval function! So this macro should be placed in the toplevel!**
+
 ### Example
 
 ```lisp
@@ -690,7 +689,7 @@ Redefines a Composite as a new function or AbstractNode specified in the `:asif`
 
 ### Inputs
 
-`target-model[Composite]` a form to initialize the composite. This from is executed before running the code, and accordingly static.
+`target-model[Composite]` a form to initialize the composite. ~~This from is executed before running the code, and accordingly static.~~
 
 `where[Subscript DSL or null]` If the model has no `:where` declaration, this macro uses this `:where` form instead. Therefore, as long as `defmodel` provides `:where` declaration, this form should be OK if set as nil.
 

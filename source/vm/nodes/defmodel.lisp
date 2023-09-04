@@ -42,8 +42,12 @@ This generic function is used to customize how the model is printed on the displ
 `call` is a generic function which is used to `:forward`/`:on-call->` forms for an `AbstractNode`/`Composite` class respectively."))
 
 (defmethod call :before ((model Composite) &rest inputs)
-  (declare (ignore inputs))
   ;; Update States?
+
+  (let ((linter-p (read-where model)))
+    (when linter-p
+      (apply #'shape-compatible? model inputs)))
+  
   (assert (subtypep (class-of model) 'Composite)
 	  nil
 	  "Assertion Failed with call method, because the model ~a isn't subtype of cl-waffe2/vm.nodes:Composite." model))
@@ -117,20 +121,8 @@ Every time the composite is rendered, this function is called.
   )
 
 ;; Update?
-(defmethod composite-error ((model Composite) error-content)
-  (shaping-error "Shaping-Error is detected when calling Composite.
-
-~a
-
-Here's a list of reports:
-
-~a"
-		 model
-		 (with-output-to-string (out)
-		   (loop for nth upfrom 1
-			 for c in error-content
-			 do (format out "~a. ~a~%"
-				    nth c)))))
+(defmethod composite-error ((model Composite) error-content inputs outputs)
+  (shaping-error "~a" (build-shape-error :call model (read-where model) inputs outputs error-content)))
 
 (defun preprocess-batch-symbol (p1)
   "~ -> GENSYM:XXX"
@@ -185,7 +177,7 @@ Predicts next output given inputs.
       model
     (if linter-function
 	(multiple-value-bind (sym1 state1) (preprocess-batch-symbol (car state1))
-	  (multiple-value-bind (res in) (funcall linter-function model inputs state1 state1)
+	  (multiple-value-bind (res in) (funcall linter-function model nil inputs state1 state1)
 	    (values
 	     (restore-symbol sym1 res)
 	     (restore-symbol sym1 in))))
@@ -210,7 +202,8 @@ Predicts next output given inputs.
 		      (inputs2      (gensym "Inputs"))
 
 		      (input-size (gensym "IO"))
-		    
+
+		      (called-tensors (gensym))
 		      (try-out (gensym))
 		      (try-err (gensym))
 		      (try-rank-error (gensym))
@@ -364,8 +357,7 @@ Directly defines a `call` method. Arguments must be: `(self arg1 arg2...)`
 				      "")
 				  documentation)))
 
-       (defmethod read-where ((model ,name))
-	 ',where)
+       (defmethod read-where ((model ,name)) ',where)
        
        ;; Creates a constructor named (linearlayer constructor-arguments)
        (defun ,name (,@constructor-arguments)
@@ -383,11 +375,11 @@ An constructor function for ~a."
 	   ;; Todo: Refactoring -> test-subscript-p
 	   ;; test-subscript-p is only used to trace computation node
 	   ;; Broadcasting isn't subject to consider.
-	   (labels ((,test-subscript-p (,self-place1 ,inputs ,inputs1 ,inputs2)
+	   (labels ((,test-subscript-p (,self-place1 ,called-tensors ,inputs ,inputs1 ,inputs2)
 		      ;; inputs  = 
 		      ;; inputs1 = 
 		      ;; inputs2 =
-		      (declare (ignorable ,self-place1 ,inputs ,inputs1 ,inputs2))
+		      (declare (ignorable ,self-place1 ,called-tensors ,inputs ,inputs1 ,inputs2))
 		      ,(if use-linter-p
 			   `(multiple-value-bind (,try-out ,try-err ,try-rank-error ,input-size)
 				(funcall (car ,subscript-p2) (or ,inputs ,inputs2))
@@ -397,10 +389,10 @@ An constructor function for ~a."
 				    (declare (ignore ,try-rank-error))
 				    (if (null ,try-err)
 					(values ,try-out ,input-size)
-					(composite-error ,self-place1 ,try-err)))
+					(composite-error ,self-place1 ,try-err ,called-tensors ,try-out)))
 				  (if (null ,try-err)
 				      (values ,try-out ,input-size)
-				      (composite-error ,self-place1 ,try-err)))))))
+				      (composite-error ,self-place1 ,try-err ,called-tensors ,try-out)))))))
 	     (let ((,self-name (make-instance
 				',name
 				:linter-f
@@ -523,7 +515,7 @@ An constructor function for ~a."
 	   collect s)))
 
 
-(defun shape-compatible? (composite &rest inputs)
+(defun shape-compatible? (composite &rest inputs1)
   "
 ## [function] shape-compatible?
 
@@ -534,6 +526,6 @@ Return: (values output-shape input-shape-determined)
 
 "
   (let ((linter-function (composite-linter-f composite))
-	(inputs (map 'list #'shape inputs)))
-    (funcall linter-function composite inputs inputs inputs)))
+	(inputs (map 'list #'shape inputs1)))
+    (funcall linter-function composite inputs1 inputs inputs inputs)))
 
