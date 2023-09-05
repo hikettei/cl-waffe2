@@ -158,20 +158,20 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	  #'(lambda (&rest received-arguments &aux (shapes nil) (alloc-as (make-hash-table)))
 	      (declare (optimize (speed 3)))
 	      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+		(apply #'shape-compatible? composite received-arguments)
+		
+		(loop for arg of-type AbstractTensor in received-arguments
+		      for place                      in input-tensors do
+			;; Update the argument
+			(cl-waffe2/vm::write-result (list place) (list arg))
+			;; Update the shape
+			(loop for place-name in (shape place)
+			      for act-val    in (shape arg) do
+				(setf (gethash place-name alloc-as) act-val)
+				(push (cons place-name act-val) shapes)
+				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
+		(cl-waffe2/vm::adjust-allocation! allocation alloc-as)
 		(cl-waffe2/vm::with-static-allocation (allocation)
-		  (apply #'shape-compatible? composite received-arguments)
-		  
-		  (loop for arg of-type AbstractTensor in received-arguments
-			for place                      in input-tensors do
-			  ;; Update the argument
-			  (cl-waffe2/vm::write-result (list place) (list arg))
-			  ;; Update the shape
-			  (loop for place-name in (shape place)
-				for act-val    in (shape arg) do
-				  (setf (gethash place-name alloc-as) act-val)
-				  (push (cons place-name act-val) shapes)
-				  (cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
-		  (cl-waffe2/vm::adjust-allocation! allocation alloc-as)
 		  (if need-backward
 		      (values
 		       (eliminate-undetermined-size
@@ -230,39 +230,41 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 			       (dout         :initform nil)
 			       (allocation   :initform nil))
 		       :forward ((,self ,@in-names)
-				 (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
-				   (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
-				     (when (scalar-p out)
-				       (setf (out-scalar-p ,self) t))
-				     out)))
+				 (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+				   (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
+				     (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
+				       (when (scalar-p out)
+					 (setf (out-scalar-p ,self) t))
+				       out))))
 
 		       :backward ((,self ,dy)
 				  ;; multiply-gradients-static(X, Grad) ... X *= Grad
-				  
-				  (when (null (slot-value ,self 'bw-iseq))
-				    (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
+
+				  (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+				    (when (null (slot-value ,self 'bw-iseq))
+				      (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
 => (defmodel-as (...) :differentiable t)
                               └── Set :differentiable=t or the forward wasn't called."
-					   ',node-name))
+					     ',node-name))
 
-				  (if (scalar-p (slot-value ,self 'dout))
-				      (setf (tensor-vec (slot-value ,self 'dout))
-					    (if (scalar-p ,dy)
-						(tensor-vec ,dy)
-						(cl-waffe2/vm.generic-tensor::vref ,dy 0)))
-				      (setf (tensor-vec (slot-value ,self 'dout)) (tensor-vec ,dy)))
-				  
-				  ;; Call Backward Iseq
-				  (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
-				    (cl-waffe2/vm:accept-instructions (slot-value ,self 'bw-iseq)))
+				    (if (scalar-p (slot-value ,self 'dout))
+					(setf (tensor-vec (slot-value ,self 'dout))
+					      (if (scalar-p ,dy)
+						  (tensor-vec ,dy)
+						  (cl-waffe2/vm.generic-tensor::vref ,dy 0)))
+					(setf (tensor-vec (slot-value ,self 'dout)) (tensor-vec ,dy)))
+				    
+				    ;; Call Backward Iseq
+				    (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
+				      (cl-waffe2/vm:accept-instructions (slot-value ,self 'bw-iseq)))
 
-				  ;; Compose gradients
-				  (apply #'values
-					 (loop for argument in (slot-value ,self 'variables)
-					       if (cl-waffe2/vm.generic-tensor:grad argument)
-						 collect (cl-waffe2/vm.generic-tensor:grad argument)
-					       else
-						 collect nil))))
+				    ;; Compose gradients
+				    (apply #'values
+					   (loop for argument in (slot-value ,self 'variables)
+						 if (cl-waffe2/vm.generic-tensor:grad argument)
+						   collect (cl-waffe2/vm.generic-tensor:grad argument)
+						 else
+						   collect nil)))))
 
 	     ;; Compile in advance
 	     (let* (,@(loop for name in in-names

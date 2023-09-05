@@ -29,7 +29,6 @@
    #:tensor-state
    #:tensor-out-n
    #:tensor-vec
-   #:tensor-mempool-idx
    #:tensor-facet
    #:tensor-stride
    #:tensor-name

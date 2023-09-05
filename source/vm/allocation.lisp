@@ -27,8 +27,15 @@
 Records the statue and result of localized allocation state by cl-waffe2 VM.
 "
   (allocated-p nil :type boolean)
+  (id-routes  (make-hash-table) :type hash-table)
   (id->tensor (make-hash-table) :type hash-table)
   (reduce-rate 0.0 :type single-float))
+
+(defun read-from-table (id allocation)
+  (declare (type VMAllocation allocation))
+  (gethash
+   (gethash id (vmalloc-id-routes allocation))
+   (vmalloc-id->tensor allocation)))
 
 (defmethod print-object ((model VMAllocation) stream)
   (format stream "{VMAllocation:
@@ -65,7 +72,6 @@ If the re-allocation is performed, frees the old one.
 		     ;; Update
 		     (funcall (the function (tensor-finalizer tensor)))
 		     (setf (tensor-vec tensor) nil)
-		     
 		     (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 			   (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))
 		     (setf (tensor-vec tensor) (make-tensor
@@ -97,10 +103,10 @@ If the re-allocation is performed, frees the old one.
   "Reading the allocated state, `allocation`, the function returns a storage vec of tensor."
   (declare (type VMAllocation allocation)
 	   (type AbstractTensor tensor))
-  (when (null (tensor-mempool-idx tensor))
-    (error "SystemError: Attempted to read the storage vec of ~a but failed because the tensor wasn't tracked when compiling." tensor))
+  (when (null (gethash (tensor-id tensor) (vmalloc-id-routes allocation)))
+    (error "tensor-vec: Attempted to read the storage vec of ~a but failed because the tensor wasn't tracked when compiling." tensor))
   
-  (let ((result (gethash (tensor-mempool-idx tensor) (vmalloc-id->tensor allocation))))
+  (let ((result (read-from-table (tensor-id tensor) allocation)))
     (when (null result)
       (error "tensor-vec: The tensor ~a isn't registered to the memory-pool.
 To use InputTensor as a cache, envolve the tensor into your node by any means, as an argument." tensor))
@@ -132,6 +138,7 @@ Declares the static allocation state to use.
 
   (let* ((cache-tensor-table (make-hash-table))
 	 (alloc-route-table  (make-hash-table))
+	 (id->tensor-table   (make-hash-table))
 	 (iseq `(,@(loop for inst in iseq-bw
 			 if (null (wfop-block-iseq inst))
 			   append (list inst)
@@ -156,9 +163,9 @@ Declares the static allocation state to use.
     ;; [TODO] 前後でメモリ使用量計算して性能を評価する
     ;; [TODO] mempool-idxを入れ替えて最適化する
     (loop for tensor being the hash-values in cache-tensor-table do
-      (setf (tensor-mempool-idx tensor) (tensor-id tensor))
-      (setf (gethash (tensor-id tensor) alloc-route-table) tensor))
-    
-    (make-vmallocation :id->tensor alloc-route-table)))
+      (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
+      (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
+
+    (make-vmallocation :id->tensor id->tensor-table :id-routes alloc-route-table)))
 
 ;;(tensor-mempool-idx tensor) を更新する・・・
