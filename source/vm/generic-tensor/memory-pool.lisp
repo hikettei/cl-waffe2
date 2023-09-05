@@ -44,8 +44,14 @@
 ;;        ...
 ;;
 
-(declaim (inline get-from-memory-pool))
+;; Memory-pool is consisted of two layers:
 
+;;
+;; Global Pool : Tensors with mempool-state=:input is placed here
+;; Local  Pool : 
+;;
+
+(declaim (inline get-from-memory-pool))
 (defparameter *thread-memory-pool*
   (make-hash-table)
   "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
@@ -69,7 +75,6 @@
 
 (defstruct Memory-Pool
   (temporary-rooms (make-hash-table) :type hash-table)
-  (caching-pools (make-hash-table) :type hash-table)  ;;
   )
 
 (defstruct Adjustable-Shape-State
@@ -91,13 +96,14 @@
 			 t)))
 	       current-keys current-vals))))
 
-(defun current-memory-pool ()
+(defun current-memory-pool (&optional (idx nil))
+  "Set idx to force the access of idxth thread."
   (let ((memory-pool (with-lock-held (*thread-pool-lock*)
-		       (gethash (current-thread) *thread-memory-pool*))))
+		       (gethash (or idx (current-thread)) *thread-memory-pool*))))
     (if memory-pool
 	memory-pool
 	(with-lock-held (*thread-pool-lock*)
-	  (setf (gethash (current-thread) *thread-memory-pool*) (make-memory-pool))))))
+	  (setf (gethash (or idx (current-thread)) *thread-memory-pool*) (make-memory-pool))))))
 
 
 ;; [TODO] Add: :gradient :cache :input
@@ -166,21 +172,22 @@
   (let ((extended))
     (maphash
      #'(lambda (thread-idx thread-memory-pool)
-	 (declare (ignore thread-idx))
+	 (print thread-idx)
 	 (maphash
 	  #'(lambda (key room)
+	      (print key)
 	      (let ((state (temporary-room-state room))
 		    (tensor (temporary-room-cache-tensor room)))
 		;; state = :tmp :input :save-for-backward
-		(if (or (null state)
-			(eql state :tmp)
-			(eql state :save-for-backward))
-		    (funcall (tensor-finalizer tensor))
-		    (push (cons key room) extended))))
-	  
+		(cond
+		  ((and (not *no-grad*) (eql state :save-for-backward))
+		   (funcall (tensor-finalizer tensor)))
+		  ((or (null state) (eql state :tmp))
+		   (funcall (tensor-finalizer tensor)))
+		  (T
+		   (push (list key room thread-idx) extended)))))
 	  (memory-pool-temporary-rooms thread-memory-pool)))
      *thread-memory-pool*)
-
     (setf *thread-memory-pool* (make-hash-table))
     extended))
 
@@ -189,18 +196,19 @@
   ""
   `(let* ((,result
 	    (let ((*thread-memory-pool* (make-hash-table)))
-	      (multiple-value-list (progn ,@body)))))
+	      (multiple-value-list
+	       (progn ,@body)))))
      (dolist (i (exit-memory-pool))
-       (set-mem-pool (symbol-name (car i)) (cdr i)))
+       (set-mem-pool (symbol-name (first i)) (second i) (third i)))
      (apply #'values ,result)))
 
 (defun get-mem-pool (key)
   (declare (type string key))
   (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool))))
 
-(defun set-mem-pool (key value)
-  (declare (type string key))  
-  (setf (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool))) value)
+(defun set-mem-pool (key value &optional (idx nil))
+  (declare (type string key))
+  (setf (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool idx))) value)
   value)
 
 (defun assure-and-return-room (room tensor)
@@ -345,7 +353,7 @@ Usage:
 (defun get-from-memory-pool (tensor)
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3)))
-
+  
   (cond
     ((scalar-p tensor) ;; As of ScalarTensor, memory-usage = O(1)
      (if (vec tensor)
@@ -353,27 +361,26 @@ Usage:
 	 (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
 	   (setf (tensor-vec tensor) (vec tmp-tensor))
 	   (vec tensor))))
+    ;; If storage is nil, allocate anyway
+    ((null (vec tensor))
+     (chaintmp-find-mem-pool tensor))
+    
     ((null (tensor-alloc-state tensor))
      ;; First Time Allcoation? or no one uses adjustable-symbol?
-     (or (vec tensor)
-	 (chaintmp-find-mem-pool tensor)))
+     (vec tensor))
+
     ;; If the tensor's size is STATIC -> just returning vec with finding mem-pool
-    ((or (null (tensor-input-shape tensor))
-	 (every #'numberp (tensor-input-shape tensor)))
-     (if (vec tensor)
-	 (vec tensor)
-	 (chaintmp-find-mem-pool tensor)))
+    ((every #'numberp (tensor-input-shape tensor))
+     (vec tensor))
+    
     ;; Other case, the shape of tensors has a symbol, but keep using the same one.
     ((no-need-update-p tensor)
-     (if (vec tensor)
-	 (vec tensor)
-	 (chaintmp-find-mem-pool tensor)))
-    ;; Otherwise, reallocating needs to be done.
+     (vec tensor))
+    ;; Otherwise, reallocating/resizing is needed!
     ((stringp (tensor-name tensor))
      (chaintmp-find-mem-pool tensor))
     ;; The Tensor is InputTensor (ChainTMP)
-    ;; (user-input-p tensor) is expensible, so use stringp instead.
-    ((user-input-p tensor) ;; high cost
+    ((user-input-p tensor) ;; user-input-p ... expensive
      (error "get-from-memory-pool failed: ~a isn't embodied." tensor))
     (T
      (error "get-from-memory-pool failed: because the given tensor isn't one of: ScalarTensor InputTensor(ChainTMP)"))))
@@ -404,12 +411,5 @@ Usage:
 ;;  Input ... 固定の領域 メモリプールの最上層に位置する
 ;;  TMP   ... with-mempoolマクロで新しいスコープを作る+抜けるとき削除
 ;;  Save4Backward ... *no-grad*=tの条件のもとならTMP otherwise Input
+;;
 
-
-(defparameter *under-mem-pool-p* nil ) ;; <- TじゃないとErrorになる
-
-(defmacro with-cl-waffe2-mempool-toplevel ()
-  "buildした後のForwardなどトップレベルに配置するべき
-
-proceedのforwardがこれを保持する"
-  )

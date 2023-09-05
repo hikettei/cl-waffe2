@@ -366,11 +366,12 @@ This function is setfable and inlined.
 		  ((and
 		    (not (scalar-p tensor))
 		    (stringp (tensor-name tensor)))
+		   ;; The size of it could be changed depending on dynamically shaping
 		   ;; ChainTMP, made by (make-input shape nil)
 		   ;; using get-form-memory-pool is MUST because shapes are dynamically changing.
 		   (get-from-memory-pool tensor))
 		  (T
-		   ;; ExistTensor
+		   ;; Or: Scalar/ExistTensor
 		   (if (vec tensor)
 		       (vec tensor)
 		       (get-from-memory-pool tensor))))))

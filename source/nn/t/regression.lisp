@@ -236,7 +236,7 @@
 ;; Only using pure features in cl-waffe2
 ;; OK
 (defun linearlayer-backward-test ()
-  (with-memory-pool
+  (progn;with-memory-pool
     (let* ((model (LinearLayer-Sequence 100 50 10))
 	   (model (build (call model (uniform-random `(10 100) -0.01 0.01))
 			 :compile-mode :default)))
