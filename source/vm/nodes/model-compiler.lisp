@@ -317,7 +317,7 @@ Redefines a Composite as a new function or AbstractNode specified in the `:asif`
 ─────────────────────────────────────────────────────────────────────────────────────
 :function | Defines a function to be executed immediately that does not create a node.
 ─────────────────────────────────────────────────────────────────────────────────────
-:node     | Defines a AbstractNode which needs to be compiler later
+:node     | Defines a AbstractNode which needs to be compiled later
 ─────────────────────────────────────────────────────────────────────────────────────
 ```
 
@@ -342,7 +342,7 @@ Choose :asif option from:
 ─────────────────────────────────────────────────────────────────────────────────────
 :function | Defines a function to be executed immediately that does not create a node.
 ─────────────────────────────────────────────────────────────────────────────────────
-:node     | Defines a AbstractNode which needs to be compiler later
+:node     | Defines a AbstractNode which needs to be compiled later
 ─────────────────────────────────────────────────────────────────────────────────────
 "
 	   asif))
