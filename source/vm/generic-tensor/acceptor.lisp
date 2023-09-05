@@ -119,10 +119,10 @@ Giving values to delay-evaluated tensors.
   (let ((input-tensor (gethash variable-name (nodevariables-variables nodevars))))
     
     (when (null input-tensor)
-      (error "The InputTensor named ~a weren't appeared in the computation node" variable-name))
+      (error "set-input: The InputTensor named ~a weren't appeared in the computation node." variable-name))
 
     (when (not (= (dims input-tensor) (dims actual-tensor)))
-      (error "embody-input: ranks does not match: ~a and ~a" input-tensor actual-tensor))
+      (error "set-input: the place and value should have the same rank: ~a and ~a" input-tensor actual-tensor))
     
     (let ((symbols-changed (make-hash-table)))
       (loop for place in (tensor-input-shape input-tensor)
@@ -130,47 +130,24 @@ Giving values to delay-evaluated tensors.
 	    for rank upfrom 0
 	    if (and (not (symbolp place))
 		    (not (= place value)))
-	      do (error "embody-input: The ~ath rank is a fixed dimension.
-So the corresponding shape must be ~a but got ~a.
-
-Shapes: Input_Place <- Actual_Tensor
------------------------------------------------
-Shapes:   ~a~a  <-  ~a
-
-input-tensor:
-~a
-
-Strides       : ~a
-permute-order : ~a
-
-actual-tensor:
-~a
-
-Strides       : ~a
-permute-order : ~a
+	      do (error "set-input: Can't set ~a as ~a of the InputTensor ~a because it is a fixnum.
+The operation was: Setting ~a <- ~a
 "
-			rank value place
-			variable-name
+			place
+			value variable-name
 			(tensor-input-shape input-tensor)
-			(shape actual-tensor)
-			input-tensor
-			(tensor-stride input-tensor)
-			(tensor-permute-order input-tensor)
-			actual-tensor
-			(tensor-stride actual-tensor)
-			(tensor-permute-order actual-tensor))
+			(shape actual-tensor))
 	    if (symbolp place)
 	      do (setf (gethash place symbols-changed) value))
             
       ;; InputTensor <- Actual-Tensor
       (embody-actual-tensor input-tensor actual-tensor)
 
-      ;; Apply hash-table
+      ;; Update hash-table
       (maphash
        #'(lambda (key value)
 	   (setf (getf (nodevariables-symbols nodevars) key) value))
        symbols-changed)
-
       t)))
 
 (defun construct-variables-table (variables-list)
@@ -212,64 +189,6 @@ permute-order : ~a
      variable-table
      tmp-variable-table)))
 
-;; ==============================================================================
-;; Kernel Constructor | General-Purpose APIs
-;; ==============================================================================
-
-(defun compile-forward-kernel (forward-iseq
-			       variables
-			       &key
-				 (compile-mode :default))
-  "
-## [function] compile-forward-kernel
-"
-
-  (declare (type compile-option-t compile-mode)
-	   (ignore compile-mode))
-  
-  (let* ((inputs (loop for var in variables
-		       if (user-input-p var)
-			 collect var))
-	 (set-input-forms))
-    ;; set-input-form .. collects adjustable shapes
-    (mapc #'(lambda (input)
-	      (loop for shape in (shape input)
-		    for kth-dim upfrom 0
-		    if (symbolp shape)
-		      do (push (list shape kth-dim input) set-input-forms)))
-	  inputs)
-
-    (values
-     ;; [FixME] Eliminate this compile in the future release.
-     #'(lambda ()
-	 (with-adjustable-symbol-scope
-	   (loop for form in set-input-forms do
-	     (register-adjustable-shape (car form) (nth (second form) (shape (third form)))))
-	   (cl-waffe2/vm:accept-instructions forward-iseq)))
-     variables
-     set-input-forms)))
-
-(defun compile-backward-kernel (toplevel backward-iseq &key (compile-mode :default) (set-input-forms))
-  (declare (type compile-option-t compile-mode)
-	   (ignore compile-mode))
-
-  
-  (when (some #'symbolp (shape toplevel))
-    (error "Can't construct backward, the top level shape still includes a symbol: ~a
-
-If you don't need a backward kernel, could you try again with wrapping the build function with:
-    (with-no-grad
-        (build ...)) "
-	   (shape toplevel)))
-
-  (if set-input-forms
-      #'(lambda ()
-	  (with-adjustable-symbol-scope
-	    (loop for form in set-input-forms do
-	      (register-adjustable-shape (car form) (nth (second form) (shape (third form)))))
-	    (cl-waffe2/vm:accept-instructions backward-iseq)))
-      #'(lambda () (cl-waffe2/vm:accept-instructions backward-iseq))))
-
 ;; ==========================================
 ;; General-Purpose APIs
 ;; ==========================================
@@ -277,6 +196,7 @@ If you don't need a backward kernel, could you try again with wrapping the build
 (defclass Compiled-Composite ()
   ((compiled-forward :initarg :compiled-forward :type function :reader compiled-forward)
    (compiled-backward :initarg :compiled-backward :type (or null function) :reader compiled-backward)
+   (allocation :initarg :allocation :reader compiled-allocation)
    (variables :initarg :variables :reader compiled-variables)
    (inputs :initform nil :initarg :inputs :reader compiled-inputs)
    (out    :initform nil :initarg :out    :reader compiled-out)
@@ -316,6 +236,10 @@ All tensors with `:requires-grad=t`, can be accessed by the `(model-parameters m
 "))
 
 (defmethod model-parameters ((model Compiled-Composite))
+  "
+## [function] model-parameters
+
+Returns a list of tensors with (:requires-grad=t)"
   (nodevariables-parameters (compiled-variables model)))
 
 (defun all-embodied? (model)
@@ -328,12 +252,23 @@ All tensors with `:requires-grad=t`, can be accessed by the `(model-parameters m
 	    do (push (cons key val) unembodied))
 
     (when unembodied
-      (error "Can't call forward of the given model,
-because there's still unembodied tensors:
+      (error "The compiled model ~a still have an unembodied tensors.
+Before calling the forward method, set any value to these InputTensors first.
 ~a"
+	     model
 	     (with-output-to-string (out)
-	       (dolist (k unembodied) (format out "~% :~a - ~a Tensor." (car k) (shape (cdr k)))))))))
+	       (dolist (k unembodied) (format out "~% :~a -> ~a" (car k) (shape (cdr k)))))))))
 
+(defun set-adjustable-symbols (model)
+  (let* ((var-table (compiled-variables model))
+	 (symbols   (nodevariables-symbols var-table))
+	 (allocator (make-hash-table)))
+    (loop for i fixnum upfrom 0 below (length symbols) by 2
+	  do (register-adjustable-shape (nth i symbols) (nth (1+ i) symbols))
+	     (setf (gethash (nth i symbols) allocator) (nth (1+ i) symbols)))
+    
+    (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) allocator)
+    nil))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
   (let ((input-args (compiled-inputs model)))
@@ -355,9 +290,11 @@ because there's still unembodied tensors:
 			 
   ;; Check if all the inputs are embodied?
   (all-embodied? model)
-
   (let ((*runtime-mode-p* t))
-    (funcall (compiled-forward model))))
+    (with-adjustable-symbol-scope
+      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+	(set-adjustable-symbols model)
+	(funcall (compiled-forward model))))))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
 
@@ -372,7 +309,10 @@ because there's still unembodied tensors:
                    └── The backward isn't compiled. Perhaps this is because the model is compiled under (with-no-grad ...) macro."))
 
   (let ((*runtime-mode-p* t))
-    (funcall (compiled-backward model)))
+    (with-adjustable-symbol-scope
+      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+	(set-adjustable-symbols model)
+	(funcall (compiled-backward model)))))
   t)
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)
@@ -406,7 +346,6 @@ Reading all variables in the computation node, the method get-input returns an c
 		(inputs nil)
 		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest)
-		(use-setinput-form nil)
 		(fuse-ops t))
   "
 ## [function] build
@@ -439,36 +378,41 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
                               └── :inputs receive a list of keyword indicating the name of tensors created by make-input
                                   Set like `(:A :B) "))
   
-  (multiple-value-bind (fw-iseq bw-iseq variables) (cl-waffe2/vm:compile-forward-and-backward toplevel :need-backward construct-backward? :compile-mode compile-mode :fuse-p fuse-ops)
-    (multiple-value-bind (fw-function variables set-input-forms) (compile-forward-kernel fw-iseq variables :compile-mode compile-mode)
-      ;; Vars - All Variables (including ChainTMP) used in forward.
-      (let ((table (construct-variables-table variables)))
+  (multiple-value-bind (fw-iseq bw-iseq variables dout allocation)
+      (cl-waffe2/vm:compile-forward-and-backward toplevel
+						 :need-backward construct-backward?
+						 :compile-mode compile-mode
+						 :fuse-p fuse-ops)
+    (declare (ignore dout))
 
-	(when inputs
-	  (let ((input-names (alexandria:hash-table-keys (nodevariables-variables table))))
-	    (mapc
-	     #'(lambda (x)
-		 (when (not (find x input-names))
-		   (error "build: Can't compile the tensor because the argument ~a didn't appear in the computation node.
+    (let ((forward-f  #'(lambda () (cl-waffe2/vm:accept-instructions fw-iseq)))
+	  (backward-f   (when construct-backward? #'(lambda () (cl-waffe2/vm:accept-instructions bw-iseq))))
+	  (table        (construct-variables-table variables)))
+
+
+      ;; Check all arguments are valid as an argument
+      (when inputs
+	(let ((input-names (alexandria:hash-table-keys (nodevariables-variables table))))
+	  (mapc
+	   #'(lambda (x)
+	       (when (not (find x input-names))
+		 (error "build: Can't compile the tensor because the argument ~a didn't appear in the computation node.
         (build toplevel :inputs ~a)
                                 └── Choose from: ~a "
-			  x
-			  inputs
-			  input-names)))
-	     inputs)))
-	    
-	
-	(prog1
-	    (values (make-instance 'Compiled-Composite
-				   :out toplevel
-				   :inputs inputs
-				   :variables  table
-				   :compiled-forward fw-function
-				   :compiled-backward (when construct-backward?
-							(compile-backward-kernel toplevel bw-iseq :compile-mode compile-mode :set-input-forms set-input-forms)))
-		    
-		    (when use-setinput-form set-input-forms))
-	  (mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*))))))
+			x
+			inputs
+			input-names)))
+	   inputs)))
+
+      (prog1
+	  (make-instance 'Compiled-Composite
+			 :allocation allocation
+			 :compiled-forward  forward-f
+			 :compiled-backward backward-f
+			 :out               toplevel
+			 :inputs            inputs
+			 :variables         table)
+	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
 
 (defmethod print-object ((model Compiled-Composite) stream)

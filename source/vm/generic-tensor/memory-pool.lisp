@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;; [TODO] Delete this
+
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;
 ;;  memory-pool.lisp provides features on MemoryPool, caching tensors, and managing allocation for dynamically shaped tensors.
@@ -65,17 +67,6 @@
 ;;      - When *no-grad*=nil, becomes :input
 ;;      - When *no-grad*=t,   :tmp
 
-;;  いつFreeする
-;; [TODO] メモリプールのrefenreeはTensor-id based
-;; [TODO] メモリプールの検索ってこっちがやるべきこと？ compilersじゃなくて？
-;; [TODO] compile-fw-and-bw ... InputTensorのReferenceも参照する
-;; [TODO] Tensor no Print-objectを更新
-;;
-;; CompilerがVirtualMemPoolみたいなの作ってそれ使うことにする？
-;; Nodeの順番は固定であること必須
-
-;; (defmacro with-set-compiled-mempool ((mempool) ...)
-
 (declaim (inline get-from-memory-pool))
 (defparameter *thread-memory-pool*
   (make-hash-table)
@@ -111,15 +102,6 @@ In order to set the io of each cache-pool as :free, cl-waffe2/vm traces the cl-w
 "
   (temporary-rooms (make-hash-table) :type hash-table) ;; All Tensors allocated here
   (cached-pool     (make-hash-table) :type hash-table) ;; Tensors with :free :using states. (apply #'* (translate-adjustable-shape (slot-value 'orig-shape))) -> ((room TENSOR1) (room TENSOR2) (room TENSOR3) ...)
-  )
-
-;; Dtype, Size is compatible?
-(defun find-cached-tensor (tensor memory-pool)
-  ;; (eq (type-of ...) (type-of ...)
-  )
-
-(defun set-cached-tensor (room memory-pool)
-
   )
 
 (defstruct Adjustable-Shape-State
@@ -353,30 +335,4 @@ InputTensors created inside this macro guarantees for all read information to be
     (when room ;; When room=nil, there's no need to consider whether the tensor will be freed or not.
       (setf (temporary-room-state room) attribute)))
   nil)
-
-;(defun update-mempool-cache-state! (tensor to)
- ; (declare (type read-state-io-t to))
-
-;  )
-
-;; with-memory-pool ... そのスコープ内部のTMPが外に持ち越されないことを保証するマクロ
-;; memory-poolはthreadごとにStaticであるべき。
-
-;;
-;; Known issuses on dynamically shaping:
-;;  Strides   ... Stridesが更新されなくてたまにPrintするとError
-;;  set-input ... viewでオフセットを加算しても, Copyしなくても, incf-offsetしなくても・・・
-;;  Scopingなどの使用が不明
-;;
-;; on memory-pool:
-;;  1. Unstable Ruleを明記
-;;  2. mgl-matでいうwith-cacheみたいなAllocationをしたい。TensorのCopyのStateに:save-for-backwardが付与されていない場合はwith-cacheを持ちいればOK
-;;  3. ^ Therefore, make-inputは0で埋められている保証がない。
-
-;;
-;; Tensorは三つある: Save4Backward, Input, TMP
-;;  Input ... 固定の領域 メモリプールの最上層に位置する
-;;  TMP   ... with-mempoolマクロで新しいスコープを作る+抜けるとき削除
-;;  Save4Backward ... *no-grad*=tの条件のもとならTMP otherwise Input
-;;
 

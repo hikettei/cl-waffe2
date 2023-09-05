@@ -283,6 +283,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 			    collect (or (system-lazy-read-save-for-backward var)
 					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
 	  (dout (cl-waffe2/vm.generic-tensor::make-clone dout)))
+
       (setf (tensor-protect-me dout) t)
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
 	     (out-toplevels (if (every #'null out-toplevels) ;; no gradients?
@@ -303,12 +304,12 @@ forward: Couldn't step forward step of ~a because it is undefined.
 			(cl-waffe2/vm:compile-forward-and-backward toplevel
 								   :need-backward nil
 								   :fuse-p t
-								   :compile-mode :fastest)))
+								   :compile-mode :fastest
+								   :optimize-locality nil)))
 	     (fw-iseq (car compiled))
 	     (leaves  (third compiled)))
-
-	(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
 	
+	(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)
 	     (progn;;cl-waffe2/vm.generic-tensor::with-memory-pool

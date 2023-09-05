@@ -341,6 +341,7 @@ The generic function current-backend-state is used to rendering (show-backends) 
   (let ((a (copy-list (tensor-permute-order tensor))))
     (not (equal (sort a #'>) (tensor-permute-order tensor)))))
 
+(defparameter *static-alloc-state* nil)
 ;; Inline
 (declaim (inline tensor-vec))
 (defun tensor-vec (tensor)
@@ -360,6 +361,11 @@ This function is setfable and inlined.
 "
   (declare (type AbstractTensor tensor))
 
+  ;; TODO: without *static-alloc-state*, puts a error
+  (when (and *static-alloc-state*
+	     (cl-waffe2/vm::tensor-tmp-p tensor))
+    (return-from tensor-vec (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor)))
+  
   ;; See also: comments on the top of memory-pool.lisp
   (let ((result (cond
 		  ((and
@@ -503,7 +509,8 @@ This function is setfable and inlined.
 		      (dtype *default-dtype*)
 		      (view nil)
 		      (order *default-order*) ;; TODO (retain-grads nil)
-		      (initial-element))
+		      (initial-element)
+		      (device nil))
   "
 ## [function] make-tensor
 
@@ -514,7 +521,8 @@ This function is setfable and inlined.
 		  (dtype *default-dtype*)
 		  (view nil)
 		  (order *default-order*)
-		  (initial-element nil))
+		  (initial-element nil)
+                  (device nil))
 ```
 
 Created a new ExistTensor of a device of `(car *using-backend*)`.
@@ -530,10 +538,12 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 4. `order`[keyword] set keyword indicating the order of elments from `:column` or `:row`. in default set to `:column`.
 
 5. `initial-element`[Anything] Set anything which you want to set as a initial element.
+
+6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
 "
   (declare (type list view))
   (if (typep shape-or-scalar 'list)
-      (make-instance (car *using-backend*)
+      (make-instance (or device (car *using-backend*))
 		     :dtype dtype
 		     :order order
 		     :requires-grad requires-grad
@@ -542,7 +552,7 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 		     :facet :exist
 		     :initial-element initial-element
 		     :view view)
-      (make-instance (find-scalar-tensor)
+      (make-instance (or device (find-scalar-tensor))
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
 		     :shape nil

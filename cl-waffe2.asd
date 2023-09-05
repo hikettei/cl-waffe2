@@ -58,6 +58,7 @@
 	       (:file "base-impl/package")
 
 	       (:file "vm/package")
+	       (:file "vm/allocation")
 	       
 	       (:file "vm/generic-tensor/cache")
 	       (:file "vm/generic-tensor/utils")
@@ -95,14 +96,13 @@
 	       (:file "base-impl/ir")
 	       (:file "base-impl/reshapers")
 	       (:file "base-impl/unfold")
-
 	       
 	       (:file "vm/ir")
 	       (:file "vm/utils")
 	       (:file "vm/vm")
 	       (:file "vm/optimize-ir")
 	       (:file "vm/compile")
-	       (:file "vm/allocation")
+	       
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")

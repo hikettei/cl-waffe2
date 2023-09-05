@@ -11,9 +11,9 @@
    #:print-current-memory-pool
    #:free-current-memory-pool
    #:make-compiled-kernel
-   #:compile-forward-kernel
    #:find-cached-function
-   #:*memory-pool*)
+   #:*memory-pool*
+   #:*static-alloc-state*)
   ;; Tensor classes
   (:export
    #:AbstractTensor

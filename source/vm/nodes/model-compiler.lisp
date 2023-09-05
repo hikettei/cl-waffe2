@@ -114,12 +114,13 @@ excepted: AbstractTensor"
 	       (or named "lambda")
 	       toplevel))
       
-      (multiple-value-bind (fwiseq bwiseq leaves)
+      (multiple-value-bind (fwiseq bwiseq leaves dout allocation)
 	  (cl-waffe2/vm:compile-forward-and-backward toplevel
 						     :need-backward need-backward
 						     :fuse-p t
 						     :compile-mode :default)
-
+	(declare (ignore dout))
+	
 	;; Detecting Errors
 	(when (some #'(lambda (argument-tensor)
 			(null (find (tensor-iid argument-tensor)
@@ -154,29 +155,33 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 		input-tensors)
 	  
 	  ;; -> AbstractNodeDefinition?
-	  #'(lambda (&rest received-arguments &aux (shapes nil))
+	  #'(lambda (&rest received-arguments &aux (shapes nil) (alloc-as (make-hash-table)))
 	      (declare (optimize (speed 3)))
-	      (apply #'shape-compatible? composite received-arguments)
-	      
 	      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
-		(loop for arg of-type AbstractTensor in received-arguments
-		      for place                      in input-tensors do
-			;; Update the argument
-			(cl-waffe2/vm::write-result (list place) (list arg))
-			;; Update the shape
-			(loop for place-name in (shape place)
-			      for act-val    in (shape arg) do
-				(push (cons place-name act-val) shapes)
-				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
-		(if need-backward
-		    (values
-		     (eliminate-undetermined-size
-		      (cl-waffe2/vm:accept-instructions fwiseq))
-		     bwiseq
-		     shapes
-		     trace-tensors)
-		    (eliminate-undetermined-size
-		     (cl-waffe2/vm:accept-instructions fwiseq))))))))))
+		(cl-waffe2/vm::with-static-allocation (allocation)
+		  (apply #'shape-compatible? composite received-arguments)
+		  
+		  (loop for arg of-type AbstractTensor in received-arguments
+			for place                      in input-tensors do
+			  ;; Update the argument
+			  (cl-waffe2/vm::write-result (list place) (list arg))
+			  ;; Update the shape
+			  (loop for place-name in (shape place)
+				for act-val    in (shape arg) do
+				  (setf (gethash place-name alloc-as) act-val)
+				  (push (cons place-name act-val) shapes)
+				  (cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
+		  (cl-waffe2/vm::adjust-allocation! allocation alloc-as)
+		  (if need-backward
+		      (values
+		       (eliminate-undetermined-size
+			(cl-waffe2/vm:accept-instructions fwiseq))
+		       bwiseq
+		       shapes
+		       trace-tensors
+		       allocation)
+		      (eliminate-undetermined-size
+		       (cl-waffe2/vm:accept-instructions fwiseq)))))))))))
 
 (defun expand-define->function-form (composite where defun-p named
 				     &key (need-backward nil))
@@ -222,12 +227,14 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 		       :slots ((fw-iseq      :initform nil)
 			       (bw-iseq      :initform nil)
 			       (variables    :initform nil)
-			       (dout         :initform nil))
+			       (dout         :initform nil)
+			       (allocation   :initform nil))
 		       :forward ((,self ,@in-names)
-				 (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
-				   (when (scalar-p out)
-				     (setf (out-scalar-p ,self) t))
-				   out))
+				 (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
+				   (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
+				     (when (scalar-p out)
+				       (setf (out-scalar-p ,self) t))
+				     out)))
 
 		       :backward ((,self ,dy)
 				  ;; multiply-gradients-static(X, Grad) ... X *= Grad
@@ -246,7 +253,8 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 				      (setf (tensor-vec (slot-value ,self 'dout)) (tensor-vec ,dy)))
 				  
 				  ;; Call Backward Iseq
-				  (cl-waffe2/vm:accept-instructions (slot-value ,self 'bw-iseq))
+				  (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
+				    (cl-waffe2/vm:accept-instructions (slot-value ,self 'bw-iseq)))
 
 				  ;; Compose gradients
 				  (apply #'values
@@ -262,15 +270,17 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 						(cl-waffe2/vm.generic-tensor:parameter ,name)
 						,name)))) ;; [FixME] <- name is detached? for reducint compiling time!
 	       (setf (slot-value ,self 'variables) (list ,@in-names))
-	       (multiple-value-bind (fw-iseq bw-iseq leaves dout) (cl-waffe2/vm:compile-forward-and-backward
-								   (call ,target-model ,@in-names)
-								   :need-backward ,differentiable-p
-								   :fuse-p t
-								   :compile-mode :fastest)
+	       (multiple-value-bind (fw-iseq bw-iseq leaves dout alloc)
+		   (cl-waffe2/vm:compile-forward-and-backward
+		    (call ,target-model ,@in-names)
+		    :need-backward ,differentiable-p
+		    :fuse-p t
+		    :compile-mode :fastest)
 		 (declare (ignore leaves))
 		 (setf (slot-value ,self 'fw-iseq) fw-iseq
 		       (slot-value ,self 'bw-iseq) bw-iseq
-		       (slot-value ,self 'dout)    dout))))
+		       (slot-value ,self 'dout)    dout
+		       (slot-value ,self 'allocation) alloc))))
 	   
 	   (defun ,named (,@in-names)
 	     (declare (type AbstractTensor ,@in-names))

@@ -7,7 +7,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (block-iseq nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
@@ -33,6 +33,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
   (node node :type (or function string null AbstractNode))
   (out-to    out-to :type list)
   (self self :type AbstractTensor)
+  (block-iseq nil :type list)
   (args args :type list)
   (sv4bw sv4bw :type list)
   (bw-is-leaf-p nil :type boolean)
@@ -168,6 +169,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 ;; The algorithm that detects such a node is simple:
 ;;
 
+;; reverse-iseq .. Set T if the node is compiled as a toplevel of reverse mode
 (defun apply-in-place-mutation! (iseq leaves &key (reverse-iseq nil))
   (declare (type list iseq leaves)
 	   (type boolean reverse-iseq)

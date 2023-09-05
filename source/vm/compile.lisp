@@ -162,7 +162,8 @@
 				     self
 				     node
 				     `(,(get-dout self) ,@args)
-				     :out-to (loop for o in out-to if o collect o)))))))
+				     :out-to (loop for o in out-to if o collect o)
+				     :block-iseq bw-iseq))))))
 	       ;; Expand Gradient Adders
 	       (loop for var in args
 		     if (and (slot-value var 'requires-grad) (get-dout var))
@@ -171,13 +172,13 @@
 
 (defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
-(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default))
+(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t))
   "
 
 ## [function] compile-forward-and-backward
 
 ```lisp
-(compile-forward-and-backward toplevel &key (need-backward t) (fuse-p t) (compile-mode :default))
+(compile-forward-and-backward toplevel &key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t))
 ```
 
 Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set `fuse-p`=t to get additional optimization to the generated IR.
@@ -186,7 +187,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 
 ## Return
 
-`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout)`
+`(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout alloc-state)`
 "
   (declare (type AbstractTensor toplevel))
   ;; fuse-p is intentionally disabled forcibly for a while
@@ -198,7 +199,6 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
 
       (apply-in-place-mutation! iseq-forward leaves)
-
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
 	     (dout (when need-backward
@@ -218,15 +218,14 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	
 	(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
 
-	(values (reverse iseq-forward)
-		(if (and need-backward out-symbol-p (not (scalar-p toplevel)))
-		    (append ;; dout = 0, so add 1
-		     (reverse
-		      (node-compile-into-vm dout))		     
-		     backward-iseq)
-		    backward-iseq)
-		leaves
-		dout)))))
+	(let ((forward (reverse iseq-forward))
+	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
+			    (append
+			     (reverse
+			      (node-compile-into-vm dout))
+			     backward-iseq)
+			    backward-iseq)))
+	  (values forward backward leaves dout (when optimize-locality (optimize-memory-locality! forward backward))))))))
 
 (defun findout-origin (table tensor)
   (let ((last-ref (tensor-id tensor)))
