@@ -218,16 +218,6 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	
 	(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
 
-	;; Initializes Gradient Resetter
-	(mapc
-	 #'(lambda (tensor)
-	     (when (slot-value tensor 'cl-waffe2/vm.generic-tensor:requires-grad)
-	       (setf (cl-waffe2/vm.generic-tensor::gradient-resetter tensor)
-		     (if (scalar-p tensor)
-			 #'(lambda () (setf (tensor-vec (grad tensor)) (tensor-vec (make-tensor 0 :dtype (dtype tensor) :order (order tensor)))))
-			 #'(lambda () (setf (tensor-grad-count tensor) 0))))))
-	 leaves)
-
 	(values (reverse iseq-forward)
 		(if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 		    (append ;; dout = 0, so add 1

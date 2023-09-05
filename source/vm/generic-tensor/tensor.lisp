@@ -38,15 +38,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; actual-shape  ... visible-shape but broadcasting is ignored.
 
 (defclass AbstractTensor ()
-  ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
-
-   ;; MultiDimensional APIs
-   ;; Set T If stride/shape/view informations are copied at a certain time.
-   ;; This is necessary because (embody-actual-tensor <<Model Parameter Tensor>> (!t (randn `(3 3))))
-   ;; will destruct <<Model Parameter Tensor>>'s stride/shape/view informations.
-   (slot-info-copied :initform nil :type boolean :initarg :slot-info-copied :reader tensor-info-safe-p)
-   
-   (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
+  ((orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
    (permute-order :initform nil :initarg :permute-order :accessor tensor-permute-order :type list)
    (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
@@ -66,30 +58,37 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    ;; Building Computation Nodes
    (backward  :initform nil :accessor tensor-backward)
+
+   ;; Storing the result of compiling
    (state     :initform nil :accessor tensor-state)
+
+   ;; Records previous variables
    (variables :initform nil :accessor tensor-variables)
 
-   (tensor-id :initform (gensym "TID") :accessor tensor-id)         ;; In-place extends TID (i.e.: indicates the pointer)
-   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid) ;; In-place never extends TID (i.e.: indicates the node/edge)
+
+   ;; tensor-id  ... indicates which pointer to use or copied?, plus, the index in the mempool.
+   ;; tensor-iid ... used for topological sorting
+   ;; mempool-idx ... In default nil, if set to symbol, the memory-pool refers this index instead.
+   (mempool-idx :initform nil :accessor tensor-mempool-idx)
+   (tensor-id :initform (gensym "TID") :accessor tensor-id)         
+   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
+   
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
+   ;; Optimizing
    (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
 
    (grad :initform nil :reader grad :writer set-grad)
    (grad-count :initform 0 :type fixnum :accessor tensor-grad-count)
    
-   (gradient-adder    :accessor gradient-adder)
-   (gradient-resetter :accessor gradient-resetter)
-
    (save-for-backward-space       :initform nil :accessor save-for-backward-space)
-   (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
    
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
    (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
+   
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
+   
    (flexible-p :initform nil :accessor tensor-flexible-p :type (or boolean fixnum))
-   (tensor-n-ref :initform 0 :accessor tensor-n-ref :type fixnum) ;; For optimizing
-   (tensor-already-traced :initform nil :accessor tensor-traced-p :type boolean)
    
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
@@ -458,11 +457,7 @@ This function is setfable and inlined.
 		     :dtype (getf initargs :dtype)
 		     :requires-grad nil
 		     :order (getf initargs :order))
-		    tensor)))
-    ;; Gradient Adder/Resetter won't be compiled until needed.
-    (when (slot-value tensor 'requires-grad)
-      (setf (gradient-adder tensor) nil
-	    (gradient-resetter tensor) nil))))
+		    tensor)))))
 
 (defun transfer-vec-information (from to)
   "Transfer information that makes a vec vec"
@@ -698,11 +693,6 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	    (numberp (vec actual-tensor)))
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
-
-  
-  ;;(when (and (null (tensor-info-safe-p input-tensor)) ;; <<Model Parameter>>'s strides aren't copied!
-;;	     (eql  (tensor-facet input-tensor) :Exist))
-  ;;  (warn "embody-actual-tensor is gonna destruct ExistTensor: ~a" (shape input-tensor)))
 
   (let ((actual-tensor
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))		   

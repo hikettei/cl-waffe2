@@ -101,7 +101,8 @@
 	       (:file "vm/utils")
 	       (:file "vm/vm")
 	       (:file "vm/optimize-ir")
-	       (:file "vm/compile")	       
+	       (:file "vm/compile")
+	       (:file "vm/allocation")
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")

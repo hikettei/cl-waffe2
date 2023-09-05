@@ -53,23 +53,30 @@
 ;; Caching Tensors:
 ;;  First, tensors in the memory-pool has a these state:
 ;;   InputTensor[state=:input]
-;;      - Whenever the computation done and the allocation isn't needed anymore,
+;;      - Whenever the computation done and the allocation isn't needed anymore, ...
 ;;        Tensors with state=:input would never moved into cached-room
 ;;        InputTensor with their name is a keyword, is register as :input
 ;;   InputTensor[state=:tmp]
 ;;      - InputTensors created like (make-input `(...) nil) is registered as :tmp
 ;;      - The storage vec isn't guaranteed to be filled with 0.
-;;      - VMが参照回数を数えて最後のReferenceはほにゃらら
-;;      - 使い終わったらcacheにGO
+;;      - When ref-count become 0, they're moved into cached-tensors
+;;      - 
 ;;   InputTensor[state=:save-for-backward]
-;;      -
-;;      -
+;;      - When *no-grad*=nil, becomes :input
+;;      - When *no-grad*=t,   :tmp
 
-;; [TODO] メモリプールの三章はTensor-id based
+;;  いつFreeする
+;; [TODO] メモリプールのrefenreeはTensor-id based
+;; [TODO] メモリプールの検索ってこっちがやるべきこと？ compilersじゃなくて？
+;; [TODO] compile-fw-and-bw ... InputTensorのReferenceも参照する
 ;; [TODO] Tensor no Print-objectを更新
 ;;
-(declaim (inline get-from-memory-pool))
+;; CompilerがVirtualMemPoolみたいなの作ってそれ使うことにする？
+;; Nodeの順番は固定であること必須
 
+;; (defmacro with-set-compiled-mempool ((mempool) ...)
+
+(declaim (inline get-from-memory-pool))
 (defparameter *thread-memory-pool*
   (make-hash-table)
   "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
@@ -103,7 +110,16 @@ When TMP Tensor (created by (make-input `(...) nil) function) is required to acc
 In order to set the io of each cache-pool as :free, cl-waffe2/vm traces the cl-waffe2 IR and notes the last reference.
 "
   (temporary-rooms (make-hash-table) :type hash-table) ;; All Tensors allocated here
-  (cached-pool     (make-hash-table) :type hash-table) ;; Tensors with :free :using states. (SHAPE) -> ((room TENSOR1) (room TENSOR2) (room TENSOR3) ...)
+  (cached-pool     (make-hash-table) :type hash-table) ;; Tensors with :free :using states. (apply #'* (translate-adjustable-shape (slot-value 'orig-shape))) -> ((room TENSOR1) (room TENSOR2) (room TENSOR3) ...)
+  )
+
+;; Dtype, Size is compatible?
+(defun find-cached-tensor (tensor memory-pool)
+  ;; (eq (type-of ...) (type-of ...)
+  )
+
+(defun set-cached-tensor (room memory-pool)
+
   )
 
 (defstruct Adjustable-Shape-State
