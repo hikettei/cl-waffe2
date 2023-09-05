@@ -2,7 +2,7 @@
 (in-package :cl-waffe2/vm.generic-tensor)
 
 ;;
-;; memory-pool.lisp needs to be given more thoughts.
+;; memory-pool.lisp provides features on MemoryPool, caching, and dynamically shaping.
 ;;
 ;;
 ;; memory-pool.lisp is a thread-safe and generic memory-pool program.
@@ -68,7 +68,9 @@
   `(or null (and keyword (member :save-for-backward :tmp :input))))
 
 (defstruct Memory-Pool
-  (temporary-rooms (make-hash-table) :type hash-table))
+  (temporary-rooms (make-hash-table) :type hash-table)
+  (caching-pools (make-hash-table) :type hash-table)  ;;
+  )
 
 (defstruct Adjustable-Shape-State
   ;; An copy of *adjustable-shape-table* to detect shape changing later.
@@ -386,3 +388,28 @@ Usage:
   nil)
 
 
+;;
+;; Known issuses on dynamically shaping:
+;;  Strides   ... Stridesが更新されなくてたまにPrintするとError
+;;  set-input ... viewでオフセットを加算しても, Copyしなくても, incf-offsetしなくても・・・
+;;  Scopingなどの使用が不明
+;;
+;; on memory-pool:
+;;  1. Unstable Ruleを明記
+;;  2. mgl-matでいうwith-cacheみたいなAllocationをしたい。TensorのCopyのStateに:save-for-backwardが付与されていない場合はwith-cacheを持ちいればOK
+;;  3. ^ Therefore, make-inputは0で埋められている保証がない。
+
+;;
+;; Tensorは三つある: Save4Backward, Input, TMP
+;;  Input ... 固定の領域 メモリプールの最上層に位置する
+;;  TMP   ... with-mempoolマクロで新しいスコープを作る+抜けるとき削除
+;;  Save4Backward ... *no-grad*=tの条件のもとならTMP otherwise Input
+
+
+(defparameter *under-mem-pool-p* nil ) ;; <- TじゃないとErrorになる
+
+(defmacro with-cl-waffe2-mempool-toplevel ()
+  "buildした後のForwardなどトップレベルに配置するべき
+
+proceedのforwardがこれを保持する"
+  )
