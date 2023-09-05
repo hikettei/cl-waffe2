@@ -1018,7 +1018,9 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 			 (slot-value tensor 'view)
 			 (render-shape tensor)))))
 	  (if (eql (tensor-facet tensor) :input)
-	      (format nil ":named ~a" (tensor-name tensor))
+	      (if (keywordp (tensor-name tensor))
+		  (format nil ":named :~a" (tensor-name tensor))
+		  (format nil ":id ~a"     (tensor-id tensor)))
 	      "")
 	  (let ((state (tensor-state tensor)))
 	    (if state
@@ -1027,10 +1029,13 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 		""))
 	  (if (and (eql (tensor-facet tensor) :input)
 		   (null (vec tensor)))
-	      (format nil "<<Not-Embodied ~a Tensor>>" (shape tensor))
+	      (format nil "  <<Not allocated: size=~a>>" (shape tensor))
 	      ;; TODO: View -> View for printing 3d, 4d... tensor.
 	      (render-tensor tensor :indent 2))
-	  (tensor-facet tensor)
+	  (if (and (eql (tensor-facet tensor) :input)
+		   (not (keywordp (tensor-name tensor))))
+	      (format nil "input~%  :belongs-to :memory-pool")
+	      (tensor-facet tensor))
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
