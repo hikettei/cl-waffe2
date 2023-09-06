@@ -152,7 +152,18 @@ Declares the static allocation state to use.
      (maybe-allocate! ,allocation)
      ,@body))
 
-;; [TODO] Memory_Pool ... Tensor_IDベースでIndexを振り分ける
+
+;; ~~ [Implementation] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; 1. Combining   AbstractNode, create computation nodes with dispatching multiple devices.
+;; 2. O(|V|+|E|)  Topological Sorting the node for forward propagation
+;; 3. O(n)        Optimize the node by deleting MoveTensorNode which is unnecessary.
+;; 4. O(n)        Generating the InstructionSeq for the backward propagation.
+;; 5. O(?)        Merging fw/bw iseq and optimize the locality of the memory
+;; 6. With call-with-view, Inlining/Collapsing the computation of view and loop
+;; 7. O(N * path) With defpath macro, users can apply FusionOps
+;; 8. Tada~ Completed!
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ;; [TODO] Optimize Backward...
 ;; tensor-protect-dout <- これ最後の参照のdoutは破壊してもOK
 ;; InstructionSeqを一直線に並べてからApply-In-Place-Mutation!したい
@@ -170,22 +181,25 @@ Declares the static allocation state to use.
 
 	 (sv4bw-tensor-table (make-hash-table))
 	 
-	 (iseq `(,@(loop for inst in iseq-bw
+	 (iseq `(,@(loop for inst in (reverse iseq-fw)
 			 if (null (wfop-block-iseq inst))
 			   append (list inst)
 			 else
 			   append (wfop-block-iseq inst))
-		 ,@(loop for inst in iseq-fw
+		 ,@(loop for inst in iseq-bw
 			 if (null (wfop-block-iseq inst))
 			   append (list inst)
 			 else
 			   append (wfop-block-iseq inst)))))
 
+    ;; iseq ... flattened list of iseq
+    ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
+
     ;; Counting up all tensors (TMP Tensor) used in the node.
-    ;;(print iseq)
-    (loop for inst in (reverse iseq) do ;; All we need is the first appearance in the node.
+    ;; All we need is the first appearance in the node.
+    (loop for inst in iseq do 
       (when (tensor-tmp-p (wfop-self inst))
-        (setf (gethash (tensor-id (wfop-self inst)) cache-tensor-table) (wfop-self inst)))
+	(setf (gethash (tensor-id (wfop-self inst)) cache-tensor-table) (wfop-self inst)))
       (mapc
        #'(lambda (arg)
 	   (when (tensor-tmp-p arg)
@@ -195,13 +209,19 @@ Declares the static allocation state to use.
       (mapc
        #'(lambda (tensor)
 	   (when tensor
-	     (print tensor)
 	     (setf (gethash (tensor-id tensor) sv4bw-tensor-table) tensor)))
        (wfop-sv4bw inst)))
 
-    ;; ~~~~~~~
-    ;; ~~ 最適化 etc..
-    ;; ~~~~~~~
+    ;; Iseqを正しい順番にSort
+    ;; :FREEと:USINGをリアルタイムで管理
+    ;; BACKWARD時はgngn
+    ;; 検索はapply '#'* original-shapeベースで
+    ;; SV4BWは逆伝播で一回用いられたらその場で破棄する
+    ;; define-opのsave-for-backwardの扱い？
+    ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
+    ;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
+    ;;(simulate-memory-pool! iseq cache-tensor-table)
+
     
     ;; [TODO] 前後でメモリ使用量計算して性能を評価する
     ;; [TODO] mempool-idxを入れ替えて最適化する
@@ -214,8 +234,132 @@ Declares the static allocation state to use.
       (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
       (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
 
-    (print (make-vmallocation
-	    :id->tensor id->tensor-table
-	    :id-routes alloc-route-table))))
+    (make-vmallocation
+     :id->tensor id->tensor-table
+     :id-routes  alloc-route-table)))
+
+(defun inst-set-p (inst) (and (movetensor-p (wfop-node inst)) (movetensor-ignore-me (wfop-node inst))))
+
+;; Blockの形は維持するけど、Node側でIn-place-mutation!をするんじゃなくて
+;; Flattenにして破壊的にin-place-mutation!してBlockの形で返す
+
+;; RNN ... define-impl-opで埋め込む？
+;; SV4BWでAllocしたのは局所性云々とはどうでもいい
+;; Backward ... In-place-mutation!しない
+;; InlineしてIseqにしてからIn-place-mutation!する(doutを繋げる)
+;; O(N^2)
+;; Enhancement: IDの番地を人間が読みやすくする
+
+(defun simulate-memory-pool! (iseq memory-pool)
+  (declare (optimize (speed 3))
+	   (type list iseq)
+	   (type hash-table memory-pool))
+  
+  (let ((adjustable-table  (make-hash-table :test #'equal))
+	(fixed-shape-table (make-hash-table))
+	
+	(mempool-using-tensors nil)
+	(pools nil)
+	(pools-adj nil))
+    (declare (type list pools pools-adj mempool-using-tensors))
+    
+    ;; 1. Sort Tensors by their storage size
+    (maphash
+     #'(lambda (key value)
+	 (declare (ignore key))
+	 (if (some #'symbolp (shape value))
+	     (setf (gethash (shape value) adjustable-table) value)
+	     (setf (gethash (apply #'* (shape value)) fixed-shape-table) value)))
+     memory-pool)
+
+    
+    (labels ((args-last-ref-p (target-tensor pc)
+	       ;; By the next time `target-tensor` is used as a `out-to`
+	       ;; If the target-tensor isn't appeared in the wfop-args or reaches the end, return T
+	       ;; Otherwise -> NIL
+	       ;; (cdr (nthcdr ... <- do not include the current position
+	       (loop for inst in (cdr (nthcdr pc iseq)) do
+		 (if (find (the symbol (tensor-id target-tensor)) (wfop-args inst) :key #'tensor-id :test #'eql)
+		     (return-from args-last-ref-p nil)
+		     (if (find (the symbol (tensor-id target-tensor)) (wfop-out-to inst) :key #'tensor-id :test #'eql)
+			 (return-from args-last-ref-p t)
+			 nil))) ;; Keep exploring
+	       ;; Reached the last -> T
+	       t)
+	     (find-from-pool (tensor)	     
+	       (if (tensor-tmp-p tensor)
+		   (if (some #'symbolp (shape tensor))
+		       (find tensor pools-adj :test #'equal :key #'shape)
+		       (find (the fixnum (apply #'* (shape tensor)))
+			     pools
+			     :test #'<=
+			     :key #'(lambda (x) (apply #'* (shape x)))))))
+	     (read-from-pool (tensor)
+	       (when (find (the symbol (tensor-id tensor)) mempool-using-tensors)
+		 (return-from read-from-pool tensor))
+	       
+	       (if (tensor-tmp-p tensor)
+		   (let ((out (find-from-pool tensor)))
+		     ;; Delete from pool
+		     (when (null out)
+		       (return-from read-from-pool tensor))
+		     (push (tensor-id out) mempool-using-tensors)
+		     (if (some #'symbolp (shape tensor))
+			 (setq pools-adj (remove (the list (shape out)) pools-adj :test #'equal :key #'shape :count 1))
+			 (setq pools
+			       (remove (apply #'* (shape out))
+				       pools
+				       :test #'<=
+				       :key #'(lambda (x) (apply #'* (shape x)))
+				       :count 1))))
+		   tensor))
+	     (set-as-free (tensor)
+	       (when (and (tensor-tmp-p tensor)
+			  ;; The tensor is from memory-pool?
+			  (find (the symbol (tensor-id tensor)) mempool-using-tensors))
+		 (setq mempool-using-tensors (delete (tensor-id tensor) mempool-using-tensors :test #'eql))
+		 (print mempool-using-tensors)
+		 (if (some #'symbolp (shape tensor))
+		     (push tensor pools-adj)
+		     (push tensor pools)))))
+      
+      (loop for inst of-type WfInstruction in iseq for pc fixnum upfrom 0 do
+	(let* ((args (if (inst-set-p inst)
+			 (cdr (wfop-args inst))
+			 (wfop-args inst)))
+	       (args-last-p (map 'list #'(lambda (x) (args-last-ref-p x pc)) args))
+	       (out-to      (wfop-out-to inst)))
+
+	  ;; Allocation is required when:
+	  ;;   The tensor is used as a out parameter
+
+	  ;; Allocation is freed when:
+	  ;;   args-last-p=T (Moved to the memory-pool)
+	  
+	  ;; WfInstruction: out-to[0], ... <- f(args[0], args[1], ...)
+
+
+	  (mapc #'(lambda (tensor state)
+		    (if state
+			(set-as-free tensor)))
+		args args-last-p)
+	  
+	  ;; ここの優先度？
+	  ;; この最適化は合成しても一回呼び出しと等価？
+	  (dolist (arg args)
+	    (let ((result (read-from-pool arg)))
+	      (setf (tensor-id arg) (tensor-id result))))
+	  
+	  (dolist (out out-to)
+	    (let ((result (read-from-pool out)))	     
+	      (setf (tensor-id out) (tensor-id result))
+	      ))
+	  
+
+
+	  ))
+
+
+      )))
 
 ;;(tensor-mempool-idx tensor) を更新する・・・

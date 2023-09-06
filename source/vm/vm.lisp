@@ -11,13 +11,7 @@
 
 (defmodel-as (SV4BW-Copier)
   :where (A[~] B[~] -> OUT[~])
-  :asif :function :named %vm-move1)
-
-(defun %vm-move (a b)
-  ;; A <- B
-  (print a)
-  (print b)
-  (%vm-move1 a b))
+  :asif :function :named %vm-move)
 
 (declaim (ftype (function (WfInstruction) t) apply-inst-sv4bw))
 (defun apply-inst-sv4bw (instruction)

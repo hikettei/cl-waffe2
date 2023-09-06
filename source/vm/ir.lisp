@@ -174,9 +174,8 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
   (declare (type list iseq leaves)
 	   (type boolean reverse-iseq)
 	   (optimize (speed 3)))
-   
-  (let ((ref-table (make-hash-table)))
 
+  (let ((ref-table (make-hash-table)))
     ;; First, Register all tensors appeared in the computation node
     (mapc
      #'(lambda (variable)
@@ -224,7 +223,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		;; Before counting up the reference, we judge whether MoveTensor is needed.
 
 		(let (;;(place  (car (wfop-args instruction)))
-		      (target (second (wfop-args instruction))))
+		      (target (second (wfop-args instruction)))) ;; <- もしかしたらcarかも〜〜〜
 		  ;; MoveTensorNode: out <- out, tensor_to_be_copied
 		  ;; But with ignored:
 		  ;; [Deleted] : out <- _, tensor_to_be_copied ;; <- _ is never allocated
@@ -256,7 +255,9 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	      ;; arg1 arg2 arg3 ... set +=1 as long as registered in the table.
 	      
 	      (mapc #'(lambda (arg)
-			(when (numberp (gethash (tensor-id arg) ref-table))
+			(when (and
+			       move-p
+			       (numberp (gethash (tensor-id arg) ref-table)))
 			  (incf (the fixnum (gethash (tensor-id arg) ref-table)))))
 		    (if (and reverse-iseq move-p (= (length (wfop-args instruction)) 3))
 			(cdr (wfop-args instruction))

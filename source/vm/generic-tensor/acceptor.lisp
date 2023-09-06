@@ -418,6 +418,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 
 
 ;; TODO -> (defmethod free-model ((model Compiled-Composite)))
+;; TODO -> (defmethod model-memory-size ((model Compiled-Composite)) )
 
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
