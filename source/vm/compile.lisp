@@ -218,7 +218,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			  (ancestor-param-p toplevel))
 		 (forward->reverse-mode iseq-forward dout))))
 
-	(when optimize-locality
+	(when (and dout optimize-locality)
 	  (setf (tensor-protect-me dout) t))
 	
 	;;(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
@@ -230,8 +230,8 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			      (node-compile-into-vm dout))
 			     backward-iseq)
 			    backward-iseq)))
-	  (multiple-value-bind (allocation) (when optimize-locality (optimize-memory-locality! forward backward))
-	    (values forward backward leaves dout allocation)))))))
+	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
+	    (values forward (or bw backward) leaves dout allocation)))))))
 
 (defun findout-origin (table tensor)
   (let ((last-ref (tensor-id tensor)))

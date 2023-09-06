@@ -239,7 +239,11 @@ Declares the static allocation state to use.
        (wfop-sv4bw inst)))
 
     (when iseq-bw-flat
-      (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values cache-tensor-table)))
+      (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values cache-tensor-table))
+      (setq iseq-bw-flat (eliminate-setq-node iseq-bw-flat))
+      )
+
+    (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
 
     ;; Iseqを正しい順番にSort
     ;; :FREEと:USINGをリアルタイムで管理
@@ -263,9 +267,11 @@ Declares the static allocation state to use.
       (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
       (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
 
-    (make-vmallocation
-     :id->tensor id->tensor-table
-     :id-routes  alloc-route-table)))
+    (values
+     iseq-bw-flat
+     (make-vmallocation
+      :id->tensor id->tensor-table
+      :id-routes  alloc-route-table))))
 
 
 ;; Blockの形は維持するけど、Node側でIn-place-mutation!をするんじゃなくて
