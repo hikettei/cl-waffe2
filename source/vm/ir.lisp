@@ -223,7 +223,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		;; Before counting up the reference, we judge whether MoveTensor is needed.
 
 		(let (;;(place  (car (wfop-args instruction)))
-		      (target (second (wfop-args instruction)))) ;; <- もしかしたらcarかも〜〜〜
+		      (target (second (wfop-args instruction))))
 		  ;; MoveTensorNode: out <- out, tensor_to_be_copied
 		  ;; But with ignored:
 		  ;; [Deleted] : out <- _, tensor_to_be_copied ;; <- _ is never allocated

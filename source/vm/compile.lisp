@@ -199,6 +199,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
 
       (apply-in-place-mutation! iseq-forward leaves)
+      (setq iseq-forward (eliminate-setq-node iseq-forward))
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
 	     (dout (when need-backward
@@ -251,18 +252,14 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
     
     (flet ((conc-iseq-str (iseq)
 	     (let ((tensor-ids)
-		   (scal-ids)
-		   (tensor-table (make-hash-table)))
+		   (scal-ids))
 	       (with-output-to-string (out)
 		 (with-indent-to iseq
 		   (dolist (i iseq)
-		     (when (and (movetensor-p (wfop-node i))
-				(movetensor-ignore-me (wfop-node i)))
-		       (setf (gethash (tensor-id (wfop-self i)) tensor-table) (tensor-id (second (wfop-args i)))))
 		     (dolist (var (wfop-args i))
 		       (if (scalar-p var)
 			   (push (tensor-id var) scal-ids)
-			   (push (findout-origin tensor-table var) tensor-ids)))
+			   (push (tensor-id var) tensor-ids)))
 		     (princ i out)))
 		 (format out "~%~a Instructions | ~a Tensors | ~a Scalars~%"
 			 (length iseq)
@@ -270,7 +267,5 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 			 (length (remove-duplicates scal-ids)))))))
       
       (format stream "~%disassemble-waffe2-ir:~% [Forward]: ~%~a~%" (conc-iseq-str iseq-fw))
-
       (format stream "~% [Pullback]: ~%~a~%" (conc-iseq-str iseq-bw))
-
       t)))
