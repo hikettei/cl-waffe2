@@ -125,15 +125,19 @@ If the re-allocation is performed, frees the old one.
   "Reading the allocated state, `allocation`, the function returns a storage vec of tensor."
   (declare (type VMAllocation allocation)
 	   (type AbstractTensor tensor))
+
   (when (null (gethash (tensor-id tensor) (vmalloc-id-routes allocation)))
-    (error "tensor-vec: Attempted to read the storage vec of ~a but failed because the tensor wasn't tracked when compiling.
+    (if (cl-waffe2/vm.generic-tensor::vec tensor)
+	(return-from storage-vec-from-memory-pool (cl-waffe2/vm.generic-tensor::vec tensor))
+	(error "tensor-vec: Attempted to read the storage vec of [~a, ~a, ~a] but failed because the tensor wasn't tracked when compiling.
 Allocation State:
-~a" tensor allocation))
+~a" (tensor-id tensor) (class-of tensor) (shape tensor) allocation)))
   
   (let ((result (read-from-table (tensor-id tensor) allocation)))
-    (when (null result)
-      (error "tensor-vec: The tensor ~a isn't registered to the memory-pool.
-To use InputTensor as a cache, envolve the tensor into your node by any means, as an argument." tensor))
+    (when (null result) ;; <- Originated from compiler.
+      (error "tensor-vec: The tensor ~a~a~a isn't registered to the memory-pool.
+To use InputTensor as a cache, envolve the tensor into your node by any means, as an argument."
+	     (tensor-id tensor) (class-of tensor) (shape tensor)))
 
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
     (cl-waffe2/vm.generic-tensor::vec result)))
@@ -163,6 +167,9 @@ Declares the static allocation state to use.
   (let* ((cache-tensor-table (make-hash-table))
 	 (alloc-route-table  (make-hash-table))
 	 (id->tensor-table   (make-hash-table))
+
+	 (sv4bw-tensor-table (make-hash-table))
+	 
 	 (iseq `(,@(loop for inst in iseq-bw
 			 if (null (wfop-block-iseq inst))
 			   append (list inst)
@@ -183,11 +190,27 @@ Declares the static allocation state to use.
        #'(lambda (arg)
 	   (when (tensor-tmp-p arg)
 	     (setf (gethash (tensor-id arg) cache-tensor-table) arg)))
-       (wfop-args inst)))
+       (wfop-args inst))
+      
+      (mapc
+       #'(lambda (tensor)
+	   (when tensor
+	     (print tensor)
+	     (setf (gethash (tensor-id tensor) sv4bw-tensor-table) tensor)))
+       (wfop-sv4bw inst)))
 
+    ;; ~~~~~~~
+    ;; ~~ 最適化 etc..
+    ;; ~~~~~~~
+    
     ;; [TODO] 前後でメモリ使用量計算して性能を評価する
     ;; [TODO] mempool-idxを入れ替えて最適化する
+    
     (loop for tensor being the hash-values in cache-tensor-table do
+      (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
+      (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
+
+    (loop for tensor being the hash-values in sv4bw-tensor-table do
       (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
       (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
 

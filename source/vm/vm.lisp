@@ -14,9 +14,10 @@
   :asif :function :named %vm-move1)
 
 (defun %vm-move (a b)
-  (let ((out (%vm-move1 a b)))
-    (cl-waffe2/vm.generic-tensor::write-mempool-state out :save-for-backward)
-    out))
+  ;; A <- B
+  (print a)
+  (print b)
+  (%vm-move1 a b))
 
 (declaim (ftype (function (WfInstruction) t) apply-inst-sv4bw))
 (defun apply-inst-sv4bw (instruction)

@@ -159,6 +159,8 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	      (declare (optimize (speed 3)))
 	      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
 		(apply #'shape-compatible? composite received-arguments)
+		;; Allocate arguments outside the function's scope
+		(mapc #'tensor-vec received-arguments)
 		
 		(loop for arg of-type AbstractTensor in received-arguments
 		      for place                      in input-tensors do
@@ -231,6 +233,7 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 			       (allocation   :initform nil))
 		       :forward ((,self ,@in-names)
 				 (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+				   (mapc #'tensor-vec (list ,@in-names))
 				   (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
 				     (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
 				       (when (scalar-p out)

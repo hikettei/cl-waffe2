@@ -45,6 +45,7 @@
 
       ;; Move: Existing Save-For-Backward-Place <- The target tensor.
       ;;(move-and-save-for-backward-static (slot-value self name) tensor)
+      ;; do not proceed, defmodel-as!
       (cl-waffe2/base-impl:proceed (cl-waffe2/base-impl:!move (slot-value self name) tensor :force t))
 
       nil)))
