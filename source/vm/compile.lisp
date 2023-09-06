@@ -155,15 +155,13 @@
 			     do (set-dout arg o)
 				(init-state-container! o))
 		     ;; MoveTensorBackward is inlined in order to get in-place mutation
-		     (if nil;;(movetensor-p (wfop-node inst))
-			 bw-iseq
-			 (list
-			  (make-wfop bw-function ;; ... dout var1 var2
-				     self
-				     node
-				     `(,(get-dout self) ,@args)
-				     :out-to (loop for o in out-to if o collect o)
-				     :block-iseq bw-iseq))))))
+		     (list
+		      (make-wfop bw-function ;; ... dout var1 var2
+				 self
+				 node
+				 `(,(get-dout self) ,@args)
+				 :out-to (loop for o in out-to if o collect o)
+				 :block-iseq bw-iseq)))))
 	       ;; Expand Gradient Adders
 	       (loop for var in args
 		     if (and (slot-value var 'requires-grad) (get-dout var))

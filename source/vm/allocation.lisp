@@ -240,24 +240,18 @@ Declares the static allocation state to use.
 
     (when iseq-bw-flat
       (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values cache-tensor-table))
-      (setq iseq-bw-flat (eliminate-setq-node iseq-bw-flat))
-      )
+      (setq iseq-bw-flat (reverse (eliminate-setq-node iseq-bw-flat))))
 
     (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
 
-    ;; Iseqを正しい順番にSort
-    ;; :FREEと:USINGをリアルタイムで管理
-    ;; BACKWARD時はgngn
-    ;; 検索はapply '#'* original-shapeベースで
-    ;; SV4BWは逆伝播で一回用いられたらその場で破棄する
     ;; define-opのsave-for-backwardの扱い？
     ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
     ;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
     (simulate-memory-pool! iseq)
 
-    
     ;; [TODO] 前後でメモリ使用量計算して性能を評価する
     ;; [TODO] mempool-idxを入れ替えて最適化する
+    ;; [TODO] memory-poolの更新して動くように
     
     (loop for tensor being the hash-values in cache-tensor-table do
       (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
