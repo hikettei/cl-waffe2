@@ -359,19 +359,17 @@ This function is setfable and inlined.
 "
   (declare (type AbstractTensor tensor))
 
-  ;; TODO: without *static-alloc-state*, puts a error
-  (when (and *static-alloc-state* (cl-waffe2/vm::tensor-tmp-p tensor))
-    (return-from tensor-vec (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor)))
-  
-  ;; See also: comments on the top of memory-pool.lisp
-  (let ((result (if (vec tensor)
-		    (vec tensor)
-		    (get-from-memory-pool tensor))))
-    ;; If returned is lazy-variable?
-    ;; Lazy-Variable... (make-tensor 'a)
-    (if (lazy-variable-p result)
-	(read-lazy-var result) ;; -> Fixnum/LazyVariable
-	result))) ;; Return as it is
+  ;; tensor-vec is called under the build execution:
+
+  (cond
+    ;; Adjustable Table is allowed to use:
+    ((and *static-alloc-state* (cl-waffe2/vm::tensor-tmp-p tensor))
+     (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor))
+    (T (or (vec tensor)
+	   (let ((result (get-from-global-memory-pool tensor)))
+	     (if (lazy-variable-p result)
+		 (read-lazy-var result)
+		 result))))))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))

@@ -161,16 +161,14 @@ Usage:
 
 "
 
-  `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table)))
-	  (*current-shape-state*    (make-adjustable-shape-state)))
+  `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
 
      (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
 	 
      ,@body))
 
 (defmacro with-adjustable-symbol-scope (&body body)
-  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table))))
-	  (*current-shape-state*    (make-adjustable-shape-state)))
+  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table)))))
      ,@body))
 
 (defun register-adjustable-shape (symbol value)

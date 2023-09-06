@@ -19,6 +19,13 @@
 ;; vecに格納しておく
 ;; (grad tensor) <- 読み込める？
 
+;; [TODO] AdjustableSymbolの管理 ... VMAllocationに任せる？
+;; Adjustable-Shape VMAllocationがないとできない <-
+;; Locality 
+;; Eliminate-Undetermined-XXX <- osoi
+
+;; コンパイル時と実行時のTensorIDは一致していないかも・・・
+
 (defun tensor-tmp-p (tensor)
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
@@ -47,10 +54,15 @@ Records the statue and result of localized allocation state by cl-waffe2 VM.
 (defmethod print-object ((model VMAllocation) stream)
   (format stream "{VMAllocation:
     memory-pool=~a,
-    reduce-rate=~a
-}"
+    reduce-rate=~a,
+    routes:
+~a}"
 	  (vmalloc-id->tensor model)
-	  (vmalloc-reduce-rate model)))
+	  (vmalloc-reduce-rate model)
+	  (with-output-to-string (out)
+	    (maphash #'(lambda (k v)
+			 (format out "        ~a -> ~a~%" k v))
+		     (vmalloc-id-routes model)))))
 
 ;; [TODO] Memory-Poolのごにゃごにゃと合わせて
 ;; [TODO] Toplevelの引数になるTensorはset-inputしないといけない e.g.: (make-input ... :X)
@@ -114,7 +126,9 @@ If the re-allocation is performed, frees the old one.
   (declare (type VMAllocation allocation)
 	   (type AbstractTensor tensor))
   (when (null (gethash (tensor-id tensor) (vmalloc-id-routes allocation)))
-    (error "tensor-vec: Attempted to read the storage vec of ~a but failed because the tensor wasn't tracked when compiling." tensor))
+    (error "tensor-vec: Attempted to read the storage vec of ~a but failed because the tensor wasn't tracked when compiling.
+Allocation State:
+~a" tensor allocation))
   
   (let ((result (read-from-table (tensor-id tensor) allocation)))
     (when (null result)
@@ -161,7 +175,8 @@ Declares the static allocation state to use.
 			   append (wfop-block-iseq inst)))))
 
     ;; Counting up all tensors (TMP Tensor) used in the node.
-    (loop for inst in iseq do
+    ;;(print iseq)
+    (loop for inst in (reverse iseq) do ;; All we need is the first appearance in the node.
       (when (tensor-tmp-p (wfop-self inst))
         (setf (gethash (tensor-id (wfop-self inst)) cache-tensor-table) (wfop-self inst)))
       (mapc
@@ -176,6 +191,8 @@ Declares the static allocation state to use.
       (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
       (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
 
-    (make-vmallocation :id->tensor id->tensor-table :id-routes alloc-route-table)))
+    (print (make-vmallocation
+	    :id->tensor id->tensor-table
+	    :id-routes alloc-route-table))))
 
 ;;(tensor-mempool-idx tensor) を更新する・・・

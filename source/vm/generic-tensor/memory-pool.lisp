@@ -67,7 +67,9 @@
 ;;      - When *no-grad*=nil, becomes :input
 ;;      - When *no-grad*=t,   :tmp
 
-(declaim (inline get-from-memory-pool))
+
+(declaim (inline get-from-global-memory-pool))
+
 (defparameter *thread-memory-pool*
   (make-hash-table)
   "A weak-hash-table which restores: [Thread-IDX] -> [Memory-Pool]")
@@ -103,25 +105,6 @@ In order to set the io of each cache-pool as :free, cl-waffe2/vm traces the cl-w
   (temporary-rooms (make-hash-table) :type hash-table) ;; All Tensors allocated here
   (cached-pool     (make-hash-table) :type hash-table) ;; Tensors with :free :using states. (apply #'* (translate-adjustable-shape (slot-value 'orig-shape))) -> ((room TENSOR1) (room TENSOR2) (room TENSOR3) ...)
   )
-
-(defstruct Adjustable-Shape-State
-  ;; An copy of *adjustable-shape-table* to detect shape changing later.
-  (state (alexandria:copy-hash-table *adjustable-shape-table*) :type hash-table))
-
-(defun adjustable-shape-compatible (old-state)
-  (declare (type Adjustable-Shape-state old-state)
-	   (optimize (speed 3)))
-  (let ((current-keys (loop for symbol being the hash-keys   in *adjustable-shape-table* collect symbol))
-	(current-vals (loop for size   being the hash-values in *adjustable-shape-table* collect size))
-	(old-table    (adjustable-shape-state-state old-state)))
-    (not (some #'(lambda (target-symbol current-val)
-		   (let ((val (gethash target-symbol old-table)))
-		     (if (and (typep val 'fixnum)
-			      (typep current-val 'fixnum))
-			 ;; Ex: The tensor is created as BATCH-SIZE=100, and now the operation is going udner BATCH_SIZE=10...
-			 (< val current-val)
-			 t)))
-	       current-keys current-vals))))
 
 (defun current-memory-pool (&optional (idx nil))
   "Set idx to force the access of idxth thread."
@@ -191,34 +174,10 @@ In order to set the io of each cache-pool as :free, cl-waffe2/vm traces the cl-w
   ;; TODO:
   ;; (maphash ... tensor-delete)
   ;; Maybe:: CUDA Foreign Pointers aren't gc-reachable??
-  (exit-memory-pool)
-  ;;(setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
+  ;;(exit-memory-pool)
+  (setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
   #+sbcl(sb-ext:gc :full t)
   )
-
-(defun exit-memory-pool ()
-  "Return: An list of AbstractTensor which wants to be registered to the superior scope"
-  (let ((extended))
-    (maphash
-     #'(lambda (thread-idx thread-memory-pool)
-	 (print thread-idx)
-	 (maphash
-	  #'(lambda (key room)
-	      (print key)
-	      (let ((state (temporary-room-state room))
-		    (tensor (temporary-room-cache-tensor room)))
-		;; state = :tmp :input :save-for-backward
-		(cond
-		  ((and (not *no-grad*) (eql state :save-for-backward))
-		   (funcall (tensor-finalizer tensor)))
-		  ((or (null state) (eql state :tmp))
-		   (funcall (tensor-finalizer tensor)))
-		  (T
-		   (push (list key room thread-idx) extended)))))
-	  (memory-pool-temporary-rooms thread-memory-pool)))
-     *thread-memory-pool*)
-    (setf *thread-memory-pool* (make-hash-table))
-    extended))
 
 ;; Users do not have to use this macro.
 (defmacro with-memory-pool (&body body &aux (result (gensym)))
@@ -232,49 +191,24 @@ InputTensors created inside this macro guarantees for all read information to be
 	    (let ((*thread-memory-pool* (make-hash-table)))
 	      (multiple-value-list
 	       (progn ,@body)))))
-     (dolist (i (exit-memory-pool))
-       (set-mem-pool (symbol-name (first i)) (second i) (third i)))
      (apply #'values ,result)))
 
 (defun get-mem-pool (key)
-  (declare (type string key))
-  (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool))))
+  (gethash key (memory-pool-temporary-rooms (current-memory-pool))))
 
 (defun set-mem-pool (key value &optional (idx nil))
-  (declare (type string key))
-  (setf (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool idx))) value)
+  (setf (gethash key (memory-pool-temporary-rooms (current-memory-pool idx))) value)
   value)
 
-(defun assure-and-return-room (room tensor)
-  "Checking room's size, returning tensor"
-  (declare (type Temporary-Room room)
-	   (type AbstractTensor tensor)
-	   (optimize (speed 3)))
-  (let ((required-size (apply #'* (translate-adjustable-shape (original-shape tensor))))
-	(vec           (vec       (temporary-room-cache-tensor room))))
-
-    ;; Checking required-size, is done at toplevel.
-    ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
-
-    ;; TODO: Add a new attribute Room: :read-state to reuse memory-pool which is not used.
-    ;; :read-state is one of: :used :free-now
-    
-    ;; when assure-and-return-room is called:
-    ;; find :free-now and required-size is enough caches, and return it.
-
-    ;; Each time update room, the operation works correctly???
-
-    (when (or (null vec) (null (vec tensor))
-	      (not (eql (the keyword (dtype tensor)) (the keyword (dtype (temporary-room-cache-tensor room)))))
-	      (> (the fixnum required-size) (temporary-room-size room)))
-      ;; Update memory-pool
-      (setf (tensor-alloc-state tensor) *current-shape-state*)
-      (setf (temporary-room-size room) required-size)
-      (setf (tensor-vec (temporary-room-cache-tensor room))
-	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor))))
-
-      (setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room))))
-    (vec tensor)))
+(defun alloc-from-input-tensor (tensor)
+  (declare (type AbstractTensor tensor))
+  (let ((out (make-tensor (original-shape tensor)
+			  :requires-grad nil
+			  :dtype (dtype tensor)
+			  :order (order tensor)
+			  :device (class-of tensor))))
+    (setf (tensor-vec tensor) (vec out))
+    out))
 
 (defun chaintmp-find-mem-pool (tensor)
   (declare (type AbstractTensor)
@@ -283,23 +217,22 @@ InputTensors created inside this macro guarantees for all read information to be
   ;; Assert: The Given Tensor is ChaimTMP
   ;; Set current-state for future allocating
   
-  (let ((place (tensor-name tensor)))
-    (declare (type string place))
+  (let ((place (tensor-id tensor)))
     (let ((room (get-mem-pool place)))
       (if room
-	  (assure-and-return-room room tensor)
-	  (and (set-mem-pool place (make-room tensor)) ;; set and read it again
-	       (chaintmp-find-mem-pool tensor))))))
+	  (vec (temporary-room-cache-tensor room))
+	  (vec (temporary-room-cache-tensor
+		(set-mem-pool place (make-room (alloc-from-input-tensor tensor)))))))))
 
-
-(defun get-from-memory-pool (tensor)
+(defun get-from-global-memory-pool (tensor)
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3)))
-
-  (when (some (the function (compose #'symbolp #'read-symbol)) (shape tensor))
-    (error "tensor-vec: Can't allocate the new space for the given InputTensor:
+  
+  (when (some #'symbolp (shape tensor))
+    (error "tensor-vec: Can't allocate the InputTensor on memory because the given one still inludes a symbol.
 ~a
-because its shape still includes a symbol." tensor))
+
+-> Compile the tensor with `build`, and set inputs." tensor))
   
   (cond
     ((scalar-p tensor) ;; As of ScalarTensor, memory-usage = O(1)
@@ -309,35 +242,5 @@ because its shape still includes a symbol." tensor))
 	   (setf (tensor-vec tensor) (vec tmp-tensor))
 	   (vec tensor))))
     ;; If storage is nil, allocate anyway
-    ((null (vec tensor))
-     (chaintmp-find-mem-pool tensor))
-    
-    ((null (tensor-alloc-state tensor))
-     ;; First Time Allcoation? or no one uses adjustable-symbol?
-     (vec tensor))
-
-    ;; If the tensor's size is STATIC -> just returning vec with finding mem-pool
-    ((every #'numberp (tensor-input-shape tensor))
-     (vec tensor))
-    
-    ;; Other case, the shape of tensors has a symbol, but keep using the same one.
-    ((no-need-update-p tensor)
-     (vec tensor))
-    ;; Otherwise, reallocating/resizing is needed!
-    ((stringp (tensor-name tensor))
-     (chaintmp-find-mem-pool tensor))
-    ;; The Tensor is InputTensor (ChainTMP)
-    ((user-input-p tensor) ;; user-input-p ... expensive
-     (error "get-from-memory-pool failed: ~a isn't embodied." tensor))
-    (T
-     (error "get-from-memory-pool failed: because the given tensor isn't one of: ScalarTensor InputTensor(ChainTMP)"))))
-
-(defun write-mempool-state (tensor attribute)
-  (declare (type AbstractTensor tensor)
-	   (type mem-pool-state-t attribute))
-
-  (let ((room (get-mem-pool (tensor-name tensor))))
-    (when room ;; When room=nil, there's no need to consider whether the tensor will be freed or not.
-      (setf (temporary-room-state room) attribute)))
-  nil)
+    (T (chaintmp-find-mem-pool tensor))))
 

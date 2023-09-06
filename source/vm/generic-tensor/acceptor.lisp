@@ -287,7 +287,7 @@ Before calling the forward method, set any value to these InputTensors first.
       (loop for val in inputs
 	    for name in input-args do
 	      (set-input model name val))))
-			 
+  
   ;; Check if all the inputs are embodied?
   (all-embodied? model)
   (let ((*runtime-mode-p* t))

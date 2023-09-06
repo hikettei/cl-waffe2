@@ -312,26 +312,23 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)
-	     (progn;;cl-waffe2/vm.generic-tensor::with-memory-pool
-	       (setf (tensor-vec dout) (tensor-vec dout-runtime))
-	       (loop for act-val in inputs-runtime
-		     for var     in variables
-		     for place   in in-tensors
-		     if (system-lazy-read-save-for-backward var)
-		       do (if (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
-			      (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
-				     var))
-		     else		     
-		       do (setf (tensor-vec place) (tensor-vec act-val)))
+	     (setf (tensor-vec dout) (tensor-vec dout-runtime))
+	     (loop for act-val in inputs-runtime
+		   for var     in variables
+		   for place   in in-tensors
+		   if (system-lazy-read-save-for-backward var)
+		     do (if (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
+			    (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
+				   var))
+		   else		     
+		     do (setf (tensor-vec place) (tensor-vec act-val)))
 
-	       (if cl-waffe2/vm::*under-benchmark-set* ;; If benchmarking mode, extends the state and proceed benchmarking...
-		   (cl-waffe2/vm::benchmark-accept-instructions fw-iseq)
-		   (cl-waffe2/vm:accept-instructions fw-iseq))
-	       ;; When quitting mem-pool, the result is never freed.
-	       ;;(loop for out-val in out-toplevels do
-		;; (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
+	     (if cl-waffe2/vm::*under-benchmark-set* ;; If benchmarking mode, extends the state and proceed benchmarking...
+		 (cl-waffe2/vm::benchmark-accept-instructions fw-iseq)
+		 (cl-waffe2/vm:accept-instructions fw-iseq))
+	     ;; When quitting mem-pool, the result is never freed.
 
-	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
+	     (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels)))
 	 fw-iseq
 	 out-toplevels-pswise
 	 directions)))))
