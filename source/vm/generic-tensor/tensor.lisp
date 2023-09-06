@@ -360,24 +360,13 @@ This function is setfable and inlined.
   (declare (type AbstractTensor tensor))
 
   ;; TODO: without *static-alloc-state*, puts a error
-  (when (and *static-alloc-state*
-	     (cl-waffe2/vm::tensor-tmp-p tensor))
+  (when (and *static-alloc-state* (cl-waffe2/vm::tensor-tmp-p tensor))
     (return-from tensor-vec (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor)))
   
   ;; See also: comments on the top of memory-pool.lisp
-  (let ((result (cond
-		  ((and
-		    (not (scalar-p tensor))
-		    (stringp (tensor-name tensor)))
-		   ;; The size of it could be changed depending on dynamically shaping
-		   ;; ChainTMP, made by (make-input shape nil)
-		   ;; using get-form-memory-pool is MUST because shapes are dynamically changing.
-		   (get-from-memory-pool tensor))
-		  (T
-		   ;; Or: Scalar/ExistTensor
-		   (if (vec tensor)
-		       (vec tensor)
-		       (get-from-memory-pool tensor))))))
+  (let ((result (if (vec tensor)
+		    (vec tensor)
+		    (get-from-memory-pool tensor))))
     ;; If returned is lazy-variable?
     ;; Lazy-Variable... (make-tensor 'a)
     (if (lazy-variable-p result)

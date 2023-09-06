@@ -294,9 +294,6 @@ Before calling the forward method, set any value to these InputTensors first.
     (with-adjustable-symbol-scope
       (set-adjustable-symbols model)
       (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-	;; [TODO] 抜ける時にGlobalのMemory-Poolに移動しないと
-	;; with-static-allocationの外でProceedで繋げることができない。
-	;; defparameterでglobalなallocationを宣言しておく？
 	(apply #'values
 	       (map 'list #'cl-waffe2/vm.nodes::eliminate-undetermined-size
 		    (multiple-value-list (funcall (compiled-forward model)))))))))

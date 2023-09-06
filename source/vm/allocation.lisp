@@ -12,6 +12,13 @@
 ;; [TODO] 局所性の最適化 -> 後で
 ;; [TODO] DtypeとかDeviceが違うTensorは同じにしたらダメ
 
+
+;; [TODO] 抜ける時にGlobalのMemory-Poolに移動しないと
+;; with-static-allocationの外でProceedで繋げることができない。
+;; defparameterでglobalなallocationを宣言しておく？
+;; vecに格納しておく
+;; (grad tensor) <- 読み込める？
+
 (defun tensor-tmp-p (tensor)
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
@@ -65,9 +72,11 @@ If the re-allocation is performed, frees the old one.
 	  if (some #'symbolp (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
 	    do (if (>= (the fixnum (apply #'* (map 'list #'->num (cl-waffe2/vm.generic-tensor::original-shape tensor))))
 		       (apply #'* (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))))
-		   ;; Keep Using a old one
+		   ;; The storage size is enough, Keep Using a old one:
 		   (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 			 (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))
+
+		   ;; Update the allocation:
 		   (when (not (scalar-p tensor))
 		     ;; Update
 		     (funcall (the function (tensor-finalizer tensor)))
@@ -88,15 +97,16 @@ If the re-allocation is performed, frees the old one.
       (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 	    (map 'list #'cl-waffe2/vm.generic-tensor::read-symbol
 		 (cl-waffe2/vm.generic-tensor::original-shape tensor)))
-      (let ((use
-	      (if (scalar-p tensor)
-		  (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
-		  (make-tensor
-		   (cl-waffe2/vm.generic-tensor::original-shape tensor)		       
-		   :dtype (dtype tensor)
-		   :order (order tensor)
-		   :device (class-of tensor)))))
-	(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use))))	
+      (when (null (cl-waffe2/vm.generic-tensor::vec tensor))
+	(let ((use
+		(if (scalar-p tensor)
+		    (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
+		    (make-tensor
+		     (cl-waffe2/vm.generic-tensor::original-shape tensor)		       
+		     :dtype (dtype tensor)
+		     :order (order tensor)
+		     :device (class-of tensor)))))
+	  (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use)))))
     (setf (vmalloc-allocated-p allocation) T)))
 	     
 (defun storage-vec-from-memory-pool (allocation tensor)
@@ -110,8 +120,8 @@ If the re-allocation is performed, frees the old one.
     (when (null result)
       (error "tensor-vec: The tensor ~a isn't registered to the memory-pool.
 To use InputTensor as a cache, envolve the tensor into your node by any means, as an argument." tensor))
+
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
-    
     (cl-waffe2/vm.generic-tensor::vec result)))
 
 (defmacro with-static-allocation ((allocation) &body body)
