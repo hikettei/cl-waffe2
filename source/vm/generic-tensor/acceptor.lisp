@@ -417,6 +417,8 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
 
+;; TODO -> (defmethod free-model ((model Compiled-Composite)))
+
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite
     forward  : ~a

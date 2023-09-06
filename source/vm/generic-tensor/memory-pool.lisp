@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; [TODO] Delete this
+;; [TODO] This file provides a global memory-pool
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;
@@ -295,6 +295,11 @@ InputTensors created inside this macro guarantees for all read information to be
 (defun get-from-memory-pool (tensor)
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3)))
+
+  (when (some (the function (compose #'symbolp #'read-symbol)) (shape tensor))
+    (error "tensor-vec: Can't allocate the new space for the given InputTensor:
+~a
+because its shape still includes a symbol." tensor))
   
   (cond
     ((scalar-p tensor) ;; As of ScalarTensor, memory-usage = O(1)
