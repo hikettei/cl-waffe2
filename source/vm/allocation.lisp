@@ -211,19 +211,19 @@ Declares the static allocation state to use.
 			 if (null (wfop-block-iseq inst))
 			   append (list inst)
 			 else
-			   append (wfop-block-iseq inst))
-		 ,@(loop for inst in iseq-bw
-			 if (null (wfop-block-iseq inst))
-			   append (list inst)
-			 else
-			   append (wfop-block-iseq inst)))))
-
+			   append (wfop-block-iseq inst))))
+	 (iseq-bw-flat (loop for inst in (reverse iseq-bw)
+			     if (null (wfop-block-iseq inst))
+			       append (list inst)
+			     else
+			       append (reverse (wfop-block-iseq inst)))))
+    
     ;; iseq ... flattened list of iseq
     ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
 
     ;; Counting up all tensors (TMP Tensor) used in the node.
     ;; All we need is the first appearance in the node.
-    (loop for inst in (reverse iseq) do 
+    (loop for inst in `(,@(reverse iseq) ,@iseq-bw-flat) do
       (when (tensor-tmp-p (wfop-self inst))
 	(setf (gethash (tensor-id (wfop-self inst)) cache-tensor-table) (wfop-self inst)))
       (mapc
@@ -237,6 +237,9 @@ Declares the static allocation state to use.
 	   (when tensor
 	     (setf (gethash (tensor-id tensor) sv4bw-tensor-table) tensor)))
        (wfop-sv4bw inst)))
+
+    (when iseq-bw-flat
+      (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values cache-tensor-table)))
 
     ;; Iseqを正しい順番にSort
     ;; :FREEと:USINGをリアルタイムで管理

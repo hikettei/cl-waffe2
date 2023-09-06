@@ -198,8 +198,9 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       ;; Set grad-count=0 if any
       (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
 
-      (apply-in-place-mutation! iseq-forward leaves)
-      (setq iseq-forward (eliminate-setq-node iseq-forward))
+      (when optimize-locality
+	(apply-in-place-mutation! iseq-forward leaves)
+	(setq iseq-forward (eliminate-setq-node iseq-forward)))
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
 	     (dout (when need-backward
@@ -216,8 +217,11 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
 		 (forward->reverse-mode iseq-forward dout))))
+
+	(when optimize-locality
+	  (setf (tensor-protect-me dout) t))
 	
-	(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
+	;;(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
 
 	(let ((forward (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
@@ -226,7 +230,8 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			      (node-compile-into-vm dout))
 			     backward-iseq)
 			    backward-iseq)))
-	  (values forward backward leaves dout (when optimize-locality (optimize-memory-locality! forward backward))))))))
+	  (multiple-value-bind (allocation) (when optimize-locality (optimize-memory-locality! forward backward))
+	    (values forward backward leaves dout allocation)))))))
 
 (defun findout-origin (table tensor)
   (let ((last-ref (tensor-id tensor)))
