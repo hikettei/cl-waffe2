@@ -10,6 +10,13 @@
 ;; O(N^2)
 ;; Enhancement: IDの番地を人間が読みやすくする
 
+
+;; define-opのsave-for-backwardの扱い？
+;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
+;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
+
+;; memory-poolのmemory-poolが欲しい〜
+
 ;; Forward 動く？ Backwardが動かん〜
 ;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
 
@@ -181,11 +188,6 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 ;; 8. Tada~ Completed!
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; [TODO] Optimize Backward...
-;; tensor-protect-dout <- これ最後の参照のdoutは破壊してもOK
-;; InstructionSeqを一直線に並べてからApply-In-Place-Mutation!したい
-;; Memory-Pool Dtypeが違うところから持ってきたらまずくない？
-
 (defun inst-set-p (inst) (and (movetensor-p (wfop-node inst)) (movetensor-ignore-me (wfop-node inst))))
 
 (defun eliminate-setq-node (iseq) ;; iseq[0] -> iseq[n]
@@ -244,10 +246,6 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 
     (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
 
-    ;; define-opのsave-for-backwardの扱い？
-    ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
-    ;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
-
     ;; Optimizes the locality of memory
     (simulate-memory-pool! iseq)
 
@@ -280,6 +278,16 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
      (make-vmallocation
       :id2pool id2pool-table))))
 
+(defun memory-pool-p (tensor1 tensor2)
+  (and (equal (original-shape tensor1)
+	      (original-shape tensor2))
+       (eql (dtype tensor1) (dtype tensor2))))
+
+(defun memory-pool-p< (tensor1 tensor2)
+  (and (<= (apply #'* (original-shape tensor1))
+	   (apply #'* (original-shape tensor2)))
+       (eql (dtype tensor1) (dtype tensor2))))
+
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
 	   (type list iseq))
@@ -307,11 +315,10 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	     (find-from-pool (tensor)	     
 	       (if (tensor-tmp-p tensor)
 		   (if (some #'symbolp (original-shape tensor))
-		       (find tensor pools-adj :test #'equal :key #'original-shape)
-		       (find (the fixnum (apply #'* (original-shape tensor)))
+		       (find tensor pools-adj :test #'memory-pool-p)
+		       (find tensor
 			     pools
-			     :test #'<=
-			     :key #'(lambda (x) (apply #'* (original-shape x)))))))
+			     :test #'memory-pool-p<))))
 	     (read-from-pool (tensor)
 	       (when (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 		 (return-from read-from-pool tensor))
@@ -324,13 +331,9 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 		       (return-from read-from-pool tensor))
 		     (push (tensor-id out) mempool-using-tensors)
 		     (if (some #'symbolp (shape tensor))
-			 (setq pools-adj (remove (the list (original-shape out)) pools-adj :test #'equal :key #'original-shape :count 1))
+			 (setq pools-adj (remove out pools-adj :test #'memory-pool-p :count 1))
 			 (setq pools
-			       (remove (apply #'* (original-shape out))
-				       pools
-				       :test #'<=
-				       :key #'(lambda (x) (apply #'* (original-shape x)))
-				       :count 1)))
+			       (remove out pools :test #'memory-pool-p< :count 1)))
 		     out)
 		   tensor))
 	     (set-as-free (tensor)
