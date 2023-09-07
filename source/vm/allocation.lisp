@@ -1,6 +1,18 @@
 
 (in-package :cl-waffe2/vm)
 
+
+
+;; Blockの形は維持するけど、Node側でIn-place-mutation!をするんじゃなくて (OK)
+;; Flattenにして破壊的にin-place-mutation!してBlockの形で返す (OK)
+
+;; RNN ... define-impl-opで埋め込む？
+;; SV4BWでAllocしたのは局所性云々とはどうでもいい
+;; O(N^2)
+;; Enhancement: IDの番地を人間が読みやすくする
+
+;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
+
 ;; [TODO] memory-pool.lispを削除
 ;; [TODO] Dynamically-Shapingを安定化する
 ;; [TODO] Stride ... In-placeの保証のもとに数値を優先
@@ -23,7 +35,7 @@
 ;; Adjustable-Shape VMAllocationがないとできない <-
 ;; Locality 
 ;; Eliminate-Undetermined-XXX <- osoi
-
+;; [BugFix] (!relu (!softmax a)))) backward
 ;; コンパイル時と実行時のTensorIDは一致していないかも・・・
 
 (defun tensor-tmp-p (tensor)
@@ -41,31 +53,20 @@
 Records the statue and result of localized allocation state by cl-waffe2 VM.
 "
   (allocated-p nil :type boolean)
-  (id-routes  (make-hash-table) :type hash-table)
-  (id->tensor (make-hash-table) :type hash-table)
+  (id2pool     (make-hash-table) :type hash-table)
   (reduce-rate 0.0 :type single-float))
-
-(defun read-from-table (id allocation)
-  (declare (type VMAllocation allocation))
-  (gethash
-   (gethash id (vmalloc-id-routes allocation))
-   (vmalloc-id->tensor allocation)))
 
 (defmethod print-object ((model VMAllocation) stream)
   (format stream "{VMAllocation:
-    memory-pool=~a,
+    id2pool=~a,
     reduce-rate=~a,
-    routes:
-~a}"
-	  (vmalloc-id->tensor model)
+    allocated-p~a
+}"
+	  (vmalloc-id2pool model)
 	  (vmalloc-reduce-rate model)
-	  (with-output-to-string (out)
-	    (maphash #'(lambda (k v)
-			 (format out "        ~a -> ~a~%" k v))
-		     (vmalloc-id-routes model)))))
+	  (vmalloc-allocated-p model)))
 
-;; [TODO] Memory-Poolのごにゃごにゃと合わせて
-;; [TODO] Toplevelの引数になるTensorはset-inputしないといけない e.g.: (make-input ... :X)
+;; Arguments (e.g.: created by (make-input `(A B) :X)) needs to be set-input
 (defun adjust-allocation! (allocation shape-table)
   "
 ## [function] adjust-allocation!
@@ -79,7 +80,7 @@ If the re-allocation is performed, frees the old one.
 	   (optimize (speed 3)))
 
   (flet ((->num (val) (the number (if (numberp val) val (gethash val shape-table)))))
-    (loop for tensor being the hash-values in (vmalloc-id->tensor allocation)
+    (loop for tensor being the hash-values in (vmalloc-id2pool allocation)
 	  ;; If the tensor is DYNAMYCALLY SHAPED:
 	  if (some #'symbolp (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
 	    do (if (>= (the fixnum (apply #'* (map 'list #'->num (cl-waffe2/vm.generic-tensor::original-shape tensor))))
@@ -104,7 +105,7 @@ If the re-allocation is performed, frees the old one.
 (defun maybe-allocate! (allocation)
   (declare (type VMAllocation allocation))
   (when (not (vmalloc-allocated-p allocation))
-    (loop for tensor being the hash-values in (vmalloc-id->tensor allocation) do
+    (loop for tensor being the hash-values in (vmalloc-id2pool allocation) do
       ;; Reading the orig-shape
       (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 	    (map 'list #'cl-waffe2/vm.generic-tensor::read-symbol
@@ -120,25 +121,20 @@ If the re-allocation is performed, frees the old one.
 		     :device (class-of tensor)))))
 	  (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use)))))
     (setf (vmalloc-allocated-p allocation) T)))
-	     
+
 (defun storage-vec-from-memory-pool (allocation tensor)
   "Reading the allocated state, `allocation`, the function returns a storage vec of tensor."
   (declare (type VMAllocation allocation)
 	   (type AbstractTensor tensor))
 
-  (when (null (gethash (tensor-id tensor) (vmalloc-id-routes allocation)))
+  (when (null (gethash (tensor-id tensor) (vmalloc-id2pool allocation)))
     (if (cl-waffe2/vm.generic-tensor::vec tensor)
 	(return-from storage-vec-from-memory-pool (cl-waffe2/vm.generic-tensor::vec tensor))
-	(error "tensor-vec: Attempted to read the storage vec of [~a, ~a, ~a] but failed because the tensor wasn't tracked when compiling.
+	(error "tensor-vec: Attempted to read the storage vec of [~a, ~a, ~a] from memory-pool but failed because the tensor wasn't tracked when compiling.
 Allocation State:
 ~a" (tensor-id tensor) (class-of tensor) (shape tensor) allocation)))
   
-  (let ((result (read-from-table (tensor-id tensor) allocation)))
-    (when (null result) ;; <- Originated from compiler.
-      (error "tensor-vec: The tensor ~a~a~a isn't registered to the memory-pool.
-To use InputTensor as a cache, envolve the tensor into your node by any means, as an argument."
-	     (tensor-id tensor) (class-of tensor) (shape tensor)))
-
+  (let ((result (gethash (tensor-id tensor) (vmalloc-id2pool allocation))))
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
     (cl-waffe2/vm.generic-tensor::vec result)))
 
@@ -201,12 +197,8 @@ Declares the static allocation state to use.
   ;; iseq-fw ... NIL is NG
   ;; iseq-bw ... NIL is ok
 
-  (let* ((cache-tensor-table (make-hash-table))
-	 (alloc-route-table  (make-hash-table))
-	 (id->tensor-table   (make-hash-table))
-
-	 (sv4bw-tensor-table (make-hash-table))
-	 
+  (let* ((bw-leaves (make-hash-table))
+	 (id2pool-table (make-hash-table))	 
 	 (iseq `(,@(loop for inst in iseq-fw
 			 if (null (wfop-block-iseq inst))
 			   append (list inst)
@@ -217,29 +209,15 @@ Declares the static allocation state to use.
 			       append (list inst)
 			     else
 			       append (reverse (wfop-block-iseq inst)))))
-    
-    ;; iseq ... flattened list of iseq
-    ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
 
-    ;; Counting up all tensors (TMP Tensor) used in the node.
-    ;; All we need is the first appearance in the node.
-    (loop for inst in `(,@(reverse iseq) ,@iseq-bw-flat) do
-      (when (tensor-tmp-p (wfop-self inst))
-	(setf (gethash (tensor-id (wfop-self inst)) cache-tensor-table) (wfop-self inst)))
-      (mapc
-       #'(lambda (arg)
-	   (when (tensor-tmp-p arg)
-	     (setf (gethash (tensor-id arg) cache-tensor-table) arg)))
-       (wfop-args inst))
-      
-      (mapc
-       #'(lambda (tensor)
-	   (when tensor
-	     (setf (gethash (tensor-id tensor) sv4bw-tensor-table) tensor)))
-       (wfop-sv4bw inst)))
-
+    (when iseq-bw
+      (loop for inst in iseq-bw-flat do
+	(mapc #'(lambda (tensor)
+		  (setf (gethash (tensor-id tensor) bw-leaves) tensor))
+	      `(,@(wfop-out-to inst) ,@(wfop-args inst)))))
+        
     (when iseq-bw-flat
-      (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values cache-tensor-table))
+      (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values bw-leaves))
       (setq iseq-bw-flat (reverse (eliminate-setq-node iseq-bw-flat))))
 
     (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
@@ -247,39 +225,34 @@ Declares the static allocation state to use.
     ;; define-opのsave-for-backwardの扱い？
     ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
     ;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
-    
+
+    ;; Optimizes the locality of memory
     (simulate-memory-pool! iseq)
 
-    ;; [TODO] 前後でメモリ使用量計算して性能を評価する
-    ;; [TODO] mempool-idxを入れ替えて最適化する
-    ;; [TODO] memory-poolの更新して動くように
-    
-    (loop for tensor being the hash-values in cache-tensor-table do
-      (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
-      (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
+    ;; iseq ... flattened list of iseq
+    ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
 
-    (loop for tensor being the hash-values in sv4bw-tensor-table do
-      (setf (gethash (tensor-id tensor) alloc-route-table) (tensor-id tensor))
-      (setf (gethash (tensor-id tensor) id->tensor-table) tensor))
+    ;; Counting up all tensors (TMP Tensor) used in the node.
+    ;; All we need is the first appearance in the node. So reverse it
+    (loop for inst in (reverse `(,@iseq ,@iseq-bw-flat)) do
+      (when (tensor-tmp-p (wfop-self inst))
+	(setf (gethash (tensor-id (wfop-self inst)) id2pool-table) (wfop-self inst)))
+      (mapc
+       #'(lambda (arg)
+	   (when (tensor-tmp-p arg)
+	     (setf (gethash (tensor-id arg) id2pool-table) arg)))
+       (wfop-args inst))
+      
+      (mapc
+       #'(lambda (tensor)
+	   (when tensor
+	     (setf (gethash (tensor-id tensor) id2pool-table) tensor)))
+       (wfop-sv4bw inst)))
 
     (values
      iseq-bw-flat
      (make-vmallocation
-      :id->tensor id->tensor-table
-      :id-routes  alloc-route-table))))
-
-
-;; Blockの形は維持するけど、Node側でIn-place-mutation!をするんじゃなくて
-;; Flattenにして破壊的にin-place-mutation!してBlockの形で返す
-
-;; RNN ... define-impl-opで埋め込む？
-;; SV4BWでAllocしたのは局所性云々とはどうでもいい
-;; Backward ... In-place-mutation!しない
-;; InlineしてIseqにしてからIn-place-mutation!する(doutを繋げる)
-;; O(N^2)
-;; Enhancement: IDの番地を人間が読みやすくする
-
-;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
+      :id2pool id2pool-table))))
 
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
@@ -360,15 +333,11 @@ Declares the static allocation state to use.
 	  (dolist (out out-to)
 	    (let ((result (read-from-pool out)))
 	      (when (not (eql (the symbol (tensor-id result)) (tensor-id out)))
-		(print inst)
-		(format t "[setas] ~a=~a~%" (tensor-id result) (tensor-id out))
 		(iseq-update-tensor-name! (nthcdr pc iseq) (tensor-id out) (tensor-id result)))))
-
 	  
 	  (mapc #'(lambda (tensor state)
 		    (when state
 		      (set-as-free tensor)))
-		args args-last-p)
-	  )))))
+		args args-last-p))))))
 
 
