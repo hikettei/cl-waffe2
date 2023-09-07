@@ -257,6 +257,8 @@ Declares the static allocation state to use.
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
 	   (type list iseq))
+
+  (%in-place-vm-ops! iseq)
   
   (let ((mempool-using-tensors nil)
 	(pools nil)

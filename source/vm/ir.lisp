@@ -269,9 +269,16 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		    (setf (gethash (tensor-id out) ref-table) 0)))))))
   nil)
 
-;; 
-(defun f-test (x y)
-  (let* ((a (!expt x 3))
-	 (b (!expt y 2))
-	 (c (!* a b)))
-    (disassemble-waffe2-ir c)))
+(defun %in-place-vm-ops! (iseq)
+  ;; Make ViewTensorNode/ReshapeNode/PermuteNode In-place
+  ;; Iseq ... Follows the execution order
+  (declare (type list iseq))
+  
+  (loop for inst of-type WfInstruction in iseq do
+	  ;; ViewTensorNode: Result Base -> Result
+	  ;; Set Result.id <- Base.id
+	  (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ViewTensorNode))
+	    (iseq-update-tensor-name! iseq
+				      (tensor-id (second (wfop-args inst)))
+				      (tensor-id (car (wfop-args inst)))))))
+	    

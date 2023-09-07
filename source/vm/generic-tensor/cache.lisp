@@ -198,7 +198,7 @@ Reading *kernel-storeroom*, the function expands the form below.
 (defun tensor->id (body args)
   (map-tree
    #'(lambda (obj)
-       (typecase obj
+      (typecase obj
 	 (AbstractTensor
 	  (if (find (tensor-id obj) args :key #'tensor-id)
 	      (tensor-id obj)
