@@ -90,12 +90,19 @@ If the re-allocation is performed, frees the old one.
 	   (type hash-table shape-table)
 	   (optimize (speed 3)))
 
-  (flet ((->num (val) (the number (if (numberp val) val (gethash val shape-table)))))
+  (flet ((->num (val)
+	   (the number
+		(if (numberp val)
+		    val
+		    (or (gethash val shape-table)
+			(error "adjust-allocation!: The symbol ~a is unknown. Choose from: ~a"
+			       val
+			       (alexandria:hash-table-keys shape-table)))))))
     (loop for tensor being the hash-values in (vmalloc-id2pool allocation)
 	  ;; If the tensor is DYNAMYCALLY SHAPED:
 	  if (some #'symbolp (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
 	    do (if (>= (the fixnum (apply #'* (map 'list #'->num (cl-waffe2/vm.generic-tensor::original-shape tensor))))
-		       (apply #'* (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))))
+		       (apply #'*  (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))))
 		   ;; The storage size is enough, Keep Using a old one:
 		   (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 			 (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))
@@ -107,11 +114,13 @@ If the re-allocation is performed, frees the old one.
 		     (setf (tensor-vec tensor) nil)
 		     (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 			   (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))
-		     (setf (tensor-vec tensor) (make-tensor
-						(cl-waffe2/vm.generic-tensor::original-shape tensor)
-						:dtype (dtype tensor)
-						:order (order tensor)
-						:device (class-of tensor))))))))
+		     (setf (tensor-vec tensor)
+			   (cl-waffe2/vm.generic-tensor::vec
+			    (make-tensor
+			     (cl-waffe2/vm.generic-tensor::original-shape tensor)
+			     :dtype (dtype tensor)
+			     :order (order tensor)
+			     :device (class-of tensor)))))))))
 
 (defun maybe-allocate! (allocation)
   (declare (type VMAllocation allocation))
