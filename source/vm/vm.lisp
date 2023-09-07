@@ -1,12 +1,12 @@
 
 (in-package :cl-waffe2/vm)
 
-(defparameter *safety-mode-p* T "
+(defparameter *safety-mode-p* NIL "
 ## [parameter] *safety-mode-p*
 
 When set to T, a run-time error is detected and a warning is displayed.")
 
-(defparameter *logging-vm-execution* nil "
+(defparameter *logging-vm-execution* NIL "
 ## [parameter] *logging-vm-execution*
 
 If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
@@ -42,7 +42,8 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 (defun maybe-read-result (tensor)
   (declare (type AbstractTensor tensor))
   (if (tensor-tmp-p tensor)
-      tensor
+      (let ((out (read-from-mempool-tensor tensor)))
+	out)
       (if (scalar-p tensor)
 	  tensor
 	  (let* ((state (tensor-state tensor))
@@ -59,7 +60,7 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 	for result in results
 	if  result do
 	  (if (tensor-tmp-p tensor)
-	      (cl-waffe2/vm.generic-tensor::embody-tensor-vec tensor result)
+	      (update-mempool-tensor tensor result) ;; Tensor.ID <- Result
 	      (if (scalar-p tensor)
 		  (setf (tensor-vec tensor) (tensor-vec result))
 		  (let* ((state (tensor-state tensor)))
@@ -69,10 +70,25 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
+  
+  (when *logging-vm-execution*
+    (let* ((inst (format nil "~a" instruction))
+	   (cnt  (length inst)))
+      (format t "= [*logging-vm-execution*] ~a
+Instruction: ~a
+args:
+~a"
+	      (with-output-to-string (out)
+		(dotimes (i cnt) (princ "=" out)))
+	      inst
+	      (map 'list #'maybe-read-result (wfop-args instruction)))))
+
+  
   (let ((outs (multiple-value-list
 	       (apply
 		(the function (wfop-op instruction))
 		(map 'list #'maybe-read-result (wfop-args instruction))))))
+
     
     (when *safety-mode-p*
       (when (some (the function (compose #'null #'cl-waffe2/vm.generic-tensor::vec)) outs)
@@ -99,7 +115,7 @@ out-to returned:
 	      outs))
 
       (mapc #'(lambda (excepted received)
-		(when (not (eq (the boolean (scalar-p excepted)) (scalar-p received)))
+		(when (not (eql (the boolean (scalar-p excepted)) (scalar-p received)))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 Scalars and Matrices are incompatible:
@@ -125,21 +141,10 @@ Butgot:
 	    (wfop-out-to instruction) outs))
 
     (when *logging-vm-execution*
-      (let* ((inst (format nil "~a" instruction))
-	     (cnt  (length inst)))
-	(format t "~a
-Instruction: ~a
-args:
-~a
+      (format t "
 outs:
 ~a~%"
-		(with-output-to-string (out)
-		  (dotimes (i cnt) (princ "=" out)))
-		inst
-		(map 'list #'maybe-read-result (wfop-args instruction))
-		outs)))
-
-    
+	      outs))
     outs))
 
 (declaim (ftype (function (list) t) accept-instructions))

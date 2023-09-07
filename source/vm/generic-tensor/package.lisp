@@ -142,3 +142,6 @@
    #:*using-backend*))
 
 (in-package :cl-waffe2/vm.generic-tensor)
+
+(defparameter *static-alloc-state* nil)
+

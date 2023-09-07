@@ -68,7 +68,7 @@
 	       
 	       (:file "optimizers/package")
 	       
-	       (:file "vm/generic-tensor/acceptor")
+	       (:file "vm/generic-tensor/acceptor" :depends-on ("vm/allocation"))
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/lut")
 	       

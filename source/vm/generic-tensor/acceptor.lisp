@@ -290,14 +290,7 @@ Before calling the forward method, set any value to these InputTensors first.
   
   ;; Check if all the inputs are embodied?
   (let ((*runtime-mode-p* t))
-    (with-adjustable-symbol-scope
-      (set-adjustable-symbols model)
-      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-	;;(apply #'values
-	;;       (map 'list #'cl-waffe2/vm.nodes::eliminate-undetermined-size
-	;;	    (multiple-value-list (funcall (compiled-forward model)))))
-	(all-embodied? model)
-	(funcall (compiled-forward model))))))
+    (funcall (compiled-forward model) model)))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
   (when inputs
@@ -311,10 +304,7 @@ Before calling the forward method, set any value to these InputTensors first.
                    └── The backward isn't compiled. Perhaps this is because the model is compiled under (with-no-grad ...) macro."))
 
   (let ((*runtime-mode-p* t))
-    (with-adjustable-symbol-scope
-      (set-adjustable-symbols model)
-      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-	(funcall (compiled-backward model)))))
+    (funcall (compiled-backward model) model))
   t)
 
 (defmethod set-input ((model Compiled-Composite) input-name actual-value)
@@ -386,9 +376,16 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 						 :compile-mode compile-mode
 						 :fuse-p fuse-ops)
     (declare (ignore dout))
-
-    (let ((forward-f  #'(lambda () (cl-waffe2/vm:accept-instructions fw-iseq)))
-	  (backward-f   (when construct-backward? #'(lambda () (cl-waffe2/vm:accept-instructions bw-iseq))))
+    (let ((forward-f  #'(lambda (model)
+			  (with-adjustable-symbol-scope
+			    (set-adjustable-symbols model)
+			    (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+			      (all-embodied? model)
+			      (cl-waffe2/vm:accept-instructions fw-iseq)))))
+	  (backward-f   (when construct-backward?
+			  #'(lambda (model)
+			      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+				(cl-waffe2/vm:accept-instructions bw-iseq)))))
 	  (table        (construct-variables-table variables)))
 
 

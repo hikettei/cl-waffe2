@@ -340,7 +340,6 @@ The generic function current-backend-state is used to rendering (show-backends) 
   (let ((a (copy-list (tensor-permute-order tensor))))
     (not (equal (sort a #'>) (tensor-permute-order tensor)))))
 
-(defparameter *static-alloc-state* nil)
 ;; Inline
 (declaim (inline tensor-vec))
 (defun tensor-vec (tensor)

@@ -138,6 +138,8 @@ Allocation State:
 ~a" (tensor-id tensor) (class-of tensor) (shape tensor) allocation)))
   
   (let ((result (gethash (tensor-id tensor) (vmalloc-id2pool allocation))))
+    (when (null (cl-waffe2/vm.generic-tensor::vec result))
+      (error "tensor-vec: In memory-pool, the InputTensor ~a isn't registered?" result))
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
     (cl-waffe2/vm.generic-tensor::vec result)))
 
@@ -147,9 +149,24 @@ Allocation State:
 
 Declares the static allocation state to use.
 "
-  `(let ((cl-waffe2/vm.generic-tensor:*static-alloc-state* ,allocation))
-     (maybe-allocate! ,allocation)
+  `(let ((*static-alloc-state* ,allocation))
+     (maybe-allocate! *static-alloc-state*)
      ,@body))
+
+(defun assure-vmalloc ()
+  (when (null *static-alloc-state*)
+    (error "cl-waffe2 VM: forward/proceed is executed without *static-alloc-state*. So the VM don't know what tensors to use.
+Please explict the allocation state with: (with-static-allocation (allocation) ...)")))
+
+(defun update-mempool-tensor (tensor value)
+  (declare (type AbstractTensor tensor value))
+  (assure-vmalloc)
+  (setf (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*)) value))
+
+(defun read-from-mempool-tensor (tensor)
+  (declare (type AbstractTensor tensor))
+  (assure-vmalloc)
+  (the AbstractTensor (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*))))
 
 
 ;; ~~ [Implementation] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,6 +183,7 @@ Declares the static allocation state to use.
 ;; [TODO] Optimize Backward...
 ;; tensor-protect-dout <- これ最後の参照のdoutは破壊してもOK
 ;; InstructionSeqを一直線に並べてからApply-In-Place-Mutation!したい
+;; Memory-Pool Dtypeが違うところから持ってきたらまずくない？
 
 (defun inst-set-p (inst) (and (movetensor-p (wfop-node inst)) (movetensor-ignore-me (wfop-node inst))))
 
