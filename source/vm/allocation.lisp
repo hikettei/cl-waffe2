@@ -144,7 +144,7 @@ Allocation State:
 
 Declares the static allocation state to use.
 "
-  `(let ((*static-alloc-state* ,allocation))
+  `(let ((cl-waffe2/vm.generic-tensor:*static-alloc-state* ,allocation))
      (maybe-allocate! ,allocation)
      ,@body))
 

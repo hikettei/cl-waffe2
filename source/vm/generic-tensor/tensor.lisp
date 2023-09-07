@@ -715,9 +715,14 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 	  nil
 	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
 
+  (when (or (scalar-p input-tensor)
+	    (scalar-p actual-tensor))
+    (setf (tensor-vec input-tensor) (vec actual-tensor))
+    (return-from embody-tensor-vec t))
+
   (when (or (numberp (vec input-tensor))
 	    (numberp (vec actual-tensor)))
-    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
+    (setf (tensor-vec input-tensor) (vec actual-tensor))
     (return-from embody-tensor-vec t))
 
   ;; Offsets?

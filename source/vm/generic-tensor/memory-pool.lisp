@@ -233,7 +233,7 @@ InputTensors created inside this macro guarantees for all read information to be
 ~a
 
 -> Compile the tensor with `build`, and set inputs." tensor))
-  
+
   (cond
     ((scalar-p tensor) ;; As of ScalarTensor, memory-usage = O(1)
      (if (vec tensor)

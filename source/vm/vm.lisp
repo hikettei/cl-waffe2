@@ -32,12 +32,14 @@
   (declare (type AbstractTensor tensor))
   (if (tensor-tmp-p tensor)
       tensor
-      (let* ((state (tensor-state tensor))
-	     (res
-	       (or (when state
-		     (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
-		   tensor)))
-	(the AbstractTensor res))))
+      (if (scalar-p tensor)
+	  tensor
+	  (let* ((state (tensor-state tensor))
+		 (res
+		   (or (when state
+			 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
+		       tensor)))
+	    (the AbstractTensor res)))))
 
 (declaim (ftype (function (list list) t) write-result))
 (defun write-result (tensors results)
@@ -47,8 +49,10 @@
 	if  result do
 	  (if (tensor-tmp-p tensor)
 	      (cl-waffe2/vm.generic-tensor::embody-tensor-vec tensor result)
-	      (let* ((state (tensor-state tensor)))
-		(setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result)))))
+	      (if (scalar-p tensor)
+		  (setf (tensor-vec tensor) (tensor-vec result))
+		  (let* ((state (tensor-state tensor)))
+		    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result))))))
 
 (declaim (ftype (function (WFInstruction) list) apply-instruction))
 (defun apply-instruction (instruction)
