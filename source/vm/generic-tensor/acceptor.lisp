@@ -421,11 +421,13 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 ;; TODO -> (defmethod model-memory-size ((model Compiled-Composite)) )
 
 (defmethod print-object ((model Compiled-Composite) stream)
-  (format stream "<Compiled-Composite
-    forward  : ~a
-    backward : ~a
+  (format stream "<Compiled-Composite(allocated-p=~a)
+    forward     : ~a
+    backward    : ~a
+    memory-pool : ~a
 ~a>"
 	  ;; Variables
+	  (cl-waffe2/vm::vmalloc-allocated-p (compiled-allocation model))
 	  (if (compiled-inputs model)
 	      (with-output-to-string (out)
 		(format out "forward(model")
@@ -435,6 +437,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 	  (if (compiled-backward model)
 	      "backward(model) -> t"
 	      "nil")
+	  (cl-waffe2/vm::vmalloc-id2pool (compiled-allocation model))
 	  (if (>= (length (alexandria:hash-table-keys (nodevariables-variables (compiled-variables model)))) 1)
 	      (compiled-variables model)
 	      "")))

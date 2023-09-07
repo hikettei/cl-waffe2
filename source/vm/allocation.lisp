@@ -2,9 +2,8 @@
 (in-package :cl-waffe2/vm)
 
 
-
-;; Blockの形は維持するけど、Node側でIn-place-mutation!をするんじゃなくて (OK)
-;; Flattenにして破壊的にin-place-mutation!してBlockの形で返す (OK)
+;; Global Memory-Poolの改善
+;; define-op の SaveForBackwardの扱いは？テスト増やすべき
 
 ;; RNN ... define-impl-opで埋め込む？
 ;; SV4BWでAllocしたのは局所性云々とはどうでもいい
@@ -13,12 +12,11 @@
 
 ;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
 
-;; [TODO] memory-pool.lispを削除
+;; TODO Nested with-static-allocation
+
+;; [TODO] memory-pool.lispを削除 (NO)
 ;; [TODO] Dynamically-Shapingを安定化する
 ;; [TODO] Stride ... In-placeの保証のもとに数値を優先
-
-;; [TODO] モデルをコンパイルするとToplevelではallocation-state構造が帰ってくる
-;; [TODO] 上をグローバル変数にセットしてその下で計算をしないといけない
 
 ;; [TODO] REPL上ではどうする？今までののこす？
 ;; [TODO] 局所性の最適化 -> 後で
@@ -60,7 +58,7 @@ Records the statue and result of localized allocation state by cl-waffe2 VM.
   (format stream "{VMAllocation:
     id2pool=~a,
     reduce-rate=~a,
-    allocated-p~a
+    allocated-p=~a
 }"
 	  (vmalloc-id2pool model)
 	  (vmalloc-reduce-rate model)
@@ -249,6 +247,10 @@ Declares the static allocation state to use.
 	     (setf (gethash (tensor-id tensor) id2pool-table) tensor)))
        (wfop-sv4bw inst)))
 
+    (maphash #'(lambda (x y)
+		 (format t "~a->~a~%" x y))
+	     id2pool-table)
+
     (values
      iseq-bw-flat
      (make-vmallocation
@@ -280,12 +282,12 @@ Declares the static allocation state to use.
 	       t)
 	     (find-from-pool (tensor)	     
 	       (if (tensor-tmp-p tensor)
-		   (if (some #'symbolp (shape tensor))
-		       (find tensor pools-adj :test #'equal :key #'shape)
-		       (find (the fixnum (apply #'* (shape tensor)))
+		   (if (some #'symbolp (original-shape tensor))
+		       (find tensor pools-adj :test #'equal :key #'original-shape)
+		       (find (the fixnum (apply #'* (original-shape tensor)))
 			     pools
 			     :test #'<=
-			     :key #'(lambda (x) (apply #'* (shape x)))))))
+			     :key #'(lambda (x) (apply #'* (original-shape x)))))))
 	     (read-from-pool (tensor)
 	       (when (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 		 (return-from read-from-pool tensor))
@@ -298,12 +300,12 @@ Declares the static allocation state to use.
 		       (return-from read-from-pool tensor))
 		     (push (tensor-id out) mempool-using-tensors)
 		     (if (some #'symbolp (shape tensor))
-			 (setq pools-adj (remove (the list (shape out)) pools-adj :test #'equal :key #'shape :count 1))
+			 (setq pools-adj (remove (the list (original-shape out)) pools-adj :test #'equal :key #'original-shape :count 1))
 			 (setq pools
-			       (remove (apply #'* (shape out))
+			       (remove (apply #'* (original-shape out))
 				       pools
 				       :test #'<=
-				       :key #'(lambda (x) (apply #'* (shape x)))
+				       :key #'(lambda (x) (apply #'* (original-shape x)))
 				       :count 1)))
 		     out)
 		   tensor))
@@ -313,7 +315,7 @@ Declares the static allocation state to use.
 			  (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 			  )
 		 (setq mempool-using-tensors (delete (tensor-id tensor) mempool-using-tensors :test #'eql))
-		 (if (some #'symbolp (shape tensor))
+		 (if (some #'symbolp (original-shape tensor))
 		     (push tensor pools-adj)
 		     (push tensor pools)))))
       

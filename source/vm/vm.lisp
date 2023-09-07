@@ -30,20 +30,25 @@
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
 (defun maybe-read-result (tensor)
   (declare (type AbstractTensor tensor))
-  (let* ((state (tensor-state tensor))
-	 (res
-	   (or (when state
-		 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
-	       tensor)))
-    (the AbstractTensor res)))
+  (if (tensor-tmp-p tensor)
+      tensor
+      (let* ((state (tensor-state tensor))
+	     (res
+	       (or (when state
+		     (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
+		   tensor)))
+	(the AbstractTensor res))))
 
 (declaim (ftype (function (list list) t) write-result))
 (defun write-result (tensors results)
+  ;; [TODO] Runtime Shape-Error Detection
   (loop for tensor of-type AbstractTensor in tensors
 	for result in results
 	if  result do
-	  (let* ((state (tensor-state tensor)))
-	    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result))))
+	  (if (tensor-tmp-p tensor)
+	      (setf (tensor-vec tensor) (tensor-vec result))
+	      (let* ((state (tensor-state tensor)))
+		(setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result)))))
 
 (declaim (ftype (function (WFInstruction) list) apply-instruction))
 (defun apply-instruction (instruction)

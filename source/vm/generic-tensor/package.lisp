@@ -39,6 +39,7 @@
    #:tensor-protect-me
    #:requires-grad
    #:ancestor-param-p
+   #:original-shape
    #:actual-shape
    #:mref
    #:vref
