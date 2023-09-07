@@ -68,6 +68,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    ;; tensor-id  ... indicates which pointer to use or copied?, plus, the index in the mempool.
    ;; tensor-iid ... used for topological sorting
+
    (tensor-id :initform (gensym "TID") :accessor tensor-id)         
    (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
    
@@ -721,6 +722,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 
   ;; Offsets?
   (let ((actual-tensor
+	  ;; V delete?
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
 		   (permuted-p input-tensor))
 	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))

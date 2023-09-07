@@ -35,6 +35,8 @@
 ;; Eliminate-Undetermined-XXX <- osoi
 ;; [BugFix] (!relu (!softmax a)))) backward
 ;; コンパイル時と実行時のTensorIDは一致していないかも・・・
+;; allocationだけ新しくすればToplevelでAbstractNodeのコンパイルできる
+;; -> (defun copy-allocation, delete-allocation
 
 (defun tensor-tmp-p (tensor)
   "Returns T if the given tensor is subject to be optimized locality"
@@ -247,9 +249,9 @@ Declares the static allocation state to use.
 	     (setf (gethash (tensor-id tensor) id2pool-table) tensor)))
        (wfop-sv4bw inst)))
 
-    (maphash #'(lambda (x y)
-		 (format t "~a->~a~%" x y))
-	     id2pool-table)
+;;    (maphash #'(lambda (x y)
+;;		 (format t "~a->~a~%" x y))
+;;	     id2pool-table)
 
     (values
      iseq-bw-flat

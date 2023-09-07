@@ -294,12 +294,12 @@ Before calling the forward method, set any value to these InputTensors first.
     (with-adjustable-symbol-scope
       (set-adjustable-symbols model)
       (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-	(apply #'values
-	       (map 'list #'cl-waffe2/vm.nodes::eliminate-undetermined-size
-		    (multiple-value-list (funcall (compiled-forward model)))))))))
+	;;(apply #'values
+	;;       (map 'list #'cl-waffe2/vm.nodes::eliminate-undetermined-size
+	;;	    (multiple-value-list (funcall (compiled-forward model)))))
+	(funcall (compiled-forward model))))))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
-
   (when inputs
     (warn "backward:
     (backward compiled-model inputs)

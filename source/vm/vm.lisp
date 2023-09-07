@@ -46,7 +46,7 @@
 	for result in results
 	if  result do
 	  (if (tensor-tmp-p tensor)
-	      (setf (tensor-vec tensor) (tensor-vec result))
+	      (cl-waffe2/vm.generic-tensor::embody-tensor-vec tensor result)
 	      (let* ((state (tensor-state tensor)))
 		(setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result)))))
 
