@@ -197,6 +197,7 @@ This function is also used to adjust memory alignment of tensor."
 (define-impl (ViewTensorNode)
 	     :forward
 	     ((self viewed-tensor old)
+	      (setf (tensor-id viewed-tensor) (tensor-id old))
 	      `(progn
 		 (setf (tensor-vec ,viewed-tensor) (tensor-vec ,old))
 		 ,viewed-tensor))

@@ -172,21 +172,21 @@ Declares the static allocation state to use.
 
 (defun eliminate-setq-node (iseq) ;; iseq[0] -> iseq[n]
   (let* ((setq-table (make-hash-table)))
-    (loop for inst of-type WfInstruction in iseq
+    (loop for inst in iseq
 	  if (inst-set-p inst)
 	    do (setf (gethash (tensor-id (wfop-self inst)) setq-table) (tensor-id (second (wfop-args inst)))))
 
-    (loop for inst of-type WfInstruction in iseq
+    (loop for inst in iseq
 	  do (dolist (tensor `(,@(wfop-out-to inst) ,@(wfop-args inst)))
 	       (let ((id (findout-origin setq-table tensor)))
 		 (setf (tensor-id tensor) id))))
 
-    (loop for inst of-type WfInstruction in iseq
+    (loop for inst in iseq
 	  if (not (inst-set-p inst))
 	    collect inst)))
 
 (defun iseq-update-tensor-name! (iseq from to)
-  (loop for inst of-type WfInstruction in iseq do
+  (loop for inst in iseq do
     (dolist (o (wfop-out-to inst))
       (when (eql (tensor-id o) from)
 	(setf (tensor-id o) to)))
@@ -247,6 +247,7 @@ Declares the static allocation state to use.
     ;; define-opのsave-for-backwardの扱い？
     ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
     ;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
+    
     (simulate-memory-pool! iseq)
 
     ;; [TODO] 前後でメモリ使用量計算して性能を評価する
@@ -277,6 +278,8 @@ Declares the static allocation state to use.
 ;; InlineしてIseqにしてからIn-place-mutation!する(doutを繋げる)
 ;; O(N^2)
 ;; Enhancement: IDの番地を人間が読みやすくする
+
+;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
 
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
@@ -339,7 +342,7 @@ Declares the static allocation state to use.
 		     (push tensor pools-adj)
 		     (push tensor pools)))))
       
-      (loop for inst of-type WfInstruction in iseq for pc fixnum upfrom 0 do
+      (loop for inst in iseq for pc fixnum upfrom 0 do
 	(let* ((args (if (inst-set-p inst)
 			 (cdr (wfop-args inst))
 			 (wfop-args inst)))
@@ -353,15 +356,19 @@ Declares the static allocation state to use.
 	  ;;   args-last-p=T (Moved to the memory-pool)
 	  
 	  ;; WfInstruction: out-to[0], ... <- f(args[0], args[1], ...)
-
-	  (mapc #'(lambda (tensor state)
-		    (when state
-		      (set-as-free tensor)))
-		args args-last-p)
 	  
 	  (dolist (out out-to)
 	    (let ((result (read-from-pool out)))
 	      (when (not (eql (the symbol (tensor-id result)) (tensor-id out)))
-		(iseq-update-tensor-name! (nthcdr pc iseq) (tensor-id out) (tensor-id result))))))))))
+		(print inst)
+		(format t "[setas] ~a=~a~%" (tensor-id result) (tensor-id out))
+		(iseq-update-tensor-name! (nthcdr pc iseq) (tensor-id out) (tensor-id result)))))
+
+	  
+	  (mapc #'(lambda (tensor state)
+		    (when state
+		      (set-as-free tensor)))
+		args args-last-p)
+	  )))))
 
 
