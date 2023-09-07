@@ -280,5 +280,16 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	  (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ViewTensorNode))
 	    (iseq-update-tensor-name! iseq
 				      (tensor-id (second (wfop-args inst)))
-				      (tensor-id (car (wfop-args inst)))))))
+				      (tensor-id (car (wfop-args inst)))))
+
+	  ;; Reshape, Permute: Result Base -> Base
+	  ;; Base.id <- Result.id
+	  (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ReshapeTensorNode)
+		    (typep (wfop-node inst) 'cl-waffe2/base-impl::Permute-Node))
+	    (iseq-update-tensor-name! iseq
+				      (tensor-id (car (wfop-args inst)))
+				      (tensor-id (second (wfop-args inst)))))))
+
+
+
 	    

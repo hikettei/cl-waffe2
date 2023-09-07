@@ -197,8 +197,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
 
       (when optimize-locality
-	(apply-in-place-mutation! iseq-forward leaves)
-	(setq iseq-forward (eliminate-setq-node iseq-forward)))
+	(apply-in-place-mutation! iseq-forward leaves))
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
 	     (dout (when need-backward
@@ -216,6 +215,9 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			  (ancestor-param-p toplevel))
 		 (forward->reverse-mode iseq-forward dout))))
 
+	(when optimize-locality
+	  (setq iseq-forward (eliminate-setq-node iseq-forward)))
+	
 	(when (and dout optimize-locality)
 	  (setf (tensor-protect-me dout) t))
 	
