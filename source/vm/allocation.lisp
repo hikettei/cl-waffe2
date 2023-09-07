@@ -10,6 +10,7 @@
 ;; O(N^2)
 ;; Enhancement: IDの番地を人間が読みやすくする
 
+;; Forward 動く？ Backwardが動かん〜
 ;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
 
 ;; TODO Nested with-static-allocation
@@ -141,7 +142,7 @@ Allocation State:
     (when (null (cl-waffe2/vm.generic-tensor::vec result))
       (error "tensor-vec: In memory-pool, the InputTensor ~a isn't registered?" result))
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
-    (cl-waffe2/vm.generic-tensor::vec result)))
+    (cl-waffe2/vm.generic-tensor::vec tensor)))
 
 (defmacro with-static-allocation ((allocation) &body body)
   "

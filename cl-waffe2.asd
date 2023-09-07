@@ -38,7 +38,6 @@
 	       :lparallel
 	       :bordeaux-threads
 	       :closer-mop
-	       :optima
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension)
   ;; TODO: Use components and split dependencies.
