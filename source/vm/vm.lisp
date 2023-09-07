@@ -1,6 +1,17 @@
 
 (in-package :cl-waffe2/vm)
 
+(defparameter *safety-mode-p* T "
+## [parameter] *safety-mode-p*
+
+When set to T, a run-time error is detected and a warning is displayed.")
+
+(defparameter *logging-vm-execution* nil "
+## [parameter] *logging-vm-execution*
+
+If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
+")
+
 (declaim (inline maybe-read-result write-result apply-instruction apply-inst-sv4bw))
 
 (defmodel (SV4BW-Copier (self)
@@ -58,10 +69,78 @@
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
-  (multiple-value-list
-   (apply
-    (the function (wfop-op instruction))
-    (map 'list #'maybe-read-result (wfop-args instruction)))))
+  (let ((outs (multiple-value-list
+	       (apply
+		(the function (wfop-op instruction))
+		(map 'list #'maybe-read-result (wfop-args instruction))))))
+    
+    (when *safety-mode-p*
+      (when (some (the function (compose #'null #'cl-waffe2/vm.generic-tensor::vec)) outs)
+	(warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+
+returned a tensor whose its storage vec is null. In runtime, cl-waffe2 VM excepts all returned tensors have a valid storages and the next arguments are overwritten with this invaild tensor. So this could be lead to Assertion Failed ... Error. If you believe this alert is false and desire to delete this warning, set *safety-mode-p*=nil.
+
+out-to returned:
+
+~a" instruction outs))
+
+      (when (not (= (length outs) (length (wfop-out-to instruction))))
+	(warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+should be return ~R arguments, but got ~R.
+
+out-to returned:
+
+~a"
+	      instruction
+	      (length outs)
+	      (length (wfop-out-to instruction))
+	      outs))
+
+      (mapc #'(lambda (excepted received)
+		(when (not (eq (the boolean (scalar-p excepted)) (scalar-p received)))
+		  (warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+Scalars and Matrices are incompatible:
+Excepted:
+~a
+Butgot:
+~a"
+			instruction
+			excepted
+			received))
+
+		(when (not (equal (shape excepted) (shape received)))
+		  (warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+Shapes are incompatible.
+Excepted:
+~a
+Butgot:
+~a"
+			instruction
+			excepted
+			received)))
+	    (wfop-out-to instruction) outs))
+
+    (when *logging-vm-execution*
+      (let* ((inst (format nil "~a" instruction))
+	     (cnt  (length inst)))
+	(format t "~a
+Instruction: ~a
+args:
+~a
+outs:
+~a~%"
+		(with-output-to-string (out)
+		  (dotimes (i cnt) (princ "=" out)))
+		inst
+		(map 'list #'maybe-read-result (wfop-args instruction))
+		outs)))
+
+    
+    outs))
 
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)

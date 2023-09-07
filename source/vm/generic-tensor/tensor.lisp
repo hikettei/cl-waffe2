@@ -713,7 +713,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 
   (assert (vec actual-tensor)
 	  nil
-	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
+	  "embody-tensor-vec: Assertion Failed because the given actual-tensor doesn't have an existing vec.")
 
   (when (or (scalar-p input-tensor)
 	    (scalar-p actual-tensor))

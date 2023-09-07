@@ -14,6 +14,9 @@
 
 ;; TODO Nested with-static-allocation
 
+;; [TODO] DtypeのCastを計算ノードにする CastTensorNode-XXX
+;; [TODO] ^ forward :aroundでデータ型の不一致を検知したら、outに従って自動でCasting
+
 ;; [TODO] memory-pool.lispを削除 (NO)
 ;; [TODO] Dynamically-Shapingを安定化する
 ;; [TODO] Stride ... In-placeの保証のもとに数値を優先

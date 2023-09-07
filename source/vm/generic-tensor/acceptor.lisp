@@ -289,7 +289,6 @@ Before calling the forward method, set any value to these InputTensors first.
 	      (set-input model name val))))
   
   ;; Check if all the inputs are embodied?
-  (all-embodied? model)
   (let ((*runtime-mode-p* t))
     (with-adjustable-symbol-scope
       (set-adjustable-symbols model)
@@ -297,6 +296,7 @@ Before calling the forward method, set any value to these InputTensors first.
 	;;(apply #'values
 	;;       (map 'list #'cl-waffe2/vm.nodes::eliminate-undetermined-size
 	;;	    (multiple-value-list (funcall (compiled-forward model)))))
+	(all-embodied? model)
 	(funcall (compiled-forward model))))))
 
 (defmethod cl-waffe2/vm.nodes:backward ((model Compiled-Composite) &rest inputs)
