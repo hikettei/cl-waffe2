@@ -210,7 +210,7 @@ And manages its allocation not to cause conflicts in the threads."))
       (with-gensyms (self dy)
 	`(progn
 	   (define-op (,node-name (,self ,@in-names)
-		       :where      ,where
+		       :where    ,where
 		       :extends 'AbstractCompositeNode
 		       :forward ((,self ,@in-names)
 				 (let ((out (multiple-value-list (forward (read-compiled-model ,self) ,@in-names))))				   
@@ -240,8 +240,8 @@ And manages its allocation not to cause conflicts in the threads."))
 						 if (cl-waffe2/vm.generic-tensor:grad argument)
 						   collect (cl-waffe2/vm.generic-tensor:grad argument)
 						 else
-						   collect nil)))))	     
-	     (setf (read-compiled-model ,self) (,(symb named '-model) ,@in-names)
+						   collect nil)))))
+	     (setf (read-compiled-model ,self) (cl-waffe2/vm.generic-tensor::copy-compiled-model (,(symb named '-model) ,@in-names))
 		   (read-dout ,self) (cl-waffe2/vm.generic-tensor::compiled-dout (read-compiled-model ,self))))
 
 	   (defun ,(symb named '-model) (,@in-names)

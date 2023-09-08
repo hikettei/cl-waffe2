@@ -31,6 +31,9 @@
 ;; [TODO] defmodel-as ...  無駄なインライン化をして実装方式を増やさない
 ;;  -> Compiled-Composite自体をCacheする
 
+;; [FIX] gradient-adderが増えてる
+;; copy/delete-alloc テスト
+
 ;; [TODO] 上の表を実装してThread-safeにする
 ;; [TODO] %vm-moveをthread-safeに動かす defmodel-as ... thread-safe optionを追加
 ;; [TODO] gradient-adder naosu
