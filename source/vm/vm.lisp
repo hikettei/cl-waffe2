@@ -34,6 +34,8 @@ If set to T, the result is displayed on the terminal with the arguments used eac
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
+	      (print place)
+	      (print var)
 	      ;; Place <- Var
 	      (%vm-move place var))))
   nil)

@@ -2,6 +2,37 @@
 (in-package :cl-waffe2/vm)
 
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; [Paradigm of memory-pool with dynamically shaped tensors]
+;; In cl-waffe2, memory-pool isn't global but local because everytime we call build, it also localized the
+;; memory usage.
+
+;;
+;; - [build: toplevel] ----------
+;; | X -> (A, B), Y -> (A, B)   |  <- Pool to use is declared by (with-static-allocation
+;; | Pool = TMP1, TMP2          |     Symbols to use is declared by with-dynamically-shape-scope
+;; ------------------------------
+;;    |
+;;    | Creating a new scope
+;;    -------|- [build: %vm-move] ----------
+;;           | A -> (R1, R2) B -> (R1, R2) | <- Similary, the new scope is created 
+;;           | Pool = NIL                  |    The superior tensor's storage vec is filled with something
+;;           ------------------------------|    So they never use %vm-move scope memory-pool
+;;    |
+;;    |
+;;  (...) Keep Computing Somethings
+;;
+
+;; By copying all tensors in (Pool = ...), you can reuse the compiled iseq with different threads.
+;; ^ defmodel-as :asif :node is implemented by it.
+;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; [TODO] 上の表を実装してThread-safeにする
+;; [TODO] %vm-moveをthread-safeに動かす defmodel-as ... thread-safe optionを追加
+;; [TODO] gradient-adder naosu
+
+;; [TODO] !softmax exp duplicated 削除
 ;; Global Memory-Poolの改善
 ;; define-op の SaveForBackwardの扱いは？テスト増やすべき
 
@@ -9,7 +40,6 @@
 ;; SV4BWでAllocしたのは局所性云々とはどうでもいい
 ;; O(N^2)
 ;; Enhancement: IDの番地を人間が読みやすくする
-
 
 ;; define-opのsave-for-backwardの扱い？
 ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
@@ -112,6 +142,7 @@ If the re-allocation is performed, frees the old one.
 		     ;; Update
 		     (funcall (the function (tensor-finalizer tensor)))
 		     (setf (tensor-vec tensor) nil)
+		     ;; Prev-allocation -> After-allocation
 		     (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 			   (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))
 		     (setf (tensor-vec tensor)
@@ -130,6 +161,7 @@ If the re-allocation is performed, frees the old one.
       (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 	    (map 'list #'cl-waffe2/vm.generic-tensor::read-symbol
 		 (cl-waffe2/vm.generic-tensor::original-shape tensor)))
+      
       (when (null (cl-waffe2/vm.generic-tensor::vec tensor))
 	(let ((use
 		(if (scalar-p tensor)
@@ -172,7 +204,7 @@ Declares the static allocation state to use.
 
 (defun assure-vmalloc ()
   (when (null *static-alloc-state*)
-    (error "cl-waffe2 VM: forward/proceed is executed without *static-alloc-state*. So the VM don't know what tensors to use.
+    (error "cl-waffe2 VM: forward/proceed seems to be executed without *static-alloc-state*. So the VM don't know what tensors to use.
 Please explict the allocation state with: (with-static-allocation (allocation) ...)")))
 
 (defun update-mempool-tensor (tensor value)

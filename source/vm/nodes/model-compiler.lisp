@@ -24,7 +24,11 @@
 ;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
 
 (defparameter *model-function-cache-form* (make-hash-table))
-  
+
+;; model-function-cache-form
+;;                    L___ SoftmaxModel(Dtype) ...
+;;                    L___  ...
+
 (defun read-where-args (where)
   "where -> (A B) (C D)"
   (multiple-value-bind (in out fw bw) (parse-subscript where)
@@ -38,12 +42,13 @@
 	       for i upfrom 0
 	       collect (nth-subscript i))))))
 
-;; model-function-cache-form
-;;                    L___ SoftmaxModel(Dtype) ...
-;;                    L___  ...
+;; [TODO]  CacheするのはCompiled-Compositeにする
+(defclass AbstractCompositeNode ()
+  ((compiled-model :initform nil :accessor read-model))
+  (:documentation "AbstractCompositeNode represents Composites compiled into AbstractNode by defmodel-as macro.
+And manages its allocation not to cause conflicts in the threads."))
 
 (declaim (type hash-table *model-function-cache-form*))
-
 (deftype model-asif-options ()
   `(and keyword (member :function :node)))
 
@@ -172,8 +177,9 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 				(setf (gethash place-name alloc-as) act-val)
 				(push (cons place-name act-val) shapes)
 				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
-		(cl-waffe2/vm::adjust-allocation! allocation alloc-as)
+		
 		(cl-waffe2/vm::with-static-allocation (allocation)
+		  (cl-waffe2/vm::adjust-allocation! allocation alloc-as)
 		  (if need-backward
 		      (values
 		       (eliminate-undetermined-size

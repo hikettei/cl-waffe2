@@ -15,7 +15,6 @@
                            :initial-value (apply fn1 args))))
       #'identity))
 
-;; Ref: http://www.utkuevci.com/ml/autograd/
 (defun topological-sort (var)
   (declare (type AbstractTensor var)
 	   (optimize (speed 3)))
@@ -35,7 +34,6 @@
 		     (push v top-sort)))))
       (top-sort-helper var (detach-p var))
       (reverse top-sort))))
-
 
 ;; Autograd:
 (defun make-backward-wfinst (tensor dout-prev)
@@ -249,3 +247,4 @@ op2 ..  E <- F(X, Y, Z)
 		     (grad tensor)
 		     grad)))))))
     (setf (detach-p grad) nil)))
+

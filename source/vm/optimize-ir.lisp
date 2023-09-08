@@ -182,7 +182,8 @@ Not replaced until the `query-list` matches everything, including the order.
     (dolist (arg (wfop-args i))
       (setf (detach-p arg) nil))))
 
-;; Test this:
+
+;; [TODO] Update this algorithm: Since MoveTensorNode(SAVE_FOR_BACKWARD) is eliminated in the InstructionSeq
 (defun apply-path-fusion (iseq &key (limit 3) (count 0))
   "`apply-path-fusions` start searching all replaceable combination of InstructionSeq declared via `defpath`, and replaces the IR.
 The operation will continue until count=limit or there's no changes."
