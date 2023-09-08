@@ -413,10 +413,20 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 			 :variables         table)
 	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
+(defmethod copy-compiled-model ((model Compiled-Composite))
+  ;; [検証] NodeVariablesのコピーは取るべき？ (-> Perhaps No, Gradientsは固定？)
+  ;; copy-allocate ... with-static-allocation下にいないけどOK? -> OK
+  (make-instance 'Compiled-Composite
+		 :allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model))
+		 :compiled-forward  (compiled-forward model)
+		 :compiled-backward (compiled-backward model)
+		 :out       (compiled-out model)
+		 :inputs    (compiled-inputs model)
+		 :variables (compiled-variables model)))
+
 
 ;; TODO -> (defmethod free-model ((model Compiled-Composite)))
 ;; TODO -> (defmethod model-memory-size ((model Compiled-Composite)) )
-
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite(allocated-p=~a)
     forward     : ~a

@@ -28,6 +28,9 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; [TODO] defmodel-as ...  無駄なインライン化をして実装方式を増やさない
+;;  -> Compiled-Composite自体をCacheする
+
 ;; [TODO] 上の表を実装してThread-safeにする
 ;; [TODO] %vm-moveをthread-safeに動かす defmodel-as ... thread-safe optionを追加
 ;; [TODO] gradient-adder naosu
@@ -174,6 +177,33 @@ If the re-allocation is performed, frees the old one.
 	  (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use)))))
     (setf (vmalloc-allocated-p allocation) T)))
 
+(defun copy-allocate (allocation)
+  "Makes a copy of given allocation and its storage vec is also copied so no thread-conflicts would happen."
+  (declare (type VMAllocation allocation))
+
+  (let ((allocation (copy-vmallocation allocation)))
+    (setf (vmalloc-allocated-p allocation) NIL)
+    (loop for key being the hash-keys      in (vmalloc-id2pool allocation)
+	  for tensor being the hash-values in (vmalloc-id2pool allocation) do
+	    (let ((use (if (scalar-p tensor)
+			   (if (scalar-p tensor)
+			       (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
+			       (make-clone tensor (tensor-name tensor))))))
+	      (setf (slot-value use 'cl-waffe2/vm.generic-tensor::input-shape)
+		    (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
+	      (setf (tensor-id use) (tensor-id tensor))
+	      (setf (gethash key (vmalloc-id2pool allocation)) use)))
+    allocation))
+
+(defun free-allocate (allocation)
+  "Deletes all tensors in memory-pool."
+  (declare (type VMAllocation allocation))
+  (loop for tensor being the hash-values in (vmalloc-id2pool allocation)
+	for key    being the hash-keys   in (vmalloc-id2pool allocation) do
+    (when (cl-waffe2/vm.generic-tensor::vec tensor)
+      (funcall (tensor-finalizer tensor))
+      (setf (gethash key (vmalloc-id2pool allocation)) nil))))
+
 (defun storage-vec-from-memory-pool (allocation tensor)
   "Reading the allocated state, `allocation`, the function returns a storage vec of tensor."
   (declare (type VMAllocation allocation)
@@ -200,6 +230,11 @@ Declares the static allocation state to use.
 "
   `(let ((*static-alloc-state* ,allocation))
      (maybe-allocate! *static-alloc-state*)
+     ,@body))
+
+(defmacro with-protect-allocation (&body body)
+  "Copies the current allocation"
+  `(let ((*static-alloc-state* (copy-allocate *static-alloc-state*)))
      ,@body))
 
 (defun assure-vmalloc ()

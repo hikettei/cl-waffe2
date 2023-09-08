@@ -85,7 +85,8 @@
        (eql (tensor-attribute tensor) :input)))
 
 
-(defun make-clone (tensor &optional name ignore-create-from)
+;; [TODO] Extend devices
+(defun make-clone (tensor &optional name ignore-create-from) 
   (let* ((shape (actual-shape tensor))
 	 (out (make-input shape (or name nil)
 			  :create-from (if ignore-create-from
