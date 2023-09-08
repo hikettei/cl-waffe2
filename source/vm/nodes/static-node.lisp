@@ -185,8 +185,7 @@ Saves the given tensors to save-place, in the currently working node.
 			(save-for-backward-names nil)
 			(forward nil)
 			(backward nil)
-			(extends-fw nil)
-			(extends-bw nil)
+			(extends nil)
 			(documentation ""))
 		     &body constructor-body)
   "
@@ -197,7 +196,7 @@ Saves the given tensors to save-place, in the currently working node.
 Defines a differentiable AbstractNode which its definition is given by a function.
 
 ```lisp
-(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends-fw extends-bw) &body body)
+(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends) &body body)
 ```
 
 ### Effects
@@ -268,7 +267,7 @@ butgot -> ~a"
 		     :out-scalar-p ,out-scalar-p
 		     :slots (,@slots
 			     ,@save-for-backward-slots)
-		     :extends ,extends-fw
+		     :extends ,extends
 		     :documentation ,documentation)
 	     ,@constructor-body)
 	   
@@ -294,7 +293,7 @@ butgot -> ~a"
 					   append
 					   `(,(symb 'in-shapes n) = (nth ,n ,in-shape))))
 		     :slots ((fw-self :initform nil))
-		     :extends ,extends-bw)
+		     :extends ,extends)
 	     (setf (slot-value ,self 'fw-self) ,fw-self
 		   (ignore-shape-error ,self) t))
 	   

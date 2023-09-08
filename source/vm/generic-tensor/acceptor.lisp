@@ -200,6 +200,7 @@ The operation was: Setting ~a <- ~a
    (variables :initarg :variables :reader compiled-variables)
    (inputs :initform nil :initarg :inputs :reader compiled-inputs)
    (out    :initform nil :initarg :out    :reader compiled-out)
+   (dout   :initform nil :initarg :dout :reader compiled-dout)
    (first-call-p :initform nil :accessor composite-first-call-p :type boolean))
   (:documentation "
 ## [class] Compiled-Composite
@@ -338,7 +339,8 @@ Reading all variables in the computation node, the method get-input returns an c
 		(inputs nil)
 		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest)
-		(fuse-ops t))
+		(fuse-ops t)
+		(defmodel-as-from nil))
   "
 ## [function] build
 
@@ -375,7 +377,6 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 						 :need-backward construct-backward?
 						 :compile-mode compile-mode
 						 :fuse-p fuse-ops)
-    (declare (ignore dout))
     (let ((forward-f  #'(lambda (model)
 			  (with-adjustable-symbol-scope
 			    (set-adjustable-symbols model)
@@ -395,9 +396,13 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 	  (mapc
 	   #'(lambda (x)
 	       (when (not (find x input-names))
-		 (error "build: Can't compile the tensor because the argument ~a didn't appear in the computation node.
+		 (error "~abuild: Can't compile the tensor because the argument ~a didn't appear in the computation node.
         (build toplevel :inputs ~a)
-                                └── Choose from: ~a "
+                                └── Choose from: ~a
+Or, your network may be disconnected at a certain position."
+			(if defmodel-as-from
+			    (format nil "~%defmodel-as: Attempted to compile the function ~(~a~) but failed due to:~%" defmodel-as-from)
+			    "")
 			x
 			inputs
 			input-names)))
@@ -409,17 +414,19 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 			 :compiled-forward  forward-f
 			 :compiled-backward backward-f
 			 :out               toplevel
+			 :dout              dout
 			 :inputs            inputs
 			 :variables         table)
 	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
 (defmethod copy-compiled-model ((model Compiled-Composite))
-  ;; [検証] NodeVariablesのコピーは取るべき？ (-> Perhaps No, Gradientsは固定？)
+  ;; [TODO] NodeVariablesのコピーは取るべき？ (-> Perhaps No, Gradientsは固定？)
   ;; copy-allocate ... with-static-allocation下にいないけどOK? -> OK
   (make-instance 'Compiled-Composite
 		 :allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model))
 		 :compiled-forward  (compiled-forward model)
 		 :compiled-backward (compiled-backward model)
+		 :dout      (compiled-dout model)
 		 :out       (compiled-out model)
 		 :inputs    (compiled-inputs model)
 		 :variables (compiled-variables model)))

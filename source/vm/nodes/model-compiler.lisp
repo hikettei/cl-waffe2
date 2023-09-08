@@ -23,12 +23,46 @@
 ;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
 ;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
 
+(defvar *thread-pool-lock* (make-lock "thread cache lock"))
 (defparameter *model-function-cache-form* (make-hash-table))
-
+(declaim (type hash-table *model-function-cache-form*))
 ;; model-function-cache-form
-;;                    L___ SoftmaxModel(Dtype) ...
-;;                    L___  ...
+;;     \ thread-idx=0 ...
+;;                    L___ SoftmaxModel(Dtype) (Compiled Composite)...
+;;                    L___  ... (Compiled Composite)
 
+;; :asif = :function -> dispatch by thread-idx
+;;       = :node     -> each time allocate
+
+(defun thread-cache-table (&optional (idx nil))
+  (with-lock-held (*thread-pool-lock*)
+    (let ((memory-pool	   
+	    (gethash (or idx (current-thread)) *model-function-cache-form*)))
+      (if memory-pool
+	  memory-pool
+	  (setf (gethash (or idx (current-thread)) *model-function-cache-form*) (make-hash-table))))))
+
+(defun cache-delete! (key)
+  "Deletes the given key from all thread"
+  (maphash #'(lambda (thread-idx table)
+	       (declare (ignore thread-idx))
+	       (setf (gethash key table) nil))
+	   *model-function-cache-form*))
+
+(defun cache-set-place! (key)
+  (maphash #'(lambda (thread-idx table)
+	       (declare (ignore thread-idx))
+	       (setf (gethash key table) (make-hash-table :test #'equal)))
+	   *model-function-cache-form*))
+
+(defun read-from-cache (key)
+  (let ((table (thread-cache-table)))
+    (or (gethash key table)
+	(progn
+	  (setf (gethash key table) (make-hash-table :test #'equal))
+	  (gethash key table)))))
+	  
+	       
 (defun read-where-args (where)
   "where -> (A B) (C D)"
   (multiple-value-bind (in out fw bw) (parse-subscript where)
@@ -42,22 +76,10 @@
 	       for i upfrom 0
 	       collect (nth-subscript i))))))
 
-;; [TODO]  CacheするのはCompiled-Compositeにする
-(defclass AbstractCompositeNode ()
-  ((compiled-model :initform nil :accessor read-model))
-  (:documentation "AbstractCompositeNode represents Composites compiled into AbstractNode by defmodel-as macro.
-And manages its allocation not to cause conflicts in the threads."))
-
-(declaim (type hash-table *model-function-cache-form*))
 (deftype model-asif-options ()
   `(and keyword (member :function :node)))
 
 (defun trace-and-compile-composite (need-backward kernel-size-list named composite composite-input-size argument-names &rest args)
-
-;;  (when (some #'(lambda (x) (some #'symbolp (shape x))) args)
-;;    (error "defmodel-as: The function ~(~a~) received a tensor which includes dynamic shape.
-;;Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
-
   (when (some #'(lambda (x) (and (tensor-state x) (eql :maybe-not-computed (cl-waffe2/vm.generic-tensor::state-name x (tensor-state x))))) args)
     (warn "defmodel-as: The function ~(~a~) received a tensor where :vec-state=[maybe-not-computed].
 Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
@@ -118,81 +140,17 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 excepted: AbstractTensor"
 	       (or named "lambda")
 	       toplevel))
-      
-      (multiple-value-bind (fwiseq bwiseq leaves dout allocation)
-	  (cl-waffe2/vm:compile-forward-and-backward toplevel
-						     :need-backward need-backward
-						     :fuse-p t
-						     :compile-mode :default)
-	(declare (ignore dout))
-	
-	;; Detecting Errors
-	(when (some #'(lambda (argument-tensor)
-			(null (find (tensor-iid argument-tensor)
-				    leaves
-				    :key #'tensor-iid)))
-		    trace-tensors)
-	  (error "defmodel-as: Traced the computation node to compile the function ~(~a~) but failed.
 
-This is because the argument ~a wasn't appeared in leaves, that is, your network isn't continuous. Ensure that all tensors used as arguments are also used to compute a result."
-		 named
-		 (tensor-name
-		  (find t trace-tensors
-			:test #'(lambda (y argument-tensor)
-				  (declare (ignore y))
-				  (null (find (tensor-iid argument-tensor)
-					      leaves
-					      :key #'tensor-iid)))))))
-	
-	(let ((input-tensors ;; -> (InputTensor(:X), InputTensor(:Y) ...)
-		(loop for input-tensor of-type AbstractTensor in trace-tensors
-		      append (loop with subject-name = (tensor-name input-tensor)
-			           for leaf-point of-type AbstractTensor in leaves
-				   when (eql (tensor-name leaf-point) subject-name)
-				     collect leaf-point))))
-	  
-	  ;; Initializes StateContainer (usually created by forward but it does manually in order to change their contents later.)
-	  ;; We use StateContainer just to use (read-result) function. so anything is ok for other parameters.
-	  
-	  (mapc #'(lambda (argument)
-		    (setf (tensor-state argument) (make-statecontainer
-						   :forward-out-form (make-compiled-kernel))))
-		input-tensors)
-	  
-	  ;; -> AbstractNodeDefinition?
-	  #'(lambda (&rest received-arguments &aux (shapes nil) (alloc-as (make-hash-table)))
-	      (declare (optimize (speed 3)))
-	      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
-		(apply #'shape-compatible? composite received-arguments)
-		;; Allocate arguments outside the function's scope
-		(mapc #'tensor-vec received-arguments)
-		
-		(loop for arg of-type AbstractTensor in received-arguments
-		      for place                      in input-tensors do
-			;; Update the argument
-			(cl-waffe2/vm::write-result (list place) (list arg))
-			;; Update the shape
-			(loop for place-name in (shape place)
-			      for act-val    in (shape arg) do
-				(setf (gethash place-name alloc-as) act-val)
-				(push (cons place-name act-val) shapes)
-				(cl-waffe2/vm.generic-tensor::register-adjustable-shape place-name act-val)))
-		
-		(cl-waffe2/vm::with-static-allocation (allocation)
-		  (cl-waffe2/vm::adjust-allocation! allocation alloc-as)
-		  (if need-backward
-		      (values
-		       (eliminate-undetermined-size
-			(cl-waffe2/vm:accept-instructions fwiseq))
-		       bwiseq
-		       shapes
-		       trace-tensors
-		       allocation)
-		      (eliminate-undetermined-size
-		       (cl-waffe2/vm:accept-instructions fwiseq)))))))))))
+      (let ((compiled-model (cl-waffe2/vm.generic-tensor::build toplevel
+								:inputs (map 'list #'tensor-name trace-tensors)
+								:construct-backward? need-backward
+								:compile-mode :fastest
+								:fuse-ops t
+								:defmodel-as-from named)))
+	(values compiled-model trace-tensors)))))
 
 (defun expand-define->function-form (composite where defun-p named
-				     &key (need-backward nil))
+				     &key (need-backward nil) (get-model nil))
   (with-gensyms (dispatching-keys found-function)
     (let* ((cache-key (intern (symbol-name (gensym "CF")) "KEYWORD"))
 	   (arguments (read-where-args where))
@@ -204,25 +162,46 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
 	       `((declare (type AbstractTensor ,@arguments))
 		 (let* ((,dispatching-keys
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
-			  (map 'list #'(lambda (tensor) (list (dtype tensor) (class-of tensor) (length (shape tensor)) (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor))) (list ,@arguments)))
-			(,found-function (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*))))
-
-		   (if (functionp ,found-function)
-		       (funcall ,found-function ,@arguments)
-		       (let ((,found-function (trace-and-compile-composite ,need-backward ',kernel-size-list ',named ,composite ',composite-input-size ',arguments ,@arguments)))
-			 ;; cache it
-			 (setf (gethash ,dispatching-keys (gethash ,cache-key *model-function-cache-form*)) ,found-function)
-			 (funcall ,found-function ,@arguments))))))))
-      (setf (gethash cache-key *model-function-cache-form*) (make-hash-table :test #'equal))
+			  (map 'list #'(lambda (tensor)
+					 (list (dtype tensor)
+					       (class-of tensor)
+					       (length (shape tensor))
+					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
+			       (list ,@arguments)))
+			(,found-function (gethash ,dispatching-keys (read-from-cache ,cache-key))))
+		  
+		   (if ,found-function
+		       ;; [TODO] Shape Inspection
+		       ,(if get-model
+			    found-function			   
+			     `(forward ,found-function ,@arguments))
+		       (let ((,found-function (trace-and-compile-composite
+						,need-backward
+						',kernel-size-list
+						',named
+						,composite
+						',composite-input-size
+						',arguments
+						,@arguments)))
+			  ;; cache it
+			 (setf (gethash ,dispatching-keys (read-from-cache ,cache-key)) ,found-function)
+			 ,(if get-model
+			      found-function
+			      `(forward ,found-function ,@arguments)))))))))
+      (cache-set-place! cache-key)
       (if defun-p
-	  `(progn	     
-	     (defun ,named (,@arguments)
-	       ,@body))
-	  (progn
-	    `(lambda (,@arguments)
-	       ,@body))))))
+	  `(defun ,named (,@arguments)
+	     ,@body)
+	  `(lambda (,@arguments)
+	     ,@body)))))
 
-;; (defclass AbstractStaticCompositeNode () nil)
+
+(defclass AbstractCompositeNode ()
+  ((compiled-model :initform nil :accessor read-compiled-model)
+   (dout :initform nil :accessor read-dout))
+  (:documentation "AbstractCompositeNode represents Composites compiled into AbstractNode by defmodel-as macro.
+And manages its allocation not to cause conflicts in the threads."))
+
 (defun expand-define->abstractnode (differentiable-p target-model where named)
   (let* ((composite-name (car target-model))
 	 (node-name (symb composite-name '-asnode)))
@@ -231,67 +210,50 @@ This is because the argument ~a wasn't appeared in leaves, that is, your network
       (with-gensyms (self dy)
 	`(progn
 	   (define-op (,node-name (,self ,@in-names)
-		       :where ,where
-		       :slots ((fw-iseq      :initform nil)
-			       (bw-iseq      :initform nil)
-			       (variables    :initform nil)
-			       (dout         :initform nil)
-			       (allocation   :initform nil))
+		       :where      ,where
+		       :extends 'AbstractCompositeNode
 		       :forward ((,self ,@in-names)
-				 (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
-				   (mapc #'tensor-vec (list ,@in-names))
-				   (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
-				     (let ((out (cl-waffe2/vm:accept-instructions (slot-value ,self 'fw-iseq))))				   
-				       (when (scalar-p out)
-					 (setf (out-scalar-p ,self) t))
-				       out))))
+				 (let ((out (multiple-value-list (forward (read-compiled-model ,self) ,@in-names))))				   
+				   (when (every #'scalar-p out)
+				     (setf (out-scalar-p ,self) t))
+				   (apply #'values out)))
 
 		       :backward ((,self ,dy)
-				  ;; multiply-gradients-static(X, Grad) ... X *= Grad
-
-				  (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
-				    (when (null (slot-value ,self 'bw-iseq))
-				      (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
+				  (when (null (cl-waffe2/vm.generic-tensor::compiled-backward (read-compiled-model ,self)))
+				    (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
 => (defmodel-as (...) :differentiable t)
                               └── Set :differentiable=t or the forward wasn't called."
-					     ',node-name))
-
-				    (if (scalar-p (slot-value ,self 'dout))
-					(setf (tensor-vec (slot-value ,self 'dout))
+					   ',node-name))
+				  (let ((dout (read-dout ,self)))
+				    (if (scalar-p dout)
+					(setf (tensor-vec dout)
 					      (if (scalar-p ,dy)
 						  (tensor-vec ,dy)
 						  (cl-waffe2/vm.generic-tensor::vref ,dy 0)))
-					(setf (tensor-vec (slot-value ,self 'dout)) (tensor-vec ,dy)))
+					(setf (tensor-vec dout) (tensor-vec ,dy)))
 				    
-				    ;; Call Backward Iseq
-				    (cl-waffe2/vm::with-static-allocation ((slot-value ,self 'allocation))
-				      (cl-waffe2/vm:accept-instructions (slot-value ,self 'bw-iseq)))
-
-				    ;; Compose gradients
+				    (backward (read-compiled-model ,self))
+				    
+				    ;; Composing Gradients
 				    (apply #'values
-					   (loop for argument in (slot-value ,self 'variables)
+					   (loop for argument in (cl-waffe2/vm.generic-tensor::compiled-inputs (read-compiled-model ,self))
 						 if (cl-waffe2/vm.generic-tensor:grad argument)
 						   collect (cl-waffe2/vm.generic-tensor:grad argument)
 						 else
-						   collect nil)))))
+						   collect nil)))))	     
+	     (setf (read-compiled-model ,self) (,(symb named '-model) ,@in-names)
+		   (read-dout ,self) (cl-waffe2/vm.generic-tensor::compiled-dout (read-compiled-model ,self))))
 
-	     ;; Compile in advance
-	     (let* (,@(loop for name in in-names
-			    collect `(,name (if (cl-waffe2/vm.generic-tensor:ancestor-param-p ,name)
-						(cl-waffe2/vm.generic-tensor:parameter ,name)
-						,name)))) ;; [FixME] <- name is detached? for reducint compiling time!
-	       (setf (slot-value ,self 'variables) (list ,@in-names))
-	       (multiple-value-bind (fw-iseq bw-iseq leaves dout alloc)
-		   (cl-waffe2/vm:compile-forward-and-backward
-		    (call ,target-model ,@in-names)
-		    :need-backward ,differentiable-p
-		    :fuse-p t
-		    :compile-mode :fastest)
-		 (declare (ignore leaves))
-		 (setf (slot-value ,self 'fw-iseq) fw-iseq
-		       (slot-value ,self 'bw-iseq) bw-iseq
-		       (slot-value ,self 'dout)    dout
-		       (slot-value ,self 'allocation) alloc))))
+	   (defun ,(symb named '-model) (,@in-names)
+	     (funcall
+	      ,(expand-define->function-form
+		target-model
+		where
+		nil
+		nil
+		:need-backward differentiable-p
+		:get-model t)
+	      ,@in-names))
 	   
 	   (defun ,named (,@in-names)
 	     (declare (type AbstractTensor ,@in-names))
