@@ -93,7 +93,8 @@
   (and (eql     (tensor-facet tensor) :input)
        (stringp (tensor-name tensor))
        (if include-scalar
-	   (not (scalar-p tensor))
+	   (and (not (scalar-p tensor))
+		(not (tensor-id-lock-p tensor)))
 	   t)))
 
 (defstruct (VMAllocation
@@ -286,7 +287,8 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     (loop for inst in iseq
 	  do (dolist (tensor `(,@(wfop-out-to inst) ,@(wfop-args inst)))
 	       (let ((id (findout-origin setq-table tensor)))
-		 (setf (tensor-id tensor) id))))
+		 (when (not (tensor-id-lock-p tensor))
+		   (setf (tensor-id tensor) id)))))
 
     ;; Deletes all unused Setq{Pruned}
     (loop for inst in iseq
@@ -300,10 +302,12 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
   (loop for inst in iseq do
     (dolist (o (wfop-out-to inst))
       (when (eql (tensor-id o) from)
-	(setf (tensor-id o) to)))
+	(when (not (tensor-id-lock-p o))
+	  (setf (tensor-id o) to))))
     (dolist (a (wfop-args inst))
       (when (eql (tensor-id a) from)
-	(setf (tensor-id a) to)))))
+	(when (not (tensor-id-lock-p a))
+	  (setf (tensor-id a) to))))))
 	
 (defun optimize-memory-locality! (iseq-fw iseq-bw)
   (declare (type list iseq-fw)
@@ -337,9 +341,15 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     
     ;; Optimizes the locality of memory
     ;; [TODO] Share memory-pools between forward and backward
+    
+
+    
+    (%in-place-vm-ops! iseq)    
     (simulate-memory-pool! iseq)
-    ;;(simulate-memory-pool! iseq-bw-flat)
+
     (%in-place-vm-ops! iseq-bw-flat)
+    (simulate-memory-pool! iseq-bw-flat)
+    
     
     ;; iseq ... flattened list of iseq
     ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
@@ -385,9 +395,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
 	   (type list iseq))
-  
-  (%in-place-vm-ops! iseq)
-  
+    
   (let ((mempool-using-tensors nil)
 	(pools nil)
 	(pools-adj nil))

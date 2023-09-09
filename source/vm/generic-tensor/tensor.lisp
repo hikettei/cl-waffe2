@@ -69,7 +69,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; tensor-id  ... indicates which pointer to use or copied?, plus, the index in the mempool.
    ;; tensor-iid ... used for topological sorting
 
-   (id-lock-p :initform nil :accessor tensor-id-lock-p)
+   (lock-id-p :initform nil :accessor tensor-id-lock-p)
    (tensor-id :initform (gensym "TID") :accessor tensor-id)         
    (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
    
@@ -1039,6 +1039,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   (if (save-for-backward-space tensor)
       nil
       (let ((tensor-clone (make-clone tensor nil)))
+	(setf (tensor-id-lock-p tensor-clone) t)
 	(setf (save-for-backward-space tensor) tensor-clone)
 	tensor)))
 
