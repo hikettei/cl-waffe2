@@ -496,7 +496,8 @@ This function is setfable and inlined.
 		      (view nil)
 		      (order *default-order*) ;; TODO (retain-grads nil)
 		      (initial-element)
-		      (device nil))
+		      (device nil)
+		      (create-from nil))
   "
 ## [function] make-tensor
 
@@ -532,6 +533,7 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
       (make-instance (or device (car *using-backend*))
 		     :dtype dtype
 		     :order order
+		     :create-from create-from
 		     :requires-grad requires-grad
 		     :shape (copy-list shape-or-scalar)
 		     :projected-p nil
@@ -543,6 +545,7 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
 		     :shape nil
 		     :dtype dtype
+		     :create-from create-from
 		     :requires-grad requires-grad
 		     :projected-p nil
 		     :facet :exist

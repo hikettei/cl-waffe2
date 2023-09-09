@@ -111,6 +111,30 @@
     (setf (tensor-initial-offset out) (tensor-initial-offset tensor))
     out))
 
+(defun make-clone-exist (tensor)
+  (if (scalar-p tensor)
+      (make-tensor 0 :device (class-of tensor) :dtype (dtype tensor) :order (order tensor))
+      (let* ((shape (actual-shape tensor))
+	     (out (make-tensor shape
+			       :create-from tensor
+			       :device (class-of tensor)
+			       :dtype (dtype tensor)
+			       :order (order tensor)))
+	     (broadcasted-p)
+	     (broadcasts (loop for size in (shape tensor)
+			       for view in (tensor-view tensor)
+			       if (eql :broadcast (viewtype (force-list view)))
+				 collect (and
+					  (setq broadcasted-p t)
+					  `(:broadcast ,size))
+			       else
+				 collect t))
+	     (out (if broadcasted-p
+		      (apply #'view out broadcasts)
+		      out)))
+	(setf (tensor-initial-offset out) (tensor-initial-offset tensor))
+	out)))
+
 (deftype compile-option-t ()
   `(and keyword
 	(member :default :fastest :compile-speed :debug :safety)))

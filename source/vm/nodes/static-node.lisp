@@ -37,18 +37,14 @@
       ;; Save For Backward hasn't created yet?
       (when (null past-sv4bw)
 	;; Make clone and allocate
-	(let ((place (cl-waffe2/vm.generic-tensor::make-clone tensor)))
+	;; [FIXME] Is this tensor creation gc-reachable??
+	(let ((place (cl-waffe2/vm.generic-tensor::make-clone-exist tensor)))
 	  ;; Do allocation of place
-	  (tensor-vec place)
 	  ;; Set it to the slot
 	  (setf (slot-value self name) place)))
 
-      ;; Move: Existing Save-For-Backward-Place <- The target tensor.
-      ;;(move-and-save-for-backward-static (slot-value self name) tensor)
-      ;; do not proceed, defmodel-as!
-      (cl-waffe2/base-impl:proceed (cl-waffe2/base-impl:!move (slot-value self name) tensor :force t))
-
-      nil)))
+      (cl-waffe2/vm::%vm-move (slot-value self name) tensor)))
+  nil)
 
 (defun apply-read-save-for-backward (self name)
   (declare (type AbstractNode self)
