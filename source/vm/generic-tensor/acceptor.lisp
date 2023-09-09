@@ -340,7 +340,8 @@ Reading all variables in the computation node, the method get-input returns an c
 		(construct-backward? (not *no-grad*))
 		(compile-mode :fastest)
 		(fuse-ops t)
-		(defmodel-as-from nil))
+		(defmodel-as-from nil)
+		(dout-add1 t))
   "
 ## [function] build
 
@@ -376,7 +377,8 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
       (cl-waffe2/vm:compile-forward-and-backward toplevel
 						 :need-backward construct-backward?
 						 :compile-mode compile-mode
-						 :fuse-p fuse-ops)
+						 :fuse-p fuse-ops
+						 :add1 dout-add1)
     (let ((forward-f  #'(lambda (model)
 			  (with-adjustable-symbol-scope
 			    (set-adjustable-symbols model)

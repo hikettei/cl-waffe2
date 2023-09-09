@@ -6,7 +6,7 @@
 
 When set to T, a run-time error is detected and a warning is displayed.")
 
-(defparameter *logging-vm-execution* NIl "
+(defparameter *logging-vm-execution* T "
 ## [parameter] *logging-vm-execution*
 
 If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
@@ -34,7 +34,12 @@ If set to T, the result is displayed on the terminal with the arguments used eac
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
-	      (%vm-move place var))))
+	      (let ((state (tensor-state var)))
+		;; Intentionally creates the illusion of VM that misunderstands
+		;; var is [computed] by deleting tensor-state
+		(setf (tensor-state var) nil)
+		(%vm-move place var)
+		(setf (tensor-state var) state)))))
   nil)
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
@@ -62,10 +67,14 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 	if  result do
 	  (if (tensor-tmp-p tensor)
 	      (progn
+		;; ScalarTensors never use Memory-Pool
 		;; Update Memory-Pool
 		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
-		(tensor-vec result)
-		(cl-waffe2/vm.generic-tensor::embody-tensor-vec tensor result)
+		;;(tensor-vec result)
+		;; Tensor is already broadcasted/permuted...
+		;; So sharing vec is enough.
+		(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
+		;;(cl-waffe2/vm.generic-tensor::embody-tensor-vec tensor result)
 		) ;; Tensor.ID <- Result
 	      (if (scalar-p tensor)
 		  (setf (tensor-vec tensor) (tensor-vec result))

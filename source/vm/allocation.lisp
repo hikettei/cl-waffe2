@@ -28,10 +28,12 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; dout=0
+;; (EXP X) -> A, B <-これ検出できない？
 ;; [TODO] defmodel-as ...  無駄なインライン化をして実装方式を増やさない
-;;  -> Compiled-Composite自体をCacheする
+;;  -> Compiled-Composite自体をCacheする (OK)
 
-;; [FIX] gradient-adderが増えてる
+;; [FIX] gradient-adderが消えてる？
 ;; copy/delete-alloc テスト
 
 ;; [TODO] 上の表を実装してThread-safeにする
@@ -271,17 +273,24 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 
 (defun eliminate-setq-node (iseq) ;; iseq[0] -> iseq[n]
   (let* ((setq-table (make-hash-table)))
+
+    ;; Collecting the direction/from of Setq{Pruned}
     (loop for inst in iseq
 	  if (inst-set-p inst)
 	    do (setf (gethash (tensor-id (wfop-self inst)) setq-table) (tensor-id (second (wfop-args inst)))))
 
+    ;; Given setq-table, updates all tensor-id
     (loop for inst in iseq
 	  do (dolist (tensor `(,@(wfop-out-to inst) ,@(wfop-args inst)))
 	       (let ((id (findout-origin setq-table tensor)))
 		 (setf (tensor-id tensor) id))))
 
+    ;; Deletes all unused Setq{Pruned}
     (loop for inst in iseq
-	  if (not (inst-set-p inst))
+	  if (not (or (inst-set-p inst)
+		      (and (eql (wfop-node inst) #'setq-vm-wrap-f)
+			   (eql (tensor-id (car (wfop-out-to inst)))
+				(tensor-id (car (wfop-args inst)))))))
 	    collect inst)))
 
 (defun iseq-update-tensor-name! (iseq from to)
@@ -321,12 +330,13 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
         
     (when iseq-bw-flat
       (apply-in-place-mutation! iseq-bw-flat (alexandria:hash-table-values bw-leaves))
-      (setq iseq-bw-flat (reverse (eliminate-setq-node iseq-bw-flat))))
-
-    (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
-
+      (setq iseq-bw-flat (eliminate-setq-node (reverse iseq-bw-flat))))
+    
     ;; Optimizes the locality of memory
+    ;; [TODO] Share memory-pools between forward and backward
+    ;; (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
     (simulate-memory-pool! iseq)
+    (simulate-memory-pool! iseq-bw-flat)
 
     ;; iseq ... flattened list of iseq
     ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter

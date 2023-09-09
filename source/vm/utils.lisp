@@ -200,12 +200,16 @@ op2 ..  E <- F(X, Y, Z)
     (setf (tensor-state tensor)
 	  (make-statecontainer :forward-out-form (make-compiled-kernel)))))
 
+(defun setq-vm-wrap-f ()
+  "To avoid iseq=null, adds this node"
+  "Setq{%VMWrap}")
+
 (defun %vm-wrap-tensor (tensor)
   (init-state-container! tensor)
   (make-wfop
    #'(lambda (x) (declare (ignore x)) tensor)
    tensor
-   #'(lambda () (format nil "Setq{Internal}"))
+   #'setq-vm-wrap-f
    (list tensor)
    :out-to (list tensor)))
 
@@ -236,8 +240,10 @@ op2 ..  E <- F(X, Y, Z)
 		     (cl-waffe2/base-impl:MoveTensorNode
 		      (dtype tensor)
 		      :save-for-backward
-		      (or (tensor-projected-p grad)
-			  (cl-waffe2/vm.generic-tensor::permuted-p  grad)))
+		      ;;(or (tensor-projected-p grad)
+		      ;;  (cl-waffe2/vm.generic-tensor::permuted-p  grad))
+		      t
+		      )
 		     (grad tensor)
 		     grad)))
 		 (progn

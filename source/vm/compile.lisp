@@ -170,7 +170,7 @@
 
 (defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
-(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t))
+(defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t) (add1 t))
   "
 
 ## [function] compile-forward-and-backward
@@ -204,11 +204,14 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		     (if (scalar-p toplevel)
 			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
 			 (if out-symbol-p
-			     (forward (cl-waffe2/base-impl:ScalarAdd (dtype toplevel))
-				      (make-input (shape toplevel) nil
+			     (let ((dout-tensor (make-input (shape toplevel) nil
 						  :dtype (dtype toplevel)
-						  :order (order toplevel))
-				      (make-tensor 1 :dtype (dtype toplevel)))
+						  :order (order toplevel))))
+			       (if add1
+				   (forward (cl-waffe2/base-impl:ScalarAdd (dtype toplevel))
+					    dout-tensor					    
+					    (make-tensor 1 :dtype (dtype toplevel)))
+				   dout-tensor))
 			     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))))
 	     (backward-iseq
 	       (when (and need-backward
@@ -221,8 +224,6 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	(when (and dout optimize-locality)
 	  (setf (tensor-protect-me dout) t))
 	
-	;;(apply-in-place-mutation! backward-iseq leaves :reverse-iseq t)
-
 	(let ((forward (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 			    (append
