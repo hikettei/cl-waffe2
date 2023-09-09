@@ -28,7 +28,9 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; dout=0
+;; ScalarTensorとMemory_pool, defmodel-asを修正 -> It should work
+
+;; deftrainerをはいし
 ;; (EXP X) -> A, B <-これ検出できない？
 ;; [TODO] defmodel-as ...  無駄なインライン化をして実装方式を増やさない
 ;;  -> Compiled-Composite自体をCacheする (OK)
@@ -53,9 +55,7 @@
 ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
 ;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
 
-;; memory-poolのmemory-poolが欲しい〜
 
-;; Forward 動く？ Backwardが動かん〜
 ;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
 
 ;; TODO Nested with-static-allocation
@@ -93,7 +93,7 @@
   (and (eql     (tensor-facet tensor) :input)
        (stringp (tensor-name tensor))
        (if include-scalar
-	   (scalar-p tensor)
+	   (not (scalar-p tensor))
 	   t)))
 
 (defstruct (VMAllocation
@@ -340,7 +340,8 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     ;; (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
     (simulate-memory-pool! iseq)
 
-    (simulate-memory-pool! iseq-bw-flat)
+    ;; FixME
+    ;;q(simulate-memory-pool! iseq-bw-flat)
 
     ;; iseq ... flattened list of iseq
     ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
