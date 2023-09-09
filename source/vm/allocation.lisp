@@ -253,7 +253,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 (defun read-from-mempool-tensor (tensor)
   (declare (type AbstractTensor tensor))
   (assure-vmalloc)
-  (the AbstractTensor (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*))))
+  (the AbstractTensor (or (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*)) tensor)))
 
 
 ;; ~~ [Implementation] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

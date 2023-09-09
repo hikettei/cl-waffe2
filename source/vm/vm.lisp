@@ -34,9 +34,6 @@ If set to T, the result is displayed on the terminal with the arguments used eac
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
-	      (print place)
-	      (print var)
-	      ;; Place <- Var
 	      (%vm-move place var))))
   nil)
 
@@ -44,7 +41,10 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 (defun maybe-read-result (tensor)
   (declare (type AbstractTensor tensor))
   (if (tensor-tmp-p tensor)
-      tensor
+      (let ((out (read-from-mempool-tensor tensor)))
+	;; Keep Broadcasting, Permution etc... But storages are shared.
+	(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec out))
+	tensor)
       (if (scalar-p tensor)
 	  tensor
 	  (let* ((state (tensor-state tensor))
