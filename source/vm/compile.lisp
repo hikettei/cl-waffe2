@@ -135,7 +135,6 @@
 	   (setf (gethash (tensor-iid tensor) dout-table) val)))
 
     (set-dout (wfop-self (car iseq)) dout-toplevel)
-
     (loop for inst of-type WfInstruction in iseq
 	  if (get-dout (wfop-self inst))
 	    append
@@ -159,7 +158,7 @@
 		      (make-wfop bw-function ;; ... dout var1 var2
 				 self
 				 node
-				 `(,(get-dout self) ,@args)
+				 `(,(get-dout (wfop-self inst)) ,@args)
 				 :out-to (loop for o in out-to if o collect o)
 				 :block-iseq bw-iseq)))))
 	       ;; Expand Gradient Adders
@@ -216,14 +215,13 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	     (backward-iseq
 	       (when (and need-backward
 			  (ancestor-param-p toplevel))
+		 (when optimize-locality
+		   (setf (tensor-protect-me dout) t))
 		 (forward->reverse-mode iseq-forward dout))))
 
 	(when optimize-locality
 	  (setq iseq-forward (eliminate-setq-node iseq-forward)))
-	
-	(when (and dout optimize-locality)
-	  (setf (tensor-protect-me dout) t))
-	
+		
 	(let ((forward (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 			    (append

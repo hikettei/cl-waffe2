@@ -279,20 +279,22 @@ forward: Couldn't step forward step of ~a because it is undefined.
     (declare (type AbstractNode node)
 	     (type list variables))    
 
-    (let ((in-tensors (loop for var in variables
-			    collect (or (system-lazy-read-save-for-backward var)
-					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
-	  (dout (cl-waffe2/vm.generic-tensor::make-clone dout)))
+    (let* ((in-tensors (loop for var in variables
+			     collect (or (system-lazy-read-save-for-backward var) var)))
+	   (detach-states (map 'list #'detach-p in-tensors))
+	   (dout-detach-p (detach-p dout)))
 
-      ;;(setf (tensor-protect-me dout) t)
+      (mapc #'(lambda (tensor) (setf (detach-p tensor) t)) in-tensors)
+      (setf (detach-p dout) t)
+      
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
 	     (out-toplevels (if (every #'null out-toplevels) ;; no gradients?
 				(return-from make-backward)
 				out-toplevels))
 	     (toplevel (loop for top in out-toplevels
-			      for var in variables
-			      collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
-					top)))
+			     for var in variables
+			     collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
+				       top)))
 	     (directions (loop for var in out-toplevels if var collect t else collect nil))
 	     (out-toplevels-pswise out-toplevels)
 	     (out-toplevels (loop for top in toplevel
@@ -301,14 +303,19 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	     (toplevel (loop for top in toplevel if top collect top))
 	     (toplevel (if toplevel (apply #'!system-lazy-values toplevel)))
 	     (compiled  (multiple-value-list
-			(cl-waffe2/vm:compile-forward-and-backward toplevel
-								   :need-backward nil
-								   :fuse-p t
-								   :compile-mode :fastest
-								   :optimize-locality nil)))
+			 (cl-waffe2/vm:compile-forward-and-backward toplevel
+								    :need-backward nil
+								    :fuse-p t
+								    :compile-mode :fastest
+								    :optimize-locality nil)))
 	     (fw-iseq (car compiled))
 	     ;;(leaves  (third compiled))
 	     )
+
+	(mapc #'(lambda (tensor state)
+		  (setf (detach-p tensor) state))
+	      in-tensors detach-states)
+	(setf (detach-p dout) dout-detach-p)
 	;;(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)

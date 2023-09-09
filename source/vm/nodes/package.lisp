@@ -24,6 +24,7 @@
 		#:actual-shape
 		#:set-input
 		#:tensor-stride
+		#:detach-p
 		#:compile-option-t
 		#:movetensor-p
 		#:shaping-error

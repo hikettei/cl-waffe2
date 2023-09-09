@@ -6,7 +6,7 @@
 
 When set to T, a run-time error is detected and a warning is displayed.")
 
-(defparameter *logging-vm-execution* T "
+(defparameter *logging-vm-execution* NIL "
 ## [parameter] *logging-vm-execution*
 
 If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
