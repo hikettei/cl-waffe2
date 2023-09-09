@@ -300,11 +300,11 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 
 (defun iseq-update-tensor-name! (iseq from to)
   (loop for inst in iseq do
-    (dolist (o (wfop-out-to inst))
+    (dolist (o (remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-id))
       (when (eql (tensor-id o) from)
 	(when (not (tensor-id-lock-p o))
 	  (setf (tensor-id o) to))))
-    (dolist (a (wfop-args inst))
+    (dolist (a (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id))
       (when (eql (tensor-id a) from)
 	(when (not (tensor-id-lock-p a))
 	  (setf (tensor-id a) to))))))
@@ -451,7 +451,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
       (loop for inst in iseq for pc fixnum upfrom 0 do
 	(let* ((args (if (inst-set-p inst)
 			 (cdr (wfop-args inst))
-			 (wfop-args inst)))
+			 (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id)))
 	       (args-last-p (map 'list #'(lambda (x) (args-last-ref-p x pc)) args))
 	       (out-to      (wfop-out-to inst)))
 
@@ -462,8 +462,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	  ;;   args-last-p=T (Moved to the memory-pool)
 	  
 	  ;; WfInstruction: out-to[0], ... <- f(args[0], args[1], ...)
-	  
-	  (dolist (out out-to)
+	  (dolist (out (remove-duplicates out-to :test #'eql :key #'tensor-id))
 	    (let ((result (read-from-pool out)))
 	      (when (not (eql (the symbol (tensor-id result)) (tensor-id out)))
 		(iseq-update-tensor-name! (nthcdr pc iseq) (tensor-id out) (tensor-id result)))))
