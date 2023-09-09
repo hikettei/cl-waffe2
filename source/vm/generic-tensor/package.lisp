@@ -21,6 +21,7 @@
 
    #:current-backend-state
 
+   #:tensor-id-lock-p
    #:tensor-finalizer
    #:tensor-grad-count
    #:tensor-backward

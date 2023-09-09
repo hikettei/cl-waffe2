@@ -69,6 +69,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; tensor-id  ... indicates which pointer to use or copied?, plus, the index in the mempool.
    ;; tensor-iid ... used for topological sorting
 
+   (id-lock-p :initform nil :accessor tensor-id-lock-p)
    (tensor-id :initform (gensym "TID") :accessor tensor-id)         
    (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
    

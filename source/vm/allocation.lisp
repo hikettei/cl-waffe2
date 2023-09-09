@@ -337,12 +337,10 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     
     ;; Optimizes the locality of memory
     ;; [TODO] Share memory-pools between forward and backward
-    ;; (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
     (simulate-memory-pool! iseq)
-
-    ;; FixME
-    ;;q(simulate-memory-pool! iseq-bw-flat)
-
+    ;;(simulate-memory-pool! iseq-bw-flat)
+    (%in-place-vm-ops! iseq-bw-flat)
+    
     ;; iseq ... flattened list of iseq
     ;; VM executes them in the order of iseq[0] iseq[1] ... iseq[n] where n = program_counter
 
@@ -387,7 +385,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
 	   (type list iseq))
-
+  
   (%in-place-vm-ops! iseq)
   
   (let ((mempool-using-tensors nil)

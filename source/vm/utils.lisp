@@ -240,10 +240,7 @@ op2 ..  E <- F(X, Y, Z)
 		     (cl-waffe2/base-impl:MoveTensorNode
 		      (dtype tensor)
 		      :save-for-backward
-		      ;;(or (tensor-projected-p grad)
-		      ;;  (cl-waffe2/vm.generic-tensor::permuted-p  grad))
-		      t
-		      )
+		      t)
 		     (grad tensor)
 		     grad)))
 		 (progn
