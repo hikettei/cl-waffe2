@@ -38,7 +38,12 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 		;; Intentionally creates the illusion of VM that misunderstands
 		;; var is [computed] by deleting tensor-state
 		(setf (tensor-state var) nil)
-		(%vm-move place var)
+	        (%vm-move place var)
+
+		;; FixME: Delete this line:
+		(when (scalar-p place)
+		  (setf (tensor-vec place) (tensor-vec var)))
+		
 		(setf (tensor-state var) state)))))
   nil)
 
@@ -68,7 +73,7 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 	  (if (tensor-tmp-p tensor)
 	      (progn
 		;; ScalarTensors never use Memory-Pool
-		;; Update Memory-Pool
+		;; Update Memory-Pool		
 		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
 		;;(tensor-vec result)
 		;; Tensor is already broadcasted/permuted...

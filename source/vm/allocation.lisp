@@ -87,12 +87,14 @@
 ;; allocationだけ新しくすればToplevelでAbstractNodeのコンパイルできる
 ;; -> (defun copy-allocation, delete-allocation
 
-(defun tensor-tmp-p (tensor)
+(defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
   (and (eql     (tensor-facet tensor) :input)
-       (not     (scalar-p tensor))
-       (stringp (tensor-name tensor))))
+       (stringp (tensor-name tensor))
+       (if include-scalar
+	   (scalar-p tensor)
+	   t)))
 
 (defstruct (VMAllocation
 	    (:conc-name vmalloc-))
@@ -166,9 +168,10 @@ If the re-allocation is performed, frees the old one.
   (when (not (vmalloc-allocated-p allocation))
     (loop for tensor being the hash-values in (vmalloc-id2pool allocation) do
       ;; Reading the orig-shape
-      (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
-	    (map 'list #'cl-waffe2/vm.generic-tensor::read-symbol
-		 (cl-waffe2/vm.generic-tensor::original-shape tensor)))
+      (when (not (scalar-p tensor))
+	(setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
+	      (map 'list #'cl-waffe2/vm.generic-tensor::read-symbol
+		   (cl-waffe2/vm.generic-tensor::original-shape tensor))))
       
       (when (null (cl-waffe2/vm.generic-tensor::vec tensor))
 	(let ((use
@@ -336,6 +339,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     ;; [TODO] Share memory-pools between forward and backward
     ;; (setq iseq `(,@iseq ,@(reverse iseq-bw-flat)))
     (simulate-memory-pool! iseq)
+
     (simulate-memory-pool! iseq-bw-flat)
 
     ;; iseq ... flattened list of iseq
@@ -368,14 +372,16 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
       :id2pool id2pool-table))))
 
 (defun memory-pool-p (tensor1 tensor2)
-  (and (equal (original-shape tensor1)
-	      (original-shape tensor2))
-       (eql (dtype tensor1) (dtype tensor2))))
+  (and (or (not (scalar-p tensor1)) (not (scalar-p tensor2)))
+       (and (equal (original-shape tensor1)
+		   (original-shape tensor2))
+	    (eql (dtype tensor1) (dtype tensor2)))))
 
 (defun memory-pool-p< (tensor1 tensor2)
-  (and (<= (apply #'* (original-shape tensor1))
-	   (apply #'* (original-shape tensor2)))
-       (eql (dtype tensor1) (dtype tensor2))))
+  (and (or (not (scalar-p tensor1)) (scalar-p tensor2))
+       (and (<= (apply #'* (original-shape tensor1))
+		(apply #'* (original-shape tensor2)))
+	    (eql (dtype tensor1) (dtype tensor2)))))
 
 (defun simulate-memory-pool! (iseq)
   (declare (optimize (speed 3))
@@ -402,7 +408,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	       ;; Reached the last -> T
 	       t)
 	     (find-from-pool (tensor)	     
-	       (if (tensor-tmp-p tensor)
+	       (if (tensor-tmp-p tensor T)
 		   (if (some #'symbolp (original-shape tensor))
 		       (find tensor pools-adj :test #'memory-pool-p)
 		       (find tensor
@@ -412,7 +418,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	       (when (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 		 (return-from read-from-pool tensor))
 	       
-	       (if (tensor-tmp-p tensor)
+	       (if (tensor-tmp-p tensor T)
 		   (let ((out (find-from-pool tensor)))
 		     ;; Delete from pool
 		     (when (null out)
@@ -426,7 +432,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 		     out)
 		   tensor))
 	     (set-as-free (tensor)
-	       (when (and (tensor-tmp-p tensor)
+	       (when (and (tensor-tmp-p tensor T)
 			  ;; The tensor is from memory-pool?
 			  (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 			  )
