@@ -160,6 +160,8 @@ excepted: AbstractTensor"
 	   (body
 	     (progn
 	       `((declare (type AbstractTensor ,@arguments))
+		 ;; tensor-vec=Eliminate InputTensor with no existing vec.
+		 (mapc #'tensor-vec (list ,@arguments))
 		 (let* ((,dispatching-keys
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
 			  (map 'list #'(lambda (tensor)
@@ -258,6 +260,8 @@ And manages its allocation not to cause conflicts in the threads."))
 	   (defun ,named (,@in-names)
 	     (declare (type AbstractTensor ,@in-names))
 	     ;; in-names=number -> make-tensor auto?
+	     ;; tensor-vec=Eliminate InputTensor with no existing vec.
+	     (mapc #'tensor-vec (list ,@in-names))
 	     (call (,node-name ,@in-names) ,@in-names)))))))
 	       
 ;; [Exported]
