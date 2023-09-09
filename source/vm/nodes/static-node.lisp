@@ -43,7 +43,13 @@
 	  ;; Set it to the slot
 	  (setf (slot-value self name) place)))
 
-      (cl-waffe2/vm::%vm-move (slot-value self name) tensor)))
+      (cl-waffe2/vm::%vm-move (slot-value self name) tensor)
+
+      ;; FixME
+
+      (when (and (scalar-p (slot-value self name))
+		 (scalar-p tensor))
+	(setf (tensor-vec (slot-value self name)) (cl-waffe2/vm.generic-tensor::vec tensor)))))
   nil)
 
 (defun apply-read-save-for-backward (self name)
