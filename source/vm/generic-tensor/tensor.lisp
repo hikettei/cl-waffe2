@@ -1142,3 +1142,29 @@ Returns shape but <1 x N> parts are replaced with -1.
 	  collect 0
 	else
 	  collect s))
+
+(defun tensor-memory-size (tensor)
+  (declare (type AbstractTensor tensor))
+  (flet ((->size (dtype)
+	   (cffi:foreign-type-size dtype)))
+    (if (dtype->lisp-type (dtype tensor))
+	(if (scalar-p tensor)
+	    (->size (dtype tensor))
+	    (if (some #'symbolp (original-shape tensor))
+		(let ((total-size)
+		      (sym))
+		  (dolist (s (original-shape tensor))
+		    (if (numberp s)
+			(push s total-size)
+			(push s sym)))
+		  (setq total-size (apply #'* total-size))
+		  (setq sym (reverse sym))
+		  (values (->size (dtype tensor))
+			  total-size
+			  sym))
+		(* (->size (dtype tensor))
+		   (apply #'* (original-shape tensor)))))
+	(progn
+	  (warn "tensor-memory-size: Unknown dtype ~a is accumlated as 0" (dtype tensor))
+	  0))))
+

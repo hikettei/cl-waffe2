@@ -75,8 +75,7 @@ The StateContainer structure is a Compiled-Kernel structure that stores before a
 		(parameters
 		 symbols
 		 adjustable-symbol-table
-		 variables
-		 tmp-variables)))
+		 variables)))
   "
 ## [struct] NodeVariables
 
@@ -85,8 +84,7 @@ The NodeVariables structure stores the tensors and Shapes that have been lazily 
   (parameters parameters :type list)
   (symbols       symbols :type list)   ;; 'a -> current-size 'b -> current-size
   (adjustable-symbol adjustable-symbol-table :type hash-table) ;; 'a -> max-alloc-size 'b -> max-alloc-size
-  (variables     variables :type hash-table) ;; (make-input `(...) :A)
-  (tmp-variables tmp-variables :type list))  ;; (make-input `(...) nil) i.e.: chaintmp
+  (variables     variables :type hash-table)) ;; (make-input `(...) :A)
 
 (defmethod print-object ((node NodeVariables) stream)
   (let* ((vars  (nodevariables-variables node)) 
@@ -154,7 +152,6 @@ The operation was: Setting ~a <- ~a
   "Returns variable-table where key and value is tensor's name and tensor's pointer."
   (declare (type list variables-list))
   (let ((variable-table (make-hash-table))
-	(tmp-variable-table) ;; All the InputTensor
 	(adjustable-symbol-table (make-hash-table))
 	(parameters `())
 	(symbols `()))
@@ -175,19 +172,32 @@ The operation was: Setting ~a <- ~a
 	   (push tensor parameters))
 	 
 	 (when (user-input-p tensor)
-	   (setf (gethash (tensor-name tensor) variable-table) tensor))
-
-	 ;; (make-input ... ChainTMPXXX)
-	 (when (typep (tensor-name tensor) 'string)
-	   (push tensor tmp-variable-table)))
+	   (setf (gethash (tensor-name tensor) variable-table) tensor)))
      variables-list)
 
     (make-variable-table
      parameters
      symbols
      adjustable-symbol-table
-     variable-table
-     tmp-variable-table)))
+     variable-table)))
+
+(defun copy-variable-table (table allocation)
+  (declare (type NodeVariables table))
+  (let ((table (make-variable-table
+		(nodevariables-parameters        table)
+		(nodevariables-symbols           table)
+		(nodevariables-adjustable-symbol table)
+		(alexandria:copy-hash-table
+		 (nodevariables-variables table)))))
+    (flet ((replace-new (tensor)
+	     (or (gethash (tensor-id tensor) (cl-waffe2/vm::vmalloc-id2pool allocation))
+		 tensor)))
+      (maphash
+       #'(lambda (place tensor)
+	   (setf (gethash place (nodevariables-variables table))
+		 (replace-new tensor)))
+       (nodevariables-variables table))
+      table)))
 
 ;; ==========================================
 ;; General-Purpose APIs
@@ -422,26 +432,68 @@ Or, your network may be disconnected at a certain position."
 	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
 
 (defmethod copy-compiled-model ((model Compiled-Composite))
-  ;; [TODO] NodeVariablesのコピーは取るべき？ (-> Perhaps No, Gradientsは固定？)
-  ;; Make Variables Tableもう一度する？
-  ;; copy-allocate ... with-static-allocation下にいないけどOK? -> OK
-  (make-instance 'Compiled-Composite
-		 :allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model))
-		 :compiled-forward  (compiled-forward model)
-		 :compiled-backward (compiled-backward model)
-		 :dout      (compiled-dout model)
-		 :out       (compiled-out model)
-		 :inputs    (compiled-inputs model)
-		 :variables (compiled-variables model)))
+  (let* ((allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model)))
+	 (table      (cl-waffe2/vm::vmalloc-id2pool allocation)))
+    (flet ((replace-new (tensor)
+	     (or (gethash (tensor-id tensor) table)
+		 tensor)))
+      (let ((dout (replace-new (compiled-dout model)))
+	    (out  (replace-new (compiled-out  model))))
+	(make-instance 'Compiled-Composite
+		       ;; Duplicate Memory-Pool
+		       :allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model))
+		       
+		       :compiled-forward  (compiled-forward model)
+		       :compiled-backward (compiled-backward model)
 
+		       :dout dout
+		       :out  out
+		       
+		       :inputs    (map 'list #'replace-new (compiled-inputs model))
+		       :variables (copy-variable-table (compiled-variables model) allocation))))))
 
 ;; TODO -> (defmethod free-model ((model Compiled-Composite)))
 ;; TODO -> (defmethod model-memory-size ((model Compiled-Composite)) )
+
+(defmethod model-memory-size ((model Compiled-Composite))
+  "Return: mempool-size"
+  (let ((mempool-fixed-size 0)
+	(adj-p nil)
+	(adjust-size (make-hash-table :test #'equal)))
+
+    (maphash
+     #'(lambda (id tensor)
+	 (declare (ignore id))
+	 (multiple-value-bind (memsize fixed-area ndm) (tensor-memory-size tensor)
+	   (if ndm
+	       (progn
+		 (setq adj-p t)
+		 (incf mempool-fixed-size (* memsize fixed-area))
+		 (setf (gethash ndm adjust-size)
+		       (if (gethash ndm adjust-size)
+			   (+ (gethash ndm adjust-size) memsize)
+			   memsize)))
+	       (incf mempool-fixed-size memsize))))
+     (cl-waffe2/vm::vmalloc-id2pool (compiled-allocation model)))
+
+    (format nil "{~a~a}MB"
+	    (/ mempool-fixed-size 1e+6)
+	    (if adj-p
+		(with-output-to-string (out)
+		  (maphash
+		   #'(lambda (size stride)
+		       (format out "+(~a x ~a)"
+			       size
+			       (/ stride 1e+6)))
+		   adjust-size))
+		""))))
+
 (defmethod print-object ((model Compiled-Composite) stream)
   (format stream "<Compiled-Composite(allocated-p=~a)
     forward     : ~a
     backward    : ~a
-    memory-pool : ~a
+    memory-pool : ~R tensor(s)
+                   L ~a
 ~a>"
 	  ;; Variables
 	  (cl-waffe2/vm::vmalloc-allocated-p (compiled-allocation model))
@@ -454,7 +506,8 @@ Or, your network may be disconnected at a certain position."
 	  (if (compiled-backward model)
 	      "backward(model) -> t"
 	      "nil")
-	  (cl-waffe2/vm::vmalloc-id2pool (compiled-allocation model))
+	  (hash-table-count (cl-waffe2/vm::vmalloc-id2pool (compiled-allocation model)))
+	  (model-memory-size model)
 	  (if (>= (length (alexandria:hash-table-keys (nodevariables-variables (compiled-variables model)))) 1)
 	      (compiled-variables model)
 	      "")))
