@@ -211,12 +211,12 @@ CL-WAFFE2-REPL&gt;
 ;; (The result may not be the latest)
 </code></pre>
 <h2 id="function-compile-forward-and-backward">[function] compile-forward-and-backward</h2>
-<pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t) (fuse-p t) (compile-mode :default))
+<pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t))
 </code></pre>
 <p>Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set <code>fuse-p</code>=t to get additional optimization to the generated IR.</p>
 <p>Tips: <code>disassemble-waffe2-ir</code> to display compiled Instruction Sequence.</p>
 <h2 id="return_1">Return</h2>
-<p><code>(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout)</code></p>
+<p><code>(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout alloc-state)</code></p>
 <h2 id="function-accept-instructions">[function] accept-instructions</h2>
 <pre><code class="language-lisp">(accept-instructions iseq)
 </code></pre>

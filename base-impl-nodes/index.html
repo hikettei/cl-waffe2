@@ -173,8 +173,6 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_9">Description</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#behaviour">Behaviour</a>
-    </li>
     <li class="toctree-l3"><a class="reference internal" href="#constructor_9">Constructor</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#backward_9">Backward</a>
@@ -731,7 +729,7 @@ X\gets{X / Y}
 <h3 id="backward_3">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout dx dy)
- (values (!div dout dy) (!div (!mul dx (!mul -1 dout)) (!square dy))))
+ (values (!div dout dy) (!div (!mul dx (!mul -1 dout)) (!mul dy dy))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-inversetensornode">[node] INVERSETENSORNODE</h2>
@@ -748,7 +746,7 @@ A\gets{1 / A}
 <p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
 <h3 id="backward_4">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout dx) (values (!div (!mul -1 dout) (!square dx))))
+<pre><code class="language-lisp">((self dout dx) (values (!div (!mul -1 dout) (!mul dx dx))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-scalaradd">[node] SCALARADD</h2>
@@ -823,7 +821,7 @@ X\gets{X / scalar}
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout dx dy)
  (values (!div dout dy)
-         (-&gt;scal (!mean (!div (!mul dx (!mul -1 dout)) (!square dy))))))
+         (-&gt;scal (!mean (!div (!mul dx (!mul -1 dout)) (!mul dy dy))))))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-movetensornode">[node] MOVETENSORNODE</h2>
@@ -834,19 +832,6 @@ X\gets{X / scalar}
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><mo>←</mo><mi>B</mi></mrow><annotation encoding="application/x-tex">
 A\gets{B}
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">A</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span></span></span></p>
-<h3 id="behaviour">Behaviour</h3>
-<p>All cl-waffe2 operations follow this rule: <code>Make a copy for now, disable later</code>. (e.g.: the function <code>(!add x y)</code> makes an copy of <code>x</code> and <code>y</code> for now, but this copy operation is ignored, if they're concluded not to be needed, by tracing computation node.)</p>
-<p>In order to disable a useless copy operations, MoveTensorNode must follow this behaviour:</p>
-<ol>
-<li>
-<p>Reading (movetensor-ignore-me self) in runtime, the forward makes a copy of given tensor only after the slot is <code>nil</code>.</p>
-</li>
-<li>
-<p>Otherwise, return <code>B</code></p>
-</li>
-</ol>
-<p>Don't worry the allocation won't be done until <code>(tensor-vec A)</code> is called.</p>
-<p>For practical example, my impls (<code>./source/backends/lisp/arithmetic.lisp</code> for example) would be helpful!.</p>
 <h3 id="constructor_9">Constructor</h3>
 <p><code>(MoveTensorNode dtype)</code></p>
 <p><code>dtype</code> dtype to use.</p>

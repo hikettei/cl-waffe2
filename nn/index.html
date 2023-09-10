@@ -237,14 +237,15 @@ ReLU(x) = max(x, 0)
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP979 
+{CPUTENSOR[float] :shape (10 10) :id TID1552 
   :vec-state [computed]
-  ((-0.0         -0.0         -0.0         ~ -0.0         0.66437244   -0.0)                    
-   (0.5758207    0.32484004   -0.0         ~ -0.0         0.33708817   0.8596226)   
+  ((1.3563212    -0.0         -0.0         ~ 0.66437244   -0.0         0.5758207)                    
+   (0.32484004   -0.0         1.1069025    ~ 0.33708817   0.8596226    -0.0)   
                  ...
-   (0.1685591    -0.0         -0.0         ~ 0.9847253    0.40561935   0.115193695)
-   (0.66292197   -0.0         -0.0         ~ 0.36703286   -0.0         1.7522626))
+   (-0.0         -0.0         -0.0         ~ 0.40561935   0.115193695  0.66292197)
+   (-0.0         -0.0         -0.0         ~ -0.0         1.7522626    -0.0))
   :facet :input
+  :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
@@ -258,14 +259,15 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 <h3 id="example_1">Example</h3>
 <pre><code class="language-lisp">(proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :named ChainTMP1143 
+{CPUTENSOR[float] :shape (10 10) :id TID1643 
   :vec-state [computed]
-  ((0.052870475 0.44819808  0.48854244  ~ 0.23942728  0.8893383   0.46183863)                   
-   (0.33162943  0.3568413   0.26439044  ~ 0.19734775  0.78826183  0.5115942)   
-                ...
-   (0.41916075  0.1272022   0.43307915  ~ 0.5208803   0.76300204  0.52910817)
-   (0.5744591   0.66711944  0.48927152  ~ 0.71474916  0.5147265   0.43981186))
+  ((0.44819808 0.48854244 0.59221524 ~ 0.8893383  0.46183863 0.33162943)                  
+   (0.3568413  0.26439044 0.519481   ~ 0.78826183 0.5115942  0.55313486)   
+               ...
+   (0.1272022  0.43307915 0.8074486  ~ 0.76300204 0.52910817 0.5744591)
+   (0.66711944 0.48927152 0.7403083  ~ 0.5147265  0.43981186 0.5560996))
   :facet :input
+  :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
@@ -281,10 +283,11 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = abs(x_n - y_n)
 <h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1331 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :id TID1902 
   :vec-state [computed]
-  ((1.2025735))
+  ((1.2066936))
   :facet :input
+  :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
@@ -300,10 +303,11 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
 <h3 id="example_3">Example</h3>
 <pre><code class="language-lisp">(proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :named ChainTMP1494 
+{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :id TID2070 
   :vec-state [computed]
-  ((1.4828944))
+  ((1.4866867))
   :facet :input
+  :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
@@ -358,7 +362,7 @@ y = xA^\intercal + b
 <h3 id="example_4">Example</h3>
 <pre><code class="language-lisp">(LinearLayer 10 5)
 
-&lt;Composite: LINEARLAYER{W1548}(
+&lt;Composite: LINEARLAYER{W2134}(
     &lt;Input : ((~ BATCH-SIZE 10)) -&gt; Output: ((~ BATCH-SIZE 5))&gt;
 
     WEIGHTS -&gt; (5 10)
@@ -420,7 +424,7 @@ y = xA^\intercal + b
 <h3 id="example_5">Example</h3>
 <pre><code class="language-lisp">(Conv2D 3 5 '(3 3))
 
-&lt;Composite: CONV2D{W1558}(
+&lt;Composite: CONV2D{W2144}(
     &lt;Input : ((N 3 H_IN W_IN)) -&gt; Output: ((N 5 -1 -1))&gt;
 
     WEIGHT -&gt; (5 3 3 3)

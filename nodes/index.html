@@ -613,7 +613,7 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 <h2 id="macro-define-op">[macro] define-op</h2>
 <p><code>define-op</code> = <code>defnode</code> + <code>define-impl-op</code></p>
 <p>Defines a differentiable AbstractNode which its definition is given by a function.</p>
-<pre><code class="language-lisp">(define-op (name (self &amp;rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends-fw extends-bw) &amp;body body)
+<pre><code class="language-lisp">(define-op (name (self &amp;rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends) &amp;body body)
 </code></pre>
 <h3 id="effects_2">Effects</h3>
 <p>This macro defines:</p>
@@ -781,7 +781,7 @@ input-form = (save-place tensor)
 ─────────────────────────────────────────────────────────────────────────────────────
 :function | Defines a function to be executed immediately that does not create a node.
 ─────────────────────────────────────────────────────────────────────────────────────
-:node     | Defines a AbstractNode which needs to be compiler later
+:node     | Defines a AbstractNode which needs to be compiled later
 ─────────────────────────────────────────────────────────────────────────────────────
 </code></pre>
 <h3 id="effects_3">Effects</h3>

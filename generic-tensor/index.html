@@ -409,7 +409,8 @@
           (dtype *default-dtype*)
           (view nil)
           (order *default-order*)
-          (initial-element nil))
+          (initial-element nil)
+                  (device nil))
 </code></pre>
 <p>Created a new ExistTensor of a device of <code>(car *using-backend*)</code>.</p>
 <h3 id="inputs_1">Inputs</h3>
@@ -428,6 +429,9 @@
 </li>
 <li>
 <p><code>initial-element</code>[Anything] Set anything which you want to set as a initial element.</p>
+</li>
+<li>
+<p><code>device[symbol or null]</code> If set to symbol, the function returns with making a tensor of device.</p>
 </li>
 </ol>
 <h3 id="example">Example</h3>
@@ -457,8 +461,8 @@
 <h3 id="example_1">Example</h3>
 <pre><code class="language-lisp">(make-input `(a 10) :train-x)
 
-{CPUTENSOR[float] :shape (A 10) :named TRAIN-X 
-  &lt;&lt;Not-Embodied (A 10) Tensor&gt;&gt;
+{CPUTENSOR[float] :shape (A 10) :named :TRAIN-X 
+    &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
   :requires-grad NIL
   :backward NIL}
@@ -522,19 +526,22 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :named ChainTMP940 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1502 
   :vec-state [maybe-not-computed]
-  &lt;&lt;Not-Embodied (A 10) Tensor&gt;&gt;
+    &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
+  :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;}
 </code></pre>
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (with-no-grad (build out :inputs `(:X :Y)))
 </code></pre>
-<pre><code>&lt;Compiled-Composite
-    forward  : forward(model X Y) -&gt; CPUTENSOR{FLOAT}(A 10)
-    backward : nil
+<pre><code>&lt;Compiled-Composite(allocated-p=NIL)
+    forward     : forward(model X Y) -&gt; CPUTENSOR{FLOAT}(A 10)
+    backward    : nil
+    memory-pool : one tensor(s)
+                   L {4.0e-5+((A) x 4.0e-6)}MB
     inputs:
         X -&gt; (A 10)
         Y -&gt; (A 10)
