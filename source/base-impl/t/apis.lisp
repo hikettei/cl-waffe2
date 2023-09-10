@@ -192,6 +192,14 @@
   (is (proceed-continue-test 1)) ;; 
   (is (proceed-continue-test 2)))
 
+(test proceed-composed-test
+  (is (<
+       (abs
+	(-
+	 (tensor-vec (Proceed (->scal (!Sum (Proceed (cl-waffe2/nn::!Softmax (randn `(3 3))))))))
+	 3.0))
+       0.000001)))
+
 
 (test reshape-permute-test
   (is (equal `(5 1 5) (shape (proceed (!t (!reshape (ax+b `(5 5) 1 0) 5 5 1))))))

@@ -95,7 +95,6 @@
 	      (setq f (and f
 			   (let ((grad-n (count-if #'non-zerop (tensor-vec window)))
 				 (grad-item (find-if #'non-zerop (tensor-vec window))))
-			     ;; randnで奇跡的に衝突する確率=0で計算??
 			     (and
 			      (= grad-n 16)
 			      (= grad-item 0.020833334)))))))))
@@ -104,7 +103,11 @@
 
 (test 2d-pool-test
   (is (2d-pool-test nil))
-  (is (2d-pool-test t)))
+  (is (2d-pool-test t))
+
+  ;; Do they work even when cached?
+  (is (2d-pool-test t))
+  (is (2d-pool-test nil)))
 
 ;; Add: CNN/MLP Train tests
 

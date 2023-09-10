@@ -38,7 +38,6 @@
 	       :lparallel
 	       :bordeaux-threads
 	       :closer-mop
-	       :optima
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension)
   ;; TODO: Use components and split dependencies.
@@ -58,6 +57,7 @@
 	       (:file "base-impl/package")
 
 	       (:file "vm/package")
+	       (:file "vm/allocation")
 	       
 	       (:file "vm/generic-tensor/cache")
 	       (:file "vm/generic-tensor/utils")
@@ -67,7 +67,7 @@
 	       
 	       (:file "optimizers/package")
 	       
-	       (:file "vm/generic-tensor/acceptor")
+	       (:file "vm/generic-tensor/acceptor" :depends-on ("vm/allocation"))
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/lut")
 	       
@@ -95,13 +95,13 @@
 	       (:file "base-impl/ir")
 	       (:file "base-impl/reshapers")
 	       (:file "base-impl/unfold")
-
 	       
 	       (:file "vm/ir")
 	       (:file "vm/utils")
 	       (:file "vm/vm")
 	       (:file "vm/optimize-ir")
-	       (:file "vm/compile")	       
+	       (:file "vm/compile")
+	       
 
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/tensor")

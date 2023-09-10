@@ -4,7 +4,7 @@
 (defpackage :cl-waffe2/vm.nodes.facets-tmp (:use :cl))
 
 (defpackage :cl-waffe2/vm.nodes
-  (:use :cl :cl-ppcre :alexandria)
+  (:use :cl :cl-ppcre :alexandria :bordeaux-threads)
   (:import-from :cl-waffe2/vm.generic-tensor
 		#:AbstractTensor
 		#:*using-backend*
@@ -24,6 +24,7 @@
 		#:actual-shape
 		#:set-input
 		#:tensor-stride
+		#:detach-p
 		#:compile-option-t
 		#:movetensor-p
 		#:shaping-error

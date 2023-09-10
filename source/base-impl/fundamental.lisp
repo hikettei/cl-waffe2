@@ -213,7 +213,6 @@ This function is also used to adjust memory alignment of tensor."
 		     (res (!move dx (apply #'!view dout inp-sub))))		
 		(values nil (->contiguous (apply #'!view res out-sub))))))
 
-
 (defun !view (tensor &rest subscripts)
   "
 ## [function] !view
@@ -533,35 +532,39 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 
 ;; We can also add: Proceed-Auto
 
-(defnode (ProceedNode (myself &key (measure-time nil) (compile-mode :default))
+(defnode (ProceedNode (myself toplevel &key (measure-time nil) (compile-mode :default))
 	  :where (A[~] -> A[~])
 	  :slots ((measure-time   :initarg :measure-time :reader measure-time-p)
 		  (compiled-model :initform nil :accessor proceed-compiled-model)
 		  (compile-mode   :initarg :compile-mode :reader compile-mode)
 		  (result         :accessor proceed-result))
-	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor."))
+	  :documentation "ProceedNode is a special node which takes all the previous computation node before tensor.")
+
+  (let ((compiled-model (if measure-time
+			    (progn
+			      (format t "[proceed-time] build ->~%")
+			      (time (build toplevel :compile-mode compile-mode)))
+			    (build toplevel :compile-mode compile-mode))))
+    ;; Detaching the tensor
+    (setf (detach-p toplevel) T
+	  (proceed-compiled-model myself) compiled-model)))
+		
 
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (let ((compiled-model (or
-					      (proceed-compiled-model self)
-					      (build x :compile-mode (compile-mode self)))))
-			 ;; Compiled-Composite
-			 (setf (proceed-compiled-model self) compiled-model)
-			 
+		       (let ((compiled-model (proceed-compiled-model self)))			 
 			 (if (measure-time-p self)
 			     (progn
-			       ;; TODO
-			       ;; Display Both: First-Time-Call/Second-Time-Call
-			       (format t "Proceed-Time: With allocation time:~%")
+			       (format t "[proceed-time] With allocation time:~%")
 			       (time (forward compiled-model))
-			       (format t "Proceed-Time: Without allocation time:~%")
+			       (format t "[proceed-time] Without allocation time:~%")
 			       (setf (proceed-result self) (time (forward compiled-model))))
 			     (setf (proceed-result self) (forward compiled-model)))
+			 
 			 ;; Tell cl-waffe2 VM the returned value's type
 			 (setf (out-scalar-p self) (scalar-p (proceed-result self)))
-
+			 
 			 ;; The result is returned.
 			 `(progn
 			    ;; Tell top compiling funtion what composite to use for the compiled-function			    
@@ -574,7 +577,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 			     `(and
 			       ,(if (measure-time-p self)
 				    `(progn
-				       (format t "Proceed-Time: Backward Time")
+				       (format t "[proceed-time] Reverse Mode~%")
 				       (time (backward ,compiled-model)))
 				    `(backward ,compiled-model))
 			       ;; Delete Gradients.
@@ -602,14 +605,10 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 
 `compile-mode` is a keyword, type of `compile-mode-t`.
 "
-  (let* ((node (ProceedNode :measure-time measure-time :compile-mode compile-mode))
+  (let* ((node (ProceedNode tensor :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out  (forward node tensor)))
     
-    ;; Cut off previous backwards
-    (setf (tensor-backward tensor) nil)
-    (setf (cl-waffe2/vm.generic-tensor::detach-p tensor) t)
-
     ;; Out is still unallocated, so set the result.
     (if (scalar-p out)
 	(setf (tensor-vec out) (tensor-vec (proceed-result node)))
@@ -696,26 +695,28 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
 ```
 "
 
-  (multiple-value-bind (fw-iseq bw-iseq leaves)
+  (multiple-value-bind (fw-iseq bw-iseq leaves dout allocation)
       (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
-    (declare (ignore leaves))
-    (let ((result))
+    (declare (ignore leaves dout))
+    (let ((cl-waffe2/vm.generic-tensor::*runtime-mode-p* t))
+      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+	(cl-waffe2/vm::with-static-allocation (allocation)
+	  (let ((result))
+	    (setq result
+		  (cl-waffe2/vm:benchmark-accept-instructions fw-iseq
+							      :n-sample n-sample
+							      :ignore-first-call ignore-first-call
+							      :stream stream
+							      :top-k top-k))
 
-      (setq result
-	    (cl-waffe2/vm:benchmark-accept-instructions fw-iseq
-							:n-sample n-sample
-							:ignore-first-call ignore-first-call
-							:stream stream
-							:top-k top-k))
-
-      (when backward
-	(format stream "[Benchmarking backward] ... ~%")
-	(cl-waffe2/vm:benchmark-accept-instructions bw-iseq
-						    :n-sample n-sample
-						    :ignore-first-call ignore-first-call
-						    :stream stream
-						    :top-k top-k))
-      result)))
+	    (when backward
+	      (format stream "[Benchmarking backward] ... ~%")
+	      (cl-waffe2/vm:benchmark-accept-instructions bw-iseq
+							  :n-sample n-sample
+							  :ignore-first-call ignore-first-call
+							  :stream stream
+							  :top-k top-k))
+	    result))))))
 
 ;; ===============================================================
 ;; Broadcast APIs

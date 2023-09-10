@@ -6,11 +6,18 @@
   (:documentation "
 ## [class] AbstractOptimizer
 
-`AbstractOptimizer` is an Abstract class of all optimizing functions in cl-waffe2.
+AbstractTensors with `:requires-grad=t` can find their gradients with the `(backward (build toplevel))` function. AbstractOptimizer is a class which minimizes the value of `toplevel` subject to `(grad tensor)`. In cl-waffe2, we initialize one AbstractOptimizer for one AbstractTensor. Specifically, one is able to create a new AbstractOptimizer with the function `(name tensor &rest constructor-args)`, for example, `(adam (parameter (randn `(3 3))) :lr 1e-3)` to create a new Adam Optimizer, and can be tied to the tensor like: `(hook-optimizer! tensor abstract-optimizer)`. Users can define any optimizer algorithms with the `defoptimizer` macro. Optimizing tied tensors is performed by calling a `(step-optimize optimizer)` method. The parameter to be optimized can be accessed by a `read-parameter` method.
 
-The optimizing operation is performed by calling a `(step-optimize optimizer)` method. The parameter to be optimized can be accessed by a `read-parameter` method. The new optimizer function can be defined via `defoptimizer` macro.
+### Example: Hooks and calls the optimizer tied to the tensor.
 
-See also: `defoptimizer` `read-parameter` `step-optimize`"))
+```lisp
+(let ((a (parameter (randn `(3 3)))))
+    (hook-optimizer! a (Adam a))
+    (call-optimizer! a))
+```
+
+See also: `defoptimizer` `read-parameter` `step-optimize`.
+"))
 
 (defgeneric step-optimize (optimizer))
 
@@ -24,9 +31,7 @@ See also: `defoptimizer` `read-parameter` `step-optimize`"))
   "
 ## [macro] defoptimizer
 
-The macro `defoptimizer` defines a user-defined optimizer class which is a subclass of `AbstractOptimizer`
-
-The class is dispatched one per parameter to be optimized and the method `step-optimize` is called each time an optimizing is performed.
+The macro `defoptimizer` defines a user-defined optimizer class which is a subclass of `AbstractOptimizer`. And the class is dispatched one per parameter to be optimized and the method `step-optimize` is called each time an optimizing is performed.
 
 ### Input
 
@@ -45,7 +50,7 @@ The class is dispatched one per parameter to be optimized and the method `step-o
 		       (declare (ignore self))
 		       (A-=B param (!mul lr grad)))))
 
-(define-composite-function (SGD-Compute-Form) step-sgd)
+(defmodel-as (SGD-Compute-Form) :named step-sgd)
 
 (defmethod step-optimize ((optimizer SGD))
   (let* ((lr    (make-tensor (sgd-lr optimizer)))
@@ -97,4 +102,13 @@ The class is dispatched one per parameter to be optimized and the method `step-o
 					       collect (car slot)))))
 	   ,@constructor-body
 	   ,self)))))
+
+(defmethod print-object ((opt AbstractOptimizer) stream)
+  (format stream "<AbstractOptimizer: ~a(
+    minimize   : toplevel
+    subject to : <~a>~a
+)>"
+	  (class-name (class-of opt))
+	  (tensor-id (read-parameter opt))
+	  (cl-waffe2/vm.nodes::describe-tensor (read-parameter opt))))
 

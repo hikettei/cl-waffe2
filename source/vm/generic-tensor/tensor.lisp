@@ -38,19 +38,14 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; actual-shape  ... visible-shape but broadcasting is ignored.
 
 (defclass AbstractTensor ()
-  ((nodes :initarg :nodes :initform nil :reader tensor-nodes :type list) ;; maybe unused...
-
-   ;; MultiDimensional APIs
-   ;; Set T If stride/shape/view informations are copied at a certain time.
-   ;; This is necessary because (embody-actual-tensor <<Model Parameter Tensor>> (!t (randn `(3 3))))
-   ;; will destruct <<Model Parameter Tensor>>'s stride/shape/view informations.
-   (slot-info-copied :initform nil :type boolean :initarg :slot-info-copied :reader tensor-info-safe-p)
-   
-   (orig-shape :initarg :shape :initform nil :reader original-shape :type list)
+  ((orig-shape :initarg :shape :initform nil :reader original-shape :type list)
    (stride :initform nil :accessor tensor-stride :type list)
    (permute-order :initform nil :initarg :permute-order :accessor tensor-permute-order :type list)
    (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
+
+   (compiled-instruction-cache-fw :initform nil :accessor tensor-compiled-instruction-cache-fw)
+   (compiled-instruction-cache-bw :initform nil :accessor tensor-compiled-instruction-cache-bw)
 
    ;; Viewed?
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
@@ -66,30 +61,37 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 
    ;; Building Computation Nodes
    (backward  :initform nil :accessor tensor-backward)
+
+   ;; Storing the result of compiling
    (state     :initform nil :accessor tensor-state)
+
+   ;; Records previous variables
    (variables :initform nil :accessor tensor-variables)
 
-   (tensor-id :initform (gensym "TID") :accessor tensor-id)         ;; In-place extends TID (i.e.: indicates the pointer)
-   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid) ;; In-place never extends TID (i.e.: indicates the node/edge)
+
+   ;; tensor-id  ... indicates which pointer to use or copied?, plus, the index in the mempool.
+   ;; tensor-iid ... used for topological sorting
+
+   (lock-id-p :initform nil :accessor tensor-id-lock-p)
+   (tensor-id :initform (gensym "TID") :type symbol :accessor tensor-id)         
+   (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
+   
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
+   ;; Optimizing
    (optimizer :initform nil :accessor tensor-optimizer :type (or null cl-waffe2/optimizers:AbstractOptimizer))
 
    (grad :initform nil :reader grad :writer set-grad)
    (grad-count :initform 0 :type fixnum :accessor tensor-grad-count)
    
-   (gradient-adder    :accessor gradient-adder)
-   (gradient-resetter :accessor gradient-resetter)
-
    (save-for-backward-space       :initform nil :accessor save-for-backward-space)
-   (save-for-backward-cloner :initform nil :accessor save-for-backward-cloner)
    
    (requires-grad :initform nil :initarg :requires-grad :reader requires-grad :type boolean)
    (ancestor-param-p :initarg :requires-grad :initform nil :accessor ancestor-param-p :type boolean)
+   
    (order :initarg :order :initform :column :type (satisfies order-p) :accessor order)
+   
    (flexible-p :initform nil :accessor tensor-flexible-p :type (or boolean fixnum))
-   (tensor-n-ref :initform 0 :accessor tensor-n-ref :type fixnum) ;; For optimizing
-   (tensor-already-traced :initform nil :accessor tensor-traced-p :type boolean)
    
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
@@ -361,27 +363,26 @@ This function is setfable and inlined.
 "
   (declare (type AbstractTensor tensor))
 
-  ;; See also: comments on the top of memory-pool.lisp
-  (let ((result (cond
-		  ((and
-		    (not (scalar-p tensor))
-		    (stringp (tensor-name tensor)))
-		   ;; ChainTMP, made by (make-input shape nil)
-		   ;; using get-form-memory-pool is MUST because shapes are dynamically changing.
-		   (get-from-memory-pool tensor))
-		  (T
-		   ;; ExistTensor
-		   (if (vec tensor)
-		       (vec tensor)
-		       (get-from-memory-pool tensor))))))
-    ;; If returned is lazy-variable?
-    ;; Lazy-Variable... (make-tensor 'a)
-    (if (lazy-variable-p result)
-	(read-lazy-var result) ;; -> Fixnum/LazyVariable
-	result))) ;; Return as it is
+  ;; tensor-vec is called under the build execution:
+
+  (let ((out
+	  (cond
+	    ;; Adjustable Table is allowed to use:
+	    ((and *static-alloc-state* (cl-waffe2/vm::tensor-tmp-p tensor))
+	     (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor))
+	    (T (or (vec tensor) (get-from-global-memory-pool tensor))))))
+    (if (scalar-p tensor)
+	(if (lazy-variable-p out)
+	    (read-lazy-var out)
+	    out)
+	out)))
 
 (defun (setf tensor-vec) (new-value tensor)
-  (declare (type AbstractTensor tensor))
+  ;;  (declare (type AbstractTensor tensor))
+
+  ;;(when (and (vec tensor)
+;;	     (not (typep new-value (type-of (vec tensor)))))
+  ;;  (error "(setf tensor-vec) Can't set the ="))
   (write-vec new-value tensor))
 
 ;; Initializes generic uis of tensors.
@@ -457,11 +458,7 @@ This function is setfable and inlined.
 		     :dtype (getf initargs :dtype)
 		     :requires-grad nil
 		     :order (getf initargs :order))
-		    tensor)))
-    ;; Gradient Adder/Resetter won't be compiled until needed.
-    (when (slot-value tensor 'requires-grad)
-      (setf (gradient-adder tensor) nil
-	    (gradient-resetter tensor) nil))))
+		    tensor)))))
 
 (defun transfer-vec-information (from to)
   "Transfer information that makes a vec vec"
@@ -507,7 +504,9 @@ This function is setfable and inlined.
 		      (dtype *default-dtype*)
 		      (view nil)
 		      (order *default-order*) ;; TODO (retain-grads nil)
-		      (initial-element))
+		      (initial-element)
+		      (device nil)
+		      (create-from nil))
   "
 ## [function] make-tensor
 
@@ -518,7 +517,8 @@ This function is setfable and inlined.
 		  (dtype *default-dtype*)
 		  (view nil)
 		  (order *default-order*)
-		  (initial-element nil))
+		  (initial-element nil)
+                  (device nil))
 ```
 
 Created a new ExistTensor of a device of `(car *using-backend*)`.
@@ -534,23 +534,27 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 4. `order`[keyword] set keyword indicating the order of elments from `:column` or `:row`. in default set to `:column`.
 
 5. `initial-element`[Anything] Set anything which you want to set as a initial element.
+
+6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
 "
   (declare (type list view))
   (if (typep shape-or-scalar 'list)
-      (make-instance (car *using-backend*)
+      (make-instance (or device (car *using-backend*))
 		     :dtype dtype
 		     :order order
+		     :create-from create-from
 		     :requires-grad requires-grad
 		     :shape (copy-list shape-or-scalar)
 		     :projected-p nil
 		     :facet :exist
 		     :initial-element initial-element
 		     :view view)
-      (make-instance (find-scalar-tensor)
+      (make-instance (or device (find-scalar-tensor))
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
 		     :shape nil
 		     :dtype dtype
+		     :create-from create-from
 		     :requires-grad requires-grad
 		     :projected-p nil
 		     :facet :exist
@@ -698,11 +702,6 @@ If you added a new backend with having different ptr-type (can't be accessed by 
     (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
     (return-from embody-actual-tensor t))
 
-  
-  ;;(when (and (null (tensor-info-safe-p input-tensor)) ;; <<Model Parameter>>'s strides aren't copied!
-;;	     (eql  (tensor-facet input-tensor) :Exist))
-  ;;  (warn "embody-actual-tensor is gonna destruct ExistTensor: ~a" (shape input-tensor)))
-
   (let ((actual-tensor
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))		   
 		   (permuted-p input-tensor)
@@ -726,15 +725,21 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 
   (assert (vec actual-tensor)
 	  nil
-	  "Assertion Failed because the given actual-tensor doesn't have a existing vec.")
+	  "embody-tensor-vec: Assertion Failed because the given actual-tensor doesn't have an existing vec.")
+
+  (when (or (scalar-p input-tensor)
+	    (scalar-p actual-tensor))
+    (setf (tensor-vec input-tensor) (vec actual-tensor))
+    (return-from embody-tensor-vec t))
 
   (when (or (numberp (vec input-tensor))
 	    (numberp (vec actual-tensor)))
-    (setf (tensor-vec input-tensor) (tensor-vec actual-tensor))
+    (setf (tensor-vec input-tensor) (vec actual-tensor))
     (return-from embody-tensor-vec t))
 
   ;; Offsets?
   (let ((actual-tensor
+	  ;; V delete?
 	  (if (and (= (the fixnum (dims actual-tensor)) (the fixnum (dims input-tensor)))
 		   (permuted-p input-tensor))
 	      (apply #'permute* actual-tensor (tensor-permute-order input-tensor))
@@ -979,8 +984,9 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   (let ((f-exist-p (statecontainer-forward-result state))
 	(b-exist-p (statecontainer-backward-result state)))
     (cond
-      ((subtypep (class-of (tensor-backward tensor))
-		 'cl-waffe2/base-impl::ProceedNode)
+      ((or (subtypep (class-of (tensor-backward tensor))
+		     'cl-waffe2/base-impl::ProceedNode)
+	   (statecontainer-latest-p state))
        :computed)
       ((and (null f-exist-p)
 	    (null b-exist-p))
@@ -1017,7 +1023,9 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 			 (slot-value tensor 'view)
 			 (render-shape tensor)))))
 	  (if (eql (tensor-facet tensor) :input)
-	      (format nil ":named ~a" (tensor-name tensor))
+	      (if (keywordp (tensor-name tensor))
+		  (format nil ":named :~a" (tensor-name tensor))
+		  (format nil ":id ~a"     (tensor-id tensor)))
 	      "")
 	  (let ((state (tensor-state tensor)))
 	    (if state
@@ -1026,10 +1034,13 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 		""))
 	  (if (and (eql (tensor-facet tensor) :input)
 		   (null (vec tensor)))
-	      (format nil "<<Not-Embodied ~a Tensor>>" (shape tensor))
+	      (format nil "  <<Not allocated: size=~a>>" (shape tensor))
 	      ;; TODO: View -> View for printing 3d, 4d... tensor.
 	      (render-tensor tensor :indent 2))
-	  (tensor-facet tensor)
+	  (if (and (eql (tensor-facet tensor) :input)
+		   (not (keywordp (tensor-name tensor))))
+	      (format nil "input~%  :belongs-to :memory-pool")
+	      (tensor-facet tensor))
 	  (slot-value tensor 'requires-grad)
 	  (tensor-backward tensor)))
 
@@ -1041,6 +1052,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   (if (save-for-backward-space tensor)
       nil
       (let ((tensor-clone (make-clone tensor nil)))
+	(setf (tensor-id-lock-p tensor-clone) t)
 	(setf (save-for-backward-space tensor) tensor-clone)
 	tensor)))
 
@@ -1138,3 +1150,29 @@ Returns shape but <1 x N> parts are replaced with -1.
 	  collect 0
 	else
 	  collect s))
+
+(defun tensor-memory-size (tensor)
+  (declare (type AbstractTensor tensor))
+  (flet ((->size (dtype)
+	   (cffi:foreign-type-size dtype)))
+    (if (dtype->lisp-type (dtype tensor))
+	(if (scalar-p tensor)
+	    (->size (dtype tensor))
+	    (if (some #'symbolp (original-shape tensor))
+		(let ((total-size)
+		      (sym))
+		  (dolist (s (original-shape tensor))
+		    (if (numberp s)
+			(push s total-size)
+			(push s sym)))
+		  (setq total-size (apply #'* total-size))
+		  (setq sym (reverse sym))
+		  (values (->size (dtype tensor))
+			  total-size
+			  sym))
+		(* (->size (dtype tensor))
+		   (apply #'* (original-shape tensor)))))
+	(progn
+	  (warn "tensor-memory-size: Unknown dtype ~a is accumlated as 0" (dtype tensor))
+	  0))))
+

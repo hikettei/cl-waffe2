@@ -10,7 +10,7 @@
 					    initializer-lambda
 					    document
 					    &key (keep-order? nil))
-  `(progn
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
      (export ',function-name)
      (define-tensor-initializer ,function-name (,@args) ,initializer-lambda ,document :keep-order? ,keep-order?)))
   

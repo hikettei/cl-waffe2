@@ -179,7 +179,7 @@
 			     (scal  (gensym "SCAL")))
 			 `(with-tensor-ptrs ((,x-ptr ,x))
 			    (locally (declare (optimize (speed 1)))
-			      (let ((,scal (tensor-vec ,scalar)))
+			      (let ((,scal (coerce (tensor-vec ,scalar) (dtype->lisp-type ,(dtype x)))))
 				,(expand-arithmetic-scalar-form x x-ptr scal :fname "add")
 				,x))))))
 
@@ -190,7 +190,7 @@
 			     (scal  (gensym "SCAL")))
 			 `(with-tensor-ptrs ((,x-ptr ,x))
 			    (locally (declare (optimize (speed 1)))
-			      (let ((,scal (tensor-vec ,scalar)))
+			      (let ((,scal (coerce (tensor-vec ,scalar) (dtype->lisp-type ,(dtype x)))))
 				,(expand-arithmetic-scalar-form x x-ptr scal :fname "sub")
 				,x))))))
 
@@ -201,7 +201,7 @@
 			     (scal  (gensym "SCAL")))
 			 `(with-tensor-ptrs ((,x-ptr ,x))
 			    (locally (declare (optimize (speed 1)))
-			      (let ((,scal (tensor-vec ,scalar)))
+			      (let ((,scal (coerce (tensor-vec ,scalar) (dtype->lisp-type ,(dtype x)))))
 				,(expand-arithmetic-scalar-form x x-ptr scal :fname "mul")
 				,x))))))
 
@@ -212,7 +212,7 @@
 			     (scal  (gensym "SCAL")))
 			 `(with-tensor-ptrs ((,x-ptr ,x))
 			    (locally (declare (optimize (speed 1)))
-			      (let ((,scal (tensor-vec ,scalar)))
+			      (let ((,scal (coerce (tensor-vec ,scalar) (dtype->lisp-type ,(dtype x)))))
 				,(expand-arithmetic-scalar-form x x-ptr scal :fname "div")
 				,x))))))
 

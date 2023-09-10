@@ -107,7 +107,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 			  dout
 			  x
 			  labels
-			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x)))))))
+			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x) :order (order x)))))))
 
 
 (defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction :mean))

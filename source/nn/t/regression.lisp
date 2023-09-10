@@ -236,7 +236,7 @@
 ;; Only using pure features in cl-waffe2
 ;; OK
 (defun linearlayer-backward-test ()
-  (with-memory-pool
+  (progn;with-memory-pool
     (let* ((model (LinearLayer-Sequence 100 50 10))
 	   (model (build (call model (uniform-random `(10 100) -0.01 0.01))
 			 :compile-mode :default)))
@@ -275,6 +275,8 @@
       (every #'not-zero-p params))))
 
 (test linearlayer-backward-with-criterlion
+  (is (linearlayer-backward-test-with-criterion))
+  ;; Is the cached function, works well?
   (is (linearlayer-backward-test-with-criterion)))
 	     
 
@@ -389,7 +391,7 @@
 
     (with-model-parameters (param model)
       (loop for p in param
-	    do (print (grad p))))
+	    do (grad p)))
 
     ;; Segfault here.
     (forward model)
@@ -397,13 +399,68 @@
 
     (with-model-parameters (param model)
       (loop for p in param
-	    do (print (grad p))))
-    
-    ))
+	    do  (grad p)))
+    T))
 
 (test multiple-time-call-of-compiled-model
   (is (fw-and-bw-test))
-  ;(is (fw-and-bw-test-criterion))
+  (is (fw-and-bw-test-criterion))
   )
 
+
+;; Gradients are decayed well?
+
+
+(defsequence Simple-MLP (in-features hidden-dim)
+	     (LinearLayer in-features hidden-dim t)
+	     (asnode #'!sigmoid)
+	     (LinearLayer hidden-dim 1 t))
+
+;; Naming:... set-input VS set-inputs
+;; allow: (forward self)
+;; make trainer forwardable
+
+(deftrainer (MLPTrainer (self in-features hidden-dim &key (lr 1e-1))
+	     :model (Simple-MLP in-features hidden-dim)
+	     :optimizer (cl-waffe2/optimizers:SGD :lr lr)
+	     :compile-mode :fastest
+	     :build ((self)
+		     (MSE
+		      (make-input `(batch-size 1) :TrainY)
+		      (call (model self) (make-input `(batch-size ,in-features) :TrainX))))
+	     
+	     :set-inputs ((self x y)
+			  (set-input (compiled-model self) :TrainX x)
+			  (set-input (compiled-model self) :TrainY y))
+	     :minimize! ((self)
+			 (zero-grads! (compiled-model self))
+			 (let ((loss (forward (compiled-model self))))
+			   (backward  (compiled-model self))
+			   (optimize! (compiled-model self))
+			   (vref loss 0)))			 
+	     :predict ((self x)
+		       (call (model self) x))))
+
+
+(defun grad-decay-test (&key
+			  (batch-size 100)
+			  (iter-num 3000))
+  (let* ((X (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
+ 	 (Y (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
+	 (trainer (MLPTrainer 100 10 :lr 1e-3))
+	 (first)
+	 (end))
+    
+    (set-inputs trainer X Y)
+    (loop for nth-epoch fixnum upfrom 0 below iter-num
+	  do (let ((out (minimize! trainer)))
+	       (if (null first) (setq first out))
+	       (setq end out)))
+    (> first end)))
+
+(test grad-decay-test
+  (is (grad-decay-test)))
+
+(test grad-decay-cached-test
+  (is (grad-decay-test)))
 
