@@ -131,10 +131,24 @@ reject-when=nil, or (apply reject-when inputs)=t"
 	 (*ranked-loop-result-cacher*))
      ,@body))
 
-(defun vm-kernel-lambda (traceable? name args self &rest body)
+(defun replace-tensor->id (body args)
+  "Replaces the body with its tensor-id if the tensor is included in the args"
+  (map-tree
+   #'(lambda (obj)
+      (typecase obj
+	 (AbstractTensor
+	  (if (find (tensor-id obj) args :key #'tensor-id :test #'eql)
+	      (tensor-id obj)
+	      (progn
+		obj)))
+	 (T
+	  obj)))
+   body))
+
+(defun vm-kernel-lambda (traceable? name args self body)
   (make-compiled-kernel
    :name name
-   :body body
+   :body (replace-tensor->id body args)
    :args args
    :self self
    :call-with-view *ranked-loop-result-cacher*
@@ -507,8 +521,9 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 		      (with-tracing-call-with-view
 			(vm-kernel-lambda
 			 ,cache-when-compiled ',fw-name-vm ,inputs ,forward-self-name
-			 `(named-lambda ,',fw-name-vm ,(map 'list #'tensor-id ,inputs)
-			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs)))
+			 `(lambda ,(map 'list #'tensor-id ,inputs)
+			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs))
+				     (type AbstractTensor ,@(map 'list #'tensor-id ,inputs)))
 			    ,,@(car forward-body)))))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
 

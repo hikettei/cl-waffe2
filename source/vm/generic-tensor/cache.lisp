@@ -8,7 +8,6 @@
 ;; cache.lisp is used to reuse the result of **call-with-view** in compling time, which consists larger part of generated code, and most reusable part.
 
 ;; =======================================================================
-;; Goal: `3 Layers MLP's compiling time of forward and backward` << `0.5sec`.
 
 ;; Compiling time with cache.lisp is approximated as:
 ;; ```
@@ -66,12 +65,8 @@
   (setf *compiled-jit-function-cache* (make-hash-table))
   t)
 
-;; Problem: Compiling !softmax called with other nodes is slightly slow.
-
-(defvar *kernel-storeroom* nil "An storeroom to record all kernels used in compiling time.") ;; Corresponds to: (labels ((SinNode-... )) ... )
-
-;; An unit of compiled funciton.
 (defstruct Compiled-Kernel
+  "All forward method must return this structure. Compiled-Kernel is an blueprint (or stores compiled functions) to generate cl-waffe2 IR"
   (op   nil :type (or null function))
   (name nil :type symbol)            ;; SinNode-CPUTENSOR
   (body nil :type list)              ;; (named-lambda ... () ...)
@@ -82,161 +77,19 @@
   (view-route nil :type list)
   (self nil)) ;; 2D 3D Flatten ...
 
-;; the maximum length of symbol-name used in CL shoule be 512? i dont remember ...
-;; Memo:
-(defun make-kernel-name (tensor reductable-p-map)
-  "The naming rule of kernel functions is following:
-
-[NodeName] - [Backend-Name] - [TensorViewName1] - [TensorViewName2] ...
-
-where TensorViewNameN is:
-
-[4D -> 3D -> 2D -> ... -> end-name]
-
-end-name = [Flatten] or 1D
-
-For Example:
-
-(!sin (randn `(100 100))) -> `SinNode-LispTensor-Flatten`
-
-(!sin (!view (randn `(100 100) `(1 -1) t)))
--> `SinNode-LispTensor-2D->Flatten`
-
-TensorViewNameN depicts the path call-with-view traced.
-"
-  (flet ((template (&optional dim)
-	   (if dim
-	       (symb ;; {->(DIM)-BackendName[Dype]}
-		'{
-		(intern (format nil "->(~a)-" dim))
-		(class-name (class-of tensor))
-		'[
-		(intern (symbol-name (dtype tensor)))
-		']
-		'})
-	       (symb ;; {BackendName[Dtype]}
-		'{
-		(class-name (class-of tensor))
-		'[
-		(intern (symbol-name (dtype tensor)))
-		']
-		'}))))
-
-    (when (scalar-p tensor)
-      (return-from make-kernel-name (template)))
-
-    (let ((name-list))
-      (loop named trace-loop
-	    for dim downfrom (1- (length (shape tensor))) to 0
-	    if (nth dim reductable-p-map)
-	      do (push (template 'flatten) name-list)
-		 (return-from trace-loop)
-	    else
-	      do (push (template dim) name-list))
-      ;; call-with-view traces following
-      ;; n-1 n-2 ... 2 1 0th dim.
-      ;; Caching Based on Tensor Strides (Because it is inlined)
-      (apply #'symb (reverse name-list) (list (intern (format nil "~a~a" (actual-shape tensor) (tensor-permute-order tensor))))))))
-
-(defun kernel-name (compiled-kernel)
-  (symb
-   (compiled-kernel-name compiled-kernel)
-   (if (movetensor-p (compiled-kernel-self compiled-kernel))
-       (cl-waffe2/base-impl:movetensor-ignore-me (compiled-kernel-self compiled-kernel))
-       '-)
-   (apply
-    #'symb
-    (map 'list #'(lambda (x) (make-kernel-name x (compiled-kernel-view-route compiled-kernel))) (compiled-kernel-args compiled-kernel)))))
-
-(defun cache-kernel-form (compiled-function)
-  (let ((fbody (cdar (compiled-kernel-body compiled-function))))
-    `(,(kernel-name compiled-function)
-      ,@(tensor->id (cdr fbody) (compiled-kernel-args compiled-function)))))
-
-(defparameter *print-compiled-function* nil)
-
-(defun make-funcallable-kernel-form (compiled-function compile-option)
-  (declare (type Compiled-Kernel compiled-function))
-  (let ((fbody (cdar (compiled-kernel-body compiled-function))))
-    (let ((out (tensor->id (cdr fbody) (compiled-kernel-args compiled-function))))
-      (let ((args (car out))
-	    (decl (second out))
-	    (body (cddr out)))
-	(let ((out `(lambda ,args ,decl (declare ,compile-option) ,@body)))
-	  (if *print-compiled-function*
-	      (print out)
-	      out))))))
-
 (defun make-funcallable-kernel (compiled-function compile-option)
-  (declare (type Compiled-Kernel compiled-function))
-  (or (compiled-kernel-op compiled-function) ;; Already provides lambda function?
-      (compile nil (make-funcallable-kernel-form compiled-function compile-option))))
+  (declare (type Compiled-Kernel compiled-function)
+	   (ignore compile-option))
+  ;; If the Compiled-kernel already provides any op as a lambda function, -> use this
+  ;; Otherwise -> compile and cache
+  (or (compiled-kernel-op compiled-function)
+      (compile
+       nil
+       ;; [TODO]
+       ;; Excepted body: (lambda args body)
+       ;;                            ^ Insert Compile-Option
+       (compiled-kernel-body compiled-function))))
 
-(defun place-cached-kernels (&rest body)
-  "
-Reading *kernel-storeroom*, the function expands the form below.
-(progn
-;; [LUT PLACE]
-(defun SinNode-CPUTensor-3D ()
-    ...)
-
-(defun SinNode-CPUTensor-2D ()
-    ...)
-
-...
-
-;; Forward/Backward Process continues...
-)"
-  ;; Expand *kernel-storeroom*
-
-  (let ((caches (make-hash-table)))
-    (dolist (fn *kernel-storeroom*)
-      (setf (gethash (kernel-name fn) caches) (cache-kernel-form fn)))
-    `(labels (,@(loop for body being the hash-values in caches
-		      collect body))
-       ;; TODO: Prune this:
-       ,@(loop for name being the hash-keys in caches
-	       collect `#',name)
-       ,@body)))
-
-(defun tensor->id (body args)
-  (map-tree
-   #'(lambda (obj)
-      (typecase obj
-	 (AbstractTensor
-	  (if (find (tensor-id obj) args :key #'tensor-id)
-	      (tensor-id obj)
-	      obj))
-	 (T
-	  obj)))
-   body))
-
-(defun tensor->iid (body args)
-  (map-tree
-   #'(lambda (obj)
-       (typecase obj
-	 (AbstractTensor
-	  (if (find (tensor-id obj) args :key #'tensor-iid)
-	      (tensor-iid obj)
-	      obj))
-	 (T
-	  obj)))
-   body))
-
-(defmacro funcall-kernel (kernel-function &rest inputs)
-  "A replacement of (funcall fw-compiled)"
-  `(funcall ,@(tensor->id (compiled-kernel-body kernel-function) (compiled-kernel-args kernel-function)) ,@inputs))
-
-(defmacro call-cache-fn (kernel-function &rest inputs)
-  `(,(kernel-name kernel-function) ,@inputs))
-
-(defmacro call-kernel (kernel-function &rest inputs)
-  (if (compiled-kernel-cache-p kernel-function)
-      `(call-cache-fn ,kernel-function ,@inputs)
-      `(funcall-kernel ,kernel-function ,@inputs)))
-
-
-;; For toplevel
 (defun funcall-cached-function (kernel-function compile-option &rest args)
   (declare (type Compiled-Kernel kernel-function))
 

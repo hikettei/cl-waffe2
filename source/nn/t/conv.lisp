@@ -95,7 +95,6 @@
 	      (setq f (and f
 			   (let ((grad-n (count-if #'non-zerop (tensor-vec window)))
 				 (grad-item (find-if #'non-zerop (tensor-vec window))))
-			     ;; randnで奇跡的に衝突する確率=0で計算??
 			     (and
 			      (= grad-n 16)
 			      (= grad-item 0.020833334)))))))))
