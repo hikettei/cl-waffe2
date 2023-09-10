@@ -698,23 +698,25 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
   (multiple-value-bind (fw-iseq bw-iseq leaves dout allocation)
       (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
     (declare (ignore leaves dout))
-    (cl-waffe2/vm::with-static-allocation (allocation)
-      (let ((result))
-	(setq result
-	      (cl-waffe2/vm:benchmark-accept-instructions fw-iseq
+    (let ((cl-waffe2/vm.generic-tensor::*runtime-mode-p* t))
+      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
+	(cl-waffe2/vm::with-static-allocation (allocation)
+	  (let ((result))
+	    (setq result
+		  (cl-waffe2/vm:benchmark-accept-instructions fw-iseq
+							      :n-sample n-sample
+							      :ignore-first-call ignore-first-call
+							      :stream stream
+							      :top-k top-k))
+
+	    (when backward
+	      (format stream "[Benchmarking backward] ... ~%")
+	      (cl-waffe2/vm:benchmark-accept-instructions bw-iseq
 							  :n-sample n-sample
 							  :ignore-first-call ignore-first-call
 							  :stream stream
 							  :top-k top-k))
-
-	(when backward
-	  (format stream "[Benchmarking backward] ... ~%")
-	  (cl-waffe2/vm:benchmark-accept-instructions bw-iseq
-						      :n-sample n-sample
-						      :ignore-first-call ignore-first-call
-						      :stream stream
-						      :top-k top-k))
-	result))))
+	    result))))))
 
 ;; ===============================================================
 ;; Broadcast APIs

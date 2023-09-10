@@ -39,6 +39,7 @@
 	;; Make clone and allocate
 	;; [FIXME] Is this tensor creation gc-reachable??
 	(let ((place (cl-waffe2/vm.generic-tensor::make-clone-exist tensor)))
+	  (setf (cl-waffe2/vm.generic-tensor::tensor-id-lock-p place) T)
 	  ;; Do allocation of place
 	  ;; Set it to the slot
 	  (setf (slot-value self name) place)))
@@ -46,7 +47,6 @@
       (cl-waffe2/vm::%vm-move (slot-value self name) tensor)
 
       ;; FixME
-
       (when (and (scalar-p (slot-value self name))
 		 (scalar-p tensor))
 	(setf (tensor-vec (slot-value self name)) (cl-waffe2/vm.generic-tensor::vec tensor)))))

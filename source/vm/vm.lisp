@@ -67,9 +67,11 @@ If set to T, the result is displayed on the terminal with the arguments used eac
   ;; [TODO] Runtime Shape-Error Detection
   (loop for tensor of-type AbstractTensor in tensors
 	for result in results
-	if  result do
+	if  (and tensor result) do
 	  (if (tensor-tmp-p tensor)
 	      (progn
+		;; tensor ... out-to
+		;; results ... result
 		;; Tensors registerd in the memory-pool,
 		;; doesn't need the support of StateContainer anymore
 		;; Deleting Unused StateContainer will benefit:
@@ -78,7 +80,6 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 		;; ScalarTensors never use Memory-Pool
 		;; Update Memory-Pool
 		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
-		;;(tensor-vec result)
 		;; Tensor is already broadcasted/permuted...
 		;; So sharing vec is enough.
 		(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
@@ -98,13 +99,12 @@ If set to T, the result is displayed on the terminal with the arguments used eac
     (let* ((inst (format nil "~a" instruction))
 	   (cnt  (length inst)))
       (format t "= [*logging-vm-execution*] ~a
-Instruction: ~a
-args:
-~a"
+Instruction: ~a"
 	      (with-output-to-string (out)
 		(dotimes (i cnt) (princ "=" out)))
 	      inst
-	      (map 'list #'maybe-read-result (wfop-args instruction)))))
+	      ;;(map 'list #'maybe-read-result (wfop-args instruction))
+	      )))
 
   
   (let ((outs (multiple-value-list
@@ -166,8 +166,8 @@ Butgot:
     (when *logging-vm-execution*
       (format t "
 outs:
-~a~%"
-	      outs))
+~%"
+	      ))
     outs))
 
 (declaim (ftype (function (list) t) accept-instructions))

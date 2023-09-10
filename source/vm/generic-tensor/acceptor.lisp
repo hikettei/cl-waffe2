@@ -398,9 +398,10 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 	  (backward-f   (when construct-backward?
 			  #'(lambda (model)
 			      (with-adjustable-symbol-scope
-				(set-adjustable-symbols model)
-				(cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-				  (cl-waffe2/vm:accept-instructions bw-iseq))))))
+				(let ((alloc-inst (set-adjustable-symbols model)))				  
+				  (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+				    (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
+				    (cl-waffe2/vm:accept-instructions bw-iseq)))))))
 	  (table        (construct-variables-table variables)))
 
 

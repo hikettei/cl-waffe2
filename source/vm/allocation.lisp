@@ -39,7 +39,8 @@
 	   t)))
 
 (defstruct (VMAllocation
-	    (:conc-name vmalloc-))
+	    (:conc-name vmalloc-)
+	    (:constructor make-vmallocation (&key (id2pool nil))))
   "
 ## [struct] VMAllocation
 
@@ -47,6 +48,7 @@ Records the statue and result of localized allocation state by cl-waffe2 VM.
 "
   (allocated-p nil :type boolean)
   (id2pool     (make-hash-table) :type hash-table)
+  ;;(first-table (alexandria:copy-hash-table id2pool) :type hash-table)
   (reduce-rate 0.0 :type single-float))
 
 (defmethod print-object ((model VMAllocation) stream)
@@ -93,7 +95,7 @@ If the re-allocation is performed, frees the old one.
 		   (when (not (scalar-p tensor))
 		     ;; Update
 		     (funcall (the function (tensor-finalizer tensor)))
-		     (setf (tensor-vec tensor) nil)
+		     ;;(setf (tensor-vec tensor) nil)
 		     ;; Prev-allocation -> After-allocation
 		     (setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 			   (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))
@@ -162,9 +164,10 @@ If the re-allocation is performed, frees the old one.
   (when (null (gethash (tensor-id tensor) (vmalloc-id2pool allocation)))
     (if (cl-waffe2/vm.generic-tensor::vec tensor)
 	(return-from storage-vec-from-memory-pool (cl-waffe2/vm.generic-tensor::vec tensor))
+	
 	(error "tensor-vec: Attempted to read the storage vec of [~a, ~a, ~a] from memory-pool but failed because the tensor wasn't tracked when compiling.
 Allocation State:
-~a" (tensor-id tensor) (class-of tensor) (shape tensor) allocation)))
+	~a" (tensor-id tensor) (class-of tensor) (shape tensor) allocation)))
   
   (let ((result (gethash (tensor-id tensor) (vmalloc-id2pool allocation))))
     (when (null (cl-waffe2/vm.generic-tensor::vec result))
@@ -204,6 +207,9 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
   (assure-vmalloc)
   (the AbstractTensor (or (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*)) tensor)))
 
+(defun registered-p (tensor)
+  (assure-vmalloc)
+  (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*)))
 
 ;; ~~ [Implementation] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; 1. Combining   AbstractNode, create computation nodes with dispatching multiple devices.
@@ -273,7 +279,6 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 			       append (reverse (wfop-block-iseq inst)))))
 
     (when iseq-bw
-      ;; Set all MID
       (loop for inst in iseq-bw-flat do
 	(mapc #'(lambda (tensor)
 		  (setf (gethash (tensor-id tensor) bw-leaves) tensor))
@@ -286,16 +291,15 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     ;; Optimizes the locality of memory
     ;; [TODO] Share memory-pools between forward and backward
     
-    (%in-place-vm-ops! iseq)    
-    (simulate-memory-pool! iseq)
-
+    (%in-place-vm-ops! iseq)
+    ;;(simulate-memory-pool! iseq)
     (%in-place-vm-ops! iseq-bw-flat)
 
     ;; Iseq-bw-flat is well optimized by simulate-memory-pool! iseq
     ;; So there's no need to call it again (only to result the wrong result)
     ;; %in-place-vm-ops! is working enough.
     
-    ;;(simulate-memory-pool! iseq-bw-flat)
+    (simulate-memory-pool! iseq-bw-flat)
     
     
     ;; iseq ... flattened list of iseq
@@ -306,17 +310,14 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 
     ;; Tensor-ids are locked (regarded as ExistTensor) when finished the compiling.
     
-    (loop for inst in (reverse `(,@iseq ,@iseq-bw-flat)) do
-      (when (tensor-tmp-p (wfop-self inst))
-	(setf (tensor-id-lock-p (wfop-self inst)) T)
-	(setf (gethash (tensor-id (wfop-self inst)) id2pool-table) (wfop-self inst)))
-      
+    (loop for inst in (reverse `(,@iseq ,@iseq-bw-flat)) do      
       (mapc
        #'(lambda (arg)
 	   (when (tensor-tmp-p arg)
 	     (setf (tensor-id-lock-p arg) T)
 	     (setf (gethash (tensor-id arg) id2pool-table) arg)))
-       (wfop-args inst))
+       `(,@(wfop-out-to inst)
+	 ,@(wfop-args inst)))
       
       (mapc
        #'(lambda (tensor)
@@ -391,8 +392,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	     (set-as-free (tensor)
 	       (when (and (tensor-tmp-p tensor T)
 			  ;; The tensor is from memory-pool?
-			  (find (the symbol (tensor-id tensor)) mempool-using-tensors)
-			  )
+			  (find (the symbol (tensor-id tensor)) mempool-using-tensors))
 		 (setq mempool-using-tensors (delete (tensor-id tensor) mempool-using-tensors :test #'eql))
 		 (if (some #'symbolp (original-shape tensor))
 		     (push tensor pools-adj)

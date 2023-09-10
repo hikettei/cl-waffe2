@@ -101,13 +101,18 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 				if (and need-backward
 					(cl-waffe2/vm.generic-tensor:ancestor-param-p arg))
 				  collect (progn
-					    (setf (slot-value tensor 'requires-grad) t
+					    (setf (slot-value tensor 'requires-grad) t						  
+						  (cl-waffe2/vm.generic-tensor::tensor-id-lock-p tensor) T
 						  (slot-value tensor 'cl-waffe2/vm.generic-tensor::grad)
 						  (make-input (shape tensor) nil
 							      :create-from tensor
 							      :scalar-p (scalar-p tensor)
 							      :dtype    (dtype tensor)
 							      :order    (order tensor)))
+					    ;; Never moved by compiler
+					    (setf (cl-waffe2/vm.generic-tensor::tensor-id-lock-p
+						   (cl-waffe2/vm.generic-tensor::grad tensor))
+						  T)
 					    tensor)
 				else
 				  collect tensor))
@@ -145,7 +150,7 @@ excepted: AbstractTensor"
 			  (map 'list #'(lambda (tensor)
 					 (list (dtype tensor)
 					       (class-of tensor)
-					       ;; [FIXME] Reusing compiled composite could be the main reason for SegFault!!
+					       ;; [FIXME] Reusing gcompiled composite could be the main reason for SegFault!!
 					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
 					       ;; Even when the node is cached
 					       ;; It should be dispatched by ranks, but helplessly uses shape
