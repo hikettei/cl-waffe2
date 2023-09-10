@@ -362,15 +362,17 @@ This function is setfable and inlined.
 
   ;; tensor-vec is called under the build execution:
 
-  (cond
-    ;; Adjustable Table is allowed to use:
-    ((and *static-alloc-state* (cl-waffe2/vm::tensor-tmp-p tensor))
-     (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor))
-    (T (or (vec tensor)
-	   (let ((result (get-from-global-memory-pool tensor)))
-	     (if (lazy-variable-p result)
-		 (read-lazy-var result)
-		 result))))))
+  (let ((out
+	  (cond
+	    ;; Adjustable Table is allowed to use:
+	    ((and *static-alloc-state* (cl-waffe2/vm::tensor-tmp-p tensor))
+	     (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor))
+	    (T (or (vec tensor) (get-from-global-memory-pool tensor))))))
+    (if (scalar-p tensor)
+	(if (lazy-variable-p out)
+	    (read-lazy-var out)
+	    out)
+	out)))
 
 (defun (setf tensor-vec) (new-value tensor)
   (declare (type AbstractTensor tensor))
