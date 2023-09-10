@@ -144,7 +144,6 @@ excepted: AbstractTensor"
       (let ((compiled-model (cl-waffe2/vm.generic-tensor::build toplevel
 								:inputs (map 'list #'tensor-name trace-tensors)
 								:construct-backward? need-backward
-								:compile-mode :fastest
 								:fuse-ops t
 								:defmodel-as-from named
 								:dout-add1 nil))) ;; <- Embodied by AbstractNode

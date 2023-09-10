@@ -28,6 +28,7 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; (Proceed (!Sum (Proceed (!Softmax (randn `(3 3))))))
 ;; ScalarTensorとMemory_pool, defmodel-asを修正 -> It should work
 
 ;; deftrainerをはいし
@@ -72,20 +73,12 @@
 ;; [TODO] DtypeとかDeviceが違うTensorは同じにしたらダメ
 
 
-;; [TODO] 抜ける時にGlobalのMemory-Poolに移動しないと
 ;; with-static-allocationの外でProceedで繋げることができない。
 ;; defparameterでglobalなallocationを宣言しておく？
 ;; vecに格納しておく
 ;; (grad tensor) <- 読み込める？
 
-;; [TODO] AdjustableSymbolの管理 ... VMAllocationに任せる？
-;; Adjustable-Shape VMAllocationがないとできない <-
-;; Locality 
-;; Eliminate-Undetermined-XXX <- osoi
-;; [BugFix] (!relu (!softmax a)))) backward
-;; コンパイル時と実行時のTensorIDは一致していないかも・・・
-;; allocationだけ新しくすればToplevelでAbstractNodeのコンパイルできる
-;; -> (defun copy-allocation, delete-allocation
+
 
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"

@@ -1,6 +1,10 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;;
+;; ~~ CALL_WITH_VIEW => FUNCTION ~~
+;;
+
 ;; cache.lisp is used to reuse the result of **call-with-view** in compling time, which consists larger part of generated code, and most reusable part.
 
 ;; =======================================================================

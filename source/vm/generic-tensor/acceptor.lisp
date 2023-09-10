@@ -423,6 +423,7 @@ Or, your network may be disconnected at a certain position."
 
 (defmethod copy-compiled-model ((model Compiled-Composite))
   ;; [TODO] NodeVariablesのコピーは取るべき？ (-> Perhaps No, Gradientsは固定？)
+  ;; Make Variables Tableもう一度する？
   ;; copy-allocate ... with-static-allocation下にいないけどOK? -> OK
   (make-instance 'Compiled-Composite
 		 :allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model))
