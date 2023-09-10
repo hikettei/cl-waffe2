@@ -145,9 +145,11 @@ excepted: AbstractTensor"
 			  (map 'list #'(lambda (tensor)
 					 (list (dtype tensor)
 					       (class-of tensor)
-					       ;;[FIXME] Reusing compiled composite could be the main reason for SegFault!!
-					       (random 1.0)
-					       (length (shape tensor))
+					       ;; [FIXME] Reusing compiled composite could be the main reason for SegFault!!
+					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
+					       ;; Even when the node is cached
+					       ;; It should be dispatched by ranks, but helplessly uses shape
+					       (shape tensor)
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
 			       (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (read-from-cache ,cache-key))))
