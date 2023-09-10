@@ -328,6 +328,11 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     (simulate-memory-pool! iseq)
 
     (%in-place-vm-ops! iseq-bw-flat)
+
+    ;; Iseq-bw-flat is well optimized by simulate-memory-pool! iseq
+    ;; So there's no need to call it again (only to result the wrong result)
+    ;; %in-place-vm-ops! is working enough.
+    
     ;;(simulate-memory-pool! iseq-bw-flat)
     
     
