@@ -275,6 +275,8 @@
       (every #'not-zero-p params))))
 
 (test linearlayer-backward-with-criterlion
+  (is (linearlayer-backward-test-with-criterion))
+  ;; Is the cached function, works well?
   (is (linearlayer-backward-test-with-criterion)))
 	     
 
@@ -389,7 +391,7 @@
 
     (with-model-parameters (param model)
       (loop for p in param
-	    do (print (grad p))))
+	    do (grad p)))
 
     ;; Segfault here.
     (forward model)
@@ -397,13 +399,12 @@
 
     (with-model-parameters (param model)
       (loop for p in param
-	    do (print (grad p))))
-    
-    ))
+	    do  (grad p)))
+    T))
 
 (test multiple-time-call-of-compiled-model
   (is (fw-and-bw-test))
-  ;(is (fw-and-bw-test-criterion))
+  (is (fw-and-bw-test-criterion))
   )
 
 

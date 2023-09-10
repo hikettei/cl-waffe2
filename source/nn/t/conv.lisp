@@ -103,7 +103,11 @@
 
 (test 2d-pool-test
   (is (2d-pool-test nil))
-  (is (2d-pool-test t)))
+  (is (2d-pool-test t))
+
+  ;; Do they work even when cached?
+  (is (2d-pool-test t))
+  (is (2d-pool-test nil)))
 
 ;; Add: CNN/MLP Train tests
 
