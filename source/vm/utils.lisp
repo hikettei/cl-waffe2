@@ -15,7 +15,6 @@
                            :initial-value (apply fn1 args))))
       #'identity))
 
-;; Ref: http://www.utkuevci.com/ml/autograd/
 (defun topological-sort (var)
   (declare (type AbstractTensor var)
 	   (optimize (speed 3)))
@@ -36,28 +35,39 @@
       (top-sort-helper var (detach-p var))
       (reverse top-sort))))
 
-
 ;; Autograd:
 (defun make-backward-wfinst (tensor dout-prev)
+  (when (and (tensor-compiled-instruction-cache-bw tensor)
+	     (equal (car (last (tensor-compiled-instruction-cache-bw tensor))) ;; == Variables
+		    (tensor-variables tensor)))
+    (let ((result-tmp (tensor-compiled-instruction-cache-bw tensor)))
+      (return-from make-backward-wfinst (apply #'values result-tmp))))
+
   (multiple-value-bind (bw-kernel iseq out-to dir) (make-backward tensor dout-prev)
     (declare (type (or null function) bw-kernel))
     (when (null bw-kernel) (return-from make-backward-wfinst nil))
-    
-    (values
-     bw-kernel
-     #'(lambda ()
-	 (format nil "Block -> ~a-BACKWARD {
+
+    (let ((result
+	    (list
+	     bw-kernel
+	     #'(lambda ()
+		 (format nil "Block -> ~a-BACKWARD {
 ~a    }
   "
-		 (class-name (class-of (tensor-backward tensor)))
-		 (with-output-to-string (out)
-		   (with-indent-to iseq
-		     (dolist (i iseq)
-		       (let ((*node-indent* (+ 4 *node-indent*)))
-			 (format out "        ~a" i)))))))
-     out-to
-     dir
-     iseq)))
+			 (class-name (class-of (tensor-backward tensor)))
+			 (with-output-to-string (out)
+			   (with-indent-to iseq
+			     (dolist (i iseq)
+			       (let ((*node-indent* (+ 4 *node-indent*)))
+				 (format out "        ~a" i)))))))
+	     out-to
+	     dir
+	     iseq
+	     ;; Variables ... To detect the change of network.
+	     (tensor-variables tensor))))
+
+      (setf (tensor-compiled-instruction-cache-bw tensor) result)
+      (apply #'values result))))
 
 (defun tensor-compiled-kernel (tensor)
   (when (tensor-state tensor)
@@ -106,7 +116,7 @@
 			collect `(,(tensor-id tensor) (nth ,nth ,args))
 		      do (push (tensor-id tensor) seen)))
 	 (locally
-	     ,@(cl-waffe2/vm.generic-tensor::tensor->id
+	     ,@(cl-waffe2/vm.nodes::replace-tensor->id
 		other-parts
 		all-args))))))
 
@@ -202,12 +212,16 @@ op2 ..  E <- F(X, Y, Z)
     (setf (tensor-state tensor)
 	  (make-statecontainer :forward-out-form (make-compiled-kernel)))))
 
+(defun setq-vm-wrap-f ()
+  "To avoid iseq=null, adds this node"
+  "Setq{%VMWrap}")
+
 (defun %vm-wrap-tensor (tensor)
   (init-state-container! tensor)
   (make-wfop
    #'(lambda (x) (declare (ignore x)) tensor)
    tensor
-   #'(lambda () (format nil "Setq{Internal}"))
+   #'setq-vm-wrap-f
    (list tensor)
    :out-to (list tensor)))
 
@@ -238,8 +252,7 @@ op2 ..  E <- F(X, Y, Z)
 		     (cl-waffe2/base-impl:MoveTensorNode
 		      (dtype tensor)
 		      :save-for-backward
-		      (or (tensor-projected-p grad)
-			  (cl-waffe2/vm.generic-tensor::permuted-p  grad)))
+		      t)
 		     (grad tensor)
 		     grad)))
 		 (progn
@@ -249,3 +262,4 @@ op2 ..  E <- F(X, Y, Z)
 		     (grad tensor)
 		     grad)))))))
     (setf (detach-p grad) nil)))
+

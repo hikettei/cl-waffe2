@@ -37,17 +37,20 @@
       ;; Save For Backward hasn't created yet?
       (when (null past-sv4bw)
 	;; Make clone and allocate
-	(let ((place (cl-waffe2/vm.generic-tensor::make-clone tensor)))
+	;; [FIXME] Is this tensor creation gc-reachable??
+	(let ((place (cl-waffe2/vm.generic-tensor::make-clone-exist tensor)))
+	  (setf (cl-waffe2/vm.generic-tensor::tensor-id-lock-p place) T)
 	  ;; Do allocation of place
-	  (tensor-vec place)
 	  ;; Set it to the slot
 	  (setf (slot-value self name) place)))
 
-      ;; Move: Existing Save-For-Backward-Place <- The target tensor.
-      ;;(move-and-save-for-backward-static (slot-value self name) tensor)
-      (cl-waffe2/base-impl:proceed (cl-waffe2/base-impl:!move (slot-value self name) tensor :force t))
+      (cl-waffe2/vm::%vm-move (slot-value self name) tensor)
 
-      nil)))
+      ;; FixME
+      (when (and (scalar-p (slot-value self name))
+		 (scalar-p tensor))
+	(setf (tensor-vec (slot-value self name)) (cl-waffe2/vm.generic-tensor::vec tensor)))))
+  nil)
 
 (defun apply-read-save-for-backward (self name)
   (declare (type AbstractNode self)
@@ -184,8 +187,7 @@ Saves the given tensors to save-place, in the currently working node.
 			(save-for-backward-names nil)
 			(forward nil)
 			(backward nil)
-			(extends-fw nil)
-			(extends-bw nil)
+			(extends nil)
 			(documentation ""))
 		     &body constructor-body)
   "
@@ -196,7 +198,7 @@ Saves the given tensors to save-place, in the currently working node.
 Defines a differentiable AbstractNode which its definition is given by a function.
 
 ```lisp
-(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends-fw extends-bw) &body body)
+(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends) &body body)
 ```
 
 ### Effects
@@ -267,7 +269,7 @@ butgot -> ~a"
 		     :out-scalar-p ,out-scalar-p
 		     :slots (,@slots
 			     ,@save-for-backward-slots)
-		     :extends ,extends-fw
+		     :extends ,extends
 		     :documentation ,documentation)
 	     ,@constructor-body)
 	   
@@ -293,7 +295,7 @@ butgot -> ~a"
 					   append
 					   `(,(symb 'in-shapes n) = (nth ,n ,in-shape))))
 		     :slots ((fw-self :initform nil))
-		     :extends ,extends-bw)
+		     :extends ,extends)
 	     (setf (slot-value ,self 'fw-self) ,fw-self
 		   (ignore-shape-error ,self) t))
 	   

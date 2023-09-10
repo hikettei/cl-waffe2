@@ -1,50 +1,74 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;; [TODO] This file provides a global memory-pool
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;
-;; memory-pool.lisp provides features on MemoryPool, caching, and dynamically shaping.
+;;  memory-pool.lisp provides features on MemoryPool, caching tensors, and managing allocation for dynamically shaped tensors.
 ;;
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; memory-pool.lisp is a thread-safe and cl-waffe2 dedicated memory-pool.
+
+;; Tensors has a two state: ExistTensor and InputTensor
+;;  As for ExistTensor, this file is not related anymore because their storage vec is stored in their own.
+;;  However, memory-pool is important for InputTensor because their allocation is done lazily, and sometime changed
+;;  And for efficiency, we have to manage their use status and cache.
+
+
+;; - [ControlFlow of tensor-vec function] -------------------------------------------------------------------------
+;;                  IF made by (make-tensor) ?
+;;  [Tensor] ---> [ExistTensor] -> just returning (vec tensor) slot. (Shapes are static)
+;;            |      made by (make-input `(10 10) nil) (<- IF name is set to nil, the InputTensor is recognised as CachedTensor.
+;;            |--> [InputTensor] -> We use memory-pool, because the number of A and B could be changed later.
+;;            |      made by (make-input `(A B) :X)
+;;            |--> [InputTensor] -> just returning (vec tensor) slot is enough. (allocated by set-input)
+;;            |
+;;           ...
+;; ----------------------------------------------------------------------------------------------------------------
+
+
+;; Dealing with dynamycally shaped tensors:
+;;   In cl-waffe2, the size of InputTensor dynamically changes depeneding on batch-size.
+;;   That is, X=(BATCH 100) tensor also could be: (1 100) or (100 100) tensor.
+;;   If the total size of tensor resized, is larger than before allocated one, do a reallocate otherwise use old one.
+;;  
+;;  Case1. BATCH=1 -> BATCH=100
+;;   => Reallocate or find 1 100 Tensor
 ;;
-;; memory-pool.lisp is a thread-safe and generic memory-pool program.
-;; ExistTensor is not related to this file because it stores a vec for each tensor.
-;; The topic is for InputTensor: (cache Tensor, the result of operations, sometimes arguments)
+;;  Case2. BATCH=100 -> BATCH=1
+;;   => Return (100 100) Tensor as (1 100) Tensor's strides.
 ;;
 
-;; = [Flow of (tensor-vec) ] ====================
-;;                 made by (make-tensor) ?
-;; [Tensor] ---> [ExistTensor] -> just returning (vec tensor) slot. (Shapes are static)
-;;          |      made by (make-input `(10 10) nil) (<- Setting nil = the tensor is cache)
-;;          |--> [InputTensor] -> use memory-pool, because it is just temporary, and shapes are dynamically changing
-;;          |      made by (make-input `(10 10) :X)
-;;          |--> [InputTensor] -> just returning (vec tensor) slot is enough. (allocated by set-input)
-;;          |
-;;
+;; Keep Thread-Safe:
+;;  Memory-Pool is devided to each thread managed by bordeaux-threads to avoid conflicts.
+;;  The toplevel variable is a *thread-memory-pool*, and branching like:
+;;   *thread-memory-pool*
+;;        thread-idx
+;;            1       -> [struct] Memory-Pool
+;;            2       -> [struct] Memory-Pool
+;;            3       -> [struct] Memory-Pool
+;;                    ...
 
-;; = [1. Deal with Adjustable Shape] ==================================================
-;; In cl-waffe2, the size of InputTensor dynamically changes depeneding on batch-size.
-;; That is, X=(BATCH 100) tensor could be: (1 100) or (100 100) tensor.
-;; 
-;; Case1. BATCH=1 -> BATCH=100
-;; => Reallocate or find 1 100 Tensor
-;;
-;; Case2. BATCH=100 -> BATCH=1
-;; => Return (100 100) Tensor as (1 100) Tensor's strides.
-;;
-;; = [2. Reusing cache] ==================================================
-;; POOL = [[ROOM (100 100) :USING] [ROOM :FREE] [ROOM :USING] ...]
-;; Each room has two state: :USING AND :FREE (TODO)
-;; 
-;;
-;; = [3. Thread Safe]   ==================================================
-;; Memory-Pool is created for each Threads.
-;;
-;; [Table] *thread-memory-pool*
-;; Thread1 => POOL1
-;; Thread2 => POOL2
-;;        ...
-;;
 
-(declaim (inline get-from-memory-pool))
+;; Caching Tensors:
+;;  First, tensors in the memory-pool has a these state:
+;;   InputTensor[state=:input]
+;;      - Whenever the computation done and the allocation isn't needed anymore, ...
+;;        Tensors with state=:input would never moved into cached-room
+;;        InputTensor with their name is a keyword, is register as :input
+;;   InputTensor[state=:tmp]
+;;      - InputTensors created like (make-input `(...) nil) is registered as :tmp
+;;      - The storage vec isn't guaranteed to be filled with 0.
+;;      - When ref-count become 0, they're moved into cached-tensors
+;;      - 
+;;   InputTensor[state=:save-for-backward]
+;;      - When *no-grad*=nil, becomes :input
+;;      - When *no-grad*=t,   :tmp
+
+
+(declaim (inline get-from-global-memory-pool))
 
 (defparameter *thread-memory-pool*
   (make-hash-table)
@@ -67,37 +91,29 @@
 "
   `(or null (and keyword (member :save-for-backward :tmp :input))))
 
+(deftype read-io-state-t ()
+  `(or null (and keyword (member :using :free))))
+
 (defstruct Memory-Pool
-  (temporary-rooms (make-hash-table) :type hash-table)
-  (caching-pools (make-hash-table) :type hash-table)  ;;
+  "
+When TMP Tensor (created by (make-input `(...) nil) function) is required to access its storage vector:
+    1. Try to finds out freed storage vec(where io=:free) from cached-pool of thread.
+    2. If found, use this, otherwise allocate the new one (set io=:using).
+
+In order to set the io of each cache-pool as :free, cl-waffe2/vm traces the cl-waffe2 IR and notes the last reference.
+"
+  (temporary-rooms (make-hash-table) :type hash-table) ;; All Tensors allocated here
+  (cached-pool     (make-hash-table) :type hash-table) ;; Tensors with :free :using states. (apply #'* (translate-adjustable-shape (slot-value 'orig-shape))) -> ((room TENSOR1) (room TENSOR2) (room TENSOR3) ...)
   )
 
-(defstruct Adjustable-Shape-State
-  ;; An copy of *adjustable-shape-table* to detect shape changing later.
-  (state (alexandria:copy-hash-table *adjustable-shape-table*) :type hash-table))
-
-(defun adjustable-shape-compatible (old-state)
-  (declare (type Adjustable-Shape-state old-state)
-	   (optimize (speed 3)))
-  (let ((current-keys (loop for symbol being the hash-keys   in *adjustable-shape-table* collect symbol))
-	(current-vals (loop for size   being the hash-values in *adjustable-shape-table* collect size))
-	(old-table    (adjustable-shape-state-state old-state)))
-    (not (some #'(lambda (target-symbol current-val)
-		   (let ((val (gethash target-symbol old-table)))
-		     (if (and (typep val 'fixnum)
-			      (typep current-val 'fixnum))
-			 ;; Ex: The tensor is created as BATCH-SIZE=100, and now the operation is going udner BATCH_SIZE=10...
-			 (< val current-val)
-			 t)))
-	       current-keys current-vals))))
-
-(defun current-memory-pool ()
+(defun current-memory-pool (&optional (idx nil))
+  "Set idx to force the access of idxth thread."
   (let ((memory-pool (with-lock-held (*thread-pool-lock*)
-		       (gethash (current-thread) *thread-memory-pool*))))
+		       (gethash (or idx (current-thread)) *thread-memory-pool*))))
     (if memory-pool
 	memory-pool
 	(with-lock-held (*thread-pool-lock*)
-	  (setf (gethash (current-thread) *thread-memory-pool*) (make-memory-pool))))))
+	  (setf (gethash (or idx (current-thread)) *thread-memory-pool*) (make-memory-pool))))))
 
 
 ;; [TODO] Add: :gradient :cache :input
@@ -111,6 +127,7 @@
   ;; Adjustable Tensor Size
   (state nil :type mem-pool-state-t)
   (shape-first shape-first :type list)
+  (io-state :using :type read-io-state-t)
   (size (apply #'* (translate-adjustable-shape (shape input-tensor))) :type fixnum)
   (cache-tensor input-tensor :type AbstractTensor))
 
@@ -153,86 +170,45 @@
     nil))
 
 (defun free-current-memory-pool ()
+  ""
   ;; TODO:
   ;; (maphash ... tensor-delete)
   ;; Maybe:: CUDA Foreign Pointers aren't gc-reachable??
-  (exit-memory-pool)
-  ;;(setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
+  ;;(exit-memory-pool)
+  (setf *thread-memory-pool* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
   #+sbcl(sb-ext:gc :full t)
   )
 
-(defun exit-memory-pool ()
-  "Return: An list of AbstractTensor which wants to be registered to the superior scope"
-  (let ((extended))
-    (maphash
-     #'(lambda (thread-idx thread-memory-pool)
-	 (declare (ignore thread-idx))
-	 (maphash
-	  #'(lambda (key room)
-	      (let ((state (temporary-room-state room))
-		    (tensor (temporary-room-cache-tensor room)))
-		;; state = :tmp :input :save-for-backward
-		(if (or (null state)
-			(eql state :tmp)
-			(eql state :save-for-backward))
-		    (funcall (tensor-finalizer tensor))
-		    (push (cons key room) extended))))
-	  
-	  (memory-pool-temporary-rooms thread-memory-pool)))
-     *thread-memory-pool*)
-
-    (setf *thread-memory-pool* (make-hash-table))
-    extended))
-
 ;; Users do not have to use this macro.
 (defmacro with-memory-pool (&body body &aux (result (gensym)))
-  ""
+  "
+## [macro] with-memory-pool
+
+InputTensors created inside this macro guarantees for all read information to be :free inside it.
+
+"
   `(let* ((,result
 	    (let ((*thread-memory-pool* (make-hash-table)))
-	      (multiple-value-list (progn ,@body)))))
-     (dolist (i (exit-memory-pool))
-       (set-mem-pool (symbol-name (car i)) (cdr i)))
+	      (multiple-value-list
+	       (progn ,@body)))))
      (apply #'values ,result)))
 
 (defun get-mem-pool (key)
-  (declare (type string key))
-  (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool))))
+  (gethash key (memory-pool-temporary-rooms (current-memory-pool))))
 
-(defun set-mem-pool (key value)
-  (declare (type string key))  
-  (setf (gethash (intern key "KEYWORD") (memory-pool-temporary-rooms (current-memory-pool))) value)
+(defun set-mem-pool (key value &optional (idx nil))
+  (setf (gethash key (memory-pool-temporary-rooms (current-memory-pool idx))) value)
   value)
 
-(defun assure-and-return-room (room tensor)
-  "Checking room's size, returning tensor"
-  (declare (type Temporary-Room room)
-	   (type AbstractTensor tensor)
-	   (optimize (speed 3)))
-  (let ((required-size (apply #'* (translate-adjustable-shape (original-shape tensor))))
-	(vec           (vec       (temporary-room-cache-tensor room))))
-
-    ;; Checking required-size, is done at toplevel.
-    ;; Use (max-size) x (max-size) vec as if they're (required-size) x (required-size) vec.
-
-    ;; TODO: Add a new attribute Room: :read-state to reuse memory-pool which is not used.
-    ;; :read-state is one of: :used :free-now
-    
-    ;; when assure-and-return-room is called:
-    ;; find :free-now and required-size is enough caches, and return it.
-
-    ;; Each time update room, the operation works correctly???
-
-    (when (or (null vec) (null (vec tensor))
-	      (not (eql (the keyword (dtype tensor)) (the keyword (dtype (temporary-room-cache-tensor room)))))
-	      (> (the fixnum required-size) (temporary-room-size room)))
-      ;; Update memory-pool
-      (setf (tensor-alloc-state tensor) *current-shape-state*)
-      (setf (temporary-room-size room) required-size)
-      (setf (tensor-vec (temporary-room-cache-tensor room))
-	    (vec (make-tensor `(,required-size) :dtype (dtype tensor) :order (order tensor))))
-
-      (setf (tensor-vec tensor) (vec (temporary-room-cache-tensor room))))
-    (vec tensor)))
+(defun alloc-from-input-tensor (tensor)
+  (declare (type AbstractTensor tensor))
+  (let ((out (make-tensor (original-shape tensor)
+			  :requires-grad nil
+			  :dtype (dtype tensor)
+			  :order (order tensor)
+			  :device (class-of tensor))))
+    (setf (tensor-vec tensor) (vec out))
+    out))
 
 (defun chaintmp-find-mem-pool (tensor)
   (declare (type AbstractTensor)
@@ -241,110 +217,22 @@
   ;; Assert: The Given Tensor is ChaimTMP
   ;; Set current-state for future allocating
   
-  (let ((place (tensor-name tensor)))
-    (declare (type string place))
+  (let ((place (tensor-id tensor)))
     (let ((room (get-mem-pool place)))
       (if room
-	  (assure-and-return-room room tensor)
-	  (and (set-mem-pool place (make-room tensor)) ;; set and read it again
-	       (chaintmp-find-mem-pool tensor))))))
+	  (vec (temporary-room-cache-tensor room))
+	  (vec (temporary-room-cache-tensor
+		(set-mem-pool place (make-room (alloc-from-input-tensor tensor)))))))))
 
-(defun translate-adjustable-shape (shape) ;; tensor-input-shape
-  "
-## [function] translate-adjustable-shape
-
-Reading the *adjustable-shape-table*, the function returns an list consisted of fixnum.
-
-If there's any undetermined one, returns an error (TODO: Add Conditions)"
-  (declare (type list shape)
-	   (optimize (speed 3)))
-  (map 'list #'read-symbol shape))
-
-(declaim (ftype (function ((or fixnum symbol)) fixnum) read-adjustable-symbol))
-(defun read-adjustable-symbol (s)
-  (typecase s
-    (fixnum s)
-    (symbol
-     (or (read-symbol s) (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
-
-(defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
-  "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
-
-Usage:
-
-(with-adjustable-symbols (('a 1) ('b 1))
-    (with-let-adjustable-symbols (a b)
-        (print a)   ;; = 1
-        (print b))) ;; = 1
-
-"
-
-  `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table)))
-	  (*current-shape-state*    (make-adjustable-shape-state)))
-
-     (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
-	 
-     ,@body))
-
-(defmacro with-adjustable-symbol-scope (&body body)
-  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table))))
-	  (*current-shape-state*    (make-adjustable-shape-state)))
-     ,@body))
-
-(defun register-adjustable-shape (symbol value)
-  (setf (gethash symbol *adjustable-shape-table*) value))
-
-(defmacro with-adjustable-symbols ((&rest forms) &body body)
-  (labels ((expand-form (rest-forms)
-	     (if (null rest-forms)
-		 `(progn ,@body)
-		 `(with-adjustable-symbol (,@(car rest-forms))
-		    ,(expand-form (cdr rest-forms))))))
-    (expand-form forms)))
-
-(defmacro with-let-adjustable-symbol (symbol-name &body body)
-  ;; TO DELETE: Binding with symbol-name
-  `(let ((,symbol-name (gethash ',symbol-name *adjustable-shape-table*)))
-     (declare (type fixnum ,symbol-name)
-	      (ignorable ,symbol-name))
-     
-     (declare (ignore symbol-name))
-     ,@body))
-
-;; Fix: symbol conflicts??
-(defmacro with-let-adjustable-symbols ((&rest symbol-names) &body body)
-  (labels ((expand (rest-forms)
-	     (if (null rest-forms)
-		 `(progn ,@body)
-		 `(with-let-adjustable-symbol ,(car rest-forms)
-		    ,(expand (cdr rest-forms))))))
-    (expand symbol-names)))
-
-(defun read-symbol (symbol)
-  (declare (optimize (speed 3) (safety 0)))
-  (if *adjustable-shape-table*
-      (typecase symbol
-	(symbol
-	 ;; out <- table[symbol]
-	 (let ((out (gethash symbol *adjustable-shape-table*)))
-	   (if (null out)
-	       symbol ;; No result?
-	       (if (and (symbolp out)
-			(not (eq symbol out))) ;; A -> A ...
-		   ;; A = BATCH_SIZE = 10
-		   (read-symbol out)
-		   out))))
-	;; Return fixnum
-	(T symbol))
-      symbol))
-
-(defun no-need-update-p (tensor)
-  (declare (type AbstractTensor tensor))
-  (adjustable-shape-compatible (tensor-alloc-state tensor)))
-
-(defun get-from-memory-pool (tensor)
+(defun get-from-global-memory-pool (tensor)
   (declare (type AbstractTensor tensor)
 	   (optimize (speed 3)))
+  
+  (when (some #'symbolp (shape tensor))
+    (error "tensor-vec: Can't allocate the InputTensor on memory because the given one still inludes a symbol.
+~a
+
+-> Compile the tensor with `build`, and set inputs." tensor))
 
   (cond
     ((scalar-p tensor) ;; As of ScalarTensor, memory-usage = O(1)
@@ -353,63 +241,6 @@ Usage:
 	 (let ((tmp-tensor (make-tensor 0 :dtype (dtype tensor) :order (order tensor))))
 	   (setf (tensor-vec tensor) (vec tmp-tensor))
 	   (vec tensor))))
-    ((null (tensor-alloc-state tensor))
-     ;; First Time Allcoation? or no one uses adjustable-symbol?
-     (or (vec tensor)
-	 (chaintmp-find-mem-pool tensor)))
-    ;; If the tensor's size is STATIC -> just returning vec with finding mem-pool
-    ((or (null (tensor-input-shape tensor))
-	 (every #'numberp (tensor-input-shape tensor)))
-     (if (vec tensor)
-	 (vec tensor)
-	 (chaintmp-find-mem-pool tensor)))
-    ;; Other case, the shape of tensors has a symbol, but keep using the same one.
-    ((no-need-update-p tensor)
-     (if (vec tensor)
-	 (vec tensor)
-	 (chaintmp-find-mem-pool tensor)))
-    ;; Otherwise, reallocating needs to be done.
-    ((stringp (tensor-name tensor))
-     (chaintmp-find-mem-pool tensor))
-    ;; The Tensor is InputTensor (ChainTMP)
-    ;; (user-input-p tensor) is expensible, so use stringp instead.
-    ((user-input-p tensor) ;; high cost
-     (error "get-from-memory-pool failed: ~a isn't embodied." tensor))
-    (T
-     (error "get-from-memory-pool failed: because the given tensor isn't one of: ScalarTensor InputTensor(ChainTMP)"))))
+    ;; If storage is nil, allocate anyway
+    (T (chaintmp-find-mem-pool tensor))))
 
-(defun write-mempool-state (tensor attribute)
-  (declare (type AbstractTensor tensor)
-	   (type mem-pool-state-t attribute))
-
-  (let ((room (get-mem-pool (tensor-name tensor))))
-    (when room ;; When room=nil, there's no need to consider whether the tensor will be freed or not.
-      (setf (temporary-room-state room) attribute)))
-  nil)
-
-
-;;
-;; Known issuses on dynamically shaping:
-;;  Strides   ... Stridesが更新されなくてたまにPrintするとError
-;;  set-input ... viewでオフセットを加算しても, Copyしなくても, incf-offsetしなくても・・・
-;;  Scopingなどの使用が不明
-;;
-;; on memory-pool:
-;;  1. Unstable Ruleを明記
-;;  2. mgl-matでいうwith-cacheみたいなAllocationをしたい。TensorのCopyのStateに:save-for-backwardが付与されていない場合はwith-cacheを持ちいればOK
-;;  3. ^ Therefore, make-inputは0で埋められている保証がない。
-
-;;
-;; Tensorは三つある: Save4Backward, Input, TMP
-;;  Input ... 固定の領域 メモリプールの最上層に位置する
-;;  TMP   ... with-mempoolマクロで新しいスコープを作る+抜けるとき削除
-;;  Save4Backward ... *no-grad*=tの条件のもとならTMP otherwise Input
-
-
-(defparameter *under-mem-pool-p* nil ) ;; <- TじゃないとErrorになる
-
-(defmacro with-cl-waffe2-mempool-toplevel ()
-  "buildした後のForwardなどトップレベルに配置するべき
-
-proceedのforwardがこれを保持する"
-  )

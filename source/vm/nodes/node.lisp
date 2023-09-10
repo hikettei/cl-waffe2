@@ -218,9 +218,9 @@ butgot: ~a"
 					 
 					 (tensor-view next-tensor)
 					 (tensor-view input)
+					 
+					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::tensor-id) (tensor-id input)
 
-					 ;; Memo: extending tensor-id is added later...
-					 (tensor-id next-tensor) (tensor-id input)
 					 (tensor-name next-tensor) (tensor-name input)
 					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::projected-p)
 					 (slot-value input 'cl-waffe2/vm.generic-tensor::projected-p)
@@ -279,19 +279,22 @@ forward: Couldn't step forward step of ~a because it is undefined.
     (declare (type AbstractNode node)
 	     (type list variables))    
 
-    (let ((in-tensors (loop for var in variables
-			    collect (or (system-lazy-read-save-for-backward var)
-					(cl-waffe2/vm.generic-tensor:make-clone var nil nil))))
-	  (dout (cl-waffe2/vm.generic-tensor::make-clone dout)))
-      (setf (tensor-protect-me dout) t)
+    (let* ((in-tensors (loop for var in variables
+			     collect (or (system-lazy-read-save-for-backward var) var)))
+	   (detach-states (map 'list #'detach-p in-tensors))
+	   (dout-detach-p (detach-p dout)))
+
+      (mapc #'(lambda (tensor) (setf (detach-p tensor) t)) in-tensors)
+      (setf (detach-p dout) t)
+      
       (let* ((out-toplevels (multiple-value-list (apply #'backward node dout in-tensors)))
 	     (out-toplevels (if (every #'null out-toplevels) ;; no gradients?
 				(return-from make-backward)
 				out-toplevels))
 	     (toplevel (loop for top in out-toplevels
-			      for var in variables
-			      collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
-					top)))
+			     for var in variables
+			     collect (when (cl-waffe2/vm.generic-tensor::ancestor-param-p var)
+				       top)))
 	     (directions (loop for var in out-toplevels if var collect t else collect nil))
 	     (out-toplevels-pswise out-toplevels)
 	     (out-toplevels (loop for top in toplevel
@@ -300,37 +303,39 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	     (toplevel (loop for top in toplevel if top collect top))
 	     (toplevel (if toplevel (apply #'!system-lazy-values toplevel)))
 	     (compiled  (multiple-value-list
-			(cl-waffe2/vm:compile-forward-and-backward toplevel
-								   :need-backward nil
-								   :fuse-p t
-								   :compile-mode :fastest)))
+			 (cl-waffe2/vm:compile-forward-and-backward toplevel
+								    :need-backward nil
+								    :fuse-p t
+								    :compile-mode :fastest
+								    :optimize-locality nil)))
 	     (fw-iseq (car compiled))
-	     (leaves  (third compiled)))
+	     ;;(leaves  (third compiled))
+	     )
 
-	(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
-	
+	(mapc #'(lambda (tensor state)
+		  (setf (detach-p tensor) state))
+	      in-tensors detach-states)
+	(setf (detach-p dout) dout-detach-p)
+	;;(cl-waffe2/vm::apply-in-place-mutation! fw-iseq leaves)
 	(values
 	 #'(lambda (dout-runtime &rest inputs-runtime)
-	     (progn;;cl-waffe2/vm.generic-tensor::with-memory-pool
-	       (setf (tensor-vec dout) (tensor-vec dout-runtime))
-	       (loop for act-val in inputs-runtime
-		     for var     in variables
-		     for place   in in-tensors
-		     if (system-lazy-read-save-for-backward var)
-		       do (if (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
-			      (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
-				     var))
-		     else		     
-		       do (setf (tensor-vec place) (tensor-vec act-val)))
+	     (setf (tensor-vec dout) (tensor-vec dout-runtime))
+	     (loop for act-val in inputs-runtime
+		   for var     in variables
+		   for place   in in-tensors
+		   if (system-lazy-read-save-for-backward var)
+		     do (if (null (cl-waffe2/vm.generic-tensor::vec (system-lazy-read-save-for-backward var)))
+			    (error "cl-waffe2 VM Autograd: Save for backward isn't allocated because the forward step of ~a isn't called."
+				   var))
+		   else		     
+		     do (setf (tensor-vec place) (tensor-vec act-val)))
 
-	       (if cl-waffe2/vm::*under-benchmark-set* ;; If benchmarking mode, extends the state and proceed benchmarking...
-		   (cl-waffe2/vm::benchmark-accept-instructions fw-iseq)
-		   (cl-waffe2/vm:accept-instructions fw-iseq))
-	       ;; When quitting mem-pool, the result is never freed.
-	       ;;(loop for out-val in out-toplevels do
-		;; (cl-waffe2/vm.generic-tensor::write-mempool-state out-val :input))
+	     (if cl-waffe2/vm::*under-benchmark-set* ;; If benchmarking mode, extends the state and proceed benchmarking...
+		 (cl-waffe2/vm::benchmark-accept-instructions fw-iseq)
+		 (cl-waffe2/vm:accept-instructions fw-iseq))
+	     ;; When quitting mem-pool, the result is never freed.
 
-	       (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels))))
+	     (apply #'values (map 'list #'cl-waffe2/vm::maybe-read-result out-toplevels)))
 	 fw-iseq
 	 out-toplevels-pswise
 	 directions)))))

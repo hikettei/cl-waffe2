@@ -11,16 +11,18 @@
    #:print-current-memory-pool
    #:free-current-memory-pool
    #:make-compiled-kernel
-   #:compile-forward-kernel
    #:find-cached-function
-   #:*memory-pool*)
+   #:*memory-pool*
+   #:*static-alloc-state*)
   ;; Tensor classes
   (:export
    #:AbstractTensor
    #:ScalarTensor
 
    #:current-backend-state
-
+   #:tensor-compiled-instruction-cache-fw
+   #:tensor-compiled-instruction-cache-bw
+   #:tensor-id-lock-p
    #:tensor-finalizer
    #:tensor-grad-count
    #:tensor-backward
@@ -39,6 +41,7 @@
    #:tensor-protect-me
    #:requires-grad
    #:ancestor-param-p
+   #:original-shape
    #:actual-shape
    #:mref
    #:vref
@@ -141,3 +144,6 @@
    #:*using-backend*))
 
 (in-package :cl-waffe2/vm.generic-tensor)
+
+(defparameter *static-alloc-state* nil)
+

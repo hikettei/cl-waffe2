@@ -8,6 +8,10 @@
    :cl-waffe2/vm.nodes
    :cl-waffe2/base-impl)
   (:export
+   #:*safety-mode-p*
+   #:*logging-vm-execution*
+
+   
    #:accept-instructions
    #:compile-forward-and-backward
    #:disassemble-waffe2-ir

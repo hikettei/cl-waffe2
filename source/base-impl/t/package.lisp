@@ -41,7 +41,7 @@
 	  ,@(map 'list #'(lambda (dtype)
 			   `(test ,(symb ', name '- dtype '- (car backend))
 			      (is (with-dtype ,dtype
-				    (with-memory-pool
+				    (progn;with-memory-pool
 				      (let ((result (progn ,,@body)))
 					(if (eql result t)
 					    t

@@ -1,6 +1,17 @@
 
 (in-package :cl-waffe2/vm)
 
+(defparameter *safety-mode-p* NIL "
+## [parameter] *safety-mode-p*
+
+When set to T, a run-time error is detected and a warning is displayed.")
+
+(defparameter *logging-vm-execution* NIL "
+## [parameter] *logging-vm-execution*
+
+If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
+")
+
 (declaim (inline maybe-read-result write-result apply-instruction apply-inst-sv4bw))
 
 (defmodel (SV4BW-Copier (self)
@@ -11,12 +22,7 @@
 
 (defmodel-as (SV4BW-Copier)
   :where (A[~] B[~] -> OUT[~])
-  :asif :function :named %vm-move1)
-
-(defun %vm-move (a b)
-  (let ((out (%vm-move1 a b)))
-    (cl-waffe2/vm.generic-tensor::write-mempool-state out :save-for-backward)
-    out))
+  :asif :function :named %vm-move)
 
 (declaim (ftype (function (WfInstruction) t) apply-inst-sv4bw))
 (defun apply-inst-sv4bw (instruction)
@@ -28,36 +34,141 @@
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
-	      ;; Place <- Var
-	      (%vm-move place var))))
+	      ;; Intentionally creates the illusion of VM that misunderstands
+	      ;; var is [computed] by deleting tensor-state
+	      (tensor-vec place)
+	      (tensor-vec var)
+	      (%vm-move place var)
+
+	      ;; FixME: Delete this line:
+	      (when (scalar-p place)
+		(setf (tensor-vec place) (tensor-vec var))))))
   nil)
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
 (defun maybe-read-result (tensor)
   (declare (type AbstractTensor tensor))
-  (let* ((state (tensor-state tensor))
-	 (res
-	   (or (when state
-		 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
-	       tensor)))
-    (the AbstractTensor res)))
+  (if (tensor-tmp-p tensor)
+      (let ((out (read-from-mempool-tensor tensor)))
+	;; Keep Broadcasting, Permution etc... But storages are shared.
+	(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec out))
+	tensor)
+      (if (scalar-p tensor)
+	  tensor
+	  (let* ((state (tensor-state tensor))
+		 (res
+		   (or (when state
+			 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
+		       tensor)))
+	    (the AbstractTensor res)))))
 
 (declaim (ftype (function (list list) t) write-result))
 (defun write-result (tensors results)
+  ;; [TODO] Runtime Shape-Error Detection
   (loop for tensor of-type AbstractTensor in tensors
 	for result in results
-	if  result do
-	  (let* ((state (tensor-state tensor)))
-	    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result))))
+	if  (and tensor result) do
+	  (if (tensor-tmp-p tensor)
+	      (progn
+		;; tensor ... out-to
+		;; results ... result
+		;; Tensors registerd in the memory-pool,
+		;; doesn't need the support of StateContainer anymore
+		;; Deleting Unused StateContainer will benefit:
+		;;  The returned tensor by the proceed function is
+		;;  displayed as [computed] in the terminal.
+		;; ScalarTensors never use Memory-Pool
+		;; Update Memory-Pool
+		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
+		;; Tensor is already broadcasted/permuted...
+		;; So sharing vec is enough.
+		(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
+		;;(cl-waffe2/vm.generic-tensor::embody-tensor-vec tensor result)
+		) ;; Tensor.ID <- Result
+	      (if (scalar-p tensor)
+		  (setf (tensor-vec tensor) (tensor-vec result))
+		  (let* ((state (tensor-state tensor)))
+		    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result))))))
 
 (declaim (ftype (function (WFInstruction) list) apply-instruction))
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
-  (multiple-value-list
-   (apply
-    (the function (wfop-op instruction))
-    (map 'list #'maybe-read-result (wfop-args instruction)))))
+  
+  (when *logging-vm-execution*
+    (let* ((inst (format nil "~a" instruction))
+	   (cnt  (length inst)))
+      (format t "= [*logging-vm-execution*] ~a
+Instruction: ~a"
+	      (with-output-to-string (out)
+		(dotimes (i cnt) (princ "=" out)))
+	      inst
+	      ;;(map 'list #'maybe-read-result (wfop-args instruction))
+	      )))
+
+  
+  (let ((outs (multiple-value-list
+	       (apply
+		(the function (wfop-op instruction))
+		(map 'list #'maybe-read-result (wfop-args instruction))))))
+
+    
+    (when *safety-mode-p*
+      (when (some (the function (compose #'null #'cl-waffe2/vm.generic-tensor::vec)) outs)
+	(warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+
+returned a tensor whose its storage vec is null. In runtime, cl-waffe2 VM excepts all returned tensors have a valid storages and the next arguments are overwritten with this invaild tensor. So this could be lead to Assertion Failed ... Error. If you believe this alert is false and desire to delete this warning, set *safety-mode-p*=nil.
+
+out-to returned:
+
+~a" instruction outs))
+
+      (when (not (= (length outs) (length (wfop-out-to instruction))))
+	(warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+should be return ~R arguments, but got ~R.
+
+out-to returned:
+
+~a"
+	      instruction
+	      (length outs)
+	      (length (wfop-out-to instruction))
+	      outs))
+
+      (mapc #'(lambda (excepted received)
+		(when (not (eql (the boolean (scalar-p excepted)) (scalar-p received)))
+		  (warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+Scalars and Matrices are incompatible:
+Excepted:
+~a
+Butgot:
+~a"
+			instruction
+			excepted
+			received))
+
+		(when (not (equal (shape excepted) (shape received)))
+		  (warn "cl-waffe2 VM: Runtime Warning
+The instruction: ~a
+Shapes are incompatible.
+Excepted:
+~a
+Butgot:
+~a"
+			instruction
+			excepted
+			received)))
+	    (wfop-out-to instruction) outs))
+
+    (when *logging-vm-execution*
+      (format t "
+outs:
+~%"
+	      ))
+    outs))
 
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)
@@ -81,7 +192,13 @@ Evaluates generated cl-waffe2 IR sequence.
 	  do (apply-inst-sv4bw inst)
 	     (write-result (wfop-out-to inst) (apply-instruction inst))
 	  finally
-	     (return-from accept-instructions (apply #'values (map 'list #'maybe-read-result (wfop-out-to inst)))))))
+	     (return-from accept-instructions
+	       (apply #'values
+		      (map 'list
+			   (compose
+			    #'cl-waffe2/vm.nodes::eliminate-undetermined-size
+			    #'maybe-read-result)
+			   (wfop-out-to inst)))))))
 
 (defparameter *under-benchmark-set* nil "(list sorted-node profiled-table) If there's any") 
 

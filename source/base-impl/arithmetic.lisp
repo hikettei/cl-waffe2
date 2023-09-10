@@ -75,13 +75,13 @@ X\\gets{X ~a Y}
      (values
       (!div dout dy)
       (!div (!mul dx (!mul -1 dout))
-	    (!square dy))))))
+	    (!mul dy dy))))))
 
 (defnode (InverseTensorNode (myself dtype)
 	  :where (A[~] -> A[~])
 	  :save-for-backward (t)
 	  :backward ((self dout dx)
-		     (values (!div (!mul -1 dout) (!square dx))))
+		     (values (!div (!mul -1 dout) (!mul dx dx))))
 	  :documentation "InverseTensorNode is a node which computes following operation element-wise
 
 ```math
@@ -171,7 +171,7 @@ X\\gets{X ~a scalar}
      ;; out = 1/dx * dy
      (values
       (!div dout dy)
-      (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!square dy))))))))
+      (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!mul dy dy))))))))
 
 ;; ===============================================================
 ;; Defun Parts
@@ -340,7 +340,7 @@ The function ~a computes following operation with calling `~a`, returning a new 
      (values (!sas-div dout dy)
 	     (!sas-div
 	      (!sas-mul dx (!sas-mul -1 dout))
-	      (!square dy))))))
+	      (!mul dy dy))))))
 
 (define-impl (ScalarAndScalarAdd :device ScalarTensor)
 	     :forward ((self x y)

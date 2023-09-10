@@ -7,7 +7,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (fused-body-cache nil) (call-with-view nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (block-iseq nil) (fused-body-cache nil) (call-with-view nil))))
   "
 ## [struct] WFInstruction
 
@@ -33,6 +33,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
   (node node :type (or function string null AbstractNode))
   (out-to    out-to :type list)
   (self self :type AbstractTensor)
+  (block-iseq nil :type list)
   (args args :type list)
   (sv4bw sv4bw :type list)
   (bw-is-leaf-p nil :type boolean)
@@ -168,13 +169,13 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 ;; The algorithm that detects such a node is simple:
 ;;
 
+;; reverse-iseq .. Set T if the node is compiled as a toplevel of reverse mode
 (defun apply-in-place-mutation! (iseq leaves &key (reverse-iseq nil))
   (declare (type list iseq leaves)
 	   (type boolean reverse-iseq)
 	   (optimize (speed 3)))
-   
-  (let ((ref-table (make-hash-table)))
 
+  (let ((ref-table (make-hash-table)))
     ;; First, Register all tensors appeared in the computation node
     (mapc
      #'(lambda (variable)
@@ -254,7 +255,9 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 	      ;; arg1 arg2 arg3 ... set +=1 as long as registered in the table.
 	      
 	      (mapc #'(lambda (arg)
-			(when (numberp (gethash (tensor-id arg) ref-table))
+			(when (and
+			       move-p
+			       (numberp (gethash (tensor-id arg) ref-table)))
 			  (incf (the fixnum (gethash (tensor-id arg) ref-table)))))
 		    (if (and reverse-iseq move-p (= (length (wfop-args instruction)) 3))
 			(cdr (wfop-args instruction))
@@ -266,9 +269,27 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		    (setf (gethash (tensor-id out) ref-table) 0)))))))
   nil)
 
-;; 
-(defun f-test (x y)
-  (let* ((a (!expt x 3))
-	 (b (!expt y 2))
-	 (c (!* a b)))
-    (disassemble-waffe2-ir c)))
+(defun %in-place-vm-ops! (iseq)
+  ;; Make ViewTensorNode/ReshapeNode/PermuteNode In-place
+  ;; Iseq ... Follows the execution order
+  (declare (type list iseq))
+    
+  (loop for inst of-type WfInstruction in iseq do
+    ;; ViewTensorNode: Result Base -> Result
+    ;; Set Result.id <- Base.id
+    (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ViewTensorNode))
+      (iseq-update-tensor-name! iseq
+				(tensor-id (second (wfop-args inst)))
+				(tensor-id (car    (wfop-args inst)))))
+
+    ;; Reshape, Permute: Result Base -> Base
+    ;; Base.id <- Result.id
+    (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ReshapeTensorNode)
+	      (typep (wfop-node inst) 'cl-waffe2/base-impl::Permute-Node))
+      (iseq-update-tensor-name! iseq
+				(tensor-id (car    (wfop-args inst)))
+				(tensor-id (second (wfop-args inst)))))))
+
+
+
+
