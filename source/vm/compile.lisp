@@ -220,14 +220,6 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		 (forward->reverse-mode iseq-forward dout))))
 
 	(when optimize-locality
-	  ;; Reset MID
-	  (reset-locality-optimizations! iseq-forward)
-	  (let ((bw-flat (loop for inst in (reverse backward-iseq)
-			       if (null (wfop-block-iseq inst))
-				 append (list inst)
-			       else
-				 append (reverse (wfop-block-iseq inst)))))
-	    (reset-locality-optimizations! bw-flat))
 	  (setq iseq-forward (eliminate-setq-node iseq-forward)))
 	
 	(let ((forward  (reverse iseq-forward))
@@ -245,7 +237,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	    (values forward (or bw backward) leaves dout allocation)))))))
 
 (defun findout-origin (table tensor &key (limit 10))
-  (let ((last-ref (tensor-mid tensor)))
+  (let ((last-ref (tensor-id tensor)))
     (loop while t for n upfrom 0 do
       (if (> n limit) (return-from findout-origin last-ref))      
       (if (null (gethash last-ref table))
@@ -275,8 +267,8 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 		   (dolist (i iseq)
 		     (dolist (var (wfop-args i))
 		       (if (scalar-p var)
-			   (push (tensor-mid var) scal-ids)
-			   (push (tensor-mid var) tensor-ids)))
+			   (push (tensor-id var) scal-ids)
+			   (push (tensor-id var) tensor-ids)))
 		     (princ i out)))
 		 (format out "~%~a Instructions | ~a Tensors | ~a Scalars~%"
 			 (length iseq)

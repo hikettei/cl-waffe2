@@ -71,7 +71,6 @@
   (declare (type AbstractTensor tensor))
   (and (eql     (tensor-facet tensor) :input)
        (stringp (tensor-name tensor))
-       (tensor-mid tensor)
        (if include-scalar
 	   (and (not (scalar-p tensor))
 		(not (tensor-id-lock-p tensor)))
@@ -180,7 +179,7 @@ If the re-allocation is performed, frees the old one.
 			       (make-clone tensor (tensor-name tensor))))))
 	      (setf (slot-value use 'cl-waffe2/vm.generic-tensor::input-shape)
 		    (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
-	      (setf (tensor-mid use) (tensor-mid tensor))
+	      (setf (tensor-id use) (tensor-id tensor))
 	      (setf (gethash key (vmalloc-id2pool allocation)) use)))
     allocation))
 
@@ -198,17 +197,14 @@ If the re-allocation is performed, frees the old one.
   (declare (type VMAllocation allocation)
 	   (type AbstractTensor tensor))
 
-  (when (null (gethash (tensor-mid tensor) (vmalloc-id2pool allocation)))
+  (when (null (gethash (tensor-id tensor) (vmalloc-id2pool allocation)))
     (if (cl-waffe2/vm.generic-tensor::vec tensor)
 	(return-from storage-vec-from-memory-pool (cl-waffe2/vm.generic-tensor::vec tensor))
 	(error "tensor-vec: Attempted to read the storage vec of [~a, ~a, ~a] from memory-pool but failed because the tensor wasn't tracked when compiling.
 Allocation State:
-~a" (tensor-mid tensor) (class-of tensor) (shape tensor) allocation)))
-
-  (when (null (tensor-mid tensor))
-    (error "MIT=NIL is invaild."))
+~a" (tensor-id tensor) (class-of tensor) (shape tensor) allocation)))
   
-  (let ((result (gethash (tensor-mid tensor) (vmalloc-id2pool allocation))))
+  (let ((result (gethash (tensor-id tensor) (vmalloc-id2pool allocation))))
     (when (null (cl-waffe2/vm.generic-tensor::vec result))
       (error "tensor-vec: In memory-pool, the InputTensor ~a isn't registered?" result))
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
@@ -239,12 +235,12 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 (defun update-mempool-tensor (tensor value)
   (declare (type AbstractTensor tensor value))
   (assure-vmalloc)
-  (setf (gethash (tensor-mid tensor) (vmalloc-id2pool *static-alloc-state*)) value))
+  (setf (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*)) value))
 
 (defun read-from-mempool-tensor (tensor)
   (declare (type AbstractTensor tensor))
   (assure-vmalloc)
-  (the AbstractTensor (or (gethash (tensor-mid tensor) (vmalloc-id2pool *static-alloc-state*)) tensor)))
+  (the AbstractTensor (or (gethash (tensor-id tensor) (vmalloc-id2pool *static-alloc-state*)) tensor)))
 
 
 ;; ~~ [Implementation] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -266,33 +262,33 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     ;; Collecting the direction/from of Setq{Pruned}
     (loop for inst in iseq
 	  if (inst-set-p inst)
-	    do (setf (gethash (tensor-mid (wfop-self inst)) setq-table) (tensor-mid (second (wfop-args inst)))))
+	    do (setf (gethash (tensor-id (wfop-self inst)) setq-table) (tensor-id (second (wfop-args inst)))))
 
     ;; Given setq-table, updates all tensor-id
     (loop for inst in iseq
 	  do (dolist (tensor `(,@(wfop-out-to inst) ,@(wfop-args inst)))
 	       (let ((id (findout-origin setq-table tensor)))
 		 (when (not (tensor-id-lock-p tensor))
-		   (setf (tensor-mid tensor) id)))))
+		   (setf (tensor-id tensor) id)))))
 
     ;; Deletes all unused Setq{Pruned}
     (loop for inst in iseq
 	  if (not (or (inst-set-p inst)
 		      (and (eql (wfop-node inst) #'setq-vm-wrap-f)
-			   (eql (tensor-mid (car (wfop-out-to inst)))
-				(tensor-mid (car (wfop-args inst)))))))
+			   (eql (tensor-id (car (wfop-out-to inst)))
+				(tensor-id (car (wfop-args inst)))))))
 	    collect inst)))
 
 (defun iseq-update-tensor-name! (iseq from to)
   (loop for inst in iseq do
-    (dolist (o (remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-mid))
-      (when (eql (tensor-mid o) from)
+    (dolist (o (remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-id))
+      (when (eql (tensor-id o) from)
 	(when (not (tensor-id-lock-p o))
-	  (setf (tensor-mid o) to))))
-    (dolist (a (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-mid))
-      (when (eql (tensor-mid a) from)
+	  (setf (tensor-id o) to))))
+    (dolist (a (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id))
+      (when (eql (tensor-id a) from)
 	(when (not (tensor-id-lock-p a))
-	  (setf (tensor-mid a) to))))))
+	  (setf (tensor-id a) to))))))
 	
 (defun optimize-memory-locality! (iseq-fw iseq-bw)
   (declare (type list iseq-fw)
@@ -318,7 +314,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
       ;; Set all MID
       (loop for inst in iseq-bw-flat do
 	(mapc #'(lambda (tensor)
-		  (setf (gethash (tensor-mid tensor) bw-leaves) tensor))
+		  (setf (gethash (tensor-id tensor) bw-leaves) tensor))
 	      `(,@(wfop-out-to inst) ,@(wfop-args inst)))))
         
     (when iseq-bw-flat
@@ -345,18 +341,21 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     
     (loop for inst in (reverse `(,@iseq ,@iseq-bw-flat)) do
       (when (tensor-tmp-p (wfop-self inst))
-	(setf (gethash (tensor-mid (wfop-self inst)) id2pool-table) (wfop-self inst)))
+	(setf (tensor-id-lock-p (wfop-self inst)) T)
+	(setf (gethash (tensor-id (wfop-self inst)) id2pool-table) (wfop-self inst)))
       
       (mapc
        #'(lambda (arg)
 	   (when (tensor-tmp-p arg)
-	     (setf (gethash (tensor-mid arg) id2pool-table) arg)))
+	     (setf (tensor-id-lock-p arg) T)
+	     (setf (gethash (tensor-id arg) id2pool-table) arg)))
        (wfop-args inst))
       
       (mapc
        #'(lambda (tensor)
 	   (when tensor
-	     (setf (gethash (tensor-mid tensor) id2pool-table) tensor)))
+	     (setf (tensor-id-lock-p tensor) T)
+	     (setf (gethash (tensor-id tensor) id2pool-table) tensor)))
        (wfop-sv4bw inst)))
 
     (values
@@ -391,9 +390,9 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	       ;; Otherwise -> NIL
 	       ;; (cdr (nthcdr ... <- do not include the current position
 	       (loop for inst in (cdr (nthcdr pc iseq)) do
-		 (if (find (the symbol (tensor-mid target-tensor)) (wfop-args inst) :key #'tensor-mid :test #'eql)
+		 (if (find (the symbol (tensor-id target-tensor)) (wfop-args inst) :key #'tensor-id :test #'eql)
 		     (return-from args-last-ref-p nil)
-		     (if (find (the symbol (tensor-mid target-tensor)) (wfop-out-to inst) :key #'tensor-mid :test #'eql)
+		     (if (find (the symbol (tensor-id target-tensor)) (wfop-out-to inst) :key #'tensor-id :test #'eql)
 			 (return-from args-last-ref-p t)
 			 nil))) ;; Keep exploring
 	       ;; Reached the last -> T
@@ -406,16 +405,16 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 			     pools
 			     :test #'memory-pool-p<))))
 	     (read-from-pool (tensor)
-	       (when (find (the symbol (tensor-mid tensor)) mempool-using-tensors)
+	       (when (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 		 (return-from read-from-pool tensor))
 	       
 	       (if (tensor-tmp-p tensor T)
 		   (let ((out (find-from-pool tensor)))
 		     ;; Delete from pool
 		     (when (null out)
-		       (push (tensor-mid tensor) mempool-using-tensors)
+		       (push (tensor-id tensor) mempool-using-tensors)
 		       (return-from read-from-pool tensor))
-		     (push (tensor-mid out) mempool-using-tensors)
+		     (push (tensor-id out) mempool-using-tensors)
 		     (if (some #'symbolp (shape tensor))
 			 (setq pools-adj (remove out pools-adj :test #'memory-pool-p :count 1))
 			 (setq pools
@@ -425,9 +424,9 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	     (set-as-free (tensor)
 	       (when (and (tensor-tmp-p tensor T)
 			  ;; The tensor is from memory-pool?
-			  (find (the symbol (tensor-mid tensor)) mempool-using-tensors)
+			  (find (the symbol (tensor-id tensor)) mempool-using-tensors)
 			  )
-		 (setq mempool-using-tensors (delete (tensor-mid tensor) mempool-using-tensors :test #'eql))
+		 (setq mempool-using-tensors (delete (tensor-id tensor) mempool-using-tensors :test #'eql))
 		 (if (some #'symbolp (original-shape tensor))
 		     (push tensor pools-adj)
 		     (push tensor pools)))))
@@ -435,7 +434,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
       (loop for inst in iseq for pc fixnum upfrom 0 do
 	(let* ((args (if (inst-set-p inst)
 			 (cdr (wfop-args inst))
-			 (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-mid)))
+			 (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id)))
 	       (args-last-p (map 'list #'(lambda (x) (args-last-ref-p x pc)) args))
 	       (out-to      (wfop-out-to inst)))
 
@@ -446,10 +445,10 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	  ;;   args-last-p=T (Moved to the memory-pool)
 	  
 	  ;; WfInstruction: out-to[0], ... <- f(args[0], args[1], ...)
-	  (dolist (out (remove-duplicates out-to :test #'eql :key #'tensor-mid))
+	  (dolist (out (remove-duplicates out-to :test #'eql :key #'tensor-id))
 	    (let ((result (read-from-pool out)))
-	      (when (not (eql (the symbol (tensor-mid result)) (tensor-mid out)))
-		(iseq-update-tensor-name! (nthcdr pc iseq) (tensor-mid out) (tensor-mid result)))))
+	      (when (not (eql (the symbol (tensor-id result)) (tensor-id out)))
+		(iseq-update-tensor-name! (nthcdr pc iseq) (tensor-id out) (tensor-id result)))))
 	  
 	  (mapc #'(lambda (tensor state)
 		    (when state

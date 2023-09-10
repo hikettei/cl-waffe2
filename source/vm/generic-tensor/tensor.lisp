@@ -66,20 +66,11 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (variables :initform nil :accessor tensor-variables)
 
 
-   ;; tensor-mid ... ID in memory-pool, used with build function.
    ;; tensor-id  ... indicates which pointer to use or copied?, plus, the index in the mempool.
    ;; tensor-iid ... used for topological sorting
 
-   ;;
-   ;; NIL NIL            TID1 TID2
-   ;;   \ /  -> build ->    \  /
-   ;;   NIL                 TID3
-   ;; Once the function build is called, the empty slot tensor-mid is intialized with its tensor-id
-   ;; When optimizing networks, tensor-mid is frequently overwritten.
-
    (lock-id-p :initform nil :accessor tensor-id-lock-p)
-   (tensor-mid :initform nil :accessor tensor-mid)
-   (tensor-id :initform (gensym "TID") :type symbol :reader tensor-id)         
+   (tensor-id :initform (gensym "TID") :type symbol :accessor tensor-id)         
    (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
    
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
@@ -1027,9 +1018,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 	  (if (eql (tensor-facet tensor) :input)
 	      (if (keywordp (tensor-name tensor))
 		  (format nil ":named :~a" (tensor-name tensor))
-		  (if (tensor-mid tensor)
-		      (format nil ":mid ~a"    (tensor-mid tensor))
-		      (format nil ":id ~a"     (tensor-id tensor))))
+		  (format nil ":id ~a"     (tensor-id tensor)))
 	      "")
 	  (let ((state (tensor-state tensor)))
 	    (if state

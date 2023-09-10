@@ -100,9 +100,9 @@
     `(lambda (&rest ,args)
        (let  (,@(loop for tensor in all-args
 		      for nth upfrom 0
-		      if (not (find (tensor-mid tensor) seen))
-			collect `(,(tensor-mid tensor) (nth ,nth ,args))
-		      do (push (tensor-mid tensor) seen)))
+		      if (not (find (tensor-id tensor) seen))
+			collect `(,(tensor-id tensor) (nth ,nth ,args))
+		      do (push (tensor-id tensor) seen)))
 	 (locally
 	     ,@(cl-waffe2/vm.nodes::replace-tensor->id
 		other-parts
@@ -190,8 +190,8 @@ op2 ..  E <- F(X, Y, Z)
   (let ((fused-p (wfop-fuse-prev fused-iseq)))
     (or (null fused-p)
 	(let* ((inst-list (apply #'collect-fused-ops fused-p))
-	       (prev-vars (map 'list (compose #'tensor-mid #'wfop-self) inst-list)))
-	  (not (find (tensor-mid (wfop-self instruction)) prev-vars))))))
+	       (prev-vars (map 'list (compose #'tensor-id #'wfop-self) inst-list)))
+	  (not (find (tensor-id (wfop-self instruction)) prev-vars))))))
 
 (defun node-out-to (node) (cl-waffe2/vm.nodes::node-out-to node))
 
@@ -250,12 +250,4 @@ op2 ..  E <- F(X, Y, Z)
 		     (grad tensor)
 		     grad)))))))
     (setf (detach-p grad) nil)))
-
-(defun reset-locality-optimizations! (iseq &optional (overwrite t))
-  (loop for inst in iseq do
-    (mapc #'(lambda (tensor)
-	      (when tensor
-		(if (if overwrite T (null (tensor-mid tensor)))
-		    (setf (tensor-mid tensor) (tensor-id tensor)))))
-	  `(,@(wfop-out-to inst) ,@(wfop-args inst) ,@(wfop-sv4bw inst)))))
 
