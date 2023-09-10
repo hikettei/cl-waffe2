@@ -112,9 +112,6 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 				else
 				  collect tensor))
 	   (toplevel (apply #'call composite trace-tensors)))
-
-      ;; [FixME] !matmul with transpsosed could be compiled as well?
-      ;; [TODO]  -> Envolve transpose-p option into lazy-evaluation
       
       (unless (typep toplevel 'AbstractTensor)
 	(error "defmodel-as: Attempted to compile the function ~(~a~) but failed because the composite didn't return any AbstractTensor. butgot: ~a
@@ -148,6 +145,8 @@ excepted: AbstractTensor"
 			  (map 'list #'(lambda (tensor)
 					 (list (dtype tensor)
 					       (class-of tensor)
+					       ;;[FIXME] Reusing compiled composite could be the main reason for SegFault!!
+					       (random 1.0)
 					       (length (shape tensor))
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
 			       (list ,@arguments)))

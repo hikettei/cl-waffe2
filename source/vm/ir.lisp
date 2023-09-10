@@ -273,7 +273,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
   ;; Make ViewTensorNode/ReshapeNode/PermuteNode In-place
   ;; Iseq ... Follows the execution order
   (declare (type list iseq))
-  
+    
   (loop for inst of-type WfInstruction in iseq do
     ;; ViewTensorNode: Result Base -> Result
     ;; Set Result.id <- Base.id
