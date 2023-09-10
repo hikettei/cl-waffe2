@@ -75,7 +75,6 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 		;; Deleting Unused StateContainer will benefit:
 		;;  The returned tensor by the proceed function is
 		;;  displayed as [computed] in the terminal.
-		;;(setf (tensor-state tensor) nil)
 		;; ScalarTensors never use Memory-Pool
 		;; Update Memory-Pool
 		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))

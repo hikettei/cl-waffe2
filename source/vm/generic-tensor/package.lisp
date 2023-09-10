@@ -20,7 +20,8 @@
    #:ScalarTensor
 
    #:current-backend-state
-
+   #:tensor-compiled-instruction-cache-fw
+   #:tensor-compiled-instruction-cache-bw
    #:tensor-id-lock-p
    #:tensor-finalizer
    #:tensor-grad-count

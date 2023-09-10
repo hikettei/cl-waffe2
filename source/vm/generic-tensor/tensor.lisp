@@ -44,6 +44,9 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
 
+   (compiled-instruction-cache-fw :initform nil :accessor tensor-compiled-instruction-cache-fw)
+   (compiled-instruction-cache-bw :initform nil :accessor tensor-compiled-instruction-cache-bw)
+
    ;; Viewed?
    (projected-p :initarg :projected-p :initform nil :type boolean :reader tensor-projected-p)
 

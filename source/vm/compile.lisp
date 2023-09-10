@@ -25,22 +25,33 @@
   "Reading a IR of tensor, the function returns a corresponding instruction"
   (declare (type AbstractTensor tensor))
 
+  (when (and (tensor-compiled-instruction-cache-fw tensor)
+	     (equal (wfop-args (tensor-compiled-instruction-cache-fw tensor))
+		    (tensor-variables tensor)))
+    ;; Using The Cached Compiled Function Instead
+    ;; At this time, variables shouldn't be changed
+    (let ((out (tensor-compiled-instruction-cache-fw tensor)))
+      (return-from ir->instruction out)))
+
   (cond
     ((null (tensor-backward tensor))
      ;; Has reached out the end of nodes.
      nil)
     (T
-     (make-wfop
-      (apply
-       #'find-cached-function
-       (statecontainer-forward-out-form (tensor-state tensor))
-       *compile-option*
-       (tensor-variables tensor))
-      tensor
-      (tensor-backward tensor)
-      (tensor-variables tensor)
-      :out-to (node-out-to (tensor-backward tensor))
-      :sv4bw  (node-sv4bw (tensor-backward tensor))))))
+     (let ((result
+	     (make-wfop
+	      (apply
+	       #'find-cached-function
+	       (statecontainer-forward-out-form (tensor-state tensor))
+	       *compile-option*
+	       (tensor-variables tensor))
+	      tensor
+	      (tensor-backward tensor)
+	      (tensor-variables tensor)
+	      :out-to (node-out-to (tensor-backward tensor))
+	      :sv4bw  (node-sv4bw (tensor-backward tensor)))))
+       (setf (tensor-compiled-instruction-cache-fw tensor) result)
+       result))))
 
 ;;
 ;; Avoid duplicate compilation:
@@ -152,14 +163,15 @@
 			   if dir
 			     do (set-dout arg o)
 				(init-state-container! o))
-		     ;; MoveTensorBackward is inlined in order to get in-place mutation
-		     (list
-		      (make-wfop bw-function ;; ... dout var1 var2
-				 self
-				 node
-				 `(,(get-dout (wfop-self inst)) ,@args)
-				 :out-to (loop for o in out-to if o collect o)
-				 :block-iseq bw-iseq)))))
+
+		     (let ((inst
+			     (make-wfop bw-function ;; ... dout var1 var2
+					self
+					node
+					`(,(get-dout (wfop-self inst)) ,@args)
+					:out-to (loop for o in out-to if o collect o)
+					:block-iseq bw-iseq)))	       
+		       (list inst)))))
 	       ;; Expand Gradient Adders
 	       (loop for var in args
 		     if (and (slot-value var 'requires-grad) (get-dout var))
@@ -225,11 +237,8 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	(let ((forward  (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 			    (append
-			     (let ((out
-				     (reverse
-				      (node-compile-into-vm dout))))
-			       (reset-locality-optimizations! out)
-			       out)
+			     (reverse
+			      (node-compile-into-vm dout))
 			     backward-iseq)
 			    backward-iseq)))
 	  

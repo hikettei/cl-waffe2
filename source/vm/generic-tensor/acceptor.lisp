@@ -397,7 +397,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 				(cl-waffe2/vm:accept-instructions fw-iseq))))))
 	  (backward-f   (when construct-backward?
 			  #'(lambda (model)
-			      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+b			      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
 				(cl-waffe2/vm:accept-instructions bw-iseq)))))
 	  (table        (construct-variables-table variables)))
 
