@@ -218,9 +218,9 @@ butgot: ~a"
 					 
 					 (tensor-view next-tensor)
 					 (tensor-view input)
+					 
+					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::tensor-id) (tensor-id input)
 
-					 ;; Memo: extending tensor-id is added later...
-					 (tensor-id next-tensor) (tensor-id input)
 					 (tensor-name next-tensor) (tensor-name input)
 					 (slot-value next-tensor 'cl-waffe2/vm.generic-tensor::projected-p)
 					 (slot-value input 'cl-waffe2/vm.generic-tensor::projected-p)

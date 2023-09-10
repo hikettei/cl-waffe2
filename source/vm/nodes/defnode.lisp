@@ -157,7 +157,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :self self
    :call-with-view *ranked-loop-result-cacher*
    :cache-when-compiled (if cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
-			    T
+			    NIL ;; This function should not be used as a cache.
 			    traceable?)
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)

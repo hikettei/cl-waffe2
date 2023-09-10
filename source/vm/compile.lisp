@@ -195,6 +195,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
       (map 'list #'(lambda (tensor) (setf (tensor-grad-count tensor) 0)) leaves)
 
       (when optimize-locality
+	;; Generating Setq{Pruned}
 	(apply-in-place-mutation! iseq-forward leaves))
 
       (let* ((out-symbol-p (some #'symbolp (shape toplevel)))
@@ -219,20 +220,32 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		 (forward->reverse-mode iseq-forward dout))))
 
 	(when optimize-locality
+	  ;; Reset MID
+	  (reset-locality-optimizations! iseq-forward)
+	  (let ((bw-flat (loop for inst in (reverse backward-iseq)
+			       if (null (wfop-block-iseq inst))
+				 append (list inst)
+			       else
+				 append (reverse (wfop-block-iseq inst)))))
+	    (reset-locality-optimizations! bw-flat))
 	  (setq iseq-forward (eliminate-setq-node iseq-forward)))
 	
-	(let ((forward (reverse iseq-forward))
+	(let ((forward  (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 			    (append
-			     (reverse
-			      (node-compile-into-vm dout))
+			     (let ((out
+				     (reverse
+				      (node-compile-into-vm dout))))
+			       (reset-locality-optimizations! out)
+			       out)
 			     backward-iseq)
 			    backward-iseq)))
+	  
 	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
 	    (values forward (or bw backward) leaves dout allocation)))))))
 
 (defun findout-origin (table tensor &key (limit 10))
-  (let ((last-ref (tensor-id tensor)))
+  (let ((last-ref (tensor-mid tensor)))
     (loop while t for n upfrom 0 do
       (if (> n limit) (return-from findout-origin last-ref))      
       (if (null (gethash last-ref table))
@@ -262,8 +275,8 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 		   (dolist (i iseq)
 		     (dolist (var (wfop-args i))
 		       (if (scalar-p var)
-			   (push (tensor-id var) scal-ids)
-			   (push (tensor-id var) tensor-ids)))
+			   (push (tensor-mid var) scal-ids)
+			   (push (tensor-mid var) tensor-ids)))
 		     (princ i out)))
 		 (format out "~%~a Instructions | ~a Tensors | ~a Scalars~%"
 			 (length iseq)

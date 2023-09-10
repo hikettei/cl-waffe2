@@ -61,11 +61,11 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 		    (princ "<Param>" out)
 		    (when (not (eql (cl-waffe2/vm.generic-tensor:tensor-attribute o) :chain))
 		      (princ "<Input>" out)))		      
-		(princ (tensor-id o) out)
+		(princ (tensor-mid o) out)
 		(princ " " out)))
 	    (if ignored-p
 		(with-output-to-string (out)
-		  (format out "~a{~(~a~), ~a}" (tensor-id (second (wfop-args inst))) (dtype (second (wfop-args inst))) (shape (second (wfop-args inst)))))
+		  (format out "~a{~(~a~), ~a}" (tensor-mid (second (wfop-args inst))) (dtype (second (wfop-args inst))) (shape (second (wfop-args inst)))))
 		(if (>= (length (wfop-args inst)) *omit-args-n*)
 		    (format nil "..., x~a,..." (length (wfop-args inst)))
 		    (with-output-to-string (out)
@@ -81,7 +81,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 				  (if sv4
 				      "SV4BW("
 				      "")
-				  (tensor-id var)
+				  (tensor-mid var)
 				  (dtype var)
 				  (shape var)
 				  (if sv4
@@ -275,21 +275,21 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
   (declare (type list iseq))
   
   (loop for inst of-type WfInstruction in iseq do
-	  ;; ViewTensorNode: Result Base -> Result
-	  ;; Set Result.id <- Base.id
-	  (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ViewTensorNode))
-	    (iseq-update-tensor-name! iseq
-				      (tensor-id (second (wfop-args inst)))
-				      (tensor-id (car (wfop-args inst)))))
+    ;; ViewTensorNode: Result Base -> Result
+    ;; Set Result.id <- Base.id
+    (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ViewTensorNode))
+      (iseq-update-tensor-name! iseq
+				(tensor-mid (second (wfop-args inst)))
+				(tensor-mid (car    (wfop-args inst)))))
 
-	  ;; Reshape, Permute: Result Base -> Base
-	  ;; Base.id <- Result.id
-	  (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ReshapeTensorNode)
-		    (typep (wfop-node inst) 'cl-waffe2/base-impl::Permute-Node))
-	    (iseq-update-tensor-name! iseq
-				      (tensor-id (car (wfop-args inst)))
-				      (tensor-id (second (wfop-args inst)))))))
+    ;; Reshape, Permute: Result Base -> Base
+    ;; Base.id <- Result.id
+    (when (or (typep (wfop-node inst) 'cl-waffe2/base-impl::ReshapeTensorNode)
+	      (typep (wfop-node inst) 'cl-waffe2/base-impl::Permute-Node))
+      (iseq-update-tensor-name! iseq
+				(tensor-mid (car    (wfop-args inst)))
+				(tensor-mid (second (wfop-args inst)))))))
 
 
 
-	    
+

@@ -355,7 +355,7 @@ CL-WAFFE2-REPL>
 		   (loop for nth being the hash-keys in profiled-result do
 		     (let ((i (gethash nth inst->node-table)))
 		       (dolist (var (wfop-args i))
-			 (push (tensor-id var) tensor-ids))
+			 (push (tensor-mid var) tensor-ids))
 		       
 		       ;; Put the result of benchmark
 		       (let* ((times (gethash nth profiled-result))

@@ -19,7 +19,7 @@
 
 (defun thread-cache-table (&optional (idx nil))
   (with-lock-held (*thread-pool-lock*)
-    (let ((memory-pool	   
+    (let ((memory-pool
 	    (gethash (or idx (current-thread)) *model-function-cache-form*)))
       (if memory-pool
 	  memory-pool
@@ -41,9 +41,7 @@
 (defun read-from-cache (key)
   (let ((table (thread-cache-table)))
     (or (gethash key table)
-	(progn
-	  (setf (gethash key table) (make-hash-table :test #'equal))
-	  (gethash key table)))))
+	(setf (gethash key table) (make-hash-table :test #'equal)))))
 	  
 	       
 (defun read-where-args (where)
@@ -157,7 +155,7 @@ excepted: AbstractTensor"
 		   (if ,found-function
 		       ;; [TODO] Shape Inspection
 		       ,(if get-model
-			    found-function			   
+			    found-function
 			     `(forward ,found-function ,@arguments))
 		       (let ((,found-function (trace-and-compile-composite
 						,need-backward
