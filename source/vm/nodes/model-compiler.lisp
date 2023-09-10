@@ -212,7 +212,7 @@ And manages its allocation not to cause conflicts in the threads."))
 	`(progn
 	   (define-op (,node-name (,self ,@in-names)
 		       :where    ,where
-		       :extends 'AbstractCompositeNode
+		       :extends (AbstractCompositeNode)
 		       :forward ((,self ,@in-names)
 				 (let ((out (multiple-value-list (forward (read-compiled-model ,self) ,@in-names))))
 				   (when (every #'scalar-p out)
