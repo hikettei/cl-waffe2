@@ -146,6 +146,9 @@ reject-when=nil, or (apply reject-when inputs)=t"
    body))
 
 (defun vm-kernel-lambda (traceable? name args self body)
+  ;; [TODO]
+  ;; (call node TID1 TID1)
+  ;;   ^ should return error
   (make-compiled-kernel
    :name name
    :body (replace-tensor->id body args)
