@@ -408,3 +408,59 @@
   )
 
 
+;; Gradients are decayed well?
+
+
+(defsequence Simple-MLP (in-features hidden-dim)
+	     (LinearLayer in-features hidden-dim t)
+	     (asnode #'!sigmoid)
+	     (LinearLayer hidden-dim 1 t))
+
+;; Naming:... set-input VS set-inputs
+;; allow: (forward self)
+;; make trainer forwardable
+
+(deftrainer (MLPTrainer (self in-features hidden-dim &key (lr 1e-1))
+	     :model (Simple-MLP in-features hidden-dim)
+	     :optimizer (cl-waffe2/optimizers:SGD :lr lr)
+	     :compile-mode :fastest
+	     :build ((self)
+		     (MSE
+		      (make-input `(batch-size 1) :TrainY)
+		      (call (model self) (make-input `(batch-size ,in-features) :TrainX))))
+	     
+	     :set-inputs ((self x y)
+			  (set-input (compiled-model self) :TrainX x)
+			  (set-input (compiled-model self) :TrainY y))
+	     :minimize! ((self)
+			 (zero-grads! (compiled-model self))
+			 (let ((loss (forward (compiled-model self))))
+			   (backward  (compiled-model self))
+			   (optimize! (compiled-model self))
+			   (vref loss 0)))			 
+	     :predict ((self x)
+		       (call (model self) x))))
+
+
+(defun grad-decay-test (&key
+			  (batch-size 100)
+			  (iter-num 3000))
+  (let* ((X (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
+ 	 (Y (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
+	 (trainer (MLPTrainer 100 10 :lr 1e-3))
+	 (first)
+	 (end))
+    
+    (set-inputs trainer X Y)
+    (loop for nth-epoch fixnum upfrom 0 below iter-num
+	  do (let ((out (minimize! trainer)))
+	       (if (null first) (setq first out))
+	       (setq end out)))
+    (> first end)))
+
+(test grad-decay-test
+  (is (grad-decay-test)))
+
+(test grad-decay-cached-test
+  (is (grad-decay-test)))
+

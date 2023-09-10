@@ -328,7 +328,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     (simulate-memory-pool! iseq)
 
     (%in-place-vm-ops! iseq-bw-flat)
-    (simulate-memory-pool! iseq-bw-flat)
+    ;;(simulate-memory-pool! iseq-bw-flat)
     
     
     ;; iseq ... flattened list of iseq
