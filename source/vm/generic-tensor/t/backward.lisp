@@ -113,7 +113,7 @@
   (is (chain-test8))
   (is (chain-test9)))
 
-(test backward-si de-effect-test
+(test backward-side-effect-test
   (is (backward-being-not-destructed)))
   
 ;; save-for-backward test

@@ -53,7 +53,6 @@ If set to T, the result is displayed on the terminal with the arguments used eac
   (if (tensor-tmp-p tensor)
       (let ((out (read-from-mempool-tensor tensor)))
 	;; Keep Broadcasting, Permution etc... But storages are shared.
-	(setf (tensor-state tensor) nil)
 	(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec out))
 	tensor)
       (if (scalar-p tensor)
@@ -73,8 +72,14 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 	if  result do
 	  (if (tensor-tmp-p tensor)
 	      (progn
+		;; Tensors registerd in the memory-pool,
+		;; doesn't need the support of StateContainer anymore
+		;; Deleting Unused StateContainer will benefit:
+		;;  The returned tensor by the proceed function is
+		;;  displayed as [computed] in the terminal.
+		(setf (tensor-vec tensor) nil)
 		;; ScalarTensors never use Memory-Pool
-		;; Update Memory-Pool		
+		;; Update Memory-Pool
 		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
 		;;(tensor-vec result)
 		;; Tensor is already broadcasted/permuted...

@@ -1,10 +1,11 @@
 
 (in-package :cl-waffe2/vm)
 
-;; This file isn't used anymore for a while
 ;; TODO:
 ;;  Add a macro named `defpath`
 ;;  We create a search-based fuse-ops, which is user-extensible
+;;  DO TESTS!!!!!
+;;  diff(exp(log))=1 , log(1+x), etc...
 
 ;; defpath possess these datum:
 ;;  1. Nodes to be replaced
