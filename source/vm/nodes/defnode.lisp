@@ -149,6 +149,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
   ;; [TODO]
   ;; (call node TID1 TID1)
   ;;   ^ should return error
+
   (make-compiled-kernel
    :name name
    :body (replace-tensor->id body args)

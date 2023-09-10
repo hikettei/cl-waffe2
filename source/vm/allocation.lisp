@@ -28,29 +28,15 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; (Proceed (!Sum (Proceed (!Softmax (randn `(3 3))))))
-;; ScalarTensorとMemory_pool, defmodel-asを修正 -> It should work
-
-;; deftrainerをはいし
+;; Deftrainerを廃止
 ;; (EXP X) -> A, B <-これ検出できない？
-;; [TODO] defmodel-as ...  無駄なインライン化をして実装方式を増やさない
-;;  -> Compiled-Composite自体をCacheする (OK)
+;; !softmax, exp is duplicated -> delete.
 
-;; [FIX] gradient-adderが消えてる？
-;; copy/delete-alloc テスト
-
-;; [TODO] 上の表を実装してThread-safeにする
-;; [TODO] %vm-moveをthread-safeに動かす defmodel-as ... thread-safe optionを追加
-;; [TODO] gradient-adder naosu
-
-;; [TODO] !softmax exp duplicated 削除
-;; Global Memory-Poolの改善
 ;; define-op の SaveForBackwardの扱いは？テスト増やすべき
 
 ;; RNN ... define-impl-opで埋め込む？
 ;; SV4BWでAllocしたのは局所性云々とはどうでもいい
 ;; O(N^2)
-;; Enhancement: IDの番地を人間が読みやすくする
 
 ;; define-opのsave-for-backwardの扱い？
 ;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
@@ -222,6 +208,8 @@ Allocation State:
     (when (null (cl-waffe2/vm.generic-tensor::vec result))
       (error "tensor-vec: In memory-pool, the InputTensor ~a isn't registered?" result))
     (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))
+    (when (tensor-state tensor)
+      (setf (cl-waffe2/vm.generic-tensor::statecontainer-latest-p (tensor-state tensor)) T))
     (cl-waffe2/vm.generic-tensor::vec tensor)))
 
 (defmacro with-static-allocation ((allocation) &body body)
@@ -334,8 +322,6 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     
     ;; Optimizes the locality of memory
     ;; [TODO] Share memory-pools between forward and backward
-    
-
     
     (%in-place-vm-ops! iseq)    
     (simulate-memory-pool! iseq)

@@ -6,23 +6,6 @@
 ;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
 ;;
 
-
-;; [TODO]
-;;- retain_graph option
-;;- Theano likeな動作を目指したい
-;;-  defmodel-as, AbstractNodeのcache
-;;-  Dynamically ShapeとControl Flowでもいいけど、コンパイル速度をもっと高速化してPyTorch-likeに動かす方針も可能っぽい
-;;     -> キャッシュできないdefine-implをdefine-impl-opで全て置き換えることでcompile nilのオーバーヘッドが0になる
-;;     -> call-with-viewのFunction Version apply-rank-iterみたいなのでランクつき演算
-;;     -> defpathでFusionOpをすればSoTAに近い性能目指せるか？
-;;     -> AD: (log 1 + x)とかのFusionで数値的安定性の保証
-;;     -> define-by-run modeでRNN
-;;  memory-pool
-;;   IR: Block内部でAllocateしたTensorはmemory-poolを出たときにFreeする
-
-;; TODO: defmodel-as ... :whereにoutのシンボル名指定しないとError
-;; (make-input `(A)) A=list Tensorにrankを記録させないとAから以降のShapeを推論できなくない？
-
 (defvar *thread-pool-lock* (make-lock "thread cache lock"))
 (defparameter *model-function-cache-form* (make-hash-table))
 (declaim (type hash-table *model-function-cache-form*))
@@ -225,6 +208,7 @@ And manages its allocation not to cause conflicts in the threads."))
 => (defmodel-as (...) :differentiable t)
                               └── Set :differentiable=t or the forward wasn't called."
 					   ',node-name))
+
 				  (let ((dout (read-dout ,self)))
 				    (if (scalar-p dout)
 					(setf (tensor-vec dout)

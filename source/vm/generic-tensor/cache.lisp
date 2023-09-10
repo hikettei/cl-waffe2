@@ -78,8 +78,7 @@
   (self nil)) ;; 2D 3D Flatten ...
 
 (defun make-funcallable-kernel (compiled-function compile-option)
-  (declare (type Compiled-Kernel compiled-function)
-	   (ignore compile-option))
+  (declare (type Compiled-Kernel compiled-function))
   ;; If the Compiled-kernel already provides any op as a lambda function, -> use this
   ;; Otherwise -> compile and cache
   (or (compiled-kernel-op compiled-function)
@@ -88,7 +87,11 @@
        ;; [TODO]
        ;; Excepted body: (lambda args body)
        ;;                            ^ Insert Compile-Option
-       (compiled-kernel-body compiled-function))))
+       (let ((body (compiled-kernel-body compiled-function)))
+	 `(,(car body)
+	   ,(second body)
+	   (declare ,compile-option)
+	   ,@(cddr body))))))
 
 (defun funcall-cached-function (kernel-function compile-option &rest args)
   (declare (type Compiled-Kernel kernel-function))

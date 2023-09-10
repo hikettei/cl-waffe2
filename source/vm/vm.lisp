@@ -34,17 +34,15 @@ If set to T, the result is displayed on the terminal with the arguments used eac
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
-	      (let ((state (tensor-state var)))
-		;; Intentionally creates the illusion of VM that misunderstands
-		;; var is [computed] by deleting tensor-state
-		(setf (tensor-state var) nil)
-	        (%vm-move place var)
+	      ;; Intentionally creates the illusion of VM that misunderstands
+	      ;; var is [computed] by deleting tensor-state
+	      (tensor-vec place)
+	      (tensor-vec var)
+	      (%vm-move place var)
 
-		;; FixME: Delete this line:
-		(when (scalar-p place)
-		  (setf (tensor-vec place) (tensor-vec var)))
-		
-		(setf (tensor-state var) state)))))
+	      ;; FixME: Delete this line:
+	      (when (scalar-p place)
+		(setf (tensor-vec place) (tensor-vec var))))))
   nil)
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
@@ -77,7 +75,7 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 		;; Deleting Unused StateContainer will benefit:
 		;;  The returned tensor by the proceed function is
 		;;  displayed as [computed] in the terminal.
-		(setf (tensor-vec tensor) nil)
+		;;(setf (tensor-state tensor) nil)
 		;; ScalarTensors never use Memory-Pool
 		;; Update Memory-Pool
 		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))

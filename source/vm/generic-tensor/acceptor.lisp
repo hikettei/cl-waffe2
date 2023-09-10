@@ -47,6 +47,7 @@ Set T to `*no-grad*` during the execution of body.
 The StateContainer structure is a Compiled-Kernel structure that stores before and after the instruction is compiled and the result of the instruction.
 "
   (state :initialized :type (member :initialized :forwarded :backwarded))
+  (latest-p nil :type boolean) ;; Synchronized with Memory-pool? (if the tensor is InputTensor)
   
   (forward-out-form nil :type Compiled-Kernel) ;; Instruction Info
   (forward-result   nil :type (or null AbstractTensor))
@@ -277,9 +278,7 @@ Before calling the forward method, set any value to these InputTensors first.
     (loop for i fixnum upfrom 0 below (length symbols) by 2
 	  do (register-adjustable-shape (nth i symbols) (nth (1+ i) symbols))
 	     (setf (gethash (nth i symbols) allocator) (nth (1+ i) symbols)))
-    
-    (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) allocator)
-    nil))
+    allocator))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs)
   (let ((input-args (compiled-inputs model)))
@@ -347,7 +346,7 @@ Reading all variables in the computation node, the method get-input returns an c
 	      &key
 		(inputs nil)
 		(construct-backward? (not *no-grad*))
-		(compile-mode :fastest)
+		(compile-mode :default)
 		(fuse-ops t)
 		(defmodel-as-from nil)
 		(dout-add1 t))
@@ -391,10 +390,11 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
     
     (let ((forward-f  #'(lambda (model)
 			  (with-adjustable-symbol-scope
-			    (set-adjustable-symbols model)
-			    (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-			      (all-embodied? model)
-			      (cl-waffe2/vm:accept-instructions fw-iseq)))))
+			    (let ((alloc-inst (set-adjustable-symbols model)))
+			      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+				(cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
+				(all-embodied? model)
+				(cl-waffe2/vm:accept-instructions fw-iseq))))))
 	  (backward-f   (when construct-backward?
 			  #'(lambda (model)
 			      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))

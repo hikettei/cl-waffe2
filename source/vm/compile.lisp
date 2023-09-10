@@ -19,7 +19,6 @@
 ;; Z <- Y
 
 
-(defparameter *vm-compile-option* :fastest)
 
 (declaim (ftype (function (AbstractTensor) (or null WFInstruction)) ir->instruction))
 (defun ir->instruction (tensor)
@@ -35,7 +34,7 @@
       (apply
        #'find-cached-function
        (statecontainer-forward-out-form (tensor-state tensor))
-       (cl-waffe2/vm.generic-tensor::compile-option-form *vm-compile-option*)
+       *compile-option*
        (tensor-variables tensor))
       tensor
       (tensor-backward tensor)
@@ -221,7 +220,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 
 	(when optimize-locality
 	  (setq iseq-forward (eliminate-setq-node iseq-forward)))
-		
+	
 	(let ((forward (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 			    (append

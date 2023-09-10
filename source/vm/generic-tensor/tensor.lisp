@@ -70,7 +70,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; tensor-iid ... used for topological sorting
 
    (lock-id-p :initform nil :accessor tensor-id-lock-p)
-   (tensor-id :initform (gensym "TID") :accessor tensor-id)         
+   (tensor-id :initform (gensym "TID") :type symbol :accessor tensor-id)         
    (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
    
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
@@ -977,8 +977,9 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   (let ((f-exist-p (statecontainer-forward-result state))
 	(b-exist-p (statecontainer-backward-result state)))
     (cond
-      ((subtypep (class-of (tensor-backward tensor))
-		 'cl-waffe2/base-impl::ProceedNode)
+      ((or (subtypep (class-of (tensor-backward tensor))
+		     'cl-waffe2/base-impl::ProceedNode)
+	   (statecontainer-latest-p state))
        :computed)
       ((and (null f-exist-p)
 	    (null b-exist-p))
