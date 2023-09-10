@@ -177,6 +177,17 @@ Allocation State:
       (setf (cl-waffe2/vm.generic-tensor::statecontainer-latest-p (tensor-state tensor)) T))
     (cl-waffe2/vm.generic-tensor::vec tensor)))
 
+(defun update-alloc-vec! (place new-value)
+  (declare (type AbstractTensor place new-value))
+  (let ((old-vec (tensor-vec place))
+	(new-vec (cl-waffe2/vm.generic-tensor::vec new-value)))
+
+    (declare (ignore old-vec))
+;;    (when (not (typep old-vec (type-of new-vec)))
+  ;;    (warn "Overwriting ~a=~a" place new-value))
+    
+    (setf (tensor-vec (gethash (tensor-id place) (vmalloc-id2pool *static-alloc-state*))) new-vec)))
+
 (defmacro with-static-allocation ((allocation) &body body)
   "
 ## [macro] with-static-allocation
@@ -292,14 +303,14 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     ;; [TODO] Share memory-pools between forward and backward
     
     (%in-place-vm-ops! iseq)
-    ;;(simulate-memory-pool! iseq)
+    (simulate-memory-pool! iseq)
     (%in-place-vm-ops! iseq-bw-flat)
 
     ;; Iseq-bw-flat is well optimized by simulate-memory-pool! iseq
     ;; So there's no need to call it again (only to result the wrong result)
     ;; %in-place-vm-ops! is working enough.
     
-    (simulate-memory-pool! iseq-bw-flat)
+    ;;(simulate-memory-pool! iseq-bw-flat)
     
     
     ;; iseq ... flattened list of iseq
@@ -316,7 +327,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	   (when (tensor-tmp-p arg)
 	     (setf (tensor-id-lock-p arg) T)
 	     (setf (gethash (tensor-id arg) id2pool-table) arg)))
-       `(,@(wfop-out-to inst)
+       `(,(wfop-self inst)
 	 ,@(wfop-args inst)))
       
       (mapc
@@ -339,7 +350,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 
 (defun memory-pool-p< (tensor1 tensor2)
   (and (or (not (scalar-p tensor1)) (scalar-p tensor2))
-       (and (<= (apply #'* (original-shape tensor1))
+       (and (= (apply #'* (original-shape tensor1)) ;; <=
 		(apply #'* (original-shape tensor2)))
 	    (eql (dtype tensor1) (dtype tensor2)))))
 
@@ -403,7 +414,7 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 			 (cdr (wfop-args inst))
 			 (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id)))
 	       (args-last-p (map 'list #'(lambda (x) (args-last-ref-p x pc)) args))
-	       (out-to      (wfop-out-to inst)))
+	       (out-to       (wfop-out-to inst)))
 
 	  ;; Allocation is required when:
 	  ;;   The tensor is used as a out parameter
