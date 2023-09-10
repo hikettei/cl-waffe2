@@ -28,44 +28,6 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; Deftrainerを廃止
-;; (EXP X) -> A, B <-これ検出できない？
-;; !softmax, exp is duplicated -> delete.
-
-;; define-op の SaveForBackwardの扱いは？テスト増やすべき
-
-;; RNN ... define-impl-opで埋め込む？
-;; SV4BWでAllocしたのは局所性云々とはどうでもいい
-;; O(N^2)
-
-;; define-opのsave-for-backwardの扱い？
-;; defmodel-asでwith-static-allocationがネストしたときの扱い・・・
-;; 最初のallocateはrouteから参照しないと・・・MoveでPruneされた後のTensorもallocしちゃう
-
-
-;; (!mul a b) AがInputTensorだとMoveTensorNodeを一つ減らせる
-
-;; TODO Nested with-static-allocation
-
-;; [TODO] DtypeのCastを計算ノードにする CastTensorNode-XXX
-;; [TODO] ^ forward :aroundでデータ型の不一致を検知したら、outに従って自動でCasting
-
-;; [TODO] memory-pool.lispを削除 (NO)
-;; [TODO] Dynamically-Shapingを安定化する
-;; [TODO] Stride ... In-placeの保証のもとに数値を優先
-
-;; [TODO] REPL上ではどうする？今までののこす？
-;; [TODO] 局所性の最適化 -> 後で
-;; [TODO] DtypeとかDeviceが違うTensorは同じにしたらダメ
-
-
-;; with-static-allocationの外でProceedで繋げることができない。
-;; defparameterでglobalなallocationを宣言しておく？
-;; vecに格納しておく
-;; (grad tensor) <- 読み込める？
-
-
-
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
