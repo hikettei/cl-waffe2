@@ -47,13 +47,15 @@ In the simplest example, the `build` function traces and compiles the network fr
     ;; model is a compiled function: f(a b)
     (forward model (randn `(3 3)) (randn `(3 3)))))
 
-;;<Compiled-Composite
-;;    forward  : forward(model A B) -> CPUTENSOR{FLOAT}(1 1)
-;;    backward : backward(model) -> t
+;;<Compiled-Composite(allocated-p=NIL)
+;;    forward     : forward(model A B) -> CPUTENSOR{FLOAT}(1 1)
+;;    backward    : backward(model) -> t
+;;    memory-pool : two tensor(s)
+;;                   L {8.0e-6+((A B) x 4.0e-6)}MB
 ;;    inputs:
 ;;        A -> (A B)
 ;;        B -> (A B)
-;;>
+;;> 
 
 ;;{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :named ChainTMP646587 
 ;;  ((1.0858848))
