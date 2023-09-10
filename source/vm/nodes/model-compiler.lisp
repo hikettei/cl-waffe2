@@ -172,7 +172,6 @@ excepted: AbstractTensor"
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
 			       (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (read-from-cache ,cache-key))))
-		  
 		   (if ,found-function
 		       ;; [TODO] Shape Inspection
 		       ,(if get-model
@@ -186,7 +185,7 @@ excepted: AbstractTensor"
 						',composite-input-size
 						',arguments
 						,@arguments)))
-			  ;; cache it
+			 ;; cache it
 			 (setf (gethash ,dispatching-keys (read-from-cache ,cache-key)) ,found-function)
 			 ,(if get-model
 			      found-function
@@ -216,7 +215,7 @@ And manages its allocation not to cause conflicts in the threads."))
 		       :where    ,where
 		       :extends 'AbstractCompositeNode
 		       :forward ((,self ,@in-names)
-				 (let ((out (multiple-value-list (forward (read-compiled-model ,self) ,@in-names))))				   
+				 (let ((out (multiple-value-list (forward (read-compiled-model ,self) ,@in-names))))
 				   (when (every #'scalar-p out)
 				     (setf (out-scalar-p ,self) t))
 				   (apply #'values out)))

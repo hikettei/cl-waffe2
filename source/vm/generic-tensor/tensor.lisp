@@ -838,6 +838,12 @@ Note that view is only created for Tensors, not a Scalar.
       (apply-permute (slot-value tensor 'input-shape) tensor))
     nil))
 
+(defun recompute-stride! (tensor)
+  (setf (tensor-stride tensor)
+	(case (order tensor)
+	  (:column (column-major-calc-strides (original-shape tensor)))
+	  (:row    (row-major-calc-strides    (original-shape tensor))))))
+
 (defun permute-computable-p (old-order new-order)
   (equal (sort (copy-list old-order) #'<)
 	 (sort (copy-list new-order) #'<)))

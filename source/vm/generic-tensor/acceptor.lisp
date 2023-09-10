@@ -271,10 +271,9 @@ Before calling the forward method, set any value to these InputTensors first.
     (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) allocator)
     nil))
 
-(defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs &key &allow-other-keys)
+(defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs)
   (let ((input-args (compiled-inputs model)))
     (when input-args
-
       (assert (= (length input-args) (length inputs))
 	  nil
 	  "forward: Can't invoke the forward step of given Compiled-Composite because the number of arguments received is invaild.
@@ -379,6 +378,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 						 :compile-mode compile-mode
 						 :fuse-p fuse-ops
 						 :add1 dout-add1)
+    
     (let ((forward-f  #'(lambda (model)
 			  (with-adjustable-symbol-scope
 			    (set-adjustable-symbols model)

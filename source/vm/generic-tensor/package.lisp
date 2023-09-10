@@ -21,6 +21,7 @@
 
    #:current-backend-state
 
+   #:recompute-stride!
    #:tensor-id-lock-p
    #:tensor-finalizer
    #:tensor-grad-count

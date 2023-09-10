@@ -53,6 +53,7 @@ If set to T, the result is displayed on the terminal with the arguments used eac
   (if (tensor-tmp-p tensor)
       (let ((out (read-from-mempool-tensor tensor)))
 	;; Keep Broadcasting, Permution etc... But storages are shared.
+	(setf (tensor-state tensor) nil)
 	(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec out))
 	tensor)
       (if (scalar-p tensor)
@@ -189,7 +190,13 @@ Evaluates generated cl-waffe2 IR sequence.
 	  do (apply-inst-sv4bw inst)
 	     (write-result (wfop-out-to inst) (apply-instruction inst))
 	  finally
-	     (return-from accept-instructions (apply #'values (map 'list #'maybe-read-result (wfop-out-to inst)))))))
+	     (return-from accept-instructions
+	       (apply #'values
+		      (map 'list
+			   (compose
+			    #'cl-waffe2/vm.nodes::eliminate-undetermined-size
+			    #'maybe-read-result)
+			   (wfop-out-to inst)))))))
 
 (defparameter *under-benchmark-set* nil "(list sorted-node profiled-table) If there's any") 
 
