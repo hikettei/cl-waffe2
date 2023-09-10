@@ -39,7 +39,7 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 	      (tensor-vec place)
 	      (tensor-vec var)
 	      (%vm-move place var)
-
+	      
 	      ;; FixME: Delete this line:
 	      (when (scalar-p place)
 		(setf (tensor-vec place) (tensor-vec var))))))
@@ -79,7 +79,8 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 		;;  displayed as [computed] in the terminal.
 		;; ScalarTensors never use Memory-Pool
 		;; Update Memory-Pool
-		(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
+		;;(setf (tensor-vec (read-from-mempool-tensor tensor)) (cl-waffe2/vm.generic-tensor::vec result))
+		(update-alloc-vec! tensor result)
 		;; Tensor is already broadcasted/permuted...
 		;; So sharing vec is enough.
 		(setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec result))

@@ -378,7 +378,11 @@ This function is setfable and inlined.
 	out)))
 
 (defun (setf tensor-vec) (new-value tensor)
-  (declare (type AbstractTensor tensor))
+  ;;  (declare (type AbstractTensor tensor))
+
+  ;;(when (and (vec tensor)
+;;	     (not (typep new-value (type-of (vec tensor)))))
+  ;;  (error "(setf tensor-vec) Can't set the ="))
   (write-vec new-value tensor))
 
 ;; Initializes generic uis of tensors.
