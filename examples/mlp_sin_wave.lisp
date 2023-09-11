@@ -20,6 +20,13 @@
 
 (in-package :mlp-sin-wave)
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; Network Template: Criterion
+(defun criterion (criterion X Y &key (reductions nil))
+  (apply #'call->
+	 (funcall criterion X Y)
+	 (map 'list #'asnode (reverse reductions))))
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; Defines a model
 (defsequence Simple-MLP (in-features hidden-dim)
@@ -29,11 +36,12 @@
 
 ;; Constructs/Compiles the neural network
 (defun build-mlp-model (in-features hidden-dim &key (lr 1e-1))
-  (let* ((lazy-loss (MSE (make-input `(batch-size 1) :TrainY)
-			 (call
-			  (Simple-MLP in-features hidden-dim)
-			  (make-input `(batch-size ,in-features) :TrainX))))
-	 (model (build (->scal lazy-loss) :inputs `(:TrainX :TrainY))))
+  (let* ((lazy-loss (criterion #'MSE
+			       (call (Simple-MLP in-features hidden-dim)
+				     (make-input `(batch-size ,in-features) :TrainX))
+			       (make-input `(batch-size 1) :TrainY)
+			       :reductions (list #'->scal)))
+	 (model (build lazy-loss :inputs `(:TrainX :TrainY))))
 
     ;; Initializes and hooks AbstractOptimizers
     (mapc (hooker x (SGD x :lr lr)) (model-parameters model))

@@ -19,4 +19,3 @@
 
 (in-package :mnist-sample)
 
-
