@@ -232,7 +232,7 @@ Reading the `(grad tensor)`, the function invokes the optimizer hooked to the te
 
 ## [function] reset-grad!
 
-Resets the gradient of the tensor with zero.
+Resets the gradient of the tensor with zero with `retain-grad=t`.
 
 
 ## [function] tensor-vec
@@ -420,7 +420,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1502 
+{CPUTENSOR[float] :shape (A 10) :id TID1381 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input

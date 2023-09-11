@@ -1666,7 +1666,7 @@ In order to implement device-specific implementation of `Unfold`, define-impl `I
    (values
     (call
      (col2imnode n c (h-of self) (w-of self) k-h k-w h-out w-out stride-x
-      stride-y (img-out-of self))
+                 stride-y (img-out-of self))
      dout)
     nil)))
 ```

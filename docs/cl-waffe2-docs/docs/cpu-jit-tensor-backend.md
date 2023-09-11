@@ -1,6 +1,6 @@
 
 # [package] :cl-waffe2/backends.jit.cpu
-The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)
+[Unstable] The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)
 ## [parameter] `*default-c-compiler*`
 
 Specify the command to compile the generated c codes. In default, "gcc".

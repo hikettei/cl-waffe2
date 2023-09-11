@@ -13,13 +13,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1552 
+{CPUTENSOR[float] :shape (10 10) :id TID1431 
   :vec-state [computed]
-  ((1.3563212    -0.0         -0.0         ~ 0.66437244   -0.0         0.5758207)                    
-   (0.32484004   -0.0         1.1069025    ~ 0.33708817   0.8596226    -0.0)   
-                 ...
-   (-0.0         -0.0         -0.0         ~ 0.40561935   0.115193695  0.66292197)
-   (-0.0         -0.0         -0.0         ~ -0.0         1.7522626    -0.0))
+  ((-0.0        -0.0        1.4563614   ~ 0.12839013  1.6735466   -0.0)                   
+   (-0.0        0.7021836   -0.0        ~ 0.0920827   1.6974396   -0.0)   
+                ...
+   (1.0319365   0.09859386  1.2601917   ~ -0.0        0.7230486   -0.0)
+   (-0.0        0.12257845  1.0139741   ~ 0.6677612   -0.0        0.35926917))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -43,13 +43,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1643 
+{CPUTENSOR[float] :shape (10 10) :id TID1522 
   :vec-state [computed]
-  ((0.44819808 0.48854244 0.59221524 ~ 0.8893383  0.46183863 0.33162943)                  
-   (0.3568413  0.26439044 0.519481   ~ 0.78826183 0.5115942  0.55313486)   
-               ...
-   (0.1272022  0.43307915 0.8074486  ~ 0.76300204 0.52910817 0.5744591)
-   (0.66711944 0.48927152 0.7403083  ~ 0.5147265  0.43981186 0.5560996))
+  ((0.92068595  0.38643858  0.59769624  ~ 0.782908    0.7951611   0.3243036)                   
+   (0.45063692  0.8844838   0.7055789   ~ 0.6401052   0.58050334  0.3435368)   
+                ...
+   (0.6815791   0.5202018   0.40984365  ~ 0.5420403   0.29856625  0.30525693)
+   (0.21781419  0.536015    0.8327136   ~ 0.65991646  0.49891552  0.3606924))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -77,9 +77,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :id TID1902 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :id TID1781 
   :vec-state [computed]
-  ((1.2066936))
+  ((1.1418228))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -105,9 +105,9 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :id TID2070 
+{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :id TID1949 
   :vec-state [computed]
-  ((1.4866867))
+  ((1.814005))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -200,7 +200,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W2134}(
+<Composite: LINEARLAYER{W2013}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -288,7 +288,7 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W2144}(
+<Composite: CONV2D{W2023}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)

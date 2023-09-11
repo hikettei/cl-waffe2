@@ -1,8 +1,8 @@
 
 # [package] cl-waffe2
-The package `:cl-waffe2` provides a wide range of utilities.
-## Accessing AbstractTensor as an array of other types.
-we provide Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
+The `cl-waffe2` package provides utilities for a wide range needs: Object Convertion, Advance Network Construction, Trainer, and so on.
+## [Tensor Facet] Converting AbstractTensor <-> Anything
+If you're looking for the way to create an AbstractTensor from a Common Lisp array or manipulate an AbstractTensor as a Common Lisp array, this section is perfect for you. Here we provide a common APIs for the conversion between AbstractTensor and other matrix types. The most basic method is a `convert-tensor-facet` method and we're welcome to add a new method by users. Other functions are macros work by assigning a method according to the type of object and the direction. Plus, conversions are performed while sharing pointers as much as possible. If turned out to be they can't be shared, the with-facet macro forces a copy to be performed and pseudo-synchronises them.
 
 ## [generic] convert-tensor-facet
 
@@ -10,18 +10,40 @@ we provide Common utils to access the storage vector of `AbstractTensor` with mu
 (convert-tensor-facet from to)
 ```
 
-The generic function `convert-tensor-facet` pays an important role when converting the data structure between `AbstractTensor` and other arrays (e.g.: `simple-array` etc...). Set `from` = `<<Array Before Converted>>`, and `to` = `(type-of <<Datatype you need>>)`, we dispatch the appropriate method and return converted arrays. Note that there's no assurance but before and after the converting, the pointers endeavour to indicate the same thing. If `AbstractTensor` to be converted has shuffled or viewed, we make a copy so that they become contiguous in memory.
+Converts the given object (anything is ok; from=`AbstractTensor` `simple-array` etc as long as declared) into the direction indicated in `to`.
 
-This method is intended to be extended by users.
+### Inputs
 
-For example, converting `AbstractTensor` -> `simple-array`:
+`From[Anything]` The object to be converted
+
+`To[Symbol]` Indicates to where the object is converted
+
+### Adding an extension
+
+Welcome to define the addition of method by users. For example, `Fixnum -> AbstractTensor` convertion can be written like:
+
+```lisp
+(defmethod convert-tensor-facet ((from fixnum) (to (eql 'AbstractTensor)))
+    (make-tensor from))
+
+(print (change-facet 1 :direction 'AbstractTensor))
+
+;;{SCALARTENSOR[float]   
+;;    1.0
+;;  :facet :exist
+;;  :requires-grad NIL
+;;  :backward NIL} 
+```
+
+If any object to AbstractTensor conversion is implemented, it is strongly recommended to add it to this method.
+
+### Example
 
 ```lisp
 (convert-tensor-facet (randn `(3 3)) 'simple-array)
 ```
 
-See also: `convert-facet`
-
+See also: `convert-facet (more convenient API)`
 
 ## [function] change-facet
 
@@ -29,20 +51,29 @@ See also: `convert-facet`
 (change-facet (array-from &key (direction 'array)))
 ```
 
-Changes the facet of given `array-from` into `direction`. This function is just an alias for `convert-tensor-facet`
+By calling the `conver-tensor-facet` method, this function can change the facet of given `array-form` into the `direction`. (Just an alias of `(convert-tensor-facet array-from direction)`)
 
 See also: `convert-tensor-facet`
 
-### direction
+### Standard Directions
 
-As of this writing(2023/7/18), we provide these directions in default.
+We provide these symbols as a `direction` in standard.
 
-`array` returns ommon Lisp Array, with keeping the shape of tensors.
+- `array`: Any Object -> Common Lisp Standard ND Array
 
-`simple-array` returns Common Lisp Array but 1D. the order of elements hinge on the order of `tensor.`
+- `simple-array`: Any Object -> Common Lisp Simple-Array
 
-`AbstractTensor` returns `AbstractTensor` (devices to use depend on `*using-device*`). The dtype of returned tensor can be inferred from a first element of given array.
+- `AbstractTensor`: Any Object -> AbstractTensor. If couldn't determine the dtype, dtype of the first element of `array-from` is used instead.
 
+## [function] ->tensor
+
+Using the `convert-tensor-facet` method, converts the given object into AbstractTensor.
+
+### Example
+
+```lisp
+(->tensor #2A((1 2 3) (4 5 6)))
+```
 
 ## [macro] with-facet
 
@@ -50,17 +81,17 @@ As of this writing(2023/7/18), we provide these directions in default.
 (with-facet (var (object-from &key (direction 'simple-array)) &body body))
 ```
 
-The macro `with-facet` changes the facet of given `object-from` into `direction`, binding the result to `var`. If you want to apply modifications to `object-from` which applied inside `body`, set `sync`=`t`. (Only available when `object-from`=`AbstractTensor` otherwise ignored).
+By using the convert-tensor-facet` method, this macro changes the facet of `object-from` into the `direction`. If you want to apply any operations to `object-from` and ensure that modifications are applied to the `object-from`, set `sync`=t and moves element forcibly (only available when direction=`'abstracttensor`). This is useful when editing AbstractTensor or calling other libraries without making copies.
 
-The macro `with-facet` is working on the flowchart below. Note that on some conditions, `(convert-tensor-facet)` will create an additional copy/compiling which may cause performance issue.
+For a more explict workflow, see below:
 
 ```lisp
-[macro with-facet]
-        ↓
-[Set var <- (convert-tensor-facet object-from direction)] ⚠️ If tensor is viewed/permuted, an additional compiling is invoked!
-        ↓
-[Processing body]
-        ↓
+    [macro with-facet]
+            ↓
+[Binding var = (convert-tensor-facet object-from direction)] 
+            ↓
+      [Processing body]
+            ↓
 [If sync=t, (setf (tensor-vec object-from) (tensor-vec (convert-tensor-facet var 'AbstractTensor)))]
 ```
 
@@ -90,8 +121,7 @@ See also: `with-facets`
 
 ## [macro] with-facets
 
-with-facet but input-forms are several.
-
+Bundles several `with-facet` macro.
 
 ```lisp
 (with-facets ((a ((randn `(3 3)) :direction 'array))
@@ -106,24 +136,42 @@ with-facet but input-forms are several.
     (0.19916026 -0.5102597 1.1834184)) 
 ```
 
-## Brief network description of the configurations
-(TODO)
-## Sequential Model
-(TODO) Composing several layers...
-## Trainer
-(TODO)
+## Advanced Network Construction
+Powerful macros in Common Lisp enabled me to provide an advanced APIs for make the construction of nodes more systematic, and elegant. Computational nodes that are lazy evaluated can be treated as pseudo-models, for example, even if they are created via functions. And, APIs in this section will make it easy to compose/compile several nodes.
+NILNIL
+## [macro] defsequence
 
 ```lisp
-minimize!:
-  ...
-
-
-set-input:
-  describe ...
-
-predict:
-  describe ..
+(defsequence (name (&rest args) &optional docstring &rest nodes))
 ```
+
+Defines a Composite that can be defined only by the `call->` method.
+
+### Inputs
+
+`name[symbol]` defines the new Composite after `name`
+
+`args[list]` a list of arguments that used to initialize nodes. Not for `call`.
+
+`docstring[string]` docstring
+
+### Example
+
+```lisp
+(defsequence MLP (in-features)
+    "Docstring (optional)"
+    (LinearLayer in-features 512)
+    (asnode #'!tanh)
+    (LinearLayer 512 256)
+    (asnode #'!tanh)
+    (LinearLayer 256 10))
+
+;; Sequence can receive a single argument.
+(call (MLP 786) (randn `(10 786)))
+```
+
+Tips: Use `(sequencelist-nth n sequence-model)` to read the nth layer of sequence.
+
 ## [function] show-backends
 
 ```lisp

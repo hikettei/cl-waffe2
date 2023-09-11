@@ -13,6 +13,30 @@ AbstractTensors with `:requires-grad=t` can find their gradients with the `(back
     (call-optimizer! a))
 ```
 
+### Tips: Customized Printing
+
+At first, AbstractOptimizers are displayed in your terminal like:
+
+```lisp
+(Adam (parameter (randn `(3 3))))
+;; <AbstractOptimizer: ADAM( ) -> TID11256>
+;;                          ^ You're allowed to insert something
+```
+
+The method `cl-waffe2/vm.nodes:on-print-object` is also used to customize how AbstractOptimizer is displayed:
+
+```lisp
+(defmethod cl-waffe2/vm.nodes:on-print-object ((opt Adam) stream)
+  (format stream "lr=~a eps=~a beta1=~a beta2=~a N=~a"
+	  (lr-of opt)
+	  (eps-of opt)
+	  (beta1-of opt)
+	  (beta2-of opt)
+	  (adam-n opt)))
+```
+
+Do not insert `Newline` here because `AbstractOptimizer` is also displayed when printing `AbstractTensor` with hooked optimizers.
+
 See also: `defoptimizer` `read-parameter` `step-optimize`.
 
 ## [macro] defoptimizer
@@ -24,6 +48,8 @@ The macro `defoptimizer` defines a user-defined optimizer class which is a subcl
 `param` the tensor to be optimized is given as this argument. the tensor is stored in the `param` slot automatically, being accessed by a `read-parameter` method.
 
 ### Example
+
+We use `defmodel` and `defmodel-as` because formulae for optimisation functions can be expressed in Composite and compiled as functions to reduce compilation time.
 
 ```lisp
 (defoptimizer (SGD (self param &key (lr 1e-3))
