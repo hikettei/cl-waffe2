@@ -997,7 +997,6 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
        :wait-for-reset))))
 
 (defmethod print-object ((tensor AbstractTensor) stream)
-
   (when *with-printing-tensor-omitted*
     (format stream "<<~a Tensor (Omitted)>>" (shape tensor))
     (return-from print-object))
@@ -1007,7 +1006,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
   ~a
   :facet :~(~a~)
   :requires-grad ~a
-  :backward ~a}"
+~a}"
 	  (class-name (class-of tensor))
 	  (dtype tensor)
 	  (if (slot-value tensor 'scalar-p)
@@ -1042,7 +1041,9 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 	      (format nil "input~%  :belongs-to :memory-pool")
 	      (tensor-facet tensor))
 	  (slot-value tensor 'requires-grad)
-	  (tensor-backward tensor)))
+	  (if (tensor-optimizer tensor)
+	      (format nil "  :optimizer ~a" (tensor-optimizer tensor))
+	      (format nil "  :backward ~a" (tensor-backward tensor)))))
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  APIs for save_for_backward (cl-waffe2 VM, internal usage)
@@ -1085,7 +1086,22 @@ optimizer[AbstractOptimizer]
   (declare (type AbstractTensor tensor)
 	   (type cl-waffe2/optimizers:AbstractOptimizer optimizer))
   (when (slot-value tensor 'requires-grad)
-    (setf (tensor-optimizer tensor) optimizer)))
+    (when (tensor-optimizer tensor)
+      (warn "hook-optimizer!: Overwritting AbstractOptimizer ...
+Tensor: ~a
+With:   ~a"
+	    tensor optimizer))
+    (when (not (equal (cl-waffe2/optimizers:read-parameter optimizer)
+		      tensor))
+      (warn "hook-optimizer! The given AbstractOptimizer ~a is hooked to another tensor ~a.
+
+It should be ~a?"
+	    optimizer
+	    (cl-waffe2/optimizers:read-parameter optimizer)
+	    tensor))
+    
+    (setf (tensor-optimizer tensor) optimizer)
+    T))
 
 (defun call-optimizer! (tensor)
   "
@@ -1100,7 +1116,7 @@ Reading the `(grad tensor)`, the function invokes the optimizer hooked to the te
   (declare (type AbstractTensor))
   (when (slot-value tensor 'requires-grad)
     (when (null (tensor-optimizer tensor))
-      (error "The tensor ~a has no optimizer hooked. Call (hook-optimizer! tensor optimizer) in advance."
+      (error "The tensor ~a seems not having AbstractOptimizer hooked with. Try (hook-optimizer! tensor optimizer) to register it."
 	     tensor))
     (cl-waffe2/optimizers:step-optimize (tensor-optimizer tensor))))
 
@@ -1108,7 +1124,7 @@ Reading the `(grad tensor)`, the function invokes the optimizer hooked to the te
   "
 ## [function] reset-grad!
 
-Resets the gradient of the tensor with zero.
+Resets the gradient of the tensor with zero with `retain-grad=t`.
 "
   (declare (type AbstractTensor tensor))
   (when (slot-value tensor 'requires-grad)

@@ -12,6 +12,11 @@
    :cl-waffe2/backends.cpu
    :cl-waffe2/backends.lisp
    :cl-waffe2/threads)
+
+  ;; Training APIs
+
+  (:export
+   #:hooker)
   
   ;; Facet APIs
   (:export

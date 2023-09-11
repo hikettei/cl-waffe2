@@ -5,7 +5,7 @@
 
 ;; TODO: DOCSTRINGS
 
-;; FixME: Shape got undetermined.
+;; TODO 抽象単射のーど
 (defmodel (Encapsulated-Node (self node-func)
 	   :slots ((node-func :initarg :node-func))
 	   :initargs (:node-func node-func)
