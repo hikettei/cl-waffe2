@@ -421,7 +421,7 @@
 			 (call
 			  (Simple-MLP in-features hidden-dim)
 			  (make-input `(batch-size ,in-features) :TrainX))))
-	 (model (build (->scal lazy-loss) :inputs `(:TrainX :TrainY))))
+	 (model (build lazy-loss :inputs `(:TrainX :TrainY))))
 
     ;; Initializes and hooks AbstractOptimizers
     (mapc (hooker x (cl-waffe2/optimizers:SGD x :lr lr)) (model-parameters model))
@@ -432,7 +432,7 @@
   (let ((act-loss (tensor-vec (forward model train-x train-y))))
     (backward model)
     (mapc #'call-optimizer! (model-parameters model))
-    act-loss))
+    (aref act-loss 0)))
 
 (defun grad-decay-test (&key
 			  (batch-size 100)
