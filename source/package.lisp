@@ -56,8 +56,7 @@
    #:set-inputs
    #:minimize!
    #:predict)
-
-   ))
+   )
 
 (in-package :cl-waffe2)
 

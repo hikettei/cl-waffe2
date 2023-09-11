@@ -17,9 +17,9 @@
     ~a
 " (slot-value model 'node-func)))
 
-(defmacro asnode (function &rest arguments)
+(defun asnode (function &rest arguments)
   "
-## [macro] asnode
+## [function] asnode
 
 ```lisp
 (asnode function &rest arguments)
@@ -73,12 +73,12 @@ The macro `cl-waffe2/vm.nodes:defmodel-as` is able to define new functions/nodes
 On a side note: `Encapsulated-Node` itself doesn't provide for `:where` declaration, but you can it with the keyword `:where`.
 "
   (if arguments
-      `(Encapsulated-Node #'(lambda (x) (funcall ,function x ,@arguments)))
-      `(Encapsulated-Node ,function)))
+      (Encapsulated-Node #'(lambda (x) (apply function x arguments)))
+      (Encapsulated-Node function)))
 
-(defmacro call-> (input &rest nodes)
+(defun call-> (input &rest nodes)
   "
-## [macro] call->
+## [function] call->
 
 ```lisp
 (call-> input &rest nodes)
@@ -95,14 +95,16 @@ Starting from `input`, this macro applies a composed function.
 
 `nodes` could be anything as long as the `call` method can handle, but I except node=`Composite`, `AbstractNode`, and `(asnode function ...)`.
 "
-  (let ((nodes (reverse nodes)))
-    (labels ((expand-call-form (rest-inputs)
-	       (if rest-inputs
-		   `(call ,(car rest-inputs)
-			  ,(expand-call-form (cdr rest-inputs)))
-		   input)))
-
-      (expand-call-form nodes))))
+  (declare (type AbstractTensor input)
+	   (type list nodes))
+  
+  (when (null nodes)
+    (return-from call-> input))
+  
+  (let ((out input))
+    (dolist (node nodes)
+      (setq out (call node out)))
+    out))
 
 ;; Sequence Printer
 

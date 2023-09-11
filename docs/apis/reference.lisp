@@ -245,26 +245,9 @@
       (with-op-doc (macro-function 'asnode) 't)
       (with-op-doc (macro-function 'call->) 't)
       (with-op-doc (macro-function 'defsequence) 't))
-
-    (with-section "Trainer"
-      (insert "(TODO)
-
-```lisp
-minimize!:
-  ...
-
-
-set-input:
-  describe ...
-
-predict:
-  describe ..
-```"))
-
+    
     (with-op-doc #'show-backends 'function)
-    (with-op-doc #'set-devices-toplevel 'function)
-
-    ))
+    (with-op-doc #'set-devices-toplevel 'function)))
 
 (with-page *lisp-tensor-backend* "[package] :cl-waffe2/backends.lisp"
   (insert
@@ -297,7 +280,7 @@ For some instructions (e.g.: `!max` `!min`, sparse matrix supports, `SLEEF`, etc
     ))
 
 (with-page *cpu-jit-tensor-backend* "[package] :cl-waffe2/backends.jit.cpu"
-  (insert "The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)")
+  (insert "[Unstable] The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)")
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)

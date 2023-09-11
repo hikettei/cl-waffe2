@@ -118,6 +118,16 @@ defines a new trainer.
 ;; ↑ いつか消す
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; TODO
+;;  1. モデルのパラメーター保存復元
+;;  2. Trainerを廃止 -> All tests, examples
+;;  3. ドキュメントを綺麗にする
+;;  4. Converter 
+;;
+;; モデルのパラメーターの保存と復元？
+;; (save-params :from 'CPUTensor :to 'CUDATensor) <- convert-tensor-facet
+;; (load-params :from 'CPUTensor :to 'CUDATensor)
+;; (save-params :wraps (converter :from 'CPUTensor :to 'CUDATensor))
 
 ;; 今日やること
 ;; cl-waffe2/vmパッケージを綺麗にする + ドキュメント整備 + Trainer廃止
