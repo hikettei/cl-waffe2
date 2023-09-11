@@ -231,16 +231,16 @@
 		  (placedoc ,name ,type)
 		  ,@body)))
 
-    (with-section "Accessing AbstractTensor as an array of other types."
-      (insert "we provide Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
-")
+    (with-section "[Tensor Facet] Converting AbstractTensor <-> Anything"
+      (insert "If you're looking for the way to create an AbstractTensor from a Common Lisp array or manipulate an AbstractTensor as a Common Lisp array, this section is perfect for you. Here we provide a common APIs for the conversion between AbstractTensor and other matrix types. The most basic method is a `convert-tensor-facet` method and we're welcome to add a new method by users. Other functions are macros work by assigning a method according to the type of object and the direction. Plus, conversions are performed while sharing pointers as much as possible. If turned out to be they can't be shared, the with-facet macro forces a copy to be performed and pseudo-synchronises them.")
       
       (with-op-doc #'convert-tensor-facet 't)
       (with-op-doc #'change-facet 't)
+      (with-op-doc #'->tensor 't)
       (with-op-doc (macro-function 'with-facet) 't)
       (with-op-doc (macro-function 'with-facets) 't))
 
-    (with-section "Brief network description of the configurations"
+    (with-section "Advanced APIs for nodes"
       (insert "(TODO)"))
 
     (with-section "Sequential Model"

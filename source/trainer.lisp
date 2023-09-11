@@ -118,6 +118,7 @@ defines a new trainer.
 ;; ↑ いつか消す
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 ;; 今日やること
 ;; cl-waffe2/vmパッケージを綺麗にする + ドキュメント整備 + Trainer廃止
 (defmacro hooker (bind optimizer &aux (opt-bind (gensym)))

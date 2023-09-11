@@ -31,6 +31,7 @@ This model usually combined with `asnode` macro."
 
 (call (asnode #'!tanh) x)
 (call (asnode #'!add 2.0) x) ;; x += 2.0
+(defmodel-as (asnode #'!sin) :where (A[~] -> B[~]) :asif :function :named !sin-test)
 "
   (if arguments
       `(Encapsulated-Node #'(lambda (x) (funcall ,function x ,@arguments)))

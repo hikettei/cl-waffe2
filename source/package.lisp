@@ -24,6 +24,8 @@
    #:change-facet
    #:with-facet
    #:with-facets
+
+   #:->tensor
    )
   
   (:export
