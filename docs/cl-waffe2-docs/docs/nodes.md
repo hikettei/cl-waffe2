@@ -466,7 +466,7 @@ Gives an implementation of `abstract-name` as a function form.
 Defines a differentiable AbstractNode which its definition is given by a function.
 
 ```lisp
-(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends-fw extends-bw) &body body)
+(define-op (name (self &rest constructor-args) where slots out-scalar-p save-for-backward-names forward backward documentation extends) &body body)
 ```
 
 ### Effects
@@ -703,7 +703,7 @@ Redefines a Composite as a new function or AbstractNode specified in the `:asif`
 ─────────────────────────────────────────────────────────────────────────────────────
 :function | Defines a function to be executed immediately that does not create a node.
 ─────────────────────────────────────────────────────────────────────────────────────
-:node     | Defines a AbstractNode which needs to be compiler later
+:node     | Defines a AbstractNode which needs to be compiled later
 ─────────────────────────────────────────────────────────────────────────────────────
 ```
 

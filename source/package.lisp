@@ -12,6 +12,17 @@
    :cl-waffe2/backends.cpu
    :cl-waffe2/backends.lisp
    :cl-waffe2/threads)
+
+  ;; Training APIs
+  (:export
+   #:hooker)
+  
+  ;; Advanced Network APIs
+  (:export
+   #:defsequence
+   #:sequencelist-nth
+   #:asnode
+   #:call->)
   
   ;; Facet APIs
   (:export
@@ -19,6 +30,8 @@
    #:change-facet
    #:with-facet
    #:with-facets
+
+   #:->tensor
    )
   
   (:export
@@ -31,27 +44,6 @@
    #:show-backends
    #:set-devices-toplevel
    ;;#:with-cuda
-   )
-
-  (:export
-   #:AbstractTrainer
-   #:deftrainer
-   #:optimize!
-   #:zero-grads!
-   #:model
-   #:compiled-model
-   #:set-inputs
-   #:minimize!
-   #:predict)
-
-  ;; network utils
-  (:export
-   #:defsequence
-   #:sequencelist-nth)
-  
-  (:export
-   #:asnode
-   #:call->
    ))
 
 (in-package :cl-waffe2)

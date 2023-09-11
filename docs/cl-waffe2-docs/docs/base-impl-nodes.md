@@ -138,7 +138,7 @@ X\gets{X / Y}
 
 ```lisp
 ((self dout dx dy)
- (values (!div dout dy) (!div (!mul dx (!mul -1 dout)) (!square dy))))
+ (values (!div dout dy) (!div (!mul dx (!mul -1 dout)) (!mul dy dy))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -171,7 +171,7 @@ A\gets{1 / A}
 ✅ Already defined. 
 
 ```lisp
-((self dout dx) (values (!div (!mul -1 dout) (!square dx))))
+((self dout dx) (values (!div (!mul -1 dout) (!mul dx dx))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -310,7 +310,7 @@ X\gets{X / scalar}
 ```lisp
 ((self dout dx dy)
  (values (!div dout dy)
-         (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!square dy))))))
+         (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!mul dy dy))))))
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
@@ -329,25 +329,12 @@ Moves all the visible elements of `B` into visible areas of `A`.
 A\gets{B}
 ```
 
-### Behaviour
-
-All cl-waffe2 operations follow this rule: `Make a copy for now, disable later`. (e.g.: the function `(!add x y)` makes an copy of `x` and `y` for now, but this copy operation is ignored, if they're concluded not to be needed, by tracing computation node.)
-
-In order to disable a useless copy operations, MoveTensorNode must follow this behaviour:
-
-1. Reading (movetensor-ignore-me self) in runtime, the forward makes a copy of given tensor only after the slot is `nil`.
-
-2. Otherwise, return `B`
-
-Don't worry the allocation won't be done until `(tensor-vec A)` is called.
-
-For practical example, my impls (`./source/backends/lisp/arithmetic.lisp` for example) would be helpful!.
-
 ### Constructor
 
 `(MoveTensorNode dtype)`
 
 `dtype` dtype to use.
+
 
 
 ### Backward
@@ -1679,7 +1666,7 @@ In order to implement device-specific implementation of `Unfold`, define-impl `I
    (values
     (call
      (col2imnode n c (h-of self) (w-of self) k-h k-w h-out w-out stride-x
-      stride-y (img-out-of self))
+                 stride-y (img-out-of self))
      dout)
     nil)))
 ```

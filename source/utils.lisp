@@ -27,13 +27,7 @@
   `(let ((*default-order* :row))
      ,@body))
 
-;; Broadcast_Auto shouldn't be modular, all the nodes defined in cl-waffe2, should work under all combines of config.
 (defmacro with-config ((&key
-			  ;; TO ADD:
-			  ;; Global Dtype
-			  ;; (sin uint8) -> Global Float Dtype
-			  ;; Matmul-Accuracy
-			  ;; 
 			  (device :cpu)
 			  (no-grad nil)
 			  (dtype :float)
@@ -60,9 +54,6 @@
 
 
 ;; TODO: Add set-config for REPL.
-
-
-
 (defun collect-initarg-slots (slots constructor-arguments)
   (map 'list #'(lambda (slots)
 		 ;; Auto-Generated Constructor is Enabled Only When:

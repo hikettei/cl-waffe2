@@ -14,6 +14,9 @@ Param_{new}\\gets{Param - Param_{grad}\\times{lr}}
 `lr[single-float]` learning rate."
 		   :slots ((lr :initarg :lr :reader sgd-lr))))
 
+(defmethod cl-waffe2/vm.nodes:on-print-object ((opt SGD) stream)
+  (format stream "lr=~a" (sgd-lr opt)))
+
 (defmodel (SGD-Compute-Form (self)
 	   :where (Param[~] Grad[~] Lr[scal] -> Param[~] where scal = 1)
 	   :documentation "Param_New <- Param - Param * Grad * Lr"
