@@ -395,7 +395,7 @@
 </code></pre>
 <p>Reading the <code>(grad tensor)</code>, the function invokes the optimizer hooked to the tensor.</p>
 <h2 id="function-reset-grad">[function] reset-grad!</h2>
-<p>Resets the gradient of the tensor with zero.</p>
+<p>Resets the gradient of the tensor with zero with <code>retain-grad=t</code>.</p>
 <h2 id="function-tensor-vec">[function] tensor-vec</h2>
 <pre><code class="language-lisp">(tensor-vec tensor)
 </code></pre>
@@ -526,7 +526,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1502 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1377 
   :vec-state [maybe-not-computed]
     &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input

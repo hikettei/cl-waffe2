@@ -1591,7 +1591,7 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
    (values
     (call
      (col2imnode n c (h-of self) (w-of self) k-h k-w h-out w-out stride-x
-      stride-y (img-out-of self))
+                 stride-y (img-out-of self))
      dout)
     nil)))
 </code></pre>

@@ -95,6 +95,8 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#example-hooks-and-calls-the-optimizer-tied-to-the-tensor">Example: Hooks and calls the optimizer tied to the tensor.</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tips-customized-printing">Tips: Customized Printing</a>
+    </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-defoptimizer">[macro] defoptimizer</a>
@@ -186,12 +188,29 @@
     (hook-optimizer! a (Adam a))
     (call-optimizer! a))
 </code></pre>
+<h3 id="tips-customized-printing">Tips: Customized Printing</h3>
+<p>At first, AbstractOptimizers are displayed in your terminal like:</p>
+<pre><code class="language-lisp">(Adam (parameter (randn `(3 3))))
+;; &lt;AbstractOptimizer: ADAM( ) -&gt; TID11256&gt;
+;;                          ^ You're allowed to insert something
+</code></pre>
+<p>The method <code>cl-waffe2/vm.nodes:on-print-object</code> is also used to customize how AbstractOptimizer is displayed:</p>
+<pre><code class="language-lisp">(defmethod cl-waffe2/vm.nodes:on-print-object ((opt Adam) stream)
+  (format stream &quot;lr=~a eps=~a beta1=~a beta2=~a N=~a&quot;
+      (lr-of opt)
+      (eps-of opt)
+      (beta1-of opt)
+      (beta2-of opt)
+      (adam-n opt)))
+</code></pre>
+<p>Do not insert <code>Newline</code> here because <code>AbstractOptimizer</code> is also displayed when printing <code>AbstractTensor</code> with hooked optimizers.</p>
 <p>See also: <code>defoptimizer</code> <code>read-parameter</code> <code>step-optimize</code>.</p>
 <h2 id="macro-defoptimizer">[macro] defoptimizer</h2>
 <p>The macro <code>defoptimizer</code> defines a user-defined optimizer class which is a subclass of <code>AbstractOptimizer</code>. And the class is dispatched one per parameter to be optimized and the method <code>step-optimize</code> is called each time an optimizing is performed.</p>
 <h3 id="input">Input</h3>
 <p><code>param</code> the tensor to be optimized is given as this argument. the tensor is stored in the <code>param</code> slot automatically, being accessed by a <code>read-parameter</code> method.</p>
 <h3 id="example">Example</h3>
+<p>We use <code>defmodel</code> and <code>defmodel-as</code> because formulae for optimisation functions can be expressed in Composite and compiled as functions to reduce compilation time.</p>
 <pre><code class="language-lisp">(defoptimizer (SGD (self param &amp;key (lr 1e-3))
            :slots ((lr :initarg :lr :reader sgd-lr))))
 

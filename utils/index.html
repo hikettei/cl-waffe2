@@ -59,33 +59,67 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#accessing-abstracttensor-as-an-array-of-other-types">Accessing AbstractTensor as an array of other types.</a>
+    <li class="toctree-l2"><a class="reference internal" href="#tensor-facet-converting-abstracttensor-anything">[Tensor Facet] Converting AbstractTensor &lt;-&gt; Anything</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#generic-convert-tensor-facet">[generic] convert-tensor-facet</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#adding-an-extension">Adding an extension</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-change-facet">[function] change-facet</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#direction">direction</a>
+    <li class="toctree-l3"><a class="reference internal" href="#standard-directions">Standard Directions</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-tensor">[function] -&gt;tensor</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-with-facet">[macro] with-facet</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-with-facets">[macro] with-facets</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#brief-network-description-of-the-configurations">Brief network description of the configurations</a>
+    <li class="toctree-l2"><a class="reference internal" href="#advanced-network-construction">Advanced Network Construction</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#sequential-model">Sequential Model</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-asnode">[function] asnode</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#usage-call-">Usage: call-&gt;</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#trainer">Trainer</a>
+    <li class="toctree-l3"><a class="reference internal" href="#usage2-defmodel-as">Usage2: defmodel-as</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-call-">[function] call-&gt;</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-defsequence">[macro] defsequence</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-hooker">[macro] hooker</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-show-backends">[function] show-backends</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
     </li>
         </ul>
     </li>
@@ -162,42 +196,71 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="package-cl-waffe2">[package] cl-waffe2</h1>
-<p>The package <code>:cl-waffe2</code> provides a wide range of utilities.</p>
-<h2 id="accessing-abstracttensor-as-an-array-of-other-types">Accessing AbstractTensor as an array of other types.</h2>
-<p>we provide Common utils to access the storage vector of <code>AbstractTensor</code> with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.</p>
+<p>The <code>cl-waffe2</code> package provides utilities for a wide range needs: Object Convertion, Advance Network Construction, Trainer, and so on.</p>
+<h2 id="tensor-facet-converting-abstracttensor-anything">[Tensor Facet] Converting AbstractTensor &lt;-&gt; Anything</h2>
+<p>If you're looking for the way to create an AbstractTensor from a Common Lisp array or manipulate an AbstractTensor as a Common Lisp array, this section is perfect for you. Here we provide a common APIs for the conversion between AbstractTensor and other matrix types. The most basic method is a <code>convert-tensor-facet</code> method and we're welcome to add a new method by users. Other functions are macros work by assigning a method according to the type of object and the direction. Plus, conversions are performed while sharing pointers as much as possible. If turned out to be they can't be shared, the with-facet macro forces a copy to be performed and pseudo-synchronises them.</p>
 <h2 id="generic-convert-tensor-facet">[generic] convert-tensor-facet</h2>
 <pre><code class="language-lisp">(convert-tensor-facet from to)
 </code></pre>
-<p>The generic function <code>convert-tensor-facet</code> pays an important role when converting the data structure between <code>AbstractTensor</code> and other arrays (e.g.: <code>simple-array</code> etc...). Set <code>from</code> = <code>&lt;&lt;Array Before Converted&gt;&gt;</code>, and <code>to</code> = <code>(type-of &lt;&lt;Datatype you need&gt;&gt;)</code>, we dispatch the appropriate method and return converted arrays. Note that there's no assurance but before and after the converting, the pointers endeavour to indicate the same thing. If <code>AbstractTensor</code> to be converted has shuffled or viewed, we make a copy so that they become contiguous in memory.</p>
-<p>This method is intended to be extended by users.</p>
-<p>For example, converting <code>AbstractTensor</code> -&gt; <code>simple-array</code>:</p>
+<p>Converts the given object (anything is ok; from=<code>AbstractTensor</code> <code>simple-array</code> etc as long as declared) into the direction indicated in <code>to</code>.</p>
+<h3 id="inputs">Inputs</h3>
+<p><code>From[Anything]</code> The object to be converted</p>
+<p><code>To[Symbol]</code> Indicates to where the object is converted</p>
+<h3 id="adding-an-extension">Adding an extension</h3>
+<p>Welcome to define the addition of method by users. For example, <code>Fixnum -&gt; AbstractTensor</code> convertion can be written like:</p>
+<pre><code class="language-lisp">(defmethod convert-tensor-facet ((from fixnum) (to (eql 'AbstractTensor)))
+    (make-tensor from))
+
+(print (change-facet 1 :direction 'AbstractTensor))
+
+;;{SCALARTENSOR[float]   
+;;    1.0
+;;  :facet :exist
+;;  :requires-grad NIL
+;;  :backward NIL} 
+</code></pre>
+<p>If any object to AbstractTensor conversion is implemented, it is strongly recommended to add it to this method.</p>
+<h3 id="example">Example</h3>
 <pre><code class="language-lisp">(convert-tensor-facet (randn `(3 3)) 'simple-array)
 </code></pre>
-<p>See also: <code>convert-facet</code></p>
+<p>See also: <code>convert-facet (more convenient API)</code></p>
 <h2 id="function-change-facet">[function] change-facet</h2>
 <pre><code class="language-lisp">(change-facet (array-from &amp;key (direction 'array)))
 </code></pre>
-<p>Changes the facet of given <code>array-from</code> into <code>direction</code>. This function is just an alias for <code>convert-tensor-facet</code></p>
+<p>By calling the <code>conver-tensor-facet</code> method, this function can change the facet of given <code>array-form</code> into the <code>direction</code>. (Just an alias of <code>(convert-tensor-facet array-from direction)</code>)</p>
 <p>See also: <code>convert-tensor-facet</code></p>
-<h3 id="direction">direction</h3>
-<p>As of this writing(2023/7/18), we provide these directions in default.</p>
-<p><code>array</code> returns ommon Lisp Array, with keeping the shape of tensors.</p>
-<p><code>simple-array</code> returns Common Lisp Array but 1D. the order of elements hinge on the order of <code>tensor.</code></p>
-<p><code>AbstractTensor</code> returns <code>AbstractTensor</code> (devices to use depend on <code>*using-device*</code>). The dtype of returned tensor can be inferred from a first element of given array.</p>
+<h3 id="standard-directions">Standard Directions</h3>
+<p>We provide these symbols as a <code>direction</code> in standard.</p>
+<ul>
+<li>
+<p><code>array</code>: Any Object -&gt; Common Lisp Standard ND Array</p>
+</li>
+<li>
+<p><code>simple-array</code>: Any Object -&gt; Common Lisp Simple-Array</p>
+</li>
+<li>
+<p><code>AbstractTensor</code>: Any Object -&gt; AbstractTensor. If couldn't determine the dtype, dtype of the first element of <code>array-from</code> is used instead.</p>
+</li>
+</ul>
+<h2 id="function-tensor">[function] -&gt;tensor</h2>
+<p>Using the <code>convert-tensor-facet</code> method, converts the given object into AbstractTensor.</p>
+<h3 id="example_1">Example</h3>
+<pre><code class="language-lisp">(-&gt;tensor #2A((1 2 3) (4 5 6)))
+</code></pre>
 <h2 id="macro-with-facet">[macro] with-facet</h2>
 <pre><code class="language-lisp">(with-facet (var (object-from &amp;key (direction 'simple-array)) &amp;body body))
 </code></pre>
-<p>The macro <code>with-facet</code> changes the facet of given <code>object-from</code> into <code>direction</code>, binding the result to <code>var</code>. If you want to apply modifications to <code>object-from</code> which applied inside <code>body</code>, set <code>sync</code>=<code>t</code>. (Only available when <code>object-from</code>=<code>AbstractTensor</code> otherwise ignored).</p>
-<p>The macro <code>with-facet</code> is working on the flowchart below. Note that on some conditions, <code>(convert-tensor-facet)</code> will create an additional copy/compiling which may cause performance issue.</p>
-<pre><code class="language-lisp">[macro with-facet]
-        ↓
-[Set var &lt;- (convert-tensor-facet object-from direction)] ⚠️ If tensor is viewed/permuted, an additional compiling is invoked!
-        ↓
-[Processing body]
-        ↓
+<p>By using the convert-tensor-facet<code>method, this macro changes the facet of</code>object-from<code>into the</code>direction<code>. If you want to apply any operations to</code>object-from<code>and ensure that modifications are applied to the</code>object-from<code>, set</code>sync<code>=t and moves element forcibly (only available when direction=</code>'abstracttensor`). This is useful when editing AbstractTensor or calling other libraries without making copies.</p>
+<p>For a more explict workflow, see below:</p>
+<pre><code class="language-lisp">    [macro with-facet]
+            ↓
+[Binding var = (convert-tensor-facet object-from direction)] 
+            ↓
+      [Processing body]
+            ↓
 [If sync=t, (setf (tensor-vec object-from) (tensor-vec (convert-tensor-facet var 'AbstractTensor)))]
 </code></pre>
-<h3 id="example">Example</h3>
+<h3 id="example_2">Example</h3>
 <pre><code class="language-lisp">(let ((a (randn `(3 3))))
     (with-facet (a* (a :direction 'simple-array))
         (print a*)
@@ -218,7 +281,7 @@
 </code></pre>
 <p>See also: <code>with-facets</code></p>
 <h2 id="macro-with-facets">[macro] with-facets</h2>
-<p>with-facet but input-forms are several.</p>
+<p>Bundles several <code>with-facet</code> macro.</p>
 <pre><code class="language-lisp">(with-facets ((a ((randn `(3 3)) :direction 'array))
               (b ((randn `(3 3)) :direction 'array)))
     (print a)
@@ -230,27 +293,100 @@
     (0.17137305 -0.026806794 -0.8192844)
     (0.19916026 -0.5102597 1.1834184)) 
 </code></pre>
-<h2 id="brief-network-description-of-the-configurations">Brief network description of the configurations</h2>
-<p>(TODO)</p>
-<h2 id="sequential-model">Sequential Model</h2>
-<p>(TODO) Composing several layers...</p>
-<h2 id="trainer">Trainer</h2>
-<p>(TODO)</p>
-<pre><code class="language-lisp">minimize!:
-  ...
+<h2 id="advanced-network-construction">Advanced Network Construction</h2>
+<p>Powerful macros in Common Lisp enabled me to provide an advanced APIs for make the construction of nodes more systematic, and elegant. Computational nodes that are lazy evaluated can be treated as pseudo-models, for example, even if they are created via functions. And, APIs in this section will make it easy to compose/compile several nodes.</p>
+<h2 id="function-asnode">[function] asnode</h2>
+<pre><code class="language-lisp">(asnode function &amp;rest arguments)
+</code></pre>
+<p>Wraps the given <code>function</code> which excepted to create computation nodes with the <code>Encapsulated-Node</code> composite. That is, functions are regarded as a <code>Composite</code> and be able to use a variety of APIs (e.g.: <code>call</code>, <code>call-&gt;</code>, <code>defmodel-as</code> ...).</p>
+<p>In principle, a function takes one argument and returns one value, but by adding more <code>arguments</code> the macro automatically wraps the function to satisfy it. For example, <code>(asnode #'!add 1.0) is transformed into: #'(lambda (x) (!add x 1.0))</code>. So the first arguments should receive AbstractTensor.</p>
+<h3 id="usage-call-">Usage: call-&gt;</h3>
+<p>It is not elegant to use <code>call</code> more than once when composing multiple models.</p>
+<pre><code class="language-lisp">(call (AnyModel1)
+      (call (AnyModel2)
+             (call (AnyModel3) X)))
+</code></pre>
+<p>Instead, you can use the <code>call-&gt;</code> function:</p>
+<pre><code class="language-lisp">(call-&gt; X
+        (AnyModel1)
+        (AnyModel2)
+        (AnyModel3))
+</code></pre>
+<p>However, due to constrains of <code>call</code>, it is not possible to place functions here. <code>asnode</code> is exactly for this!</p>
+<pre><code class="language-lisp">(call-&gt; X
+        (AnyModel1)
+        (asnode #'!softmax)
+        (asnode #'!view 0) ;; Slicing the tensor: (!view x 0 t ...)
+        (asnode #'!add 1.0) ;; X += 1.0
+        (asnode !matmul Y) ;; X &lt;- Matmul(X, Y)
+        )
+</code></pre>
+<h3 id="usage2-defmodel-as">Usage2: defmodel-as</h3>
+<p>The macro <code>cl-waffe2/vm.nodes:defmodel-as</code> is able to define new functions/nodes from existing <code>Composite</code>. However, this macro only needs the traced computation nodes information to do this. As the simplest case, compiling the AbstractNode <code>SinNode</code> (which is callable as <code>!sin</code>) into static function, <code>matrix-sin</code>.</p>
+<pre><code class="language-lisp">(defmodel-as (asnode #'!sin) :where (A[~] -&gt; B[~]) :asif :function :named matrix-sin)
 
+(matrix-sin (ax+b `(10 10) 0 1)) ;; &lt;- No compiling overhead. Just works like Numpy
+</code></pre>
+<p>On a side note: <code>Encapsulated-Node</code> itself doesn't provide for <code>:where</code> declaration, but you can it with the keyword <code>:where</code>.</p>
+<h2 id="function-call-">[function] call-&gt;</h2>
+<pre><code class="language-lisp">(call-&gt; input &amp;rest nodes)
+</code></pre>
+<p>Starting from <code>input</code>, this macro applies a composed function.</p>
+<pre><code class="language-lisp">(call-&gt; (randn `(3 3))       ;; To the given input:
+    (asnode #'!add 1.0)  ;;  |
+    (asnode #'!relu)     ;;  | Applies operations in this order.
+    (asnode #'!sum))))   ;;  ↓
+</code></pre>
+<p><code>nodes</code> could be anything as long as the <code>call</code> method can handle, but I except node=<code>Composite</code>, <code>AbstractNode</code>, and <code>(asnode function ...)</code>.</p>
+<h2 id="macro-defsequence">[macro] defsequence</h2>
+<pre><code class="language-lisp">(defsequence (name (&amp;rest args) &amp;optional docstring &amp;rest nodes))
+</code></pre>
+<p>Defines a Composite that can be defined only by the <code>call-&gt;</code> method.</p>
+<h3 id="inputs_1">Inputs</h3>
+<p><code>name[symbol]</code> defines the new Composite after <code>name</code></p>
+<p><code>args[list]</code> a list of arguments that used to initialize nodes. Not for <code>call</code>.</p>
+<p><code>docstring[string]</code> docstring</p>
+<h3 id="example_3">Example</h3>
+<pre><code class="language-lisp">(defsequence MLP (in-features)
+    &quot;Docstring (optional)&quot;
+    (LinearLayer in-features 512)
+    (asnode #'!tanh)
+    (LinearLayer 512 256)
+    (asnode #'!tanh)
+    (LinearLayer 256 10))
 
-set-input:
-  describe ...
+;; Sequence can receive a single argument.
+(call (MLP 786) (randn `(10 786)))
+</code></pre>
+<p>Tips: Use <code>(sequencelist-nth n sequence-model)</code> to read the nth layer of sequence.</p>
+<h2 id="macro-hooker">[macro] hooker</h2>
+<pre><code class="language-lisp">(hooker bind optimizer)
+</code></pre>
+<p>A convenient macro to hook AbstractOptimizers to each AbstractTensor. As the most straightforward explanation: this macro is expanded into this form.</p>
+<pre><code class="language-lisp">`(lambda (,bind)
+     (hook-optimizer! ,bind ,optimizer))
+</code></pre>
+<p>where <code>bind</code> is excepted to be AbstractTensor, optimizer is a creation form of <code>AbstractOptimizer</code>, and the function <code>hook-optimizer!</code> hooks the given optimizer into bind.</p>
+<p>In cl-waffe2, one independent Optimizer must be initialised per parameter. This macro can be used to concisely describe the process of initialising the same Optimiser for many parameters.</p>
+<h3 id="example_4">Example</h3>
+<pre><code class="language-lisp">;; (model-parameters compiled-composite) to read the list of all parameters in the network
 
-predict:
-  describe ..
+(let ((model (build (!matmul 
+             (parameter (randn `(3 3)))
+             (parameter (randn `(3 3)))))))
+
+  (mapc (hooker x (Adam X :lr 1e-3)) (model-parameters model))
+
+  (forward model)
+  (backward model)
+
+  (mapc #'call-optimizer! (model-parameters model)))
 </code></pre>
 <h2 id="function-show-backends">[function] show-backends</h2>
 <pre><code class="language-lisp">(show-backends &amp;key (stream t))
 </code></pre>
 <p>collects and displays the current state of devices to the given <code>stream</code></p>
-<h3 id="example_1">Example</h3>
+<h3 id="example_5">Example</h3>
 <pre><code class="language-lisp">(show-backends)
 
 ─────[All Backends Tree]──────────────────────────────────────────────────
