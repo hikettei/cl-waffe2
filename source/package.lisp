@@ -44,19 +44,7 @@
    #:show-backends
    #:set-devices-toplevel
    ;;#:with-cuda
-   )
-
-  (:export
-   #:AbstractTrainer
-   #:deftrainer
-   #:optimize!
-   #:zero-grads!
-   #:model
-   #:compiled-model
-   #:set-inputs
-   #:minimize!
-   #:predict)
-   )
+   ))
 
 (in-package :cl-waffe2)
 
