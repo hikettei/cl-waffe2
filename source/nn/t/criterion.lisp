@@ -39,7 +39,7 @@
       (forward model)
       (backward model)
 
-      (zero-grads! model)
+      ;;zero-grads! model)
       (print (grad a))
       (print (grad b))
 

@@ -34,6 +34,14 @@ See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithm
 		       :dtype (dtype param)
 		       :order (order param))))
 
+(defmethod cl-waffe2/vm.nodes:on-print-object ((opt Adam) stream)
+  (format stream "lr=~a eps=~a beta1=~a beta2=~a N=~a"
+	  (lr-of opt)
+	  (eps-of opt)
+	  (beta1-of opt)
+	  (beta2-of opt)
+	  (adam-n opt)))
+
 (defmodel (Adam-Step-M (self)
 	         ;;  M    Grad       beta1
 	   :where (M[~] X.grad[~] decay-rate[scal] -> M[~] where scal = 1)

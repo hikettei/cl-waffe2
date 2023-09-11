@@ -3,22 +3,53 @@
 
 ## [class] AbstractOptimizer
 
-`AbstractOptimizer` is an Abstract class of all optimizing functions in cl-waffe2.
+AbstractTensors with `:requires-grad=t` can find their gradients with the `(backward (build toplevel))` function. AbstractOptimizer is a class which minimizes the value of `toplevel` subject to `(grad tensor)`. In cl-waffe2, we initialize one AbstractOptimizer for one AbstractTensor. Specifically, one is able to create a new AbstractOptimizer with the function `(name tensor &rest constructor-args)`, for example, `(adam (parameter (randn `(3 3))) :lr 1e-3)` to create a new Adam Optimizer, and can be tied to the tensor like: `(hook-optimizer! tensor abstract-optimizer)`. Users can define any optimizer algorithms with the `defoptimizer` macro. Optimizing tied tensors is performed by calling a `(step-optimize optimizer)` method. The parameter to be optimized can be accessed by a `read-parameter` method.
 
-The optimizing operation is performed by calling a `(step-optimize optimizer)` method. The parameter to be optimized can be accessed by a `read-parameter` method. The new optimizer function can be defined via `defoptimizer` macro.
+### Example: Hooks and calls the optimizer tied to the tensor.
 
-See also: `defoptimizer` `read-parameter` `step-optimize`
+```lisp
+(let ((a (parameter (randn `(3 3)))))
+    (hook-optimizer! a (Adam a))
+    (call-optimizer! a))
+```
+
+### Tips: Customized Printing
+
+At first, AbstractOptimizers are displayed in your terminal like:
+
+```lisp
+(Adam (parameter (randn `(3 3))))
+;; <AbstractOptimizer: ADAM( ) -> TID11256>
+;;                          ^ You're allowed to insert something
+```
+
+The method `cl-waffe2/vm.nodes:on-print-object` is also used to customize how AbstractOptimizer is displayed:
+
+```lisp
+(defmethod cl-waffe2/vm.nodes:on-print-object ((opt Adam) stream)
+  (format stream "lr=~a eps=~a beta1=~a beta2=~a N=~a"
+	  (lr-of opt)
+	  (eps-of opt)
+	  (beta1-of opt)
+	  (beta2-of opt)
+	  (adam-n opt)))
+```
+
+Do not insert `Newline` here because `AbstractOptimizer` is also displayed when printing `AbstractTensor` with hooked optimizers.
+
+See also: `defoptimizer` `read-parameter` `step-optimize`.
+
 ## [macro] defoptimizer
 
-The macro `defoptimizer` defines a user-defined optimizer class which is a subclass of `AbstractOptimizer`
-
-The class is dispatched one per parameter to be optimized and the method `step-optimize` is called each time an optimizing is performed.
+The macro `defoptimizer` defines a user-defined optimizer class which is a subclass of `AbstractOptimizer`. And the class is dispatched one per parameter to be optimized and the method `step-optimize` is called each time an optimizing is performed.
 
 ### Input
 
 `param` the tensor to be optimized is given as this argument. the tensor is stored in the `param` slot automatically, being accessed by a `read-parameter` method.
 
 ### Example
+
+We use `defmodel` and `defmodel-as` because formulae for optimisation functions can be expressed in Composite and compiled as functions to reduce compilation time.
 
 ```lisp
 (defoptimizer (SGD (self param &key (lr 1e-3))
@@ -31,7 +62,7 @@ The class is dispatched one per parameter to be optimized and the method `step-o
 		       (declare (ignore self))
 		       (A-=B param (!mul lr grad)))))
 
-(define-composite-function (SGD-Compute-Form) step-sgd)
+(defmodel-as (SGD-Compute-Form) :named step-sgd)
 
 (defmethod step-optimize ((optimizer SGD))
   (let* ((lr    (make-tensor (sgd-lr optimizer)))

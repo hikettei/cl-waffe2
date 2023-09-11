@@ -2,16 +2,15 @@
 (in-package :cl-waffe2)
 
 ;;
-;; array-converter.lisp provides a converter between: WaffeTensor <-> Other Arrays
+;; array-converter.lisp: Here, we provide a common framework for the conversion between AbstractTensor and other matrix types.
+;; The most basic method is convert-tensor-facet.
+;; Other functions and macros work by assigning a method according to the type before and after the conversion and describing the process.
+;; Conversions are performed while sharing pointers as much as possible.
+;; If they cannot be shared, the with-facet macro forces a copy to be performed and pseudo-synchronises them.
 ;;
 
-;; 1. Array <-> AbstractTensor
-;; (print (change-facet #2A((1 2 3)) :direction 'abstracttensor))
 
-;; 2.
-;; 
-
-;; 3.
+;; [TODO] Lists to AbstractTensor
 
 (defgeneric convert-tensor-facet (from to)
   (:documentation "
@@ -21,18 +20,40 @@
 (convert-tensor-facet from to)
 ```
 
-The generic function `convert-tensor-facet` pays an important role when converting the data structure between `AbstractTensor` and other arrays (e.g.: `simple-array` etc...). Set `from` = `<<Array Before Converted>>`, and `to` = `(type-of <<Datatype you need>>)`, we dispatch the appropriate method and return converted arrays. Note that there's no assurance but before and after the converting, the pointers endeavour to indicate the same thing. If `AbstractTensor` to be converted has shuffled or viewed, we make a copy so that they become contiguous in memory.
+Converts the given object (anything is ok; from=`AbstractTensor` `simple-array` etc as long as declared) into the direction indicated in `to`.
 
-This method is intended to be extended by users.
+### Inputs
 
-For example, converting `AbstractTensor` -> `simple-array`:
+`From[Anything]` The object to be converted
+
+`To[Symbol]` Indicates to where the object is converted
+
+### Adding an extension
+
+Welcome to define the addition of method by users. For example, `Fixnum -> AbstractTensor` convertion can be written like:
+
+```lisp
+(defmethod convert-tensor-facet ((from fixnum) (to (eql 'AbstractTensor)))
+    (make-tensor from))
+
+(print (change-facet 1 :direction 'AbstractTensor))
+
+;;{SCALARTENSOR[float]   
+;;    1.0
+;;  :facet :exist
+;;  :requires-grad NIL
+;;  :backward NIL} 
+```
+
+If any object to AbstractTensor conversion is implemented, it is strongly recommended to add it to this method.
+
+### Example
 
 ```lisp
 (convert-tensor-facet (randn `(3 3)) 'simple-array)
 ```
 
-See also: `convert-facet`
-
+See also: `convert-facet (more convenient API)`
 "))
 
 (defun change-facet (array-from &key (direction 'array))
@@ -43,38 +64,30 @@ See also: `convert-facet`
 (change-facet (array-from &key (direction 'array)))
 ```
 
-Changes the facet of given `array-from` into `direction`. This function is just an alias for `convert-tensor-facet`
+By calling the `conver-tensor-facet` method, this function can change the facet of given `array-form` into the `direction`. (Just an alias of `(convert-tensor-facet array-from direction)`)
 
 See also: `convert-tensor-facet`
 
-### direction
+### Standard Directions
 
-As of this writing(2023/7/18), we provide these directions in default.
+We provide these symbols as a `direction` in standard.
 
-`array` returns ommon Lisp Array, with keeping the shape of tensors.
+- `array`: Any Object -> Common Lisp Standard ND Array
 
-`simple-array` returns Common Lisp Array but 1D. the order of elements hinge on the order of `tensor.`
+- `simple-array`: Any Object -> Common Lisp Simple-Array
 
-`AbstractTensor` returns `AbstractTensor` (devices to use depend on `*using-device*`). The dtype of returned tensor can be inferred from a first element of given array.
-
+- `AbstractTensor`: Any Object -> AbstractTensor. If couldn't determine the dtype, dtype of the first element of `array-from` is used instead.
 "
   (convert-tensor-facet array-from direction))
 
 (defun AbstractCPUTensor->simple-array (from)
-  ;; AbstractTensor -> Simple-Array
   (assert (cl-waffe2/vm.generic-tensor::vec from)
 	  nil
-	  "convert-tensor-facet: Assertion Failed because the given tensor doesn't have a existing vec.")
+	  "convert-tensor-facet: Attempted to convert the given AbstractTensor into Simple-Array but failed because the given tensor doesn't have an existing vec.
+~a" from)
 
-  ;; TODO: Check from is [computed]
-
-  (cond
-    ((cl-waffe2/vm.generic-tensor::permuted-p from)
-     (tensor-vec (proceed (->contiguous from) :compile-mode :fastest)))
-    ((tensor-projected-p from)
-     (tensor-vec (proceed (!copy from :force t) :compile-mode :fastest)))
-    (T
-     (tensor-vec from))))
+  ;; Make it contiguous on the memory?
+  (tensor-vec from))
 
 ;; AbstractTensor[CPU, Lisp] -> Simple-Array, Array
 (defmethod convert-tensor-facet ((from CPUTensor)  (to (eql 'simple-array))) (AbstractCPUTensor->simple-array from))
@@ -118,17 +131,17 @@ As of this writing(2023/7/18), we provide these directions in default.
 (with-facet (var (object-from &key (direction 'simple-array)) &body body))
 ```
 
-The macro `with-facet` changes the facet of given `object-from` into `direction`, binding the result to `var`. If you want to apply modifications to `object-from` which applied inside `body`, set `sync`=`t`. (Only available when `object-from`=`AbstractTensor` otherwise ignored).
+By using the convert-tensor-facet` method, this macro changes the facet of `object-from` into the `direction`. If you want to apply any operations to `object-from` and ensure that modifications are applied to the `object-from`, set `sync`=t and moves element forcibly (only available when direction=`'abstracttensor`). This is useful when editing AbstractTensor or calling other libraries without making copies.
 
-The macro `with-facet` is working on the flowchart below. Note that on some conditions, `(convert-tensor-facet)` will create an additional copy/compiling which may cause performance issue.
+For a more explict workflow, see below:
 
 ```lisp
-[macro with-facet]
-        ↓
-[Set var <- (convert-tensor-facet object-from direction)] ⚠️ If tensor is viewed/permuted, an additional compiling is invoked!
-        ↓
-[Processing body]
-        ↓
+    [macro with-facet]
+            ↓
+[Binding var = (convert-tensor-facet object-from direction)] 
+            ↓
+      [Processing body]
+            ↓
 [If sync=t, (setf (tensor-vec object-from) (tensor-vec (convert-tensor-facet var 'AbstractTensor)))]
 ```
 
@@ -172,8 +185,7 @@ See also: `with-facets`
   "
 ## [macro] with-facets
 
-with-facet but input-forms are several.
-
+Bundles several `with-facet` macro.
 
 ```lisp
 (with-facets ((a ((randn `(3 3)) :direction 'array))
@@ -195,5 +207,17 @@ with-facet but input-forms are several.
 		 `(locally ,@body))))
     (expand-forms input-forms)))
 
+(defun ->tensor (object)
+  "
+## [function] ->tensor
 
+Using the `convert-tensor-facet` method, converts the given object into AbstractTensor.
+
+### Example
+
+```lisp
+(->tensor #2A((1 2 3) (4 5 6)))
+```
+"
+  (convert-tensor-facet object 'AbstractTensor))
 

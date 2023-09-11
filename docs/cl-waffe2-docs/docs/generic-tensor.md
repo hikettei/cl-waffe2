@@ -232,7 +232,7 @@ Reading the `(grad tensor)`, the function invokes the optimizer hooked to the te
 
 ## [function] reset-grad!
 
-Resets the gradient of the tensor with zero.
+Resets the gradient of the tensor with zero with `retain-grad=t`.
 
 
 ## [function] tensor-vec
@@ -256,7 +256,8 @@ This function is setfable and inlined.
 		  (dtype *default-dtype*)
 		  (view nil)
 		  (order *default-order*)
-		  (initial-element nil))
+		  (initial-element nil)
+                  (device nil))
 ```
 
 Created a new ExistTensor of a device of `(car *using-backend*)`.
@@ -272,6 +273,8 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 4. `order`[keyword] set keyword indicating the order of elments from `:column` or `:row`. in default set to `:column`.
 
 5. `initial-element`[Anything] Set anything which you want to set as a initial element.
+
+6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
 
 ### Example
 
@@ -316,8 +319,8 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
 ```lisp
 (make-input `(a 10) :train-x)
 
-{CPUTENSOR[float] :shape (A 10) :named TRAIN-X 
-  <<Not-Embodied (A 10) Tensor>>
+{CPUTENSOR[float] :shape (A 10) :named :TRAIN-X 
+    <<Not allocated: size=(A 10)>>
   :facet :input
   :requires-grad NIL
   :backward NIL}
@@ -417,10 +420,11 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :named ChainTMP940 
+{CPUTENSOR[float] :shape (A 10) :id TID1377 
   :vec-state [maybe-not-computed]
-  <<Not-Embodied (A 10) Tensor>>
+    <<Not allocated: size=(A 10)>>
   :facet :input
+  :belongs-to :memory-pool
   :requires-grad NIL
   :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
 ```
@@ -430,9 +434,11 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (with-no-grad (build out :inputs `(:X :Y)))
 ```
 ```
-<Compiled-Composite
-    forward  : forward(model X Y) -> CPUTENSOR{FLOAT}(A 10)
-    backward : nil
+<Compiled-Composite(allocated-p=NIL)
+    forward     : forward(model X Y) -> CPUTENSOR{FLOAT}(A 10)
+    backward    : nil
+    memory-pool : one tensor(s)
+                   L {4.0e-5+((A) x 4.0e-6)}MB
     inputs:
         X -> (A 10)
         Y -> (A 10)

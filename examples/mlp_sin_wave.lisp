@@ -1,7 +1,11 @@
 
 (in-package :cl-user)
 
-(defpackage :cl-waffe2-example1
+;;
+;; This example provides the smallest package for training neural network in cl-waffe2
+;;
+
+(defpackage :mlp-sin-wave
   (:use
    :cl
    :cl-waffe2
@@ -12,42 +16,43 @@
    :cl-waffe2/vm.nodes
    :cl-waffe2/optimizers
 
-   :cl-waffe2/backends.jit.cpu
-   :cl-waffe2/backends.cpu
-   ))
+   :cl-waffe2/backends.cpu))
 
-(in-package :cl-waffe2-example1)
+(in-package :mlp-sin-wave)
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; Network Template: Criterion
+(defun criterion (criterion X Y &key (reductions nil))
+  (apply #'call->
+	 (funcall criterion X Y)
+	 (map 'list #'asnode (reverse reductions))))
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; Defines a model
 (defsequence Simple-MLP (in-features hidden-dim)
 	     (LinearLayer in-features hidden-dim t)
 	     (asnode #'!sigmoid)
 	     (LinearLayer hidden-dim 1 t))
 
-;; Naming:... set-input VS set-inputs
-;; allow: (forward self)
-;; make trainer forwardable
+;; Constructs/Compiles the neural network
+(defun build-mlp-model (in-features hidden-dim &key (lr 1e-1))
+  (let* ((lazy-loss (criterion #'MSE
+			       (call (Simple-MLP in-features hidden-dim)
+				     (make-input `(batch-size ,in-features) :TrainX))
+			       (make-input `(batch-size 1) :TrainY)
+			       :reductions (list #'->scal)))
+	 (model (build lazy-loss :inputs `(:TrainX :TrainY))))
 
-(deftrainer (MLPTrainer (self in-features hidden-dim &key (lr 1e-1))
-	     :model (Simple-MLP in-features hidden-dim)
-	     :optimizer (SGD :lr lr)
-	     :compile-mode :fastest
-	     :build ((self)
-		     (MSE
-		      (make-input `(batch-size 1) :TrainY)
-		      (call (model self) (make-input `(batch-size ,in-features) :TrainX))))
-	     
-	     :set-inputs ((self x y)
-			  (set-input (compiled-model self) :TrainX x)
-			  (set-input (compiled-model self) :TrainY y))
-	     :minimize! ((self)
-			 (zero-grads! (compiled-model self))
-			 (let ((loss (forward (compiled-model self))))
-			   (format t "Training Loss: ~a~%" (tensor-vec loss)))
-			 (backward  (compiled-model self))
-			 (optimize! (compiled-model self)))
-	     :predict ((self x)
-		       (call (model self) x))))
+    ;; Initializes and hooks AbstractOptimizers
+    (mapc (hooker x (SGD x :lr lr)) (model-parameters model))
+    model))
 
+;; Calls forward/backward propagations, and optimizes.
+(defun step-train (model train-x train-y)
+  (let ((act-loss (forward model train-x train-y)))
+    (format t "Loss = ~a~%" (tensor-vec act-loss)))
+  (backward model)
+  (mapc #'call-optimizer! (model-parameters model)))
 
 ;; Training sin wave from random noises
 ;; If we forget to call proceed when making training data?
@@ -55,15 +60,18 @@
 (defun train (&key
 		(batch-size 100)
 		(iter-num 3000))
-  (let* ((X (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
- 	 (Y (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
-	 (trainer (MLPTrainer 100 10 :lr 1e-3)))
+  (let* ((X     (proceed (!sin (ax+b `(,batch-size 100) 0.01 0.1))))
+ 	 (Y     (proceed (!cos (ax+b `(,batch-size 1)   0.01 0.1))))
+	 (model (build-mlp-model 100 10 :lr 1e-3)))
     
-    (set-inputs trainer X Y)
     (time
      (loop for nth-epoch fixnum upfrom 0 below iter-num
-	   do (minimize! trainer)))))
+	   do (step-train model X Y)))
 
+    ;; Displays the compiled model
+    (print model)))
+
+;; Start Training:
 (train)
 
 

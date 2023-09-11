@@ -224,49 +224,31 @@
 
 
 (with-page *cl-waffe2-package* "[package] cl-waffe2"
-  (insert "The package `:cl-waffe2` provides a wide range of utilities.")
+  (insert "The `cl-waffe2` package provides utilities for a wide range needs: Object Convertion, Advance Network Construction, Trainer, and so on.")
 
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
 
-    (with-section "Accessing AbstractTensor as an array of other types."
-      (insert "we provide Common utils to access the storage vector of `AbstractTensor` with multiple devices. In addition, those utils endeavour to synchronize the matrix elements as much as possible before and after the conversation.
-")
+    (with-section "[Tensor Facet] Converting AbstractTensor <-> Anything"
+      (insert "If you're looking for the way to create an AbstractTensor from a Common Lisp array or manipulate an AbstractTensor as a Common Lisp array, this section is perfect for you. Here we provide a common APIs for the conversion between AbstractTensor and other matrix types. The most basic method is a `convert-tensor-facet` method and we're welcome to add a new method by users. Other functions are macros work by assigning a method according to the type of object and the direction. Plus, conversions are performed while sharing pointers as much as possible. If turned out to be they can't be shared, the with-facet macro forces a copy to be performed and pseudo-synchronises them.~%")
       
       (with-op-doc #'convert-tensor-facet 't)
       (with-op-doc #'change-facet 't)
+      (with-op-doc #'->tensor 't)
       (with-op-doc (macro-function 'with-facet) 't)
       (with-op-doc (macro-function 'with-facets) 't))
 
-    (with-section "Brief network description of the configurations"
-      (insert "(TODO)"))
-
-    (with-section "Sequential Model"
-      (insert "(TODO) Composing several layers...")
-
-      )
-
-    (with-section "Trainer"
-      (insert "(TODO)
-
-```lisp
-minimize!:
-  ...
-
-
-set-input:
-  describe ...
-
-predict:
-  describe ..
-```"))
-
+    (with-section "Advanced Network Construction"
+      (insert "Powerful macros in Common Lisp enabled me to provide an advanced APIs for make the construction of nodes more systematic, and elegant. Computational nodes that are lazy evaluated can be treated as pseudo-models, for example, even if they are created via functions. And, APIs in this section will make it easy to compose/compile several nodes.~%")
+      (with-op-doc #'asnode 't)
+      (with-op-doc #'call-> 't)
+      (with-op-doc (macro-function 'defsequence) 't)
+      (with-op-doc (macro-function 'hooker) 't))
+    
     (with-op-doc #'show-backends 'function)
-    (with-op-doc #'set-devices-toplevel 'function)
-
-    ))
+    (with-op-doc #'set-devices-toplevel 'function)))
 
 (with-page *lisp-tensor-backend* "[package] :cl-waffe2/backends.lisp"
   (insert
@@ -299,7 +281,7 @@ For some instructions (e.g.: `!max` `!min`, sparse matrix supports, `SLEEF`, etc
     ))
 
 (with-page *cpu-jit-tensor-backend* "[package] :cl-waffe2/backends.jit.cpu"
-  (insert "The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)")
+  (insert "[Unstable] The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)")
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
