@@ -242,8 +242,8 @@
 
     (with-section "Advanced Network Construction"
       (insert "Powerful macros in Common Lisp enabled me to provide an advanced APIs for make the construction of nodes more systematic, and elegant. Computational nodes that are lazy evaluated can be treated as pseudo-models, for example, even if they are created via functions. And, APIs in this section will make it easy to compose/compile several nodes.~%")
-      (with-op-doc (macro-function 'asnode) 't)
-      (with-op-doc (macro-function 'call->) 't)
+      (with-op-doc #'asnode 't)
+      (with-op-doc #'call-> 't)
       (with-op-doc (macro-function 'defsequence) 't))
     
     (with-op-doc #'show-backends 'function)

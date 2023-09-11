@@ -138,7 +138,77 @@ Bundles several `with-facet` macro.
 
 ## Advanced Network Construction
 Powerful macros in Common Lisp enabled me to provide an advanced APIs for make the construction of nodes more systematic, and elegant. Computational nodes that are lazy evaluated can be treated as pseudo-models, for example, even if they are created via functions. And, APIs in this section will make it easy to compose/compile several nodes.
-NILNIL
+
+## [function] asnode
+
+```lisp
+(asnode function &rest arguments)
+```
+
+Wraps the given `function` which excepted to create computation nodes with the `Encapsulated-Node` composite. That is, functions are regarded as a `Composite` and be able to use a variety of APIs (e.g.: `call`, `call->`, `defmodel-as` ...).
+
+In principle, a function takes one argument and returns one value, but by adding more `arguments` the macro automatically wraps the function to satisfy it. For example, `(asnode #'!add 1.0) is transformed into: #'(lambda (x) (!add x 1.0))`. So the first arguments should receive AbstractTensor.
+
+### Usage: call->
+
+It is not elegant to use `call` more than once when composing multiple models.
+
+```lisp
+(call (AnyModel1)
+      (call (AnyModel2)
+             (call (AnyModel3) X)))
+```
+
+Instead, you can use the `call->` function:
+
+```lisp
+(call-> X
+        (AnyModel1)
+        (AnyModel2)
+        (AnyModel3))
+```
+
+However, due to constrains of `call`, it is not possible to place functions here. `asnode` is exactly for this!
+
+```lisp
+(call-> X
+        (AnyModel1)
+        (asnode #'!softmax)
+        (asnode #'!view 0) ;; Slicing the tensor: (!view x 0 t ...)
+        (asnode #'!add 1.0) ;; X += 1.0
+        (asnode !matmul Y) ;; X <- Matmul(X, Y)
+        )
+```
+
+### Usage2: defmodel-as
+
+The macro `cl-waffe2/vm.nodes:defmodel-as` is able to define new functions/nodes from existing `Composite`. However, this macro only needs the traced computation nodes information to do this. As the simplest case, compiling the AbstractNode `SinNode` (which is callable as `!sin`) into static function, `matrix-sin`.
+
+```lisp
+(defmodel-as (asnode #'!sin) :where (A[~] -> B[~]) :asif :function :named matrix-sin)
+
+(matrix-sin (ax+b `(10 10) 0 1)) ;; <- No compiling overhead. Just works like Numpy
+```
+
+On a side note: `Encapsulated-Node` itself doesn't provide for `:where` declaration, but you can it with the keyword `:where`.
+
+## [function] call->
+
+```lisp
+(call-> input &rest nodes)
+```
+
+Starting from `input`, this macro applies a composed function.
+
+```lisp
+(call-> (randn `(3 3))       ;; To the given input:
+	(asnode #'!add 1.0)  ;;  |
+	(asnode #'!relu)     ;;  | Applies operations in this order.
+	(asnode #'!sum))))   ;;  ↓
+```
+
+`nodes` could be anything as long as the `call` method can handle, but I except node=`Composite`, `AbstractNode`, and `(asnode function ...)`.
+
 ## [macro] defsequence
 
 ```lisp
