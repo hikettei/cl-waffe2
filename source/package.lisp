@@ -14,9 +14,15 @@
    :cl-waffe2/threads)
 
   ;; Training APIs
-
   (:export
    #:hooker)
+  
+  ;; Advanced Network APIs
+  (:export
+   #:defsequence
+   #:sequencelist-nth
+   #:asnode
+   #:call->)
   
   ;; Facet APIs
   (:export
@@ -51,14 +57,6 @@
    #:minimize!
    #:predict)
 
-  ;; network utils
-  (:export
-   #:defsequence
-   #:sequencelist-nth)
-  
-  (:export
-   #:asnode
-   #:call->
    ))
 
 (in-package :cl-waffe2)
