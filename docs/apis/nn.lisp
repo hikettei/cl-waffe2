@@ -6,14 +6,32 @@
 	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
+    (insert "## Non Linear Activations~%")
+    
     (with-nn-doc '!relu 'function
       (with-example
 	"(proceed (!relu (randn `(10 10))))"))
-    (with-nn-doc '!gelu 'function)
+
+    (with-nn-doc '!gelu 'function
+      (with-example
+	"(proceed (!relu (randn `(10 10))))"))
+
     (with-nn-doc '!sigmoid 'function
       (with-example
 	"(proceed (!sigmoid (randn `(10 10))))"))
 
+    (with-nn-doc '!leakey-relu 'function
+      (with-example
+	"(proceed (!leakey-relu (randn `(10 10))))"))
+
+    (with-nn-doc '!elu 'function
+      (with-example
+	"(proceed (!leakey-relu (randn `(10 10))))"))
+
+    (insert "## Normalization Layers~%")
+
+    (insert "## Loss Functions~%")
+    
     (with-nn-doc 'L1Norm 'function
       (with-example
 	"(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))"))

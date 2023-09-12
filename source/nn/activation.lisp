@@ -1,23 +1,12 @@
 
-;; Non Linear Functions
+;; Non Linear Activations
 
 (in-package :cl-waffe2/nn)
-
-;; [TODO] ドキュメント更新 + Examples + Package追加 + Test !mulとかの型宣言
-
-;; Softmax
-;; ReLU
-;; GeLU
-;; Leakey-ReLU
-;; Swish Hardswish Hardtanh
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor)
 		!relu
 		!sigmoid
 		!gelu))
-
-(declaim (ftype (function (AbstractTensor &key (:negative-slope single-float)) AbstractTensor)
-		!leakey-relu))
 
 (defun !relu (x)
   "
@@ -76,6 +65,7 @@ GeLU(x) = 0.5\\times{x}\\times{(1 + Tanh(\\sqrt{\\frac{2}{π}}\\times{(x + 0.447
 	       (!+ x
 		   (!* 0.044715 (!expt x 3))))))))
 
+(declaim (ftype (function (AbstractTensor &key (:negative-slope single-float)) AbstractTensor) !leakey-relu))
 (defun !leakey-relu (x &key (negative-slope 0.01))
   "
 ## [function] !leakey-relu
@@ -104,17 +94,53 @@ LeakeyReLU(x) = max(x, 0) + negative-slope\\times{min(0, x)}
 		       :false-then negative-slope)))
     (!mul x mask)))
 
+(declaim (ftype (function (AbstractTensor &key (:alpha single-float)) AbstractTensor) !elu))
+(defun !elu (x &key (alpha 1.0))
+  "
+## [function] !elu
 
+```lisp
+(!elu x &key (alpha 1.0))
+```
+
+Applies the Expotential Linear Units Function (ELUs) element-wise as described in [this paper](https://arxiv.org/abs/1511.07289)
+
+```math
+\\begin{equation}
+  ELU(x)=
+  \\begin{cases}
+    \\text{x} & if x>0 \\\\
+    \\text{α*(exp(x)-1)} & \\text{otherwise}
+  \\end{cases}
+\\end{equation}
+```
+"
+  ;; [TODO] Fusion
+  (let* ((mask1 (A>scal x 0 :true-then 0 :false-then 1))
+	 (mask2 (A>scal x 0 :true-then 1 :false-then 0))
+	 (out1  (!* mask1 alpha (!- (!exp x) 1)))
+	 (out2  (!* mask2 x)))
+    (!add out1 out2)))
 
 
 (defun !softmax (x &key (avoid-overflow t) (axis 1))
   "
 ## [function] !softmax
 
-Returns a tensor that applied Softmax function.
+```lisp
+(!softmax x &key (avoid-overflow t) (axis 1))
+```
+
+Returns a tensor that applied Softmax function along the given axis.
 
 ```lisp
 Softmax(x_i) = exp(x_i)\\div{sum(x_j, axis)}
+```
+
+If avoid-overflow is set to t:
+
+```lisp
+x_i = x_i - mean(x)
 ```
 
 ### Inputs
@@ -125,9 +151,11 @@ Softmax(x_i) = exp(x_i)\\div{sum(x_j, axis)}
 "
 
   (if avoid-overflow
-      (let* ((x1 (!sub x (!mean x  :axis axis :keepdims t)))
-	     (z  (!sum   (!exp x1) :axis axis :keepdims t)))
-	(!div (!exp x1) z))
-      (!div (!exp x) (!sum (!exp x) :axis axis :keepdims t))))
+      (let* ((x1    (!sub x (!mean x  :axis axis :keepdims t)))
+	     (expx1 (!exp x1))
+	     (z     (!sum   expx1 :axis axis :keepdims t)))
+	(!div expx1 z))
+      (let ((x1 (!exp x)))
+	(!div x1 (!sum x1 :axis axis :keepdims t)))))
 
 

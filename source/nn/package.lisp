@@ -37,6 +37,7 @@
    #:!leakey-relu
    #:!sigmoid
    #:!gelu
+   #:!elu
    #:!softmax))
 
 (in-package :cl-waffe2/nn)
