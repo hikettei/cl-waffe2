@@ -102,7 +102,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 (defmodel-as (Softmax-Cross-Entropy-Forward) :asif :function :named static-softmax-cross-entropy-forward)
 (defmodel-as (Softmax-Cross-Entropy-Backward) :asif :function :named static-softmax-cross-entropy-backward)
 
-(define-op (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow nil) (axis 1))
+(define-op (Softmax-Cross-Entropy-Node-old (self &key (delta 1e-7) (avoid-overflow nil) (axis 1))
 	    :slots ((delta :initarg :delta :reader delta)
 		    (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
 	    :save-for-backward-names (x labels)
@@ -118,23 +118,41 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 			  labels
 			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x) :order (order x)))))))
 
-(define-op (Softmax-Cross-Entropy-Node1 (self &key (delta 1e-7) (avoid-overflow nil))
-	    :slots ((softmax :initform nil :accessor softmax-of)
-		    (cross-entropy :initform nil :accessor cross-entropy-of))
+
+(node->defun sce-diff-static
+    (Dy[~ length n-dimension] z[~ length n-dimension] Labels[~ length n-dimension] Batch-Size[scal]
+     ->
+     X.grad[~ length n-dimension] where scal = 1)
+  (let* ((z1 (!sub z labels))
+	 (dx (!div (!mul dy z1) batch-size)))
+    dx))
+
+
+(define-op (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow t))
+	    :slots ((softmax       :initform nil :accessor softmax-of)
+		    (cross-entropy :initform nil :accessor celoss-of))
 	    
-	    :save-for-backward-names (sx labels)
+	    :save-for-backward-names (z label)
 	    :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
-	    :forward ((self x labels)
-
-		      )
+	    :forward ((self x label)
+		      (let ((z (funcall (softmax-of self) x)))
+			(with-setting-save4bw ((z z) (label label)) self
+			  (funcall (celoss-of self) z label))))
 	    :backward ((self dout)
-
-		       ))
+		       (with-reading-save4bw ((z z) (label label)) self
+			 (sce-diff-static
+			  dout
+			  z
+			  label
+			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x) :order (order x))))))
   
-  ;; Initializing static functions in advance:
-  (let ((softmax (defmodel-as (asnode #'!softmax :axis axis :avoid-overflow avoid-overflow) :where (A[~] -> B[~])))
-	(celoss  (defmodel-as (asnode #'cross-entropy-loss :delta delta) :where (A[~] B[~] -> OUT[~]))))
-
+  ;; Initializing/Compiling static functions in advance:
+  (let ((softmax (node->lambda (A[~] -> B[~] where avoid-overflow = avoid-overflow)
+		   (!softmax a :axis 1 :avoid-overflow avoid-overflow)))
+	(celoss  (node->lambda (A[~] B[~] -> OUT[~] where delta = delta)
+		   (cross-entropy-loss a b :delta delta))))
+    (setf (softmax-of self) softmax
+	  (celoss-of  self) celoss)
     softmax))
 	    
 

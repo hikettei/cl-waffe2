@@ -216,7 +216,7 @@ Creates a lambda function obtained by tracing and compiling the computation node
 
 ### Inputs
 
-`where` declares the shape transforms. the tensor names used here are the same as those used in body.
+`where` declares the shape transforms. the tensor names used here are the same as those used in body. (i.e.: everything is AbstractTensor)
 
 `body` Describe the construction of the computation node here.
 

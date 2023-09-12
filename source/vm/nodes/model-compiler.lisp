@@ -6,6 +6,8 @@
 ;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
 ;;
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  
 (defvar *thread-pool-lock* (make-lock "thread cache lock"))
 (defparameter *model-function-cache-form* (make-hash-table))
 (declaim (type hash-table *model-function-cache-form*))
@@ -250,7 +252,8 @@ And manages its allocation not to cause conflicts in the threads."))
 	     ;; tensor-vec=Eliminate InputTensor with no existing vec.
 	     (mapc #'tensor-vec (list ,@in-names))
 	     (call (,node-name ,@in-names) ,@in-names)))))))
-	       
+)
+
 ;; [Exported]
 (defmacro defmodel-as (target-model
 		       &key
@@ -416,13 +419,10 @@ Or
 
     (case asif
       (:function
-       `(eval
-	 (expand-define->function-form ',target-model ',where-decl-to-use ,(not (null named)) ',named)))
+        (expand-define->function-form `,target-model `,where-decl-to-use (not (null named)) named))
       (:node
-       ;; [TODO]
-       `(eval
-	 (expand-define->abstractnode
-	  ,differentiable ',target-model ',where-decl-to-use ',named))))))
+       (expand-define->abstractnode
+	differentiable `,target-model `,where-decl-to-use named)))))
 
 ;; Utils for multiplying gradients
 (defmodel (Multiply-Gradients (self)
@@ -435,3 +435,4 @@ Or
   :where (X[~] Grad[~] -> OUT[~])
   :asif :function
   :named multiply-grads-static)
+
