@@ -517,7 +517,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 			    (progn
 			      (format t "[proceed-time] build ->~%")
 			      (time (build toplevel :compile-mode compile-mode)))
-			    (build toplevel :compile-mode compile-mode))))
+			    (build toplevel :compile-mode compile-mode :construct-backward? (and (not *no-grad*) (ancestor-param-p toplevel))))))
     ;; Detaching the tensor
     (setf (detach-p toplevel) T
 	  (proceed-compiled-model myself) compiled-model)))

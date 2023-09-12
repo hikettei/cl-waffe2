@@ -180,7 +180,7 @@ The result sequence MUST not over max-length.
   
   (with-output-to-string (out)
     (let ((*matrix-element-displaying-size*
-	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))
+	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))		       
 		       maximize (length (format nil "~a" (vref tensor i)))))))
       (pprint-vector out tensor tensor t indent)
       out)))

@@ -134,7 +134,7 @@ If the re-allocation is performed, frees the old one.
 (defun copy-allocate (allocation)
   "Makes a copy of given allocation and its storage vec is also copied so no thread-conflicts would happen."
   (declare (type VMAllocation allocation))
-
+  
   (let ((allocation (copy-vmallocation allocation)))
     (setf (vmalloc-allocated-p allocation) NIL)
     (loop for key being the hash-keys      in (vmalloc-id2pool allocation)

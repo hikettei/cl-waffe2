@@ -82,9 +82,10 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
     (Dy[~ length n-dimension] z[~ length n-dimension] Labels[~ length n-dimension] Batch-Size[scal]
      ->
      X.grad[~ length n-dimension] where scal = 1)
-  (let* ((z1 (!sub z labels))
-	 (dx (!div (!mul dy z1) batch-size)))
+  (let* ((z  (!sub z labels))
+	 (dx (!div (!mul dy z) batch-size)))
     dx))
+
 
 (define-op (Softmax-Cross-Entropy-Node (self &key (axis 1) (delta 1e-7) (avoid-overflow t))
 	    :slots ((softmax       :initform nil :accessor softmax-of)
@@ -109,6 +110,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 		   (!softmax a :axis axis :avoid-overflow avoid-overflow)))
 	(celoss  (node->lambda (A[~] B[~] -> OUT[~])
 		   (cross-entropy-loss a b :delta delta))))
+
     (setf (softmax-of self) softmax
 	  (celoss-of  self) celoss)))
 	    
@@ -158,12 +160,12 @@ L_i = -p_ilog(x_i + delta)
       (:mean (!mean z))
       (T     z))))
 
-(defun softmax-cross-entropy (x labels &key (axis 1) (delta 1e-7) (avoid-overflow t) (reduction t))
+(defun softmax-cross-entropy (x labels &key (axis 1) (delta 1e-7) (avoid-overflow nil) (reduction t))
   "
 ## [function] softmax-cross-entropy
 
 ```lisp
-(softmax-cross-entropy x labels &key (axis 1) (delta 1e-7) (avoid-overflow t) (reduction t))
+(softmax-cross-entropy x labels &key (axis 1) (delta 1e-7) (avoid-overflow nil) (reduction t))
 ```
 
 Returns a tensor that measures the Softmax-Cross-Entropy-Error between each element in the x and labels.

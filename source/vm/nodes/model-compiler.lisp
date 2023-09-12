@@ -7,9 +7,9 @@
 ;;
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  
+
 (defvar *thread-pool-lock* (make-lock "thread cache lock"))
-(defparameter *model-function-cache-form* (make-hash-table))
+(defparameter *model-function-cache-form* (make-hash-table)) ;; <- Make it gc-reachable. with worker=FINISHED
 (declaim (type hash-table *model-function-cache-form*))
 ;; model-function-cache-form
 ;;     \ thread-idx=0 ...
@@ -132,6 +132,7 @@ excepted: AbstractTensor"
 								:fuse-ops t
 								:defmodel-as-from named
 								:dout-add1 nil))) ;; <- Embodied by AbstractNode
+	
 	(values compiled-model trace-tensors)))))
 
 (defun expand-define->function-form (composite where defun-p named
@@ -156,7 +157,7 @@ excepted: AbstractTensor"
 					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
 					       ;; Even when the node is cached
 					       ;; It should be dispatched by ranks, but helplessly uses shape
-					       (shape tensor)
+					       (shape tensor);;(cl-waffe2/vm.generic-tensor::translate-adjustable-shape (shape tensor))
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
 			       (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (read-from-cache ,cache-key))))
@@ -178,12 +179,15 @@ excepted: AbstractTensor"
 			 ,(if get-model
 			      found-function
 			      `(forward ,found-function ,@arguments)))))))))
-      (cache-set-place! cache-key)
       (if defun-p
-	  `(defun ,named (,@arguments)
-	     ,@body)
-	  `(lambda (,@arguments)
-	     ,@body)))))
+	  `(progn
+	     (cache-set-place! ,cache-key)
+	     (defun ,named (,@arguments)
+	       ,@body))
+	  `(progn
+	     (cache-set-place! ,cache-key)
+	     #'(lambda (,@arguments)
+		 ,@body))))))
 
 
 (defclass AbstractCompositeNode ()
@@ -269,8 +273,6 @@ And manages its allocation not to cause conflicts in the threads."))
 ```
 
 Redefines a Composite as a new function or AbstractNode specified in the `:asif` keyword. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
-
-**Note that the expanded form includes eval function! So this macro should be placed in the toplevel!**
 
 ### Example
 
@@ -419,7 +421,9 @@ Or
 
     (case asif
       (:function
-        (expand-define->function-form `,target-model `,where-decl-to-use (not (null named)) named))
+       (if named
+	   `(eval (expand-define->function-form ',target-model ',where-decl-to-use ,(not (null named)) ',named))
+	   (expand-define->function-form `,target-model `,where-decl-to-use (not (null named)) named)))
       (:node
        (expand-define->abstractnode
 	differentiable `,target-model `,where-decl-to-use named)))))
