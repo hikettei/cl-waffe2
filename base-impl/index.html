@@ -229,8 +229,6 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-copy">[function] !copy</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-copy-force">[function] !copy-force</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-permute">[function] !permute</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
@@ -1011,14 +1009,8 @@ A\gets{B}
 <p>The function !copy returns a node which makes a copy the tensor's visible area.</p>
 <p>Note that: the function <code>!copy</code> never creates a new tensor larger than (tensor-vec tensor) has, (i.e.: copying broadcasted tensor will return broadcasted and copied tensor).</p>
 <p><code>!copy</code> is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns <code>InputTensor</code>, not <code>AbstractTensor</code>.</p>
-<p>See also: <code>!copy-force</code> never being ignored by compiler, and broadcasted axes will be padded.</p>
 <p>Input:  Tensor[AbstractTensor]
 Output: Tensor[AbstractTensor]</p>
-<h2 id="function-copy-force">[function] !copy-force</h2>
-<pre><code class="language-lisp">(!copy-force (tensor))
-</code></pre>
-<p>The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.</p>
-<p>This function is also used to adjust memory alignment of tensor.</p>
 <h2 id="function-permute">[function] !permute</h2>
 <p>In cl-waffe2, each tensor has a slot <code>(tensor-permute-order tensor)</code>, which indicates the order of the dimensions to be invoked. The function <code>!permute</code> returns a view of the original tensor input with its dimensions permuted.</p>
 <pre><code class="language-lisp">(n) (n-1) ... (1) (0) ... The order

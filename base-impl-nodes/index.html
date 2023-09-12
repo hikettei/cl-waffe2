@@ -743,7 +743,7 @@ A\gets{1 / A}
 <h3 id="constructor_4">Constructor</h3>
 <pre><code>(InverseTensorNode dtype)
 </code></pre>
-<p><code>dtype</code> dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
+<p><code>dtype</code> indicates dtype to use, being used to dispatch backends. (e.g.: <code>:float</code> <code>:uint8</code>)</p>
 <h3 id="backward_4">Backward</h3>
 <p>✅ Already defined. </p>
 <pre><code class="language-lisp">((self dout dx) (values (!div (!mul -1 dout) (!mul dx dx))))
@@ -1591,7 +1591,7 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
    (values
     (call
      (col2imnode n c (h-of self) (w-of self) k-h k-w h-out w-out stride-x
-                 stride-y (img-out-of self))
+      stride-y (img-out-of self))
      dout)
     nil)))
 </code></pre>

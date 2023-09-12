@@ -767,7 +767,6 @@ input-form = (save-place tensor)
 <pre><code class="language-lisp">(defmodel-as target-model &amp;key (where nil) (asif :function) (named nil) (differentiable nil))
 </code></pre>
 <p>Redefines a Composite as a new function or AbstractNode specified in the <code>:asif</code> keyword. Further functions or <code>Differentiable AbstractNode</code> can be defined based on existing Composites (also called as <code>model</code> and defined by <code>defmodel</code> macro) which bundles several <code>AbstractNodes</code>, as long as <code>:where</code> form is fulfilled.</p>
-<p><strong>Note that the expanded form includes eval function! So this macro should be placed in the toplevel!</strong></p>
 <h3 id="example_3">Example</h3>
 <pre><code class="language-lisp">(defmodel-as (SoftmaxNode) :named static-softmax :asif :function :where (A[~] -&gt; A[~]))
 </code></pre>

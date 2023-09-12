@@ -117,9 +117,27 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-node-lambda">[macro] node-&gt;lambda</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_2">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#note">Note</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-node-defun">[macro] node-&gt;defun</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-show-backends">[function] show-backends</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
     </li>
         </ul>
     </li>
@@ -323,7 +341,10 @@
 </code></pre>
 <h3 id="usage2-defmodel-as">Usage2: defmodel-as</h3>
 <p>The macro <code>cl-waffe2/vm.nodes:defmodel-as</code> is able to define new functions/nodes from existing <code>Composite</code>. However, this macro only needs the traced computation nodes information to do this. As the simplest case, compiling the AbstractNode <code>SinNode</code> (which is callable as <code>!sin</code>) into static function, <code>matrix-sin</code>.</p>
-<pre><code class="language-lisp">(defmodel-as (asnode #'!sin) :where (A[~] -&gt; B[~]) :asif :function :named matrix-sin)
+<pre><code class="language-lisp">
+;; The number of arguments is anything: (defmodel-as (asnode #'(lambda (x y z) ... is also ok
+
+(defmodel-as (asnode #'!sin) :where (A[~] -&gt; B[~]) :asif :function :named matrix-sin)
 
 (matrix-sin (ax+b `(10 10) 0 1)) ;; &lt;- No compiling overhead. Just works like Numpy
 </code></pre>
@@ -382,11 +403,48 @@
 
   (mapc #'call-optimizer! (model-parameters model)))
 </code></pre>
+<h2 id="macro-node-lambda">[macro] node-&gt;lambda</h2>
+<pre><code class="language-lisp">(node-&gt;lambda (&amp;rest where) &amp;body body)
+</code></pre>
+<p>Creates a lambda function obtained by tracing and compiling the computation node described in body.</p>
+<h3 id="inputs_2">Inputs</h3>
+<p><code>where</code> declares the shape transforms. the tensor names used here are the same as those used in body. (i.e.: everything is AbstractTensor)</p>
+<p><code>body</code> Describe the construction of the computation node here.</p>
+<h3 id="example_5">Example</h3>
+<pre><code class="language-lisp">(node-&gt;lambda (A[~] -&gt; B[~])
+    (!sin (!cos a)))
+
+(funcall * (randn `(3 3)))
+</code></pre>
+<h3 id="note">Note</h3>
+<p>⚠️ Caches of functions are created for each location where this macro is located. Never place it inside a loop!</p>
+<h2 id="macro-node-defun">[macro] node-&gt;defun</h2>
+<pre><code class="language-lisp">(node-&gt;defun (name (&amp;rest where) &amp;body body))
+</code></pre>
+<p>Defines a function obtained by tracing and compiling the computation node described in the body.</p>
+<h3 id="inputs_3">Inputs</h3>
+<p><code>name[symbol]</code> the function is defined after it</p>
+<p><code>where</code> declares the shape transforms. the tensor names used here are the same as those used in body.</p>
+<p><code>body</code> Describe the construction of the computation node here.</p>
+<h3 id="example_6">Example</h3>
+<pre><code class="language-lisp">(node-&gt;defun log-softmax (A[~] -&gt; OUT[~])
+    (!softmax (!loge a) :axis 1))
+
+(log-softmax (ax+b `(3 3) 0 1))
+{CPUTENSOR[float] :shape (3 3) :id TID261835 
+  ((0.33333334 0.33333334 0.33333334)
+   (0.33333334 0.33333334 0.33333334)
+   (0.33333334 0.33333334 0.33333334))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward NIL}
+</code></pre>
 <h2 id="function-show-backends">[function] show-backends</h2>
 <pre><code class="language-lisp">(show-backends &amp;key (stream t))
 </code></pre>
 <p>collects and displays the current state of devices to the given <code>stream</code></p>
-<h3 id="example_5">Example</h3>
+<h3 id="example_7">Example</h3>
 <pre><code class="language-lisp">(show-backends)
 
 ─────[All Backends Tree]──────────────────────────────────────────────────

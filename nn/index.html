@@ -87,6 +87,8 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/nn</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#non-linear-activations">[Non Linear Activations]</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-relu">[function] !relu</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
@@ -94,38 +96,42 @@
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-gelu">[function] !gelu</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-sigmoid">[function] !sigmoid</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-l1norm">[function] L1Norm</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-sigmoid">[function] !sigmoid</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-mse">[function] mse</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-leakey-relu">[function] !leakey-relu</a>
         <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
     <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#fucntion-cross-entropy-loss">[fucntion] cross-entropy-loss</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-elu">[function] !elu</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-softmax-cross-entropy">[function] softmax-cross-entropy</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-softmax">[function] !softmax</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#model-linearlayer">[model] LINEARLAYER</a>
+    <li class="toctree-l2"><a class="reference internal" href="#normalization-layers">[Normalization Layers]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#model-layernorm">[model] LAYERNORM</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description">Description</a>
     </li>
@@ -133,41 +139,93 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#parameters">Parameters</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#loss-functions">[Loss Functions]</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#tips-utility-function">Tips: Utility Function</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#model-conv2d">[model] CONV2D</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-l1norm">[function] L1Norm</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-mse">[function] mse</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#fucntion-cross-entropy-loss">[fucntion] cross-entropy-loss</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-softmax-cross-entropy">[function] softmax-cross-entropy</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_4">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#linear-layers">[Linear Layers]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#model-linearlayer">[model] LINEARLAYER</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_1">Description</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_5">Inputs</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#parameters_1">Parameters</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_8">Example</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#model-maxpool2d">[model] MAXPOOL2D</a>
+    <li class="toctree-l2"><a class="reference internal" href="#dropout-layers">[Dropout Layers]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#sparse-layers">[Sparse Layers]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#recurrent-layers">[Recurrent Layers]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#convolutional-layers">[Convolutional Layers]</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#model-conv2d">[model] CONV2D</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_2">Description</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#inputs_4">Inputs</a>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_6">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#parameters_2">Parameters</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_9">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#pooling-layers">Pooling Layers</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#model-maxpool2d">[model] MAXPOOL2D</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#description_3">Description</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_7">Inputs</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#model-avgpool2d">[model] AVGPOOL2D</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#description_3">Description</a>
+    <li class="toctree-l3"><a class="reference internal" href="#description_4">Description</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#inputs_5">Inputs</a>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_8">Inputs</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-unfold">[function] unfold</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#inputs_6">Inputs</a>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_9">Inputs</a>
     </li>
         </ul>
     </li>
@@ -229,90 +287,235 @@
     }
 </style>
 <h1 id="cl-waffe2nn">cl-waffe2/nn</h1>
+<h2 id="non-linear-activations">[Non Linear Activations]</h2>
 <h2 id="function-relu">[function] !relu</h2>
-<p>Returns a tensor that applied ReLU element-wise.</p>
+<pre><code class="language-lisp">(!relu x)
+</code></pre>
+<p>Computes ReLU to the given tensor.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>R</mi><mi>e</mi><mi>L</mi><mi>U</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>m</mi><mi>a</mi><mi>x</mi><mo stretchy="false">(</mo><mi>x</mi><mo separator="true">,</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
 ReLU(x) = max(x, 0)
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.10903em;">LU</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">ma</span><span class="mord mathnormal">x</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0</span><span class="mclose">)</span></span></span></span></span></p>
 <h3 id="example">Example</h3>
 <pre><code class="language-lisp">(proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1427 
+{CPUTENSOR[float] :shape (10 10) :id TID840 
   :vec-state [computed]
-  ((-0.0        -0.0        1.4563614   ~ 0.12839013  1.6735466   -0.0)                   
-   (-0.0        0.7021836   -0.0        ~ 0.0920827   1.6974396   -0.0)   
+  ((0.5808442   0.561935    0.8702531   ~ 1.4563614   2.6245794   -0.0)                   
+   (-0.0        0.25706416  0.12839013  ~ -0.0        0.74763197  1.0563446)   
                 ...
-   (1.0319365   0.09859386  1.2601917   ~ -0.0        0.7230486   -0.0)
-   (-0.0        0.12257845  1.0139741   ~ 0.6677612   -0.0        0.35926917))
+   (0.2521708   -0.0        -0.0        ~ 1.2601917   1.9790884   -0.0)
+   (1.5096567   -0.0        -0.0        ~ 1.0139741   -0.0        -0.0))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
 <h2 id="function-gelu">[function] !gelu</h2>
-<p>Approximates GeLU (Not tested yet): <code>(!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x (!* 0.044715 (!expt x 3)))))))</code></p>
-<h2 id="function-sigmoid">[function] !sigmoid</h2>
-<p>Returns a tensor that applied sigmoid function element-wise.</p>
-<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mi>i</mi><mi>g</mi><mi>m</mi><mi>o</mi><mi>i</mi><mi>d</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><mi>e</mi><mi>x</mi><mi>p</mi><mo stretchy="false">(</mo><mo>−</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">
-Sigmoid(x) = \frac{1}{1 + exp(-x)}
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">m</span><span class="mord mathnormal">o</span><span class="mord mathnormal">i</span><span class="mord mathnormal">d</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.2574em;vertical-align:-0.936em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">e</span><span class="mord mathnormal">x</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord">−</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<pre><code class="language-lisp">(!gelu x)
+</code></pre>
+<p>Applies the Gaussian Error Linear Units function approximated with:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>G</mi><mi>e</mi><mi>L</mi><mi>U</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mn>0.5</mn><mo>×</mo><mi>x</mi><mo>×</mo><mrow><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>T</mi><mi>a</mi><mi>n</mi><mi>h</mi><mo stretchy="false">(</mo><msqrt><mfrac><mn>2</mn><mi>π</mi></mfrac></msqrt><mo>×</mo><mrow><mo stretchy="false">(</mo><mi>x</mi><mo>+</mo><mn>0.44715</mn><mo>×</mo><msup><mi>x</mi><mn>3</mn></msup><mo stretchy="false">)</mo></mrow><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+GeLU(x) = 0.5\times{x}\times{(1 + Tanh(\sqrt{\frac{2}{π}}\times{(x + 0.44715\times{x^3})}))}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">G</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.10903em;">LU</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">0.5</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord"><span class="mord mathnormal">x</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:2.44em;vertical-align:-0.7884em;"></span><span class="mord"><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="mord mathnormal">anh</span><span class="mopen">(</span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.6516em;"><span class="svg-align" style="top:-4.4em;"><span class="pstrut" style="height:4.4em;"></span><span class="mord" style="padding-left:1em;"><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">π</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-3.6116em;"><span class="pstrut" style="height:4.4em;"></span><span class="hide-tail" style="min-width:1.02em;height:2.48em;"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSc0MDBlbScgaGVpZ2h0PScyLjQ4ZW0nIHZpZXdCb3g9JzAgMCA0MDAwMDAgMjU5MicgcHJlc2VydmVBc3BlY3RSYXRpbz0neE1pbllNaW4gc2xpY2UnPjxwYXRoIGQ9J000MjQsMjQ3OApjLTEuMywtMC43LC0zOC41LC0xNzIsLTExMS41LC01MTRjLTczLC0zNDIsLTEwOS44LC01MTMuMywtMTEwLjUsLTUxNApjMCwtMiwtMTAuNywxNC4zLC0zMiw0OWMtNC43LDcuMywtOS44LDE1LjcsLTE1LjUsMjVjLTUuNyw5LjMsLTkuOCwxNiwtMTIuNSwyMApzLTUsNywtNSw3Yy00LC0zLjMsLTguMywtNy43LC0xMywtMTNzLTEzLC0xMywtMTMsLTEzczc2LC0xMjIsNzYsLTEyMnM3NywtMTIxLDc3LC0xMjEKczIwOSw5NjgsMjA5LDk2OGMwLC0yLDg0LjcsLTM2MS43LDI1NCwtMTA3OWMxNjkuMywtNzE3LjMsMjU0LjcsLTEwNzcuNywyNTYsLTEwODEKbDAgLTBjNCwtNi43LDEwLC0xMCwxOCwtMTAgSDQwMDAwMAp2NDBIMTAxNC42CnMtODcuMywzNzguNywtMjcyLjYsMTE2NmMtMTg1LjMsNzg3LjMsLTI3OS4zLDExODIuMywtMjgyLDExODUKYy0yLDYsLTEwLDksLTI0LDkKYy04LDAsLTEyLC0wLjcsLTEyLC0yeiBNMTAwMSA4MApoNDAwMDAwdjQwaC00MDAwMDB6Jy8+PC9zdmc+"/></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.7884em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord"><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord">0.44715</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">3</span></span></span></span></span></span></span></span></span><span class="mclose">)</span></span><span class="mclose">))</span></span></span></span></span></span></p>
 <h3 id="example_1">Example</h3>
-<pre><code class="language-lisp">(proceed (!sigmoid (randn `(10 10))))
+<pre><code class="language-lisp">(proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1518 
+{CPUTENSOR[float] :shape (10 10) :id TID938 
   :vec-state [computed]
-  ((0.92068595  0.38643858  0.59769624  ~ 0.782908    0.7951611   0.3243036)                   
-   (0.45063692  0.8844838   0.7055789   ~ 0.6401052   0.58050334  0.3435368)   
-                ...
-   (0.6815791   0.5202018   0.40984365  ~ 0.5420403   0.29856625  0.30525693)
-   (0.21781419  0.536015    0.8327136   ~ 0.65991646  0.49891552  0.3606924))
+  ((0.44939238   0.41165844   0.6677612    ~ 0.3958751    -0.0         -0.0)                    
+   (-0.0         -0.0         1.2826939    ~ 0.87400746   -0.0         -0.0)   
+                 ...
+   (-0.0         -0.0         2.6147454    ~ -0.0         2.0264342    0.6727572)
+   (0.5444808    0.4298513    0.1685591    ~ 1.6049826    0.69115645   0.9847253))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
+<h2 id="function-sigmoid">[function] !sigmoid</h2>
+<pre><code class="language-lisp">(!sigmoid x)
+</code></pre>
+<p>Computes sigmoid function to the given tensor.</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mi>i</mi><mi>g</mi><mi>m</mi><mi>o</mi><mi>i</mi><mi>d</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><mi>e</mi><mi>x</mi><mi>p</mi><mo stretchy="false">(</mo><mo>−</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+Sigmoid(x) = \frac{1}{1 + exp(-x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">m</span><span class="mord mathnormal">o</span><span class="mord mathnormal">i</span><span class="mord mathnormal">d</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.2574em;vertical-align:-0.936em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">e</span><span class="mord mathnormal">x</span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord">−</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<h3 id="example_2">Example</h3>
+<pre><code class="language-lisp">(proceed (!sigmoid (randn `(10 10))))
+
+{CPUTENSOR[float] :shape (10 10) :id TID1027 
+  :vec-state [computed]
+  ((0.60003704  0.52876663  0.65991646  ~ 0.31420857  0.5431252   0.5907418)                   
+   (0.44231126  0.85223794  0.052870475 ~ 0.45874146  0.3822164   0.23942728)   
+                ...
+   (0.6871358   0.34860885  0.5553089   ~ 0.2812789   0.26618165  0.7462144)
+   (0.08166347  0.36012515  0.41916075  ~ 0.40895566  0.6800641   0.5208803))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<h2 id="function-leakey-relu">[function] !leakey-relu</h2>
+<pre><code class="language-lisp">(!leakey-relu x &amp;key (negative-slope 0.01))
+</code></pre>
+<p>Applies the element-wise function:</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mi>e</mi><mi>a</mi><mi>k</mi><mi>e</mi><mi>y</mi><mi>R</mi><mi>e</mi><mi>L</mi><mi>U</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>m</mi><mi>a</mi><mi>x</mi><mo stretchy="false">(</mo><mi>x</mi><mo separator="true">,</mo><mn>0</mn><mo stretchy="false">)</mo><mo>+</mo><mi>n</mi><mi>e</mi><mi>g</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>v</mi><mi>e</mi><mo>−</mo><mi>s</mi><mi>l</mi><mi>o</mi><mi>p</mi><mi>e</mi><mo>×</mo><mrow><mi>m</mi><mi>i</mi><mi>n</mi><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mi>x</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">L</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.03148em;">ak</span><span class="mord mathnormal" style="margin-right:0.03588em;">ey</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.10903em;">LU</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">ma</span><span class="mord mathnormal">x</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.854em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">n</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">o</span><span class="mord mathnormal">p</span><span class="mord mathnormal">e</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">min</span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span></span></p>
+<h3 id="inputs">Inputs</h3>
+<p><code>x[AbstractTensor]</code></p>
+<p><code>negative-slope[single-float]</code></p>
+<h3 id="example_3">Example</h3>
+<pre><code class="language-lisp">(proceed (!leakey-relu (randn `(10 10))))
+
+{CPUTENSOR[float] :shape (10 10) :id TID1198 
+  :vec-state [computed]
+  ((1.1692092     0.11656446    0.30006784    ~ 2.1753807     -0.0016911929 0.91856265)                     
+   (0.058923136   -0.0024192566 0.22534728    ~ 1.2239017     1.7646626     0.09464423)   
+                  ...
+   (-0.009824244  0.7632074     -0.005644763  ~ -0.015221703  -0.016091045  -0.019533638)
+   (0.065208726   -8.3835196e-4 -0.003529744  ~ -0.008703116  -0.0054432875 -0.011891315))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<h2 id="function-elu">[function] !elu</h2>
+<pre><code class="language-lisp">(!elu x &amp;key (alpha 1.0))
+</code></pre>
+<p>Applies the Expotential Linear Units Function (ELUs) element-wise as described in <a href="https://arxiv.org/abs/1511.07289">this paper</a></p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.16em" columnspacing="1em"><mtr><mtd class ="mtr-glue"></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mi>E</mi><mi>L</mi><mi>U</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.36em" columnalign="left left" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>x</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mi>i</mi><mi>f</mi><mi>x</mi><mo>&gt;</mo><mn>0</mn></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>α*(exp(x)-1)</mtext></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mtext>otherwise</mtext></mstyle></mtd></mtr></mtable></mrow></mrow></mstyle></mtd><mtd class ="mtr-glue"></mtd><mtd class ="mml-eqn-num"></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{equation}
+  ELU(x)=
+  \begin{cases}
+    \text{x} &amp; if x&gt;0 \\
+    \text{α*(exp(x)-1)} &amp; \text{otherwise}
+  \end{cases}
+\end{equation}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mord mathnormal" style="margin-right:0.10903em;">LU</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">x</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">α*(exp(x)-1)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mord">0</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
+<h3 id="example_4">Example</h3>
+<pre><code class="language-lisp">(proceed (!leakey-relu (randn `(10 10))))
+
+{CPUTENSOR[float] :shape (10 10) :id TID1296 
+  :vec-state [computed]
+  ((0.5904447     -0.0032229226 -0.02728275   ~ 0.82924825    -0.020005597  0.42104635)                     
+   (0.22655094    1.0474913     -0.016174942  ~ 0.16634473    -0.0011037168 0.014392254)   
+                  ...
+   (1.6010814     -0.020643149  1.1317508     ~ -8.938963e-4  -0.0014071185 -0.0054373243)
+   (-0.0017879818 -0.016084751  -0.0051612905 ~ 0.83619833    -0.003853535  -0.008486624))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<h2 id="function-softmax">[function] !softmax</h2>
+<pre><code class="language-lisp">(!softmax x &amp;key (avoid-overflow t) (axis 1))
+</code></pre>
+<p>Returns a tensor that applied Softmax function along the given axis.</p>
+<pre><code class="language-lisp">Softmax(x_i) = exp(x_i)\div{sum(x_j, axis)}
+</code></pre>
+<p>If avoid-overflow is set to t:</p>
+<pre><code class="language-lisp">x_i = x_i - mean(x)
+</code></pre>
+<h3 id="inputs_1">Inputs</h3>
+<p><code>avoid-overflow[boolean]</code> If t, <code>exp(x_i)</code> is substracted by the mean value of <code>x</code>.</p>
+<p><code>axis[fixnum or list or t]</code> The axis to be reducted.</p>
+<h3 id="example_5">Example</h3>
+<pre><code class="language-lisp">(proceed (!softmax (randn `(3 3))))
+
+{CPUTENSOR[float] :shape (3 3) :id TID1468 
+  :vec-state [computed]
+  ((0.21200114 0.49856123 0.28943768)
+   (0.27376842 0.40487444 0.32135713)
+   (0.589742   0.1968889  0.21336912))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
+</code></pre>
+<h2 id="normalization-layers">[Normalization Layers]</h2>
+<h2 id="model-layernorm">[model] LAYERNORM</h2>
+<pre><code>(layernorm NORMALIZED-SHAPE &amp;KEY (EPS 1.0e-5) (AFFINE T))
+</code></pre>
+<p>which transformation of shapes are defined as:</p>
+<pre><code>(X[~ NORMALIZED-SHAPE] -&gt; OUT[~ NORMALIZED-SHAPE])
+</code></pre>
+<h3 id="description">Description</h3>
+<p>Applies Layer Normalization over a mini-batch of inputs as described in the paper <a href="https://arxiv.org/abs/1607.06450">Layer Normalization</a></p>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>L</mi><mi>a</mi><mi>y</mi><mi>e</mi><mi>r</mi><mi>N</mi><mi>o</mi><mi>r</mi><mi>m</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mfrac><mrow><mi>x</mi><mo>−</mo><mi>E</mi><mo stretchy="false">[</mo><mi>x</mi><mo stretchy="false">]</mo></mrow><msqrt><mrow><mi>V</mi><mi>a</mi><mi>r</mi><mo stretchy="false">[</mo><mi>x</mi><mo stretchy="false">]</mo><mo>+</mo><mi>ε</mi></mrow></msqrt></mfrac><mo>×</mo><mi>γ</mi><mo>+</mo><mi>β</mi></mrow><annotation encoding="application/x-tex">
+LayerNorm(x) = \frac{x - E[x]}{\sqrt{Var[x] + ε}}\times{γ}+β
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">L</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.02778em;">yer</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mord mathnormal" style="margin-right:0.02778em;">or</span><span class="mord mathnormal">m</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.557em;vertical-align:-1.13em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.427em;"><span style="top:-2.175em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.935em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mord mathnormal">Va</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mopen">[</span><span class="mord mathnormal">x</span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal">ε</span></span></span><span style="top:-2.895em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSc0MDBlbScgaGVpZ2h0PScxLjI4ZW0nIHZpZXdCb3g9JzAgMCA0MDAwMDAgMTI5NicgcHJlc2VydmVBc3BlY3RSYXRpbz0neE1pbllNaW4gc2xpY2UnPjxwYXRoIGQ9J00yNjMsNjgxYzAuNywwLDE4LDM5LjcsNTIsMTE5CmMzNCw3OS4zLDY4LjE2NywxNTguNywxMDIuNSwyMzhjMzQuMyw3OS4zLDUxLjgsMTE5LjMsNTIuNSwxMjAKYzM0MCwtNzA0LjcsNTEwLjcsLTEwNjAuMyw1MTIsLTEwNjcKbDAgLTAKYzQuNywtNy4zLDExLC0xMSwxOSwtMTEKSDQwMDAwdjQwSDEwMTIuMwpzLTI3MS4zLDU2NywtMjcxLjMsNTY3Yy0zOC43LDgwLjcsLTg0LDE3NSwtMTM2LDI4M2MtNTIsMTA4LC04OS4xNjcsMTg1LjMsLTExMS41LDIzMgpjLTIyLjMsNDYuNywtMzMuOCw3MC4zLC0zNC41LDcxYy00LjcsNC43LC0xMi4zLDcsLTIzLDdzLTEyLC0xLC0xMiwtMQpzLTEwOSwtMjUzLC0xMDksLTI1M2MtNzIuNywtMTY4LC0xMDkuMywtMjUyLC0xMTAsLTI1MmMtMTAuNyw4LC0yMiwxNi43LC0zNCwyNgpjLTIyLDE3LjMsLTMzLjMsMjYsLTM0LDI2cy0yNiwtMjYsLTI2LC0yNnM3NiwtNTksNzYsLTU5czc2LC02MCw3NiwtNjB6Ck0xMDAxIDgwaDQwMDAwMHY0MGgtNDAwMDAweicvPjwvc3ZnPg=="/></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.305em;"><span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mopen">[</span><span class="mord mathnormal">x</span><span class="mclose">]</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.13em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05556em;">γ</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.05278em;">β</span></span></span></span></span></p>
+<p>The mean and standard-deviation are calculated over the last D dimension where D = <code>(length normalized-shape)</code>. The parameters β and γ are trainable affine transforms created if <code>affine</code> is set to T.</p>
+<h3 id="inputs_2">Inputs</h3>
+<p><code>normalized-shape</code> [list or fixnum] the size of kernel</p>
+<p><code>eps[single-float]</code> a value added to the denominator for the numerical stability.</p>
+<p><code>affine[boolean]</code> Set T to use affine transformation.</p>
+<h3 id="parameters">Parameters</h3>
+<p><code>alpha</code> (normalized-shape) is a trainable tensor filled with <code>1.0</code>. accessor: <code>alpha-of</code></p>
+<p><code>beta</code> (normalized-shape) is a trainable tensor filled with <code>0.0</code>. accessor: <code>beta-of</code></p>
+<h2 id="loss-functions">[Loss Functions]</h2>
+<h3 id="tips-utility-function">Tips: Utility Function</h3>
+<p>The <code>:reduction</code> keyword for all loss functions is set to T by default. If you want to compose several functions for reduction (e.g. -&gt;scal and !sum), it is recommended to define utilities such as:</p>
+<pre><code class="language-lisp">(defun criterion (criterion X Y &amp;key (reductions nil))
+  (apply #'call-&gt;
+     (funcall criterion X Y)
+     (map 'list #'asnode reductions)))
+
+;; Without criterion:
+(-&gt;scal (MSE x y :reduction :sum))
+
+;; With criterion for example:
+(criterion #'MSE x y :reductions `(#'!sum #'-&gt;scal))
+</code></pre>
 <h2 id="function-l1norm">[function] L1Norm</h2>
-<pre><code>(L1Norm x p &amp;key (:reduction :mean))
+<pre><code>(L1Norm x p &amp;key (:reduction t))
 </code></pre>
 <p>Returns a tensor that measures L1 Norm between each element in the input <code>x</code> and <code>y</code>.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>l</mi><mo stretchy="false">(</mo><mi>x</mi><mo separator="true">,</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mi>L</mi><mo>=</mo><msup><mrow><msub><mi>l</mi><mn>1</mn></msub><mo separator="true">,</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo separator="true">,</mo><msub><mi>l</mi><mi>n</mi></msub></mrow><mo>⊺</mo></msup><mo separator="true">,</mo><msub><mi>l</mi><mi>n</mi></msub><mo>=</mo><mi>a</mi><mi>b</mi><mi>s</mi><mo stretchy="false">(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>−</mo><msub><mi>y</mi><mi>n</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
 l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = abs(x_n - y_n)
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.9432em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0197em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">...</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0197em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7487em;"><span style="top:-3.1473em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin amsrm mtight">⊺</span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0197em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">ab</span><span class="mord mathnormal">s</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span></p>
 <p>where <code>N</code> is a batch-size.</p>
-<p>In addition, reading the value of a <code>:reduction</code> keyword (one of <code>:mean</code> <code>:sum</code> <code>nil</code>), the result of <code>L</code> is reducted. (If nil, reduction is ignored.)</p>
-<h3 id="example_2">Example</h3>
+<p>In addition, reading the value of a <code>:reduction</code> keyword (one of <code>:mean</code> <code>:sum</code> <code>t</code>), the result of <code>L</code> is reducted. (If t, reduction is ignored.)</p>
+<h3 id="example_6">Example</h3>
 <pre><code class="language-lisp">(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :id TID1777 
+{CPUTENSOR[float] :shape (10 10) :id TID1617 
   :vec-state [computed]
-  ((1.1418228))
+  ((0.49251193  0.14809273  0.19033384  ~ 0.47967017  0.4091363   0.6728387)                   
+   (0.7338484   1.6381152   0.5507769   ~ 0.499057    1.1318297   0.23955035)   
+                ...
+   (2.3659637   1.0059501   0.44494402  ~ 1.1202438   0.7872741   1.5189112)
+   (1.3229258   0.49464262  1.1380236   ~ 1.2058142   0.541952    0.83405435))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
 <h2 id="function-mse">[function] mse</h2>
-<pre><code>(mse x p &amp;key (:reduction :mean))
+<pre><code>(mse x p &amp;key (:reduction T))
 </code></pre>
-<p>Returns a tensor that measures the MSE error (L2Norm) between each element in the input <code>x</code> and <code>y</code>.</p>
+<p>Returns a tensor that measures the MSE error (i.e.: L2Norm) between each element in the input <code>x</code> and <code>y</code>.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>l</mi><mo stretchy="false">(</mo><mi>x</mi><mo separator="true">,</mo><mi>y</mi><mo stretchy="false">)</mo><mo>=</mo><mi>L</mi><mo>=</mo><msup><mrow><msub><mi>l</mi><mn>1</mn></msub><mo separator="true">,</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo separator="true">,</mo><msub><mi>l</mi><mi>n</mi></msub></mrow><mo>⊺</mo></msup><mo separator="true">,</mo><msub><mi>l</mi><mi>n</mi></msub><mo>=</mo><mo stretchy="false">(</mo><msub><mi>x</mi><mi>n</mi></msub><mo>−</mo><msub><mi>y</mi><mi>n</mi></msub><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">
 l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.9432em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0197em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">...</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0197em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7487em;"><span style="top:-3.1473em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin amsrm mtight">⊺</span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0197em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.1141em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span></p>
 <p>where <code>N</code> is a batch-size.</p>
-<p>In addition, reading the value of a <code>:reduction</code> keyword (one of <code>:mean</code> <code>:sum</code> <code>nil</code>), the result of <code>L</code> is reducted. (If nil, reduction is ignored.)</p>
-<h3 id="example_3">Example</h3>
+<p>In addition, reading the value of a <code>:reduction</code> keyword (one of <code>:mean</code> <code>:sum</code> <code>t</code>), the result of <code>L</code> is reducted. (If t, this operation is ignored.)</p>
+<h3 id="example_7">Example</h3>
 <pre><code class="language-lisp">(proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -&gt; :view (&lt;(BROADCAST 1)&gt; &lt;(BROADCAST 1)&gt;) -&gt; :visible-shape (1 1) :id TID1945 
+{CPUTENSOR[float] :shape (10 10) :id TID1723 
   :vec-state [computed]
-  ((1.814005))
+  ((0.07562627   0.11942701   1.9347922    ~ 2.026125     1.9001515    0.30982995)                    
+   (1.7072835    1.1944336    1.7687622    ~ 4.3252897    1.7336549    0.0073211933)   
+                 ...
+   (5.5642757    0.76558644   1.492699     ~ 19.684551    0.45103252   3.3292983)
+   (1.9140419    4.0798182    1.168521     ~ 2.2761366    0.15981026   0.65503675))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
 <h2 id="fucntion-cross-entropy-loss">[fucntion] cross-entropy-loss</h2>
-<pre><code class="language-lisp">(cross-entropy-loss x labels &amp;key (delta 1e-7) (reduction :mean))
+<pre><code class="language-lisp">(cross-entropy-loss x labels &amp;key (delta 1e-7) (reduction t))
 </code></pre>
 <p>Returns a tensor that measures the Cross-Entropy-Error between each element in the x and labels.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mi>i</mi></msub><mo>=</mo><mo>−</mo><msub><mi>p</mi><mi>i</mi></msub><mi>l</mi><mi>o</mi><mi>g</mi><mo stretchy="false">(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><mi>d</mi><mi>e</mi><mi>l</mi><mi>t</mi><mi>a</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
@@ -328,47 +531,53 @@ L_i = -p_ilog(x_i + delta)
   \end{cases}
 \end{equation}
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:4.32em;vertical-align:-1.91em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.41em;"><span style="top:-4.41em;"><span class="pstrut" style="height:4.41em;"></span><span class="mord"><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen"><span class="delimsizing mult"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.35em;"><span style="top:-2.2em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎩</span></span></span><span style="top:-2.192em;"><span class="pstrut" style="height:3.15em;"></span><span style="height:0.316em;width:0.8889em;"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPScwLjg4ODllbScgaGVpZ2h0PScwLjMxNmVtJyBzdHlsZT0nd2lkdGg6MC44ODg5ZW0nIHZpZXdCb3g9JzAgMCA4ODguODkgMzE2JyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSd4TWluWU1pbic+PHBhdGggZD0nTTM4NCAwIEg1MDQgVjMxNiBIMzg0eiBNMzg0IDAgSDUwNCBWMzE2IEgzODR6Jy8+PC9zdmc+"/></span></span><span style="top:-3.15em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎨</span></span></span><span style="top:-4.292em;"><span class="pstrut" style="height:3.15em;"></span><span style="height:0.316em;width:0.8889em;"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPScwLjg4ODllbScgaGVpZ2h0PScwLjMxNmVtJyBzdHlsZT0nd2lkdGg6MC44ODg5ZW0nIHZpZXdCb3g9JzAgMCA4ODguODkgMzE2JyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSd4TWluWU1pbic+PHBhdGggZD0nTTM4NCAwIEg1MDQgVjMxNiBIMzg0eiBNMzg0IDAgSDUwNCBWMzE2IEgzODR6Jy8+PC9zdmc+"/></span></span><span style="top:-4.6em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎧</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.85em;"><span></span></span></span></span></span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.41em;"><span style="top:-4.41em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="mord mathnormal">u</span><span class="mord mathnormal">m</span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mclose">)</span></span></span><span style="top:-2.97em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">m</span><span class="mord mathnormal">e</span><span class="mord mathnormal">an</span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mclose">)</span></span></span><span style="top:-1.53em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">L</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.91em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.41em;"><span style="top:-4.41em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">reduction = sum</span></span></span></span><span style="top:-2.97em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">reduction = mean</span></span></span></span><span style="top:-1.53em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.91em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.91em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.41em;"><span style="top:-4.41em;"><span class="pstrut" style="height:4.41em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.91em;"><span></span></span></span></span></span></span></span></span></p>
-<h3 id="inputs">Inputs</h3>
+<h3 id="inputs_3">Inputs</h3>
 <p><code>x[AbstractTensor]</code></p>
 <p><code>labels[AbstractTensor]</code> one-hot encoding.</p>
+<p><code>reduction</code> one of :sum :mean t</p>
 <h2 id="function-softmax-cross-entropy">[function] softmax-cross-entropy</h2>
-<pre><code class="language-lisp">(softmax-cross-entropy x labels)
+<pre><code class="language-lisp">(softmax-cross-entropy x labels &amp;key (axis 1) (delta 1e-7) (avoid-overflow nil) (reduction t))
 </code></pre>
 <p>Returns a tensor that measures the Softmax-Cross-Entropy-Error between each element in the x and labels.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>o</mi><mi>u</mi><mi>t</mi><mo>=</mo><mi>C</mi><mi>r</mi><mi>o</mi><mi>s</mi><mi>s</mi><mi>E</mi><mi>n</mi><mi>t</mi><mi>r</mi><mi>o</mi><mi>p</mi><mi>y</mi><mi>L</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo stretchy="false">(</mo><mi>S</mi><mi>o</mi><mi>f</mi><mi>t</mi><mi>m</mi><mi>a</mi><mi>x</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo separator="true">,</mo><mi>l</mi><mi>a</mi><mi>b</mi><mi>e</mi><mi>l</mi><mi>s</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">
 out = CrossEntropyLoss(Softmax(x), labels)
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="mord mathnormal">ross</span><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mord mathnormal">n</span><span class="mord mathnormal">t</span><span class="mord mathnormal">ro</span><span class="mord mathnormal">p</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mord mathnormal">L</span><span class="mord mathnormal">oss</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal">t</span><span class="mord mathnormal">ma</span><span class="mord mathnormal">x</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">ab</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">s</span><span class="mclose">)</span></span></span></span></span></p>
-<h3 id="inputs_1">Inputs</h3>
-<p><code>x[AbstractTensor]</code></p>
-<p><code>labels[AbstractTensor]</code> one-hot encoding.</p>
+<h3 id="inputs_4">Inputs</h3>
+<p><code>x[AbstractTensor]</code> distribution to measure</p>
+<p><code>labels[AbstractTensor]</code> answer labels with one-hot encoding.</p>
+<h2 id="linear-layers">[Linear Layers]</h2>
 <h2 id="model-linearlayer">[model] LINEARLAYER</h2>
 <pre><code>(linearlayer IN-FEATURES OUT-FEATURES &amp;OPTIONAL (USE-BIAS? T))
 </code></pre>
 <p>which transformation of shapes are defined as:</p>
 <pre><code>([~ BATCH-SIZE IN-FEATURES] -&gt; [~ BATCH-SIZE OUT-FEATURES])
 </code></pre>
-<h3 id="description">Description</h3>
+<h3 id="description_1">Description</h3>
 <p>Applies a linear transformation to the incoming data.</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>y</mi><mo>=</mo><mi>x</mi><msup><mi>A</mi><mo>⊺</mo></msup><mo>+</mo><mi>b</mi></mrow><annotation encoding="application/x-tex">
 y = xA^\intercal + b
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7977em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">x</span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7144em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin amsrm mtight">⊺</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">b</span></span></span></span></span></p>
-<h3 id="inputs_2">Inputs</h3>
+<h3 id="inputs_5">Inputs</h3>
 <p><code>in-features[fixnum]</code> size of each input size.</p>
 <p><code>out-features[fixnum]</code> size of each output size.</p>
 <p><code>bias[boolean]</code> If set to nil, the layer won't learn an additive bias. default: <code>t</code></p>
-<h3 id="parameters">Parameters</h3>
+<h3 id="parameters_1">Parameters</h3>
 <p><code>(linear-weight self)</code> the trainable value of the model of shape <code>out_features * in_features</code>. The values are sampled from  <code>xavier-uniform</code>.</p>
 <p><code>(linear-bias self)</code> the tranable value of bias of shape <code>out_features</code>. If bias is t, the initial values are sampled from uniform distribution: <code>U(-k, k)</code> where k = <code>sqrt(1/out-features)</code>.</p>
-<h3 id="example_4">Example</h3>
+<h3 id="example_8">Example</h3>
 <pre><code class="language-lisp">(LinearLayer 10 5)
 
-&lt;Composite: LINEARLAYER{W2009}(
+&lt;Composite: LINEARLAYER{W1824}(
     &lt;Input : ((~ BATCH-SIZE 10)) -&gt; Output: ((~ BATCH-SIZE 5))&gt;
 
     WEIGHTS -&gt; (5 10)
     BIAS    -&gt; (5)
 )&gt;
 </code></pre>
+<h2 id="dropout-layers">[Dropout Layers]</h2>
+<h2 id="sparse-layers">[Sparse Layers]</h2>
+<h2 id="recurrent-layers">[Recurrent Layers]</h2>
+<h2 id="convolutional-layers">[Convolutional Layers]</h2>
 <h2 id="model-conv2d">[model] CONV2D</h2>
 <pre><code>(conv2d IN-CHANNELS OUT-CHANNELS KERNEL-SIZE &amp;KEY (STRIDE 1) (PADDING 0) (DILATION 1) (GROUPS
                                                                                 1) (BIAS
@@ -407,30 +616,31 @@ y = xA^\intercal + b
           (SECOND STRIDE))))
      -1))
 </code></pre>
-<h3 id="description_1">Description</h3>
+<h3 id="description_2">Description</h3>
 <p>Applies a 2D convolution over an input signal composed of several input planes.</p>
-<h3 id="inputs_3">Inputs</h3>
+<h3 id="inputs_6">Inputs</h3>
 <p><code>in-channels[fixnum]</code> <code>out-channels[fixnum]</code> the number of channels. For example, if the input image is RGB, <code>in-channels=3</code>.</p>
 <p><code>kernel-size[list (kernel-x kernel-y)]</code> controls the size of kernel (e.g.: <code>'(3 3)</code>).</p>
 <p><code>padding[fixnum or list]</code> controls the amount of padding applies to the coming input. pads in X and Y direction when an integer value is entered. set a list of <code>(pad-x pad-y)</code> and pads in each direction.</p>
 <p><code>stride[fixnum or list]</code> controls the stride for cross-correlation. As with <code>padding</code>, this parameter can be applied for each x/y axis.</p>
 <p><code>dilation[fixnum or list]</code> controls the connections between inputs and outputs. in_channels and out_channels must both be divisible by groups. (currently not working, please set 1.)</p>
 <p><code>bias[boolean]</code> Set t to use bias.</p>
-<h3 id="parameters_1">Parameters</h3>
+<h3 id="parameters_2">Parameters</h3>
 <p>Let k be <code>(/ groups (* in-channels (apply #'* kernel-size)))</code>.</p>
 <p><code>weight</code> is a trainable parameter of <code>(out-channels, in-channels / groups, kernel-size[0] kernel-size[1])</code> sampled from <code>U(-sqrt(k), sqrt(k))</code> distribution, and can be accessed with <code>weight-of</code>.</p>
 <p><code>bias</code> is a trainable parameter of <code>(out-channels)</code> sampled from <code>U(-sqrt(k), sqrt(k))</code> distribution, and can be accessed with <code>bias-of</code>.</p>
 <p>Note: When <code>Conv2D</code> is initialised, the output is displayed as -1. This is because the calculation of the output is complicated and has been omitted. Once call is invoked, the output is recorded.</p>
-<h3 id="example_5">Example</h3>
+<h3 id="example_9">Example</h3>
 <pre><code class="language-lisp">(Conv2D 3 5 '(3 3))
 
-&lt;Composite: CONV2D{W2019}(
+&lt;Composite: CONV2D{W1834}(
     &lt;Input : ((N 3 H_IN W_IN)) -&gt; Output: ((N 5 -1 -1))&gt;
 
     WEIGHT -&gt; (5 3 3 3)
     BIAS   -&gt; (5)
 )&gt;
 </code></pre>
+<h2 id="pooling-layers">Pooling Layers</h2>
 <h2 id="model-maxpool2d">[model] MAXPOOL2D</h2>
 <pre><code>(maxpool2d KERNEL-SIZE &amp;KEY (STRIDE KERNEL-SIZE) (PADDING 0) &amp;AUX (STRIDE
                                                          (MAYBE-TUPLE STRIDE
@@ -449,9 +659,9 @@ y = xA^\intercal + b
      (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
      -1))
 </code></pre>
-<h3 id="description_2">Description</h3>
+<h3 id="description_3">Description</h3>
 <p>Applies a 2D max pooling over an input signal composed of several input planes.</p>
-<h3 id="inputs_4">Inputs</h3>
+<h3 id="inputs_7">Inputs</h3>
 <p><code>kernel-size[list]</code> the size of window</p>
 <p><code>stride[fixnum or list]</code> the stride of window</p>
 <p><code>padding[fixnum or list]</code> adds 0 padding</p>
@@ -474,9 +684,9 @@ y = xA^\intercal + b
      (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
      -1))
 </code></pre>
-<h3 id="description_3">Description</h3>
+<h3 id="description_4">Description</h3>
 <p>Applies a 2D average pooling over an input signal composed of several input planes.</p>
-<h3 id="inputs_5">Inputs</h3>
+<h3 id="inputs_8">Inputs</h3>
 <p><code>kernel-size[list]</code> the size of window</p>
 <p><code>stride[fixnum or list]</code> the stride of window</p>
 <p><code>padding[fixnum or list]</code> adds 0 padding</p>
@@ -487,7 +697,7 @@ y = xA^\intercal + b
 <p>Extracts sliding local blocks from a batched input tensor. The detailed specifications follow PyTorch: <a href="https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html">nn.Unfold</a>.</p>
 <p>As of this writing, <code>input</code> must be a 4D Tensor even when <code>N=batch-size=1</code>.</p>
 <p>Corresponding nodes: <code>cl-waffe2/base-impl:Im2ColNode</code>, <code>cl-waffe2/base-impl:Col2ImNode</code></p>
-<h3 id="inputs_6">Inputs</h3>
+<h3 id="inputs_9">Inputs</h3>
 <p>Note that <code>dilation</code>, <code>kernel-size</code>, <code>stride</code>, and <code>padding</code> are given in this form:</p>
 <p><code>(list y-direction(Height) x-direction(Width))</code></p>
 <p><code>input[AbstractTensor]</code> the tensor to be unfold.</p>
