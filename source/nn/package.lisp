@@ -7,12 +7,18 @@
   ;; LinearLayer
   (:export
    #:weight-of
-   #:bias-of)
+   #:bias-of
+   #:alpha-of
+   #:beta-of)
   
   (:export
    #:LinearLayer
    #:Linear-weight
    #:Linear-bias)
+
+  (:export
+   #:BatchNorm
+   #:LayerNorm)
 
   (:export
    #:Conv2D
