@@ -30,11 +30,14 @@
    #:cross-entropy-loss
    #:softmax-cross-entropy
    )
-  
+
+  ;; Non Linear Functions
   (:export
    #:!relu
+   #:!leakey-relu
    #:!sigmoid
    #:!gelu
+   #:!elu
    #:!softmax))
 
 (in-package :cl-waffe2/nn)

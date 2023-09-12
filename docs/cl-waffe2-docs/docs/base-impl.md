@@ -399,19 +399,8 @@ Note that: the function `!copy` never creates a new tensor larger than (tensor-v
 
 `!copy` is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns `InputTensor`, not `AbstractTensor`.
 
-See also: `!copy-force` never being ignored by compiler, and broadcasted axes will be padded.
-
 Input:  Tensor[AbstractTensor]
 Output: Tensor[AbstractTensor]
-## [function] !copy-force
-
-```lisp
-(!copy-force (tensor))
-```
-
-The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
-
-This function is also used to adjust memory alignment of tensor.
 ## [function] !permute
 
 In cl-waffe2, each tensor has a slot `(tensor-permute-order tensor)`, which indicates the order of the dimensions to be invoked. The function `!permute` returns a view of the original tensor input with its dimensions permuted.

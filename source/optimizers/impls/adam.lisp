@@ -56,7 +56,7 @@ See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithm
 	   :on-call-> ((self v x-grad decay-rate)
 		       (declare (ignore self))
 		       (A+=B v (!mul (!sub 1.0 decay-rate)
-				     (!sub (!square x-grad) v))))))
+				     (!sub (!mul x-grad x-grad) v))))))
 
 (defmodel (Adam-Step-Param (self)
 	   :where (M[~] V[~] Param[~] Lr-t[scal] Eps[scal] -> Param[~] where scal = 1)
@@ -99,11 +99,11 @@ See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithm
 	 (grad  (grad param)))
     (with-no-grad
       ;; TODO: Cache?
-
       (apply-adam-step-m
        (adam-m optimizer)
        grad ;; the gradient involved in in-place op
        (make-tensor (beta1-of optimizer)))
+      
       (apply-adam-step-v
        (adam-v optimizer)
        grad ;; never destruct the gradients

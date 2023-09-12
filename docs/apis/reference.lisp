@@ -147,7 +147,6 @@
 
     (caller-doc !move)
     (caller-doc !copy)
-    (caller-doc !copy-force)
 
     (caller-doc !permute)
     (caller-doc !reshape)
@@ -245,7 +244,9 @@
       (with-op-doc #'asnode 't)
       (with-op-doc #'call-> 't)
       (with-op-doc (macro-function 'defsequence) 't)
-      (with-op-doc (macro-function 'hooker) 't))
+      (with-op-doc (macro-function 'hooker) 't)
+      (with-op-doc (macro-function 'node->lambda) 't)
+      (with-op-doc (macro-function 'node->defun) 't))
     
     (with-op-doc #'show-backends 'function)
     (with-op-doc #'set-devices-toplevel 'function)))

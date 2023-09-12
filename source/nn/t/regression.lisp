@@ -421,7 +421,7 @@
 			 (call
 			  (Simple-MLP in-features hidden-dim)
 			  (make-input `(batch-size ,in-features) :TrainX))))
-	 (model (build lazy-loss :inputs `(:TrainX :TrainY))))
+	 (model (build (!mean lazy-loss) :inputs `(:TrainX :TrainY))))
 
     ;; Initializes and hooks AbstractOptimizers
     (mapc (hooker x (cl-waffe2/optimizers:SGD x :lr lr)) (model-parameters model))

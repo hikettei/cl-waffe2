@@ -6,8 +6,10 @@
 ;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
 ;;
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+
 (defvar *thread-pool-lock* (make-lock "thread cache lock"))
-(defparameter *model-function-cache-form* (make-hash-table))
+(defparameter *model-function-cache-form* (make-hash-table)) ;; <- Make it gc-reachable. with worker=FINISHED
 (declaim (type hash-table *model-function-cache-form*))
 ;; model-function-cache-form
 ;;     \ thread-idx=0 ...
@@ -130,6 +132,7 @@ excepted: AbstractTensor"
 								:fuse-ops t
 								:defmodel-as-from named
 								:dout-add1 nil))) ;; <- Embodied by AbstractNode
+	
 	(values compiled-model trace-tensors)))))
 
 (defun expand-define->function-form (composite where defun-p named
@@ -154,7 +157,7 @@ excepted: AbstractTensor"
 					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
 					       ;; Even when the node is cached
 					       ;; It should be dispatched by ranks, but helplessly uses shape
-					       (shape tensor)
+					       (shape tensor);;(cl-waffe2/vm.generic-tensor::translate-adjustable-shape (shape tensor))
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
 			       (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (read-from-cache ,cache-key))))
@@ -176,12 +179,15 @@ excepted: AbstractTensor"
 			 ,(if get-model
 			      found-function
 			      `(forward ,found-function ,@arguments)))))))))
-      (cache-set-place! cache-key)
       (if defun-p
-	  `(defun ,named (,@arguments)
-	     ,@body)
-	  `(lambda (,@arguments)
-	     ,@body)))))
+	  `(progn
+	     (cache-set-place! ,cache-key)
+	     (defun ,named (,@arguments)
+	       ,@body))
+	  `(progn
+	     (cache-set-place! ,cache-key)
+	     #'(lambda (,@arguments)
+		 ,@body))))))
 
 
 (defclass AbstractCompositeNode ()
@@ -250,7 +256,8 @@ And manages its allocation not to cause conflicts in the threads."))
 	     ;; tensor-vec=Eliminate InputTensor with no existing vec.
 	     (mapc #'tensor-vec (list ,@in-names))
 	     (call (,node-name ,@in-names) ,@in-names)))))))
-	       
+)
+
 ;; [Exported]
 (defmacro defmodel-as (target-model
 		       &key
@@ -266,8 +273,6 @@ And manages its allocation not to cause conflicts in the threads."))
 ```
 
 Redefines a Composite as a new function or AbstractNode specified in the `:asif` keyword. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
-
-**Note that the expanded form includes eval function! So this macro should be placed in the toplevel!**
 
 ### Example
 
@@ -346,9 +351,9 @@ Choose :asif option from:
 "
      named))
 
-  (let* ((composite (eval target-model))
-	 (where-decl-to-use (or (read-where composite) where)))
-
+  (let* ((where-decl-to-use
+	   (or where (read-where (eval target-model)))))
+    
     (when (null where-decl-to-use)
       (error "defmodel-as: Attempted to compile into a ~(~a~) but the composite doesn't provide any available :where declaration.
 
@@ -405,24 +410,23 @@ Or
 			     target-model
 			     where-decl-to-use))))))
 
-    (when (and (read-where composite) where)
-      (warn "defmodel-as: As both the composite ~a and defmodel-as form declared :where form, defmodel was used in preference.
-
-(defmodel-as target-model ... :where ...)
-                                 └── This option is ignored.
-
-"
-	    (car target-model)))
+;;    (when (and (read-where composite) where)
+;;      (warn "defmodel-as: As both the composite ~a and defmodel-as form declared :where form, defmodel was used in preference.
+;;
+;;(defmodel-as target-model ... :where ...)
+;;                                 └── This option is ignored.
+;;
+;;"
+;;	    (car target-model)))
 
     (case asif
       (:function
-       `(eval
-	 (expand-define->function-form ',target-model ',where-decl-to-use ,(not (null named)) ',named)))
+       (if named
+	   `(eval (expand-define->function-form ',target-model ',where-decl-to-use ,(not (null named)) ',named))
+	   (expand-define->function-form `,target-model `,where-decl-to-use (not (null named)) named)))
       (:node
-       ;; [TODO]
-       `(eval
-	 (expand-define->abstractnode
-	  ,differentiable ',target-model ',where-decl-to-use ',named))))))
+       (expand-define->abstractnode
+	differentiable `,target-model `,where-decl-to-use named)))))
 
 ;; Utils for multiplying gradients
 (defmodel (Multiply-Gradients (self)
@@ -435,3 +439,4 @@ Or
   :where (X[~] Grad[~] -> OUT[~])
   :asif :function
   :named multiply-grads-static)
+

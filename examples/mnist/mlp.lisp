@@ -7,7 +7,7 @@
 (defun criterion (criterion X Y &key (reductions nil))
   (apply #'call->
 	 (funcall criterion X Y)
-	 (map 'list #'asnode (reverse reductions))))
+	 (map 'list #'asnode reductions)))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
@@ -25,7 +25,7 @@
 			       (call mlp
 				     (make-input `(batch-size ,in-class) :X))
 			       (make-input `(batch-size ,out-class) :Y)
-			       :reductions (list #'->scal #'!sum)))
+			       :reductions (list #'!sum #'->scal)))
 	 (model     (build lazy-loss :inputs `(:X :Y))))
     (mapc (hooker x (Adam x :lr lr)) (model-parameters model))
     (values model mlp)))

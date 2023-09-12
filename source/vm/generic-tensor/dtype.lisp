@@ -60,10 +60,10 @@
 (defun read-lazy-var (lazy-var)
   (declare (type lazy-variable lazy-var))
 
-  (if *adjustable-shape-table*
-      (coerce (read-adjustable-symbol (lazy-variable-variable lazy-var))
-	      (lazy-variable-dtype lazy-var))
-      lazy-var))
+  (let ((result (read-symbol (lazy-variable-variable lazy-var))))
+    (if (numberp result)
+	(coerce result (lazy-variable-dtype lazy-var))
+	result)))
 
 (defun coerce-lazy (scalar dtype)
   "If scalar is number, coerce to dtype, otherwise lazily evalute"

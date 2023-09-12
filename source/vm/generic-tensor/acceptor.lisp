@@ -276,8 +276,8 @@ Before calling the forward method, set any value to these InputTensors first.
 	 (symbols   (nodevariables-symbols var-table))
 	 (allocator (make-hash-table)))
     (loop for i fixnum upfrom 0 below (length symbols) by 2
-	  do (register-adjustable-shape (nth i symbols) (nth (1+ i) symbols))
-	     (setf (gethash (nth i symbols) allocator) (nth (1+ i) symbols)))
+	  do (register-adjustable-shape (nth i symbols) (read-symbol (nth (1+ i) symbols)))
+	     (setf (gethash (nth i symbols) allocator)  (read-symbol (nth (1+ i) symbols))))
     allocator))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs)
@@ -398,7 +398,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 	  (backward-f   (when construct-backward?
 			  #'(lambda (model)
 			      (with-adjustable-symbol-scope
-				(let ((alloc-inst (set-adjustable-symbols model)))				  
+				(let ((alloc-inst (set-adjustable-symbols model)))
 				  (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
 				    (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
 				    (cl-waffe2/vm:accept-instructions bw-iseq)))))))
