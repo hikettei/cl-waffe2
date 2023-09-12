@@ -1,6 +1,6 @@
 
 # cl-waffe2/nn
-## Non Linear Activations
+## [Non Linear Activations]
 
 ## [function] !relu
 
@@ -19,13 +19,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1512 
+{CPUTENSOR[float] :shape (10 10) :id TID1681 
   :vec-state [computed]
-  ((-0.0        0.06268174  0.38545948  ~ 0.45613456  -0.0        1.2389519)                   
-   (-0.0        0.80596685  -0.0        ~ -0.0        -0.0        2.1135337)   
-                ...
-   (-0.0        0.66437244  -0.0        ~ -0.0        0.9794315   -0.0)
-   (-0.0        0.33708817  0.8596226   ~ 0.44115165  -0.0        0.4445048))
+  ((-0.0         0.0043426207 0.09177353   ~ -0.0         0.6232454    -0.0)                    
+   (-0.0         1.0070686    0.5032876    ~ 1.3696644    0.4344641    -0.0)   
+                 ...
+   (1.6235474    0.5676201    -0.0         ~ 0.052415702  0.592523     0.3905703)
+   (0.909697     -0.0         0.25025347   ~ 1.1814722    0.70569587   0.8696611))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -50,13 +50,13 @@ GeLU(x) = 0.5\times{x}\times{(1 + Tanh(\sqrt{\frac{2}{π}}\times{(x + 0.44715\ti
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1610 
+{CPUTENSOR[float] :shape (10 10) :id TID1779 
   :vec-state [computed]
-  ((-0.0         0.89838934   1.0843782    ~ -0.0         -0.0         -0.0)                    
-   (-0.0         0.4584069    -0.0         ~ 0.5861535    0.80540437   -0.0)   
-                 ...
-   (-0.0         2.0839996    -0.0         ~ 1.1435975    -0.0         -0.0)
-   (-0.0         1.3144796    0.04638508   ~ -0.0         -0.0         1.8804568))
+  ((0.7867626   -0.0        0.22214448  ~ -0.0        -0.0        1.0785233)                   
+   (-0.0        -0.0        -0.0        ~ -0.0        0.7540661   0.0835697)   
+                ...
+   (1.9579667   0.3563664   1.214624    ~ -0.0        -0.0        -0.0)
+   (1.0319841   -0.0        0.64793074  ~ 0.55727094  0.552846    1.5301232))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -80,13 +80,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1699 
+{CPUTENSOR[float] :shape (10 10) :id TID1868 
   :vec-state [computed]
-  ((0.728437   0.631219   0.62524664 ~ 0.1444213  0.4615509  0.45974594)                  
-   (0.65860546 0.36433932 0.53884435 ~ 0.56951594 0.4647735  0.4935272)   
-               ...
-   (0.5236434  0.69857574 0.09652317 ~ 0.51632696 0.80563885 0.53765744)
-   (0.77151203 0.5960395  0.6833214  ~ 0.71123135 0.2943471  0.23736556))
+  ((0.27241096  0.6820497   0.36251238  ~ 0.17914216  0.16671297  0.12418704)                   
+   (0.5162964   0.4790535   0.4126613   ~ 0.29518947  0.36718118  0.23341432)   
+                ...
+   (0.4409427   0.6701919   0.6264692   ~ 0.61069953  0.6756201   0.46399498)
+   (0.65854335  0.6439355   0.26841757  ~ 0.35817942  0.3361184   0.6462194))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -101,7 +101,7 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 
 Applies the element-wise function:
 
-```lisp
+```math
 LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
 ```
 
@@ -116,13 +116,13 @@ LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1870 
+{CPUTENSOR[float] :shape (10 10) :id TID2039 
   :vec-state [computed]
-  ((-0.007370783  -0.0010218715 -0.011959649  ~ -0.012164829  0.43317536    0.95860183)                     
-   (-0.0010178427 0.33624887    -0.010997846  ~ 2.351149      -0.009332305  -0.006312372)   
+  ((1.6010814     -0.020643149  1.1317508     ~ -8.938963e-4  -0.0014071185 -0.0054373243)                     
+   (-0.0017879818 -0.016084751  -0.0051612905 ~ 0.83619833    -0.003853535  -0.008486624)   
                   ...
-   (0.014392254   0.49713793    -0.011500162  ~ 0.9108881     -0.0100887185 0.102592506)
-   (0.44861665    -0.010909835  -0.008496331  ~ -0.014008625  1.3601671     -0.008670153))
+   (-0.018487988  0.1387289     0.76449746    ~ 0.27244374    -3.0009958e-4 -0.014330269)
+   (-0.010918061  -0.0057589184 -0.014941703  ~ 0.3164845     -0.0013041443 -0.012455955))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -152,20 +152,96 @@ Applies the Expotential Linear Units Function (ELUs) element-wise as described i
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1968 
+{CPUTENSOR[float] :shape (10 10) :id TID2137 
   :vec-state [computed]
-  ((-0.013192002  -0.011740226  0.8038811     ~ -0.0074112606 1.3139632     2.1789594)                     
-   (-0.0010714618 0.80368596    -0.0033079023 ~ -5.434935e-4  0.93554825    1.1892815)   
+  ((2.141637      -0.0038391715 0.41633528    ~ -0.0013977536 -0.016705511  1.2868437)                     
+   (0.4208957     0.29538745    -2.1028628e-4 ~ 0.5409319     -0.0040707714 -0.0060373386)   
                   ...
-   (0.30161232    -0.017567515  -0.004835163  ~ -0.006370061  0.47988546    1.4195682)
-   (-0.00520801   -3.4653608e-4 -9.5531833e-4 ~ -0.012002897  -0.0018533143 0.6940714))
+   (-0.021277614  0.15823734    0.1470265     ~ -0.016705172  1.8078922     -0.009703435)
+   (-0.0015537185 -0.0070356703 -0.008327949  ~ -0.0038119582 -0.005176657  -0.0021570416))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
-## Normalization Layers
-## Loss Functions
+
+## [function] !softmax
+
+```lisp
+(!softmax x &key (avoid-overflow t) (axis 1))
+```
+
+Returns a tensor that applied Softmax function along the given axis.
+
+```lisp
+Softmax(x_i) = exp(x_i)\div{sum(x_j, axis)}
+```
+
+If avoid-overflow is set to t:
+
+```lisp
+x_i = x_i - mean(x)
+```
+
+### Inputs
+
+`avoid-overflow[boolean]` If t, `exp(x_i)` is substracted by the mean value of `x`.
+
+`axis[fixnum or list or t]` The axis to be reducted.
+
+### Example
+
+```lisp
+(proceed (!softmax (randn `(3 3))))
+
+{CPUTENSOR[float] :shape (3 3) :id TID2309 
+  :vec-state [computed]
+  ((0.48046404 0.3317493  0.18778665)
+   (0.2452016  0.55917555 0.19562285)
+   (0.28334472 0.3566487  0.36000657))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+## [Normalization Layers]
+
+## [model] LAYERNORM
+
+```
+(layernorm NORMALIZED-SHAPE &KEY (EPS 1.0e-5) (AFFINE T))
+```
+
+
+which transformation of shapes are defined as:
+```
+(X[~ NORMALIZED-SHAPE] -> OUT[~ NORMALIZED-SHAPE])
+```
+### Description
+
+Applies Layer Normalization over a mini-batch of inputs as described in the paper [Layer Normalization](https://arxiv.org/abs/1607.06450)
+
+```math
+LayerNorm(x) = \frac{x - E[x]}{\sqrt{Var[x] + ε}}\times{γ}+β
+```
+
+The mean and standard-deviation are calculated over the last D dimension where D = `(length normalized-shape)`. The parameters β and γ are trainable affine transforms created if `affine` is set to T.
+
+### Inputs
+
+`normalized-shape` [list or fixnum] the size of kernel
+
+`eps[single-float]` a value added to the denominator for the numerical stability.
+
+`affine[boolean]` Set T to use affine transformation.
+
+### Parameters
+
+`alpha` (normalized-shape) is a trainable tensor filled with `1.0`. accessor: `alpha-of`
+
+`beta` (normalized-shape) is a trainable tensor filled with `0.0`. accessor: `beta-of`
+
+## [Loss Functions]
 
 ### Tips: Utility Function
 
@@ -181,7 +257,7 @@ The `:reduction` keyword for all loss functions is set to T by default. If you w
 (->scal (MSE x y :reduction :sum))
 
 ;; With criterion for example:
-(criterion #'MSE x y :reductions `(#'->scal #'!sum))
+(criterion #'MSE x y :reductions `(#'!sum #'->scal))
 ```
 
 ## [function] L1Norm
@@ -205,13 +281,13 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2057 
+{CPUTENSOR[float] :shape (10 10) :id TID2458 
   :vec-state [computed]
-  ((0.52083296  0.40177372  2.1186347   ~ 1.3097919   1.4082458   3.0848603)                   
-   (1.2743711   2.3686373   0.20020244  ~ 0.9002279   1.7962848   2.3246503)   
-                ...
-   (0.7444719   1.0475134   0.32404017  ~ 0.43116307  2.3071566   1.7676215)
-   (0.5804124   0.7593653   0.38540208  ~ 1.5800132   0.27997005  0.61595696))
+  ((0.4566843  0.6813598  0.79705036 ~ 1.1656076  0.10712293 1.300199)                  
+   (2.022753   0.3943771  0.6498685  ~ 0.15336323 2.3432698  0.8553799)   
+               ...
+   (0.5011796  0.27995068 2.3874388  ~ 1.6373541  0.4218289  0.93132174)
+   (0.97590274 1.3968422  1.1132267  ~ 0.19320068 0.52505016 2.9838))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -238,13 +314,13 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2163 
+{CPUTENSOR[float] :shape (10 10) :id TID2564 
   :vec-state [computed]
-  ((0.67441535   2.1862133    8.821052     ~ 2.4430165    2.5409465    0.17583068)                    
-   (0.13544491   9.803973     3.0020092    ~ 0.08279413   17.030046    0.15624054)   
+  ((3.1418607    0.28144094   0.6135049    ~ 12.724762    0.10777044   5.017987)                    
+   (2.5867405    4.7998104    8.385995     ~ 8.446191e-6  1.3725786    1.5723969)   
                  ...
-   (2.7255685    0.27481204   2.2419963    ~ 1.431767     0.35703227   3.0560243)
-   (0.42558736   2.4342675    0.00399647   ~ 1.2202001    0.70150405   0.2355568))
+   (0.21287398   1.5072122    2.0695667    ~ 1.7402432    0.03394435   0.16414145)
+   (0.0014272734 2.1516743    0.85952467   ~ 0.016058445  0.01197301   0.17685433))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -299,7 +375,7 @@ out = CrossEntropyLoss(Softmax(x), labels)
 `x[AbstractTensor]` distribution to measure
 
 `labels[AbstractTensor]` answer labels with one-hot encoding.
-## Regressions
+## [Linear Layers]
 
 ## [model] LINEARLAYER
 
@@ -340,14 +416,17 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W2264}(
+<Composite: LINEARLAYER{W2665}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
     BIAS    -> (5)
 )>
 ```
-## Image Processings
+## [Dropout Layers]
+## [Sparse Layers]
+## [Recurrent Layers]
+## [Convolutional Layers]
 
 ## [model] CONV2D
 
@@ -429,13 +508,14 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W2274}(
+<Composite: CONV2D{W2675}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)
     BIAS   -> (5)
 )>
 ```
+## Pooling Layers
 
 ## [model] MAXPOOL2D
 

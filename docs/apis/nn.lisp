@@ -6,7 +6,7 @@
 	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
-    (insert "## Non Linear Activations~%")
+    (insert "## [Non Linear Activations]~%")
     
     (with-nn-doc '!relu 'function
       (with-example
@@ -28,9 +28,15 @@
       (with-example
 	"(proceed (!leakey-relu (randn `(10 10))))"))
 
-    (insert "## Normalization Layers~%")
+    (with-nn-doc '!softmax 'function
+      (with-example
+	"(proceed (!softmax (randn `(3 3))))"))
 
-    (insert "## Loss Functions
+    (insert "## [Normalization Layers]~%")
+
+    (with-nn-doc (find-class 'LayerNorm) 't)
+
+    (insert "## [Loss Functions]
 
 ### Tips: Utility Function
 
@@ -46,7 +52,7 @@ The `:reduction` keyword for all loss functions is set to T by default. If you w
 (->scal (MSE x y :reduction :sum))
 
 ;; With criterion for example:
-(criterion #'MSE x y :reductions `(#'->scal #'!sum))
+(criterion #'MSE x y :reductions `(#'!sum #'->scal))
 ```
 ")
     
@@ -59,19 +65,31 @@ The `:reduction` keyword for all loss functions is set to T by default. If you w
 	"(proceed (MSE (randn `(10 10)) (randn `(10 10))))"))
     
     (with-nn-doc 'cross-entropy-loss 'function)
+    
     (with-nn-doc 'softmax-cross-entropy 'function)
 
-    (insert "## Regressions~%")
+    (insert "## [Linear Layers]~%")
     
     (with-nn-doc (find-class 'LinearLayer) 't
       (with-example
 	"(LinearLayer 10 5)"))
 
-    (insert "## Image Processings~%")
+    (insert "## [Dropout Layers]~%")
+    
+    
+    (insert "## [Sparse Layers]~%")
+    
+
+    (insert "## [Recurrent Layers]~%")
+
+    
+    (insert "## [Convolutional Layers]~%")
 
     (with-nn-doc (find-class 'Conv2D) 't
       (with-example
 	"(Conv2D 3 5 '(3 3))"))
+
+    (insert "## Pooling Layers~%")
 
     (with-nn-doc (find-class 'MaxPool2D) 't)
     (with-nn-doc (find-class 'AvgPool2D) 't)

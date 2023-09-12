@@ -164,6 +164,7 @@
 	       (:file "nn/package")
 	       (:file "nn/activation")
 	       (:file "nn/regression")
+	       (:file "nn/norms")
 	       (:file "nn/criterion")
 	       (:file "nn/recurrent")
 
