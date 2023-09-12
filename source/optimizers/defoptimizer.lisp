@@ -6,7 +6,7 @@
   (:documentation "
 ## [class] AbstractOptimizer
 
-AbstractTensors with `:requires-grad=t` can find their gradients with the `(backward (build toplevel))` function. AbstractOptimizer is a class which minimizes the value of `toplevel` subject to `(grad tensor)`. In cl-waffe2, we initialize one AbstractOptimizer for one AbstractTensor. Specifically, one is able to create a new AbstractOptimizer with the function `(name tensor &rest constructor-args)`, for example, `(adam (parameter (randn `(3 3))) :lr 1e-3)` to create a new Adam Optimizer, and can be tied to the tensor like: `(hook-optimizer! tensor abstract-optimizer)`. Users can define any optimizer algorithms with the `defoptimizer` macro. Optimizing tied tensors is performed by calling a `(step-optimize optimizer)` method. The parameter to be optimized can be accessed by a `read-parameter` method.
+AbstractTensors with `:requires-grad=t` can find their gradients with the `(backward (build toplevel))` function. AbstractOptimizer is a class which minimizes the value of `toplevel` subject to `(grad tensor)`. In cl-waffe2, we initialize one AbstractOptimizer for one AbstractTensor. Specifically, one is able to create a new AbstractOptimizer with the function `(name tensor &rest constructor-args)`, for example, `(adam (parameter (randn (list 3 3))) :lr 1e-3)` to create a new Adam Optimizer, and can be tied to the tensor like: `(hook-optimizer! tensor abstract-optimizer)`. Users can define any optimizer algorithms with the `defoptimizer` macro. Optimizing tied tensors is performed by calling a `(step-optimize optimizer)` method. The parameter to be optimized can be accessed by a `read-parameter` method.
 
 ### Example: Hooks and calls the optimizer tied to the tensor.
 

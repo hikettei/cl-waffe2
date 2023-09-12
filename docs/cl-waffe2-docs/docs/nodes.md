@@ -679,8 +679,6 @@ Directly defines a `call` method. Arguments must be: `(self arg1 arg2...)`
 
 Redefines a Composite as a new function or AbstractNode specified in the `:asif` keyword. Further functions or `Differentiable AbstractNode` can be defined based on existing Composites (also called as `model` and defined by `defmodel` macro) which bundles several `AbstractNodes`, as long as `:where` form is fulfilled.
 
-**Note that the expanded form includes eval function! So this macro should be placed in the toplevel!**
-
 ### Example
 
 ```lisp

@@ -76,7 +76,7 @@ GeLU(x) = 0.5\\times{x}\\times{(1 + Tanh(\\sqrt{\\frac{2}{π}}\\times{(x + 0.447
 
 Applies the element-wise function:
 
-```lisp
+```math
 LeakeyReLU(x) = max(x, 0) + negative-slope\\times{min(0, x)}
 ```
 
