@@ -131,7 +131,7 @@ butgot: ~a"
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
-    (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states)
+    (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states) ;; ... Finishes in < 1e-6 sec
       ;;(setq out-state (delete-broadcast out-state))
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
 

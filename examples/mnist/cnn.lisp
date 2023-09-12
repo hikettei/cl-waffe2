@@ -20,7 +20,7 @@
 	 (lazy-loss (criterion #'softmax-cross-entropy
 			       (call model (make-input `(,N 1 28 28) :X))
 			       (make-input `(,N 10) :Y)
-			       :reductions (list #'->scal #'!sum)))
+			       :reductions (list #'!sum #'->scal)))
 	 (compiled-model (build lazy-loss :inputs `(:X :Y))))
     (mapc (hooker x (Adam x :lr lr)) (model-parameters compiled-model))
     (values compiled-model model)))

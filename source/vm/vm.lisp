@@ -95,16 +95,16 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
-  
   (when *logging-vm-execution*
     (let* ((inst (format nil "~a" instruction))
 	   (cnt  (length inst)))
       (format t "= [*logging-vm-execution*] ~a
-Instruction: ~a"
+Instruction: ~a
+~a"
 	      (with-output-to-string (out)
 		(dotimes (i cnt) (princ "=" out)))
 	      inst
-	      ;;(map 'list #'maybe-read-result (wfop-args instruction))
+	      (map 'list #'maybe-read-result (wfop-args instruction))
 	      )))
 
   
@@ -167,7 +167,9 @@ Butgot:
     (when *logging-vm-execution*
       (format t "
 outs:
+~a
 ~%"
+	      outs
 	      ))
     outs))
 

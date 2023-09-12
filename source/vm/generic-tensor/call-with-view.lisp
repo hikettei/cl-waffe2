@@ -581,6 +581,11 @@ See also: `with-ranked-loop` to the more elegant wrapping macro.
 butgot ~a."
 	  (map 'list #'shape tensors)) ;; ... (1)
 
+  (when (some #'scalar-p tensors)
+    (error "call-with-view: tensors must not include ScalarTensor.
+  You probably called AbstractNode excepting a Matrix with ScalarTensor.
+  Use the ->mat function to create matrix from scalar."))
+
   (when *freeze-call-with-view*
     (setq force-order t))
   

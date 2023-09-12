@@ -1,25 +1,31 @@
 
 # cl-waffe2/nn
+## [Non Linear Activations]
 
 ## [function] !relu
 
-Returns a tensor that applied ReLU element-wise.
+```lisp
+(!relu x)
+```
+
+Computes ReLU to the given tensor.
 
 ```math
 ReLU(x) = max(x, 0)
 ```
+
 ### Example
 
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1427 
+{CPUTENSOR[float] :shape (10 10) :id TID1681 
   :vec-state [computed]
-  ((-0.0        -0.0        1.4563614   ~ 0.12839013  1.6735466   -0.0)                   
-   (-0.0        0.7021836   -0.0        ~ 0.0920827   1.6974396   -0.0)   
-                ...
-   (1.0319365   0.09859386  1.2601917   ~ -0.0        0.7230486   -0.0)
-   (-0.0        0.12257845  1.0139741   ~ 0.6677612   -0.0        0.35926917))
+  ((-0.0         0.0043426207 0.09177353   ~ -0.0         0.6232454    -0.0)                    
+   (-0.0         1.0070686    0.5032876    ~ 1.3696644    0.4344641    -0.0)   
+                 ...
+   (1.6235474    0.5676201    -0.0         ~ 0.052415702  0.592523     0.3905703)
+   (0.909697     -0.0         0.25025347   ~ 1.1814722    0.70569587   0.8696611))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -28,11 +34,42 @@ ReLU(x) = max(x, 0)
 
 ## [function] !gelu
 
-Approximates GeLU (Not tested yet): `(!* 0.5 x (!+ 1 (!tanh (!* (sqrt (/ 2 pi)) (!+ x (!* 0.044715 (!expt x 3)))))))`
+```lisp
+(!gelu x)
+```
+
+Applies the Gaussian Error Linear Units function approximated with:
+
+```math
+GeLU(x) = 0.5\times{x}\times{(1 + Tanh(\sqrt{\frac{2}{π}}\times{(x + 0.44715\times{x^3})}))}
+```
+
+
+### Example
+
+```lisp
+(proceed (!relu (randn `(10 10))))
+
+{CPUTENSOR[float] :shape (10 10) :id TID1779 
+  :vec-state [computed]
+  ((0.7867626   -0.0        0.22214448  ~ -0.0        -0.0        1.0785233)                   
+   (-0.0        -0.0        -0.0        ~ -0.0        0.7540661   0.0835697)   
+                ...
+   (1.9579667   0.3563664   1.214624    ~ -0.0        -0.0        -0.0)
+   (1.0319841   -0.0        0.64793074  ~ 0.55727094  0.552846    1.5301232))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
 
 ## [function] !sigmoid
 
-Returns a tensor that applied sigmoid function element-wise.
+```lisp
+(!sigmoid x)
+```
+
+Computes sigmoid function to the given tensor.
 
 ```math
 Sigmoid(x) = \frac{1}{1 + exp(-x)}
@@ -43,23 +80,190 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID1518 
+{CPUTENSOR[float] :shape (10 10) :id TID1868 
   :vec-state [computed]
-  ((0.92068595  0.38643858  0.59769624  ~ 0.782908    0.7951611   0.3243036)                   
-   (0.45063692  0.8844838   0.7055789   ~ 0.6401052   0.58050334  0.3435368)   
+  ((0.27241096  0.6820497   0.36251238  ~ 0.17914216  0.16671297  0.12418704)                   
+   (0.5162964   0.4790535   0.4126613   ~ 0.29518947  0.36718118  0.23341432)   
                 ...
-   (0.6815791   0.5202018   0.40984365  ~ 0.5420403   0.29856625  0.30525693)
-   (0.21781419  0.536015    0.8327136   ~ 0.65991646  0.49891552  0.3606924))
+   (0.4409427   0.6701919   0.6264692   ~ 0.61069953  0.6756201   0.46399498)
+   (0.65854335  0.6439355   0.26841757  ~ 0.35817942  0.3361184   0.6462194))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
 
+## [function] !leakey-relu
+
+```lisp
+(!leakey-relu x &key (negative-slope 0.01))
+```
+
+Applies the element-wise function:
+
+```math
+LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
+```
+
+### Inputs
+
+`x[AbstractTensor]`
+
+`negative-slope[single-float]`
+
+### Example
+
+```lisp
+(proceed (!leakey-relu (randn `(10 10))))
+
+{CPUTENSOR[float] :shape (10 10) :id TID2039 
+  :vec-state [computed]
+  ((1.6010814     -0.020643149  1.1317508     ~ -8.938963e-4  -0.0014071185 -0.0054373243)                     
+   (-0.0017879818 -0.016084751  -0.0051612905 ~ 0.83619833    -0.003853535  -0.008486624)   
+                  ...
+   (-0.018487988  0.1387289     0.76449746    ~ 0.27244374    -3.0009958e-4 -0.014330269)
+   (-0.010918061  -0.0057589184 -0.014941703  ~ 0.3164845     -0.0013041443 -0.012455955))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+## [function] !elu
+
+```lisp
+(!elu x &key (alpha 1.0))
+```
+
+Applies the Expotential Linear Units Function (ELUs) element-wise as described in [this paper](https://arxiv.org/abs/1511.07289)
+
+```math
+\begin{equation}
+  ELU(x)=
+  \begin{cases}
+    \text{x} & if x>0 \\
+    \text{α*(exp(x)-1)} & \text{otherwise}
+  \end{cases}
+\end{equation}
+```
+
+### Example
+
+```lisp
+(proceed (!leakey-relu (randn `(10 10))))
+
+{CPUTENSOR[float] :shape (10 10) :id TID2137 
+  :vec-state [computed]
+  ((2.141637      -0.0038391715 0.41633528    ~ -0.0013977536 -0.016705511  1.2868437)                     
+   (0.4208957     0.29538745    -2.1028628e-4 ~ 0.5409319     -0.0040707714 -0.0060373386)   
+                  ...
+   (-0.021277614  0.15823734    0.1470265     ~ -0.016705172  1.8078922     -0.009703435)
+   (-0.0015537185 -0.0070356703 -0.008327949  ~ -0.0038119582 -0.005176657  -0.0021570416))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+
+## [function] !softmax
+
+```lisp
+(!softmax x &key (avoid-overflow t) (axis 1))
+```
+
+Returns a tensor that applied Softmax function along the given axis.
+
+```lisp
+Softmax(x_i) = exp(x_i)\div{sum(x_j, axis)}
+```
+
+If avoid-overflow is set to t:
+
+```lisp
+x_i = x_i - mean(x)
+```
+
+### Inputs
+
+`avoid-overflow[boolean]` If t, `exp(x_i)` is substracted by the mean value of `x`.
+
+`axis[fixnum or list or t]` The axis to be reducted.
+
+### Example
+
+```lisp
+(proceed (!softmax (randn `(3 3))))
+
+{CPUTENSOR[float] :shape (3 3) :id TID2309 
+  :vec-state [computed]
+  ((0.48046404 0.3317493  0.18778665)
+   (0.2452016  0.55917555 0.19562285)
+   (0.28334472 0.3566487  0.36000657))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
+```
+## [Normalization Layers]
+
+## [model] LAYERNORM
+
+```
+(layernorm NORMALIZED-SHAPE &KEY (EPS 1.0e-5) (AFFINE T))
+```
+
+
+which transformation of shapes are defined as:
+```
+(X[~ NORMALIZED-SHAPE] -> OUT[~ NORMALIZED-SHAPE])
+```
+### Description
+
+Applies Layer Normalization over a mini-batch of inputs as described in the paper [Layer Normalization](https://arxiv.org/abs/1607.06450)
+
+```math
+LayerNorm(x) = \frac{x - E[x]}{\sqrt{Var[x] + ε}}\times{γ}+β
+```
+
+The mean and standard-deviation are calculated over the last D dimension where D = `(length normalized-shape)`. The parameters β and γ are trainable affine transforms created if `affine` is set to T.
+
+### Inputs
+
+`normalized-shape` [list or fixnum] the size of kernel
+
+`eps[single-float]` a value added to the denominator for the numerical stability.
+
+`affine[boolean]` Set T to use affine transformation.
+
+### Parameters
+
+`alpha` (normalized-shape) is a trainable tensor filled with `1.0`. accessor: `alpha-of`
+
+`beta` (normalized-shape) is a trainable tensor filled with `0.0`. accessor: `beta-of`
+
+## [Loss Functions]
+
+### Tips: Utility Function
+
+The `:reduction` keyword for all loss functions is set to T by default. If you want to compose several functions for reduction (e.g. ->scal and !sum), it is recommended to define utilities such as:
+
+```lisp
+(defun criterion (criterion X Y &key (reductions nil))
+  (apply #'call->
+	 (funcall criterion X Y)
+	 (map 'list #'asnode reductions)))
+
+;; Without criterion:
+(->scal (MSE x y :reduction :sum))
+
+;; With criterion for example:
+(criterion #'MSE x y :reductions `(#'!sum #'->scal))
+```
+
 ## [function] L1Norm
 
 ```
-(L1Norm x p &key (:reduction :mean))
+(L1Norm x p &key (:reduction t))
 ```
 
 Returns a tensor that measures L1 Norm between each element in the input `x` and `y`.
@@ -70,16 +274,20 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = abs(x_n - y_n)
 
 where `N` is a batch-size.
 
-In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `nil`), the result of `L` is reducted. (If nil, reduction is ignored.)
+In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `t`), the result of `L` is reducted. (If t, reduction is ignored.)
 
 ### Example
 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :id TID1777 
+{CPUTENSOR[float] :shape (10 10) :id TID2458 
   :vec-state [computed]
-  ((1.1418228))
+  ((0.4566843  0.6813598  0.79705036 ~ 1.1656076  0.10712293 1.300199)                  
+   (2.022753   0.3943771  0.6498685  ~ 0.15336323 2.3432698  0.8553799)   
+               ...
+   (0.5011796  0.27995068 2.3874388  ~ 1.6373541  0.4218289  0.93132174)
+   (0.97590274 1.3968422  1.1132267  ~ 0.19320068 0.52505016 2.9838))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -88,9 +296,10 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 
 ## [function] mse
 ```
-(mse x p &key (:reduction :mean))
+(mse x p &key (:reduction T))
 ```
-Returns a tensor that measures the MSE error (L2Norm) between each element in the input `x` and `y`.
+
+Returns a tensor that measures the MSE error (i.e.: L2Norm) between each element in the input `x` and `y`.
 
 ```math
 l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
@@ -98,16 +307,20 @@ l(x, y) = L = {l_1, ..., l_n}^\intercal, l_n = (x_n - y_n)^2
 
 where `N` is a batch-size.
 
-In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `nil`), the result of `L` is reducted. (If nil, reduction is ignored.)
+In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `t`), the result of `L` is reducted. (If t, this operation is ignored.)
 
 ### Example
 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (1 1) -> :view (<(BROADCAST 1)> <(BROADCAST 1)>) -> :visible-shape (1 1) :id TID1945 
+{CPUTENSOR[float] :shape (10 10) :id TID2564 
   :vec-state [computed]
-  ((1.814005))
+  ((3.1418607    0.28144094   0.6135049    ~ 12.724762    0.10777044   5.017987)                    
+   (2.5867405    4.7998104    8.385995     ~ 8.446191e-6  1.3725786    1.5723969)   
+                 ...
+   (0.21287398   1.5072122    2.0695667    ~ 1.7402432    0.03394435   0.16414145)
+   (0.0014272734 2.1516743    0.85952467   ~ 0.016058445  0.01197301   0.17685433))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -117,7 +330,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ## [fucntion] cross-entropy-loss
 
 ```lisp
-(cross-entropy-loss x labels &key (delta 1e-7) (reduction :mean))
+(cross-entropy-loss x labels &key (delta 1e-7) (reduction t))
 ```
 
 Returns a tensor that measures the Cross-Entropy-Error between each element in the x and labels.
@@ -143,10 +356,12 @@ L_i = -p_ilog(x_i + delta)
 
 `labels[AbstractTensor]` one-hot encoding.
 
+`reduction` one of :sum :mean t
+
 ## [function] softmax-cross-entropy
 
 ```lisp
-(softmax-cross-entropy x labels)
+(softmax-cross-entropy x labels &key (axis 1) (delta 1e-7) (avoid-overflow nil) (reduction t))
 ```
 
 Returns a tensor that measures the Softmax-Cross-Entropy-Error between each element in the x and labels.
@@ -157,9 +372,10 @@ out = CrossEntropyLoss(Softmax(x), labels)
 
 ### Inputs
 
-`x[AbstractTensor]`
+`x[AbstractTensor]` distribution to measure
 
-`labels[AbstractTensor]` one-hot encoding.
+`labels[AbstractTensor]` answer labels with one-hot encoding.
+## [Linear Layers]
 
 ## [model] LINEARLAYER
 
@@ -200,13 +416,17 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W2009}(
+<Composite: LINEARLAYER{W2665}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
     BIAS    -> (5)
 )>
 ```
+## [Dropout Layers]
+## [Sparse Layers]
+## [Recurrent Layers]
+## [Convolutional Layers]
 
 ## [model] CONV2D
 
@@ -288,13 +508,14 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W2019}(
+<Composite: CONV2D{W2675}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)
     BIAS   -> (5)
 )>
 ```
+## Pooling Layers
 
 ## [model] MAXPOOL2D
 

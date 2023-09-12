@@ -7,12 +7,18 @@
   ;; LinearLayer
   (:export
    #:weight-of
-   #:bias-of)
+   #:bias-of
+   #:alpha-of
+   #:beta-of)
   
   (:export
    #:LinearLayer
    #:Linear-weight
    #:Linear-bias)
+
+  (:export
+   #:BatchNorm
+   #:LayerNorm)
 
   (:export
    #:Conv2D
@@ -30,11 +36,14 @@
    #:cross-entropy-loss
    #:softmax-cross-entropy
    )
-  
+
+  ;; Non Linear Functions
   (:export
    #:!relu
+   #:!leakey-relu
    #:!sigmoid
    #:!gelu
+   #:!elu
    #:!softmax))
 
 (in-package :cl-waffe2/nn)

@@ -19,6 +19,8 @@
   
   ;; Advanced Network APIs
   (:export
+   #:node->defun
+   #:node->lambda
    #:defsequence
    #:sequencelist-nth
    #:asnode

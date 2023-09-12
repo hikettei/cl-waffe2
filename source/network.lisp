@@ -8,9 +8,10 @@
 (defmodel (Encapsulated-Node (self node-func)
 	   :slots ((node-func :initarg :node-func))
 	   :initargs (:node-func node-func)
-	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (excepted to construct networks) with no `:where` dependency"
-	   :on-call-> ((self x)
-		       (funcall (slot-value self 'node-func) x))))
+	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (excepted to construct networks) with no `:where` dependency"))
+
+(defmethod call ((model Encapsulated-Node) &rest inputs)
+  (apply (slot-value model 'node-func) inputs))
 
 (defmethod on-print-object ((model Encapsulated-Node) stream)
   (format stream "
@@ -65,6 +66,9 @@ However, due to constrains of `call`, it is not possible to place functions here
 The macro `cl-waffe2/vm.nodes:defmodel-as` is able to define new functions/nodes from existing `Composite`. However, this macro only needs the traced computation nodes information to do this. As the simplest case, compiling the AbstractNode `SinNode` (which is callable as `!sin`) into static function, `matrix-sin`.
 
 ```lisp
+
+;; The number of arguments is anything: (defmodel-as (asnode #'(lambda (x y z) ... is also ok
+
 (defmodel-as (asnode #'!sin) :where (A[~] -> B[~]) :asif :function :named matrix-sin)
 
 (matrix-sin (ax+b `(10 10) 0 1)) ;; <- No compiling overhead. Just works like Numpy
@@ -196,5 +200,85 @@ Tips: Use `(sequencelist-nth n sequence-model)` to read the nth layer of sequenc
 		     (1+ i) length layer)))))))
 
 
+;; lambda from node
+;;(node->defun cdiff! (A[~] B[~]) (!add a b))
+;; kwargs?
 
+(defmacro node->lambda ((&rest where) &body body)
+  "
+## [macro] node->lambda
 
+```lisp
+(node->lambda (&rest where) &body body)
+```
+
+Creates a lambda function obtained by tracing and compiling the computation node described in body.
+
+### Inputs
+
+`where` declares the shape transforms. the tensor names used here are the same as those used in body. (i.e.: everything is AbstractTensor)
+
+`body` Describe the construction of the computation node here.
+
+### Example
+
+```lisp
+(node->lambda (A[~] -> B[~])
+    (!sin (!cos a)))
+
+(funcall * (randn `(3 3)))
+```
+
+### Note
+
+⚠️ Caches of functions are created for each location where this macro is located. Never place it inside a loop!
+
+"
+  (let* ((parsed (multiple-value-list (cl-waffe2/vm.nodes::parse-subscript `,where))))
+    `(defmodel-as
+	 (asnode #'(lambda (,@(car parsed)) ,@body))
+       :where ,where
+       :asif :function
+       :named nil)))
+
+(defmacro node->defun (name (&rest where) &body body)
+  "
+## [macro] node->defun
+
+```lisp
+(node->defun (name (&rest where) &body body))
+```
+
+Defines a function obtained by tracing and compiling the computation node described in the body.
+
+### Inputs
+
+`name[symbol]` the function is defined after it
+
+`where` declares the shape transforms. the tensor names used here are the same as those used in body.
+
+`body` Describe the construction of the computation node here.
+
+### Example
+
+```lisp
+(node->defun log-softmax (A[~] -> OUT[~])
+    (!softmax (!loge a) :axis 1))
+
+(log-softmax (ax+b `(3 3) 0 1))
+{CPUTENSOR[float] :shape (3 3) :id TID261835 
+  ((0.33333334 0.33333334 0.33333334)
+   (0.33333334 0.33333334 0.33333334)
+   (0.33333334 0.33333334 0.33333334))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward NIL}
+```
+"
+  (let* ((parsed (multiple-value-list (cl-waffe2/vm.nodes::parse-subscript `,where))))
+    `(defmodel-as
+	 (asnode #'(lambda (,@(car parsed)) ,@body))
+       :where ,where
+       :asif :function
+       :named ,name)))
