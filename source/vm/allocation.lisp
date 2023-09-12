@@ -78,10 +78,12 @@ If the re-allocation is performed, frees the old one.
 	   (the number
 		(if (numberp val)
 		    val
-		    (or (gethash val shape-table)
-			(error "adjust-allocation!: The symbol ~a is unknown. Choose from: ~a"
+		    (or (let ((out (gethash val shape-table)))
+			  (when (numberp out) out))
+			(error "adjust-allocation!: The symbol ~a is unknown. Choose from: ~a -> ~a"
 			       val
-			       (alexandria:hash-table-keys shape-table)))))))
+			       (alexandria:hash-table-keys shape-table)
+			       (alexandria:hash-table-values shape-table)))))))
     (loop for tensor being the hash-values in (vmalloc-id2pool allocation)
 	  ;; If the tensor is DYNAMYCALLY SHAPED:
 	  if (some #'symbolp (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
