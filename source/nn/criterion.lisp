@@ -2,7 +2,7 @@
 (in-package :cl-waffe2/nn)
 
 ;; TODO: ================================
-;; L1
+;; L1/one-hot
 ;; BinaryCrossEntropy
 ;; KLdiv
 ;; CosineSim (rather than distance.lisp?)
@@ -12,12 +12,22 @@
 ;; BSE
 ;; ======================================
 
-(defun L1Norm (x y &key (reduction :mean))
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; Tips ... Criterionを使うとき下のユーティリティを定義しておくと便利
+;; Network Template: Criterion
+;;(defun criterion (criterion X Y &key (reductions nil))
+;;  (apply #'call->
+;;	 (funcall criterion X Y)
+;;	 (map 'list #'asnode reductions)))
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(defun L1Norm (x y &key (reduction t))
   "
 ## [function] L1Norm
 
 ```
-(L1Norm x p &key (:reduction :mean))
+(L1Norm x p &key (:reduction T))
 ```
 
 Returns a tensor that measures L1 Norm between each element in the input `x` and `y`.
@@ -41,11 +51,11 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
        (!mean (!abs l)))
       (T (!abs l)))))
 
-(defun mse (x y &key (reduction :mean))
+(defun mse (x y &key (reduction t))
   "
 ## [function] mse
 ```
-(mse x p &key (:reduction :mean))
+(mse x p &key (:reduction T))
 ```
 Returns a tensor that measures the MSE error (L2Norm) between each element in the input `x` and `y`.
 
@@ -110,12 +120,12 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x) :order (order x)))))))
 
 
-(defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction :mean))
+(defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction t))
   "
 ## [fucntion] cross-entropy-loss
 
 ```lisp
-(cross-entropy-loss x labels &key (delta 1e-7) (reduction :mean))
+(cross-entropy-loss x labels &key (delta 1e-7) (reduction t))
 ```
 
 Returns a tensor that measures the Cross-Entropy-Error between each element in the x and labels.
@@ -145,9 +155,9 @@ L_i = -p_ilog(x_i + delta)
   ;; KLDiv: xlogp
   (let ((z (!mul -1 (!mul labels (!loge (!add x delta))))))
     (case reduction
-      (:sum (!sum z))
+      (:sum  (!sum z))
       (:mean (!mean z))
-      (T z))))
+      (T     z))))
 
 (defun softmax-cross-entropy (x labels)
   "

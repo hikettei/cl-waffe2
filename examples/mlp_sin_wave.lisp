@@ -25,7 +25,7 @@
 (defun criterion (criterion X Y &key (reductions nil))
   (apply #'call->
 	 (funcall criterion X Y)
-	 (map 'list #'asnode (reverse reductions))))
+	 (map 'list #'asnode reductions)))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; Defines a model
@@ -40,7 +40,7 @@
 			       (call (Simple-MLP in-features hidden-dim)
 				     (make-input `(batch-size ,in-features) :TrainX))
 			       (make-input `(batch-size 1) :TrainY)
-			       :reductions (list #'->scal)))
+			       :reductions (list #'!mean #'->scal)))
 	 (model (build lazy-loss :inputs `(:TrainX :TrainY))))
 
     ;; Initializes and hooks AbstractOptimizers
