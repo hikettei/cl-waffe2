@@ -1,19 +1,23 @@
 
 (in-package :cl-waffe2/base-impl)
 
-;;
-;; Add: define-doc
-;; Matrix-Matrix Operation:
-;;  (!matrix-add ) (!matrix-sub ) (!matrix-mul ) (!matrix-div )
-;; Correspondng-Nodes are AddNode SubNode MulNode DivNode
-;;
-;; Scalar-Matrix Operation:
-;;  (!scalar-add ) (!scalar-sub ) ...
-;; Corresponding-Nodes are ScalarAdd ScalarSub...
-;;
-;; general-purpose function: !add !sub !mul !div.
 
-;; Utils
+;; Roadmap
+
+;; Dtype Specific Arithmetic Ops:
+;; !matrix-XXX, !sas-XXX, !scalar-XXX
+
+;; More general:
+;;  (!add !sub !mul !div...)
+
+;; Reduce:
+;;  (!+ !- !* !/)
+
+(deftype function-args-t ()
+  "Indicates the list of types that can be arguments of functions."
+  `(or AbstractTensor number symbol))
+
+;; Numbers to Tensors
 (defun number->stensor (scalar tensor)
   "This function always returns ScalarTensor, whenever scalar is number or ScalarTensor. tensor[number or AbstractTensor] is used in order to determine the dtype of scalar."
   (if (numberp scalar)
@@ -22,7 +26,7 @@
 				     (if (typep tensor 'AbstractTensor)
 					 (dtype tensor)
 					 (dtype-of scalar))))
-      (if (symbolp scalar)
+      (if (symbolp scalar) ;; Dynamic Shape
 	  (make-tensor scalar :dtype :uint32)
 	  scalar)))
 
@@ -94,8 +98,7 @@ A\\gets{1 / A}
 (InverseTensorNode dtype)
 ```
 
-`dtype` dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
-
+`dtype` indicates dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
 "))
 
 (macrolet ((define-scalar-mat-node (name document1 document2 sv4bw &optional backward)
@@ -176,10 +179,19 @@ X\\gets{X ~a scalar}
 ;; ===============================================================
 ;; Defun Parts
 ;; ===============================================================
+
+(declaim (ftype (function (AbstractTensor AbstractTensor) (values AbstractTensor &optional))
+		!matrix-add
+		!matrix-sub
+		!matrix-mul
+		!matrix-div))
+	       
 (macrolet ((define-arithmetic-node-caller (name node-name ops prep f)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
 		(defun ,name (x y)
+		  (declare (ftype (function (AbstractNode AbstractTensor AbstractTensor) (values AbstractTensor &optional))
+				  forward))
 		  ,(format nil "
 ## [function] ~(~a~)
 
@@ -237,6 +249,7 @@ None.
     "by"
     "/"))
 
+(declaim (ftype (function (function-args-t) (values AbstractTensor &optional)) !inverse))
 (with-export !inverse
   (defun !inverse (tensor)
     "## [function] !inverse
@@ -262,7 +275,12 @@ tensor[ScalarTensor/AbstractTensor/Number]
 	  (!sas-div 1 X)
 	  (forward (InverseTensorNode (dtype X)) (!copy X))))))
 
-;; update docs
+(declaim (ftype (function (function-args-t AbstractTensor) (values AbstractTensor &optional))
+		!scalar-add
+		!scalar-sub
+		!scalar-mul
+		!scalar-div))
+		
 (macrolet ((define-scalar-mat-node-caller (name node-name document)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -385,6 +403,8 @@ The function ~a computes following operation with calling `~a`, returning a new 
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x))))
 
+(declaim (ftype (function (function-args-t function-args-t) (values AbstractTensor &optional))
+		!sas-add !sas-sub !sas-mul !sas-div))
 (macrolet ((define-sas-op (name node-name op)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
@@ -424,6 +444,9 @@ x_{copy}\\gets{x ~a y}
 
 (defun scalartensor-p (tensor)
   (scalar-p tensor))
+
+(declaim (ftype (function (function-args-t function-args-t) (values AbstractTensor &optional))
+		!add !sub !mul !div))
 
 (macrolet ((define-arith-function (name
 				   invertor
@@ -501,6 +524,11 @@ None
 ;; Destructive Functions Family: A+=B A-=B A*=B A/=B
 ;; ===============================================================
 
+(declaim (ftype (function (AbstractTensor AbstractTensor) (values AbstractTensor &optional))
+		A+=B
+		A-=B
+		A*=B
+		A/=B))
 (macrolet ((define-darith-function (name
 				    matrix-operation
 				    op)
@@ -544,6 +572,11 @@ A\\gets{A ~a B}
 ;; Destructive Functions Family: A+=scal A-=scal A*=scal A/=scal
 ;; ===============================================================
 
+(declaim (ftype (function (AbstractTensor function-args-t) (values AbstractTensor &optional))
+		A+=scal
+		A-=scal
+		A*=scal
+		A/=scal))
 (macrolet ((define-darith-function (name
 				    matrix-operation
 				    op)
@@ -574,7 +607,7 @@ A\\gets{A ~a scalar}
 			   (symbol-name matrix-operation)
 			   op)
 		  (if (numberp scalar)
-		      (forward (,matrix-operation (dtype A)) A (make-tensor scalar))
+		      (forward (,matrix-operation (dtype A)) A (make-tensor scalar :dtype (dtype A)))
 		      (forward (,matrix-operation (dtype A)) A scalar)))))
 	   (define-darith-function1 (name broadcast op op1 arg op-name)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
@@ -609,7 +642,8 @@ A\\gets{A ~a scalar}
   (define-darith-function  A*=scal ScalarMul "*")
   (define-darith-function1 A/=scal A*=scal / !div 1 "*"))
 
-
+(declaim (ftype (function (&rest function-args-t) (values AbstractTensor &optional))
+		!+ !- !* !/))
 (macrolet ((define-arith-op (waffe-func lisp-op)
 	     `(progn
 		(export ',lisp-op)

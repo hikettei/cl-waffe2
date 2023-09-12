@@ -147,7 +147,6 @@
 
     (caller-doc !move)
     (caller-doc !copy)
-    (caller-doc !copy-force)
 
     (caller-doc !permute)
     (caller-doc !reshape)

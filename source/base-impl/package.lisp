@@ -38,7 +38,6 @@
    #:!mean
    #:!move
    #:!copy
-   #:!copy-force
    #:!permute
    #:!view
    #:!reshape

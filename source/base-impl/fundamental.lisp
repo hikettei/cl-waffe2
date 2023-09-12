@@ -75,6 +75,9 @@ A\\gets{B}
 			      ,x)
 			    ,y)))
 
+(declaim (ftype (function (AbstractTensor AbstractTensor &key (:force boolean)) (values AbstractTensor &optional))
+		!move))
+
 (defun !move (place tensor &key (force nil))
   "
 ## [function] !move
@@ -112,7 +115,8 @@ Unevaluated Copied Tensor."
 	       place
 	       tensor)))
 
-
+(declaim (ftype (function (AbstractTensor &key (:force boolean)) (values AbstractTensor &optional))
+		!copy))
 (defun !copy (tensor &key (force nil))
   "
 ## [function] !copy
@@ -127,15 +131,8 @@ Note that: the function `!copy` never creates a new tensor larger than (tensor-v
 
 `!copy` is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns `InputTensor`, not `AbstractTensor`.
 
-See also: `!copy-force` never being ignored by compiler, and broadcasted axes will be padded.
-
 Input:  Tensor[AbstractTensor]
 Output: Tensor[AbstractTensor]"
-
-  ;; FIXME: Operation with tensor permuted...
-  ;;(when (tensor-permuted-p tensor)
-  ;;  (return-from !copy (->contiguous tensor)))
-  
   (let* ((out (make-input (actual-shape tensor) nil
 			  :create-from tensor
 			  :scalar-p (scalar-p tensor)
@@ -154,30 +151,6 @@ Output: Tensor[AbstractTensor]"
 		  (apply #'!view out broadcasts)
 		  out))
 	 (res (!move out tensor :force force)))
-    ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
-    (extend-states res tensor)))
-
-;; Depcrecated ...
-(defun !copy-force (tensor)
-  "
-## [function] !copy-force
-
-```lisp
-(!copy-force (tensor))
-```
-
-The function !copy-force returns a node which copies the given tensor forcibly while the function !copy sometimes ignored.
-
-This function is also used to adjust memory alignment of tensor."
-
-  (warn "!copy-force is subject to be deleted in the future release. use instead: (!copy tensor :force t)")
-  
-  (let* ((out (make-tensor (if (scalar-p tensor)
-			       0
-			       (shape tensor))
-			   :dtype (dtype tensor)
-			   :order (order tensor)))
-	 (res (!move out tensor)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 

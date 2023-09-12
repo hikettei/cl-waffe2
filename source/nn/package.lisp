@@ -30,9 +30,11 @@
    #:cross-entropy-loss
    #:softmax-cross-entropy
    )
-  
+
+  ;; Non Linear Functions
   (:export
    #:!relu
+   #:!leakey-relu
    #:!sigmoid
    #:!gelu
    #:!softmax))
