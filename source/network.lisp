@@ -200,5 +200,85 @@ Tips: Use `(sequencelist-nth n sequence-model)` to read the nth layer of sequenc
 		     (1+ i) length layer)))))))
 
 
+;; lambda from node
+;;(node->defun cdiff! (A[~] B[~]) (!add a b))
+;; kwargs?
 
+(defmacro node->lambda ((&rest where) &body body)
+  "
+## [macro] node->lambda
 
+```lisp
+(node->lambda (&rest where) &body body)
+```
+
+Creates a lambda function obtained by tracing and compiling the computation node described in body.
+
+### Inputs
+
+`where` declares the shape transforms. the tensor names used here are the same as those used in body.
+
+`body` Describe the construction of the computation node here.
+
+### Example
+
+```lisp
+(node->lambda (A[~] -> B[~])
+    (!sin (!cos a)))
+
+(funcall * (randn `(3 3)))
+```
+
+### Note
+
+⚠️A cache of functions is created for each location where this macro is located. Never place it inside a loop!
+
+"
+  (let* ((parsed (multiple-value-list (cl-waffe2/vm.nodes::parse-subscript `,where))))
+    `(defmodel-as
+	 (asnode #'(lambda (,@(car parsed)) ,@body))
+       :where ,where
+       :asif :function
+       :named nil)))
+
+(defmacro node->defun (name (&rest where) &body body)
+  "
+## [macro] node->defun
+
+```lisp
+(node->defun (name (&rest where) &body body))
+```
+
+Defines a function obtained by tracing and compiling the computation node described in the body.
+
+### Inputs
+
+`name[symbol]` the function is defined after it
+
+`where` declares the shape transforms. the tensor names used here are the same as those used in body.
+
+`body` Describe the construction of the computation node here.
+
+### Example
+
+```lisp
+(node->defun log-softmax (A[~] -> OUT[~])
+    (!softmax (!loge a) :axis 1))
+
+(log-softmax (ax+b `(3 3) 0 1))
+{CPUTENSOR[float] :shape (3 3) :id TID261835 
+  ((0.33333334 0.33333334 0.33333334)
+   (0.33333334 0.33333334 0.33333334)
+   (0.33333334 0.33333334 0.33333334))
+  :facet :input
+  :belongs-to :memory-pool
+  :requires-grad NIL
+  :backward NIL}
+```
+"
+  (let* ((parsed (multiple-value-list (cl-waffe2/vm.nodes::parse-subscript `,where))))
+    `(defmodel-as
+	 (asnode #'(lambda (,@(car parsed)) ,@body))
+       :where ,where
+       :asif :function
+       :named ,name)))
