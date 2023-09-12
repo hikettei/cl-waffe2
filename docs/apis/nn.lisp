@@ -34,6 +34,8 @@
 
     (insert "## [Normalization Layers]~%")
 
+    (with-nn-doc (find-class 'LayerNorm) 't)
+
     (insert "## [Loss Functions]
 
 ### Tips: Utility Function

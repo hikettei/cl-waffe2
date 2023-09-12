@@ -304,7 +304,7 @@ Creates a lambda function obtained by tracing and compiling the computation node
 
 ### Note
 
-⚠️A cache of functions is created for each location where this macro is located. Never place it inside a loop!
+⚠️ Caches of functions are created for each location where this macro is located. Never place it inside a loop!
 
 
 ## [macro] node->defun

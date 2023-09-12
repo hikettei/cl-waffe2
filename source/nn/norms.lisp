@@ -1,8 +1,9 @@
 
 (in-package :cl-waffe2/nn)
 
-;; 記憶違いかも 後で調べる
+;; kiokutigaikamo atode zissou siraberu
 (defmodel (BatchNorm (self in-features &key (affine t) (eps 1e-5))
+	   :documentation ""
 	   :slots ((alpha :initform nil :accessor alpha-of)
 		   (beta  :initform nil :accessor beta-of)
 		   (shape :initform nil :initarg :in-features :accessor shape-of)
@@ -25,8 +26,8 @@
 (defmodel (LayerNorm (self normalized-shape &key (eps 1.0e-5) (affine T))
 	   :slots ((alpha :initform nil :accessor alpha-of)
 		   (beta  :initform nil :accessor beta-of)
-		   (shape :initarg :normalized-shape :accessor dim-of)
-		   (eps   :initarg :eps :accessor eps-of))
+		   (shape :initform nil :initarg :normalized-shape :accessor dim-of)
+		   (eps   :initform nil :initarg :eps :accessor eps-of))
 	   :documentation "Applies Layer Normalization over a mini-batch of inputs as described in the paper [Layer Normalization](https://arxiv.org/abs/1607.06450)
 
 ```math
