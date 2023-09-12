@@ -30,21 +30,44 @@
 
     (insert "## Normalization Layers~%")
 
-    (insert "## Loss Functions~%")
+    (insert "## Loss Functions
+
+### Tips: Utility Function
+
+The `:reduction` keyword for all loss functions is set to T by default. If you want to compose several functions for reduction (e.g. ->scal and !sum), it is recommended to define utilities such as:
+
+```lisp
+(defun criterion (criterion X Y &key (reductions nil))
+  (apply #'call->
+	 (funcall criterion X Y)
+	 (map 'list #'asnode reductions)))
+
+;; Without criterion:
+(->scal (MSE x y :reduction :sum))
+
+;; With criterion for example:
+(criterion #'MSE x y :reductions `(#'->scal #'!sum))
+```
+")
     
     (with-nn-doc 'L1Norm 'function
       (with-example
 	"(proceed (L1Norm (randn `(10 10)) (randn `(10 10))))"))
-    (with-nn-doc 'mse 'function
+    
+    (with-nn-doc 'MSE 'function
       (with-example
 	"(proceed (MSE (randn `(10 10)) (randn `(10 10))))"))
     
     (with-nn-doc 'cross-entropy-loss 'function)
     (with-nn-doc 'softmax-cross-entropy 'function)
 
+    (insert "## Regressions~%")
+    
     (with-nn-doc (find-class 'LinearLayer) 't
       (with-example
 	"(LinearLayer 10 5)"))
+
+    (insert "## Image Processings~%")
 
     (with-nn-doc (find-class 'Conv2D) 't
       (with-example

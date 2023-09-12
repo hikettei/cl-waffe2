@@ -8,9 +8,10 @@
 (defmodel (Encapsulated-Node (self node-func)
 	   :slots ((node-func :initarg :node-func))
 	   :initargs (:node-func node-func)
-	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (excepted to construct networks) with no `:where` dependency"
-	   :on-call-> ((self x)
-		       (funcall (slot-value self 'node-func) x))))
+	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (excepted to construct networks) with no `:where` dependency"))
+
+(defmethod call ((model Encapsulated-Node) &rest inputs)
+  (apply (slot-value model 'node-func) inputs))
 
 (defmethod on-print-object ((model Encapsulated-Node) stream)
   (format stream "
@@ -65,6 +66,9 @@ However, due to constrains of `call`, it is not possible to place functions here
 The macro `cl-waffe2/vm.nodes:defmodel-as` is able to define new functions/nodes from existing `Composite`. However, this macro only needs the traced computation nodes information to do this. As the simplest case, compiling the AbstractNode `SinNode` (which is callable as `!sin`) into static function, `matrix-sin`.
 
 ```lisp
+
+;; The number of arguments is anything: (defmodel-as (asnode #'(lambda (x y z) ... is also ok
+
 (defmodel-as (asnode #'!sin) :where (A[~] -> B[~]) :asif :function :named matrix-sin)
 
 (matrix-sin (ax+b `(10 10) 0 1)) ;; <- No compiling overhead. Just works like Numpy

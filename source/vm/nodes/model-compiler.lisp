@@ -346,9 +346,9 @@ Choose :asif option from:
 "
      named))
 
-  (let* ((composite (eval target-model))
-	 (where-decl-to-use (or (read-where composite) where)))
-
+  (let* ((where-decl-to-use
+	   (or where (read-where (eval target-model)))))
+    
     (when (null where-decl-to-use)
       (error "defmodel-as: Attempted to compile into a ~(~a~) but the composite doesn't provide any available :where declaration.
 
@@ -405,14 +405,14 @@ Or
 			     target-model
 			     where-decl-to-use))))))
 
-    (when (and (read-where composite) where)
-      (warn "defmodel-as: As both the composite ~a and defmodel-as form declared :where form, defmodel was used in preference.
-
-(defmodel-as target-model ... :where ...)
-                                 └── This option is ignored.
-
-"
-	    (car target-model)))
+;;    (when (and (read-where composite) where)
+;;      (warn "defmodel-as: As both the composite ~a and defmodel-as form declared :where form, defmodel was used in preference.
+;;
+;;(defmodel-as target-model ... :where ...)
+;;                                 └── This option is ignored.
+;;
+;;"
+;;	    (car target-model)))
 
     (case asif
       (:function

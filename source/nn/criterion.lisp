@@ -12,22 +12,21 @@
 ;; BSE
 ;; ======================================
 
+(deftype reduction-opt-t ()
+  "Keywords indicating the option to reduct"
+  `(member :mean :sum t))
 
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; Tips ... Criterionを使うとき下のユーティリティを定義しておくと便利
-;; Network Template: Criterion
-;;(defun criterion (criterion X Y &key (reductions nil))
-;;  (apply #'call->
-;;	 (funcall criterion X Y)
-;;	 (map 'list #'asnode reductions)))
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+(declaim (ftype (function
+		 (AbstractTensor AbstractTensor &key (:reduction reduction-opt-t))
+		 (values AbstractTensor &optional))
+		L1Norm
+		MSE))
 (defun L1Norm (x y &key (reduction t))
   "
 ## [function] L1Norm
 
 ```
-(L1Norm x p &key (:reduction T))
+(L1Norm x p &key (:reduction t))
 ```
 
 Returns a tensor that measures L1 Norm between each element in the input `x` and `y`.
@@ -38,10 +37,10 @@ l(x, y) = L = {l_1, ..., l_n}^\\intercal, l_n = abs(x_n - y_n)
 
 where `N` is a batch-size.
 
-In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `nil`), the result of `L` is reducted. (If nil, reduction is ignored.)
+In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `t`), the result of `L` is reducted. (If t, reduction is ignored.)
 "
   (declare (type AbstractTensor x y)
-	   (type (or nil (member :mean :sum))))
+	   (type reduction-opt-t reduction))
   
   (let ((l (!sub x y)))
     (case reduction
@@ -57,7 +56,8 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```
 (mse x p &key (:reduction T))
 ```
-Returns a tensor that measures the MSE error (L2Norm) between each element in the input `x` and `y`.
+
+Returns a tensor that measures the MSE error (i.e.: L2Norm) between each element in the input `x` and `y`.
 
 ```math
 l(x, y) = L = {l_1, ..., l_n}^\\intercal, l_n = (x_n - y_n)^2
@@ -65,31 +65,31 @@ l(x, y) = L = {l_1, ..., l_n}^\\intercal, l_n = (x_n - y_n)^2
 
 where `N` is a batch-size.
 
-In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `nil`), the result of `L` is reducted. (If nil, reduction is ignored.)
+In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` `t`), the result of `L` is reducted. (If t, this operation is ignored.)
 "
   (declare (type AbstractTensor x y)
-	   (type (or nil (member :mean :sum))))
+	   (type reduction-opt-t reduction))
   
   (let ((l (!sub x y)))
     (case reduction
       (:sum
-       (!sum  (!square l)))
+       (!sum  (!mul l l)))
       (:mean
-       (!mean (!square l)))
-      (T      (!square l)))))
+       (!mean (!mul l l)))
+      (T      (!mul l l)))))
 
 
-(defmodel (Softmax-Cross-Entropy-Forward (self &key (delta 1e-7) (avoid-overflow t))
+(defmodel (Softmax-Cross-Entropy-Forward (self &key (delta 1e-7) (avoid-overflow nil))
 	   :slots ((delta :initarg :delta :reader delta)
 		   (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
 	   
 	   :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
-	   :on-call-> ((self x labels)
+	   :on-call-> ((self x labels)		       
 		       (with-slots ((delta delta) (avoid-overflow avoid-overflow)) self
 			 (let ((z (!softmax x :avoid-overflow avoid-overflow)))
-			   (cross-entropy-loss z labels :delta delta :reduction nil))))))
+			   (cross-entropy-loss z labels :delta delta :reduction t))))))
 
-(defmodel (Softmax-Cross-Entropy-Backward (self &key (avoid-overflow t))
+(defmodel (Softmax-Cross-Entropy-Backward (self &key (avoid-overflow nil))
 	   :slots ((avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
 	   
 	   :where (Dy[~ length n-dimension] X[~ length n-dimension] Labels[~ length n-dimension] Batch-Size[scal] -> X.grad[~ length n-dimension] where scal = 1)
@@ -97,16 +97,15 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 		       (with-slots ((avoid-overflow avoid-overflow)) self
 			 (let* ((z  (!sub (!softmax x :avoid-overflow avoid-overflow) labels))
 				(dx (!div (!mul dy z) coeff)))
-			   (values dx))))))
+			   dx)))))
 
 (defmodel-as (Softmax-Cross-Entropy-Forward) :asif :function :named static-softmax-cross-entropy-forward)
 (defmodel-as (Softmax-Cross-Entropy-Backward) :asif :function :named static-softmax-cross-entropy-backward)
 
-(define-op (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow t))
+(define-op (Softmax-Cross-Entropy-Node (self &key (delta 1e-7) (avoid-overflow nil) (axis 1))
 	    :slots ((delta :initarg :delta :reader delta)
 		    (avoid-overflow :initarg :avoid-overflow :reader avoid-overflow))
 	    :save-for-backward-names (x labels)
-	    
 	    :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
 	    :forward ((self x labels)
 		      (with-setting-save4bw ((x x) (labels labels)) self
@@ -119,7 +118,28 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 			  labels
 			  (make-tensor (car (last (shape x) 2)) :dtype (dtype x) :order (order x)))))))
 
+(define-op (Softmax-Cross-Entropy-Node1 (self &key (delta 1e-7) (avoid-overflow nil))
+	    :slots ((softmax :initform nil :accessor softmax-of)
+		    (cross-entropy :initform nil :accessor cross-entropy-of))
+	    
+	    :save-for-backward-names (sx labels)
+	    :where (X[~ length n-dimension] Labels[~ length n-dimension] -> OUT[~ length n-dimension])
+	    :forward ((self x labels)
 
+		      )
+	    :backward ((self dout)
+
+		       ))
+  
+  ;; Initializing static functions in advance:
+  (let ((softmax (defmodel-as (asnode #'!softmax :axis axis :avoid-overflow avoid-overflow) :where (A[~] -> B[~])))
+	(celoss  (defmodel-as (asnode #'cross-entropy-loss :delta delta) :where (A[~] B[~] -> OUT[~]))))
+
+    softmax))
+	    
+
+(declaim (ftype (function (AbstractTensor AbstractTensor &key (:delta single-float) (:reduction reduction-opt-t)) (values AbstractTensor &optional))
+		cross-entropy-loss))
 (defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction t))
   "
 ## [fucntion] cross-entropy-loss
@@ -150,7 +170,11 @@ L_i = -p_ilog(x_i + delta)
 `x[AbstractTensor]`
 
 `labels[AbstractTensor]` one-hot encoding.
+
+`reduction` one of :sum :mean t
 "
+  (declare (type AbstractTensor x labels)
+	   (type reduction-opt-t reduction))
 
   ;; KLDiv: xlogp
   (let ((z (!mul -1 (!mul labels (!loge (!add x delta))))))
