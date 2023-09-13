@@ -50,6 +50,10 @@
   "
 ## [struct] FusionPathQuery
 
+```lisp
+(make-query abstract-node &key (device t) (dtype t) (pred #'(lambda (node) t)))
+```
+
 `(make-query ...)` and create a new query.
 
 A single `FusionPathQuery` becomes t only when satisfies all of following conditions:
@@ -62,7 +66,7 @@ A single `FusionPathQuery` becomes t only when satisfies all of following condit
 
 `pred[function]`        specifies an additional predicator, the function receives `(node)` as arguments and return t to accept it. (`arguments-tensor` is an list of tensors, which `forward` or `call` used.)
 
-See also: `defpath`.
+This structure is excepted to be combined with `defpath`.
 "
   (node   abstract-node :type symbol)
   (device device :type symbol)
@@ -77,7 +81,9 @@ See also: `defpath`.
 (defpath (fusion-name &rest query-list) &key (reject-p #'(lambda ())) (replaced-with nil))
 ```
 
-Define a `FusionQueryPath` to relocate compiled instructions with reference to the search. Composing the sequence of generated IRs to suit the device or model is the easiest way to speed up your model, cl-waffe2 searches for compiled nodes and replaces those matching the conditions specified in `query-list` with the computed nodes specified in `replaced-with`, if `:fuse-p` is set to t (default: `t`). In the simplest case, `defpath` can detect `[AddNode-CPUTensor] [MulNode-CPUTensor]` sequence and replace it with `[AddMulNode-CPUTensor]` node to reduce the number of instructions.
+⚠️ This API is still in the conceptial stage, tests are not enough. DO NOT USE THIS.
+
+The macro defpath introduces to cl-waffe2 **Symbolic Differentiation**. Users can define a `FusionQueryPath` to relocate compiled instructions with reference to the search. Composing the sequence of generated IRs to suit the device or model is the easiest way to speed up your model, cl-waffe2 searches for compiled nodes and replaces those matching the conditions specified in `query-list` with the computed nodes specified in `replaced-with`, if `:fuse-p` is set to t (default: `t`). In the simplest case, `defpath` can detect `[AddNode-CPUTensor] [MulNode-CPUTensor]` sequence and replace it with `[AddMulNode-CPUTensor]` node to reduce the number of instructions.
 
 ```lisp
 [When adding a new device to cl-waffe2...]
@@ -89,20 +95,19 @@ Define a `FusionQueryPath` to relocate compiled instructions with reference to t
 
 The created and registered path, will be reset with the `(reset-all-path!)` function. All registered paths are stored in `*user-defined-path-list*` parameter.
 
-## Rules
+### Rules
 
 cl-waffe2 replaces the existing operations with following the rules:
 
 1. The search is performed ignoring SaveForBackwardNode. If it is contained in the area to be replaced, it is moved to the last sequence of replaced one.
 
 
-```
-Example:
-
+```lisp
+;; Example
 Rule: [A] [B] -> [C]
 ```
 
-```
+```lisp
 Before Fusion:
 
 [A]
@@ -112,7 +117,7 @@ Before Fusion:
 [N]
 ```
 
-```
+```lisp
 Searching will be done ignoring [SAVE_FOR_BACKWARD]
 
 ^ [A]
@@ -145,7 +150,6 @@ Not replaced until the `query-list` matches everything, including the order.
 
 ### make-query
 
-### WfInstruction
 
 "
   `(eval-when (:compile-toplevel :load-toplevel :execute)

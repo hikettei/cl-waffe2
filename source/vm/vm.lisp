@@ -1,15 +1,28 @@
 
 (in-package :cl-waffe2/vm)
 
-(defparameter *safety-mode-p* NIL "
-## [parameter] *safety-mode-p*
+(defparameter *opt-level* 2 "
+## [parameter] `*opt-level*`
 
-When set to T, a run-time error is detected and a warning is displayed.")
+This parameter indicates the degree of runtime error detection. Whichever you choose, cl-waffe2 never apply something unsafe code transformation. It takes the fixnum from 1 to 3, and the larger, the faster.
+
+- Set 1 to use safety-mode, in every instructions, runtime error is checked.
+
+- Set 2 to use middle-mode, runtime error is checked only when first execution.
+
+- Set 3 to use fastest-mode, no runtime error checking is done.
+
+Again, whichever levels you choose, the graph cl-waffe2 executes is the same. So the effects on the performance is very small (within < `1e-4~1e-5` sec).
+
+In default, set to 2.
+")
+
+(declaim (type (integer 0 3) *opt-level*))
 
 (defparameter *logging-vm-execution* NIL "
-## [parameter] *logging-vm-execution*
+## [parameter] `*logging-vm-execution*`
 
-If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
+This parameter is useful for printing how all instructions are performed. If set to T, all results and arguments produced by executing `cl-waffe2 IR` is displayed into the terminal. In default, set to nil.
 ")
 
 (declaim (inline maybe-read-result write-result apply-instruction apply-inst-sv4bw))
@@ -95,37 +108,39 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
+  
   (when *logging-vm-execution*
     (let* ((inst (format nil "~a" instruction))
 	   (cnt  (length inst)))
       (format t "= [*logging-vm-execution*] ~a
 Instruction: ~a
+[Inputs]
 ~a"
 	      (with-output-to-string (out)
 		(dotimes (i cnt) (princ "=" out)))
 	      inst
-	      (map 'list #'maybe-read-result (wfop-args instruction))
-	      )))
-
+	      (if (some #'(lambda (x) (not (every #'numberp (tensor-stride x)))) (map 'list #'maybe-read-result (wfop-args instruction)))
+		  (with-output-to-string (out)
+		    (format out "(Can't Displayed):")
+		    (dolist (arg (map 'list #'maybe-read-result (wfop-args instruction)))
+		      (format out " ~a" (cl-waffe2/vm.nodes::describe-tensor arg))))
+		  (map 'list #'maybe-read-result (wfop-args instruction))))))
   
   (let ((outs (multiple-value-list
 	       (apply
 		(the function (wfop-op instruction))
 		(map 'list #'maybe-read-result (wfop-args instruction))))))
-
     
-    (when *safety-mode-p*
-      (when (some (the function (compose #'null #'cl-waffe2/vm.generic-tensor::vec)) outs)
-	(warn "cl-waffe2 VM: Runtime Warning
-The instruction: ~a
+    (when (and (< *opt-level* 3)
+	       (wfop-self instruction)
+	       (tensor-backward (wfop-self instruction))
+	       (if (= *opt-level* 1)
+		   t
+		   (null (wfop-error-check-p instruction)))
+	       (not (ignore-shape-error (tensor-backward (wfop-self instruction)))))
 
-returned a tensor whose its storage vec is null. In runtime, cl-waffe2 VM excepts all returned tensors have a valid storages and the next arguments are overwritten with this invaild tensor. So this could be lead to Assertion Failed ... Error. If you believe this alert is false and desire to delete this warning, set *safety-mode-p*=nil.
-
-out-to returned:
-
-~a" instruction outs))
-
-      (when (not (= (length outs) (length (wfop-out-to instruction))))
+      (when (and (= *opt-level* 1)
+		 (not (= (length outs) (length (wfop-out-to instruction)))))
 	(warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 should be return ~R arguments, but got ~R.
@@ -137,21 +152,37 @@ out-to returned:
 	      (length outs)
 	      (length (wfop-out-to instruction))
 	      outs))
-
+      
       (mapc #'(lambda (excepted received)
 		(when (not (eql (the boolean (scalar-p excepted)) (scalar-p received)))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
-Scalars and Matrices are incompatible:
+~a
 Excepted:
 ~a
 Butgot:
 ~a"
 			instruction
+			(if (scalar-p received)
+			    "returned a ScalarTensor but Matrix is excepted:"
+			    "returned a Matrix but ScalarTensor is excepted:")
 			excepted
 			received))
 
-		(when (not (equal (shape excepted) (shape received)))
+		;; Under *opt-level* = 1, we do runtime shape inspection
+		;; to all the tensors
+
+		;; Under *opt-level* = 2, weodo runtime shape inspection to:
+		;;  1. Tensors with fixed shape
+		;;  2. This is done only the first time.
+		(when (if (= *opt-level* 1)
+			  (not ;; Shape-Equal is slow op
+			   (cl-waffe2/vm.generic-tensor::shape-equal
+			    (shape excepted) (shape received)))
+			  (not
+			   (or (some #'symbolp (shape excepted))
+			       (some #'symbolp (shape received))
+			       (equal (shape excepted) (shape received)))))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 Shapes are incompatible.
@@ -163,15 +194,41 @@ Butgot:
 			excepted
 			received)))
 	    (wfop-out-to instruction) outs))
+    
+    (setf (wfop-error-check-p instruction) T)
 
     (when *logging-vm-execution*
       (format t "
 outs:
-~a
-~%"
-	      outs
-	      ))
+~a"
+	      (if (some #'(lambda (x) (not (every #'numberp (tensor-stride x)))) outs)
+		  (with-output-to-string (out)
+		    (format out "(Can't Displayed):")
+		    (dolist (arg outs)
+		      (format out " ~a" (cl-waffe2/vm.nodes::describe-tensor arg))))
+		  outs)))
     outs))
+
+(defun runtime-error (position condition iseq)
+  (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
+disassemble:
+~a
+
+condition:
+  ~a"
+	 position
+	 (with-output-to-string (out)
+	   (let* ((start (max 0 (- position 3)))
+		  (end   (min (length iseq) (+ position 3)))
+		  (iseqs  (loop for nth upfrom start below end collect (nth nth iseq))))
+	     (with-indent-to iseqs
+	       (loop with *no-newline* = t
+		     for nth upfrom start below end
+		     if (= nth position)
+		       do (format out "~a*: ~a~%" nth (nth nth iseq))
+		     else
+		       do (format out "~a : ~a~%" nth (nth nth iseq))))))
+	 condition))
 
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)
@@ -191,9 +248,13 @@ Evaluates generated cl-waffe2 IR sequence.
 
   (when iseq
     (loop for inst of-type WFInstruction in iseq
-	  ;; TODO: Runtime Shape Inspection etc...
+	  for position fixnum upfrom 0
 	  do (apply-inst-sv4bw inst)
-	     (write-result (wfop-out-to inst) (apply-instruction inst))
+	     (handler-bind
+		 ((error
+		    (lambda (c)
+		      (runtime-error position c iseq))))
+	       (write-result (wfop-out-to inst) (apply-instruction inst)))
 	  finally
 	     (return-from accept-instructions
 	       (apply #'values
@@ -222,7 +283,7 @@ Evaluates generated cl-waffe2 IR sequence.
 
 Basically, the function `benchmark-accept-instruction` executes the given list of instructions with profiling execution time, but at the end of proess, displays the report into `stream`.
 
-## Inputs
+### Inputs
 
 `n-sample[fixnum]` repeats the iseq execution for `n-sample` times
 
@@ -232,61 +293,11 @@ Basically, the function `benchmark-accept-instruction` executes the given list o
 
 `top-k[fixnum]` top-k slowest nodes are displayed at the end of report.
 
-## Return
+### Return
 
 `result[AbstractTensor]`
 
-## Example
-
-```lisp
-CL-WAFFE2-REPL> (with-no-grad (benchmark-accept-instructions (compile-forward-and-backward (!softmax (randn `(128 128)))) :n-sample 1000))
- Time(s)   |   Instruction ( * - Beyonds the average execution time)
-0.005366   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078760 <= op(TID1078760(128 128) TID1078676(128 128))>
-5.62e-4    | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078719 <= op(TID1078719(128 128) TID1078717(128 1))>
-0.001171   | <WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078679 <= op(TID1078679(128 1) TID1078681(1))>
-3.62e-4    | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078690 <= op(TID1078690(128 128) TID1078679(128 1))>
-0.084953*  | <WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078690 <= op(TID1078690(128 128) TID1078676(128 128))>
-0.053719*  | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078719 <= op(TID1078719(128 128) TID1078690(128 128))>
-6.69e-4    | <WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] : TID1078742 <= op(TID1078742(1) TID1078714(1))>
-0.120082*  | <WfInst[Compiled: SCALARDIV-CPUTENSOR]               : TID1078719 <= op(TID1078719(128 128) TID1078742(1))>
-0.049947*  | <WfInst[Compiled: SUBNODE-CPUTENSOR]                 : TID1078760 <= op(TID1078760(128 128) TID1078719(128 128))>
-0.004672   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078839 <= op(TID1078839(128 128) TID1078760(128 128))>
-0.166431*  | <WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078839 <= op(TID1078760(128 128) TID1078839(128 128))>
-0.004736   | <WfInst[Compiled: <DELETED>]                         : TID1078856 <= op(TID1078856(128 128) TID1078839(128 128))>
-0.001068   | <WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078805 <= op(TID1078805(128 1) TID1078807(1))>
-4.96e-4    | <WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078816 <= op(TID1078816(128 128) TID1078805(128 1))>
-0.004744   | <WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078788 <= op(TID1078788(128 128) TID1078760(128 128))>
-0.165539*  | <WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078788 <= op(TID1078760(128 128) TID1078788(128 128))>
-0.085777*  | <WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078816 <= op(TID1078816(128 128) TID1078788(128 128))>
-0.050755*  | <WfInst[Compiled: DIVNODE-CPUTENSOR]                 : TID1078856 <= op(TID1078856(128 128) TID1078816(128 128))>
-
-18 Instructions | 15 Tensors
-
- Total Time: 0.801049 sec
-
- Instruction                                         | Total time (s) | Time/Total (n-sample=1000)
-<WfInst[Compiled: EXPNODE-LISPTENSOR]                | 0.33196998   | 41.441906%
-<WfInst[Compiled: ADDNODE-CPUTENSOR]                 | 0.17073      | 21.313303%
-<WfInst[Compiled: SCALARDIV-CPUTENSOR]               | 0.120082     | 14.990594%
-<WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          | 0.068501     | 8.551412%
-<WfInst[Compiled: DIVNODE-CPUTENSOR]                 | 0.050755     | 6.3360667%
-<WfInst[Compiled: SUBNODE-CPUTENSOR]                 | 0.049947     | 6.2351995%
-<WfInst[Compiled: <DELETED>]                         | 0.004736     | 0.5912248%
-<WfInst[Compiled: SCALARMUL-CPUTENSOR]               | 0.002239     | 0.2795085%
-<WfInst[Compiled: VIEWTENSORNODE-T]                  | 0.0014199999 | 0.17726754%
-<WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] | 6.69e-4      | 0.08351549%
-{CPUTENSOR[float] :shape (128 128) :named ChainTMP1078855 
-  ((0.0017760922 0.0030971088 0.017302852  ~ 0.012318904  6.049352e-4  0.0041618845)                    
-   (0.012581187  0.0030174912 0.016748475  ~ 0.007076549  0.007030908  0.0017801385)   
-                 ...
-   (0.0036988985 0.0061271163 0.05046869   ~ 0.009297135  0.003441493  5.820294e-4)
-   (0.045387346  0.004674337  0.0018589711 ~ 0.008918608  0.0024204857 0.00761818))
-  :facet :input
-  :requires-grad NIL
-  :backward NIL}
-CL-WAFFE2-REPL>
-;; (The result may not be the latest)
-```
+See also: `proceed-bench`
 "
   (declare (type list iseq)
 	   (type fixnum n-sample top-k)
@@ -308,13 +319,18 @@ CL-WAFFE2-REPL>
       (when iseq
 	(loop with *under-benchmark-set* = (list sort-by-node profiled-result inst->node-table)
 	      for inst of-type WFInstruction in iseq
+	      for position fixnum upfrom 0
 	      do (let ((start-time (get-internal-real-time))) ;; Measuring save4bwtime
 		   (apply-inst-sv4bw inst)
 		   (let ((end-time (get-internal-real-time)))
 		     (incf sv4bw-time (/ (- end-time start-time) internal-time-units-per-second))))
 		     
-		 (let ((start-time (get-internal-real-time)))  
-		   (write-result (wfop-out-to inst) (apply-instruction inst))
+		 (let ((start-time (get-internal-real-time)))
+		   (handler-bind
+		       ((error
+			  (lambda (c)
+			    (runtime-error position c iseq))))
+		     (write-result (wfop-out-to inst) (apply-instruction inst)))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
 		     (let* ((end-time (get-internal-real-time))
