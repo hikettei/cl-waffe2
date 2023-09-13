@@ -21,6 +21,7 @@
   (:export
    #:node->defun
    #:node->lambda
+   #:node->defnode
    #:defsequence
    #:sequencelist-nth
    #:asnode

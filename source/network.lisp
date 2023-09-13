@@ -282,3 +282,41 @@ Defines a function obtained by tracing and compiling the computation node descri
        :where ,where
        :asif :function
        :named ,name)))
+
+
+#|
+(defmacro node->defnode (name (&rest where) &body body)
+  "
+## [macro] node->defnode
+
+```lisp
+(node->defun (name (&rest where) &body body))
+```
+
+Defines a differentiable AbstractNode obtained by tracing and compiling the computation node described in the body.
+
+### Inputs
+
+`name[symbol]` the function is defined after it
+
+`where` declares the shape transforms. the tensor names used here are the same as those used in body.
+
+`body` Describe the construction of the computation node here.
+
+### Example
+
+```lisp
+(node->defnode log-softmax (A[~] -> OUT[~])
+    (!softmax (!loge a) :axis 1))
+
+(proceed (log-softmax (parameter (ax+b `(3 3) 0 1))))
+```
+"
+  (let* ((parsed (multiple-value-list (cl-waffe2/vm.nodes::parse-subscript `,where))))
+    `(defmodel-as
+	 (asnode #'(lambda (,@(car parsed)) ,@body))
+       :where ,where
+       :asif :node
+       :differentiable nil
+       :named ,name)))
+|#

@@ -104,8 +104,7 @@ Instruction: ~a
 	      (with-output-to-string (out)
 		(dotimes (i cnt) (princ "=" out)))
 	      inst
-	      (map 'list #'maybe-read-result (wfop-args instruction))
-	      )))
+	      (map 'list #'maybe-read-result (wfop-args instruction)))))
 
   
   (let ((outs (multiple-value-list
@@ -173,6 +172,27 @@ outs:
 	      ))
     outs))
 
+(defun runtime-error (position condition iseq)
+  (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
+disassemble: 
+~a
+
+condition:
+  ~a"
+	 position
+	 (with-output-to-string (out)
+	   (let* ((start (max 0 (- position 3)))
+		  (end   (min (length iseq) (+ position 3)))
+		  (iseqs  (loop for nth upfrom start below end collect (nth nth iseq))))
+	     (with-indent-to iseqs
+	       (loop with *no-newline* = t
+		     for nth upfrom start below end
+		     if (= nth position)
+		       do (format out "~a*: ~a~%" nth (nth nth iseq))
+		     else
+		       do (format out "~a : ~a~%" nth (nth nth iseq))))))
+	 condition))
+
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)
   "
@@ -191,9 +211,14 @@ Evaluates generated cl-waffe2 IR sequence.
 
   (when iseq
     (loop for inst of-type WFInstruction in iseq
-	  ;; TODO: Runtime Shape Inspection etc...
+	  for position fixnum upfrom 0
 	  do (apply-inst-sv4bw inst)
-	     (write-result (wfop-out-to inst) (apply-instruction inst))
+	     (handler-bind
+		 ((error
+		    (lambda (c)
+		      (runtime-error position c iseq))))
+	       (write-result (wfop-out-to inst) (apply-instruction inst)))
+	     
 	  finally
 	     (return-from accept-instructions
 	       (apply #'values
@@ -308,13 +333,18 @@ CL-WAFFE2-REPL>
       (when iseq
 	(loop with *under-benchmark-set* = (list sort-by-node profiled-result inst->node-table)
 	      for inst of-type WFInstruction in iseq
+	      for position fixnum upfrom 0
 	      do (let ((start-time (get-internal-real-time))) ;; Measuring save4bwtime
 		   (apply-inst-sv4bw inst)
 		   (let ((end-time (get-internal-real-time)))
 		     (incf sv4bw-time (/ (- end-time start-time) internal-time-units-per-second))))
 		     
-		 (let ((start-time (get-internal-real-time)))  
-		   (write-result (wfop-out-to inst) (apply-instruction inst))
+		 (let ((start-time (get-internal-real-time)))
+		   (handler-bind
+		       ((error
+			  (lambda (c)
+			    (runtime-error position c iseq))))
+		     (write-result (wfop-out-to inst) (apply-instruction inst)))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
 		     (let* ((end-time (get-internal-real-time))

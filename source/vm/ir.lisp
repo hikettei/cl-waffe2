@@ -46,12 +46,13 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 
 (defparameter *omit-args-n* 5)
 (defparameter *opname-indent-to* 0 "Adds a space for this param times")
+(defparameter *no-newline* nil)
 
 (defmethod print-object ((inst WFInstruction) stream)
   (let ((ignored-p (and (movetensor-p (wfop-node inst))
 			(movetensor-ignore-me (wfop-node inst)))))
     (format stream
-	    "~a~a : ~a<= op(~a)>~%"
+	    "~a~a : ~a<= op(~a)>~a"
 	    (instruction-opname inst)
 	    (with-output-to-string (out)
 	      (dotimes (i (- *opname-indent-to* (length (instruction-opname inst)))) (princ " " out)))
@@ -89,7 +90,10 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 				      "")
 				  (if (nth (1+ i) (wfop-args inst))
 				      " "
-				      ""))))))))))
+				      "")))))))
+	    (if *no-newline*
+		""
+		(format nil "~%")))))
 
 (defmethod instruction-opname ((inst WFInstruction))
   (format nil "<WfInst[op=~a]"
