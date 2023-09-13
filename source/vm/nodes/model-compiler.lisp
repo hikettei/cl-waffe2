@@ -8,6 +8,13 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
+;; [TODO] Make FINISHED Workers gc-reachable, esp working with REPL
+;;```lisp
+;;#<SB-THREAD:THREAD "worker" FINISHED values: NIL {10012E02A3}> 
+;;#<SB-THREAD:THREAD "worker" FINISHED values: NIL {10012DF0E3}> 
+;;#<SB-THREAD:THREAD "worker" FINISHED values: T {10012DF073}> 
+;;#<SB-THREAD:THREAD "repl-thread" RUNNING {10010C81B3}> 
+;;```    ...
 (defvar *thread-pool-lock* (make-lock "thread cache lock"))
 (defparameter *model-function-cache-form* (make-hash-table)) ;; <- Make it gc-reachable. with worker=FINISHED
 (declaim (type hash-table *model-function-cache-form*))
@@ -179,6 +186,7 @@ excepted: AbstractTensor"
 			 ,(if get-model
 			      found-function
 			      `(forward ,found-function ,@arguments)))))))))
+      
       (if defun-p
 	  `(progn
 	     (cache-set-place! ,cache-key)
