@@ -4,11 +4,17 @@
 (defparameter *opt-level* 2 "
 ## [parameter] `*opt-level*`
 
-Indicates
+This parameter indicates the degree of runtime error detection. Whichever you choose, cl-waffe2 never apply something unsafe code transformation. It takes the fixnum from 1 to 3, and the larger, the faster.
 
-1 ... Safety
-2 ... Middle
-3 ... Fastest
+- Set 1 to use safety-mode, in every instructions, runtime error is checked.
+
+- Set 2 to use middle-mode, runtime error is checked only when first execution.
+
+- Set 3 to use fastest-mode, no runtime error checking is done.
+
+Again, whichever levels you choose, the graph cl-waffe2 executes is the same. So the effects on the performance is very small (within < `1e-4~1e-5` sec).
+
+In default, set to 2.
 ")
 
 (declaim (type (integer 0 3) *opt-level*))
@@ -16,7 +22,7 @@ Indicates
 (defparameter *logging-vm-execution* NIL "
 ## [parameter] `*logging-vm-execution*`
 
-If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
+This parameter is useful for printing how all instructions are performed. If set to T, all results and arguments produced by executing `cl-waffe2 IR` is displayed into the terminal. In default, set to nil.
 ")
 
 (declaim (inline maybe-read-result write-result apply-instruction apply-inst-sv4bw))

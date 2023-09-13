@@ -263,9 +263,3 @@ op2 ..  E <- F(X, Y, Z)
 		     grad)))))))
     (setf (detach-p grad) nil)))
 
-;; fastest     ... Ignores all safety check
-;; intermidate ... Normal
-;; safety      ... Doing all safety check
-(defun waffe2-opt-level ())
-
-(defun with-vm ()) ;; printing mode etc...
