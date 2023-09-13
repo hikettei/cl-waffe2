@@ -9,15 +9,28 @@
 	    (:conc-name wfop-)
 	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (block-iseq nil) (fused-body-cache nil) (call-with-view nil))))
   "
-## [struct] WFInstruction
+## [struct] WfInstruction
 
-WfInstruction is a extended Wengert list which is able to return multiple arguments, and sometimes called as a cl-waffe2 IR. In addition, unlike other frameworks, this is not only for reverse mode case but used for representing forward propagation.
+WfInstruction is IR for cl-waffe2 VM. Its form is represented by an extended Wengert list which is able to return multiple outputs. In this document, we call this *cl-waffe2 IR*, and compiled cl-waffe2 code, that is, the list of WfInstruction is called **InstructionSeq** or **iseq**. Unlike other frameworks, this IR is not only used to represent backpropagation but also forward propagation.
 
-Instruction: Sets the result of λ function op called with `args`, into `self.state.forward_result`. So, Operations basically follow this format:
+
+In cl-waffe2, WfInstruction is created by compiling AbstractNode, and its operation can be obtained by compiling lisp code or passing lambda functions.
+
+A single WfInstruction represents:
 
 ```
-out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
+out_to[0], out_to[1], ... <- λ(Args[0], Args[1], Args[2], ...)
+ ^wfop-out-to                 ^wfop-op     ^wfop-args
 ```
+
+where λ represents the operation. And, if any, `ArgsN` is wrapped with `SV4BW`.
+
+```
+out_to[0], out_to[1], ... <- λ(SV4BW(Args[0]), Args[1], Args[2], ...)
+                                  ^ wfop-sv4bw
+```
+
+SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl-waffe2 reads the `:save-for-backward` slots in the `define-impl` macro, and the corresponding tensors are copied.
 
 ### Slots
 
@@ -25,9 +38,13 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
 
 `wfop-node[AbstractNode or string or function]` The node which generates λ function. For the most case, this slot is set to `AbstractNode`, but the node is something special, (e.g.: `CodeBlock`, `IfNode` etc...), set to `function`.
 
+`wfop-out-to[list of AbstractTensor]` indicates list of tensors that results are to be stored.
+
 `wfop-self[AbstractTensor]` corresponds with `out_target`, that is, the tensor to store the results
 
 `wfop-args[list of AbstractTensor]` corresponds with `(tensor-variable wfop-self)`. tensors to be called with: `arg1 arg2 arg3...`.
+
+`wfop-sv4bw[list of AbstractTensor]` indicates list of tensors storing save-for-backward tensors. if the corresponding position is `save-for-backward=nil`, the corresponding position also become nil.
 "
   (op   op   :type function)  
   (node node :type (or function string null AbstractNode))
