@@ -3,6 +3,7 @@
 
 ;;
 ;; This example provides the smallest package for training neural network in cl-waffe2
+;; Excepted to be something like Project Template.
 ;;
 
 (defpackage :mlp-sin-wave
@@ -20,6 +21,14 @@
 
 (in-package :mlp-sin-wave)
 
+;; Steps:
+;;  1. Create your neural network with AbstractNode
+;;  2. Compile the network with build funciton
+;;  3. Hook optimizers to all the parameters
+;;  4. forward/backward to step the computation
+;;  5. call-optimizer! to minimize the loss
+;;  6. back to 4.
+
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; Network Template: Criterion
 (defun criterion (criterion X Y &key (reductions nil))
@@ -28,7 +37,7 @@
 	 (map 'list #'asnode reductions)))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; Defines a model
+;; Defines a model to be trained
 (defsequence Simple-MLP (in-features hidden-dim)
 	     (LinearLayer in-features hidden-dim t)
 	     (asnode #'!sigmoid)
@@ -42,7 +51,7 @@
 			       (make-input `(batch-size 1) :TrainY)
 			       :reductions (list #'!mean #'->scal)))
 	 (model (build lazy-loss :inputs `(:TrainX :TrainY))))
-
+    ;; model ... f(TrainX TrainY)
     ;; Initializes and hooks AbstractOptimizers
     (mapc (hooker x (SGD x :lr lr)) (model-parameters model))
     model))

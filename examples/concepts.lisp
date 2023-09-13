@@ -126,3 +126,59 @@
 
 ;; Section2. Advanced Network Configurations
 
+;;; Composite
+(defmodel (LayerNorm-Revisit (self normalized-shape &key (eps 1.0e-5) (affine T))
+	   :slots ((alpha :initform nil :accessor alpha-of)
+		   (beta  :initform nil :accessor beta-of)
+		   (shape :initform nil :initarg :normalized-shape :accessor dim-of)
+		   (eps   :initform nil :initarg :eps :accessor eps-of))
+	   ;; Optional
+	   :where (X[~ normalized-shape] -> out[~ normalized-shape])
+	   :on-call-> layer-norm)
+
+  ;; Constructor
+  (when affine
+    (setf (alpha-of self) (parameter (ax+b `(,@normalized-shape) 0 1))
+	  (beta-of  self) (parameter (ax+b `(,@normalized-shape) 0 0)))))
+
+(defmethod layer-norm ((self LayerNorm-Revisit) x)
+  "
+Computes LayerNorm:
+```math
+LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
+```
+"
+  (with-slots ((alpha alpha) (beta beta)) self
+    (let* ((last-dim (length (dim-of self)))
+	   (u (!mean x :axis (- last-dim) :keepdims t))
+	   (s (!mean (!expt (!sub x u) 2) :axis (- last-dim) :keepdims t))
+	   (x (!div (!sub x u)
+		    (!sqrt (!add (->contiguous s) (eps-of self))))))
+
+      (if (and alpha beta)
+	  (!add (!mul x (!flexible alpha)) (!flexible beta))
+	  x))))
+
+(print (call (LayerNorm-Revisit `(10)) (randn `(10 10 10))))
+
+;; One more example
+(defmodel (Softmax-Model (self)
+	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                              (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                         (!div (!exp x1) z)))))
+
+(defmodel-as (Softmax-Model)
+  :where (A[~] -> B[~])
+  :asif :function :named %softmax)
+
+
+;;(call-> x
+;;(asnode ...
+
+
+;; Section3 Make everything user-extensible
+
+;; define-op    customized backward for scalartensor
+;; defoptimizer user defined optimizer!
