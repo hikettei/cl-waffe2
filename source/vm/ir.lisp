@@ -36,6 +36,7 @@ out_to[0], out_to[1], ... <- λ(Args1 Args2 Args3, ...)
   (block-iseq nil :type list)
   (args args :type list)
   (sv4bw sv4bw :type list)
+  (error-check-p nil :type boolean) ;; Indicates the first shape-inspection has done?
   (bw-is-leaf-p nil :type boolean)
   (call-with-view call-with-view :type (or null cl-waffe2/vm.generic-tensor::Ranked-Loop))
   (fuse-prev fuse-prev :type (or null list))

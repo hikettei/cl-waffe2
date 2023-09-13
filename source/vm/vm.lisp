@@ -1,13 +1,20 @@
 
 (in-package :cl-waffe2/vm)
 
-(defparameter *safety-mode-p* NIL "
-## [parameter] *safety-mode-p*
+(defparameter *opt-level* 2 "
+## [parameter] `*opt-level*`
 
-When set to T, a run-time error is detected and a warning is displayed.")
+Indicates
+
+1 ... Safety
+2 ... Middle
+3 ... Fastest
+")
+
+(declaim (type (integer 0 3) *opt-level*))
 
 (defparameter *logging-vm-execution* NIL "
-## [parameter] *logging-vm-execution*
+## [parameter] `*logging-vm-execution*`
 
 If set to T, the result is displayed on the terminal with the arguments used each time cl-waffe2 VM executes an instruction. In default, set to nil
 ")
@@ -95,36 +102,39 @@ If set to T, the result is displayed on the terminal with the arguments used eac
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
+  
   (when *logging-vm-execution*
     (let* ((inst (format nil "~a" instruction))
 	   (cnt  (length inst)))
       (format t "= [*logging-vm-execution*] ~a
 Instruction: ~a
+[Inputs]
 ~a"
 	      (with-output-to-string (out)
 		(dotimes (i cnt) (princ "=" out)))
 	      inst
-	      (map 'list #'maybe-read-result (wfop-args instruction)))))
-
+	      (if (some #'(lambda (x) (not (every #'numberp (tensor-stride x)))) (map 'list #'maybe-read-result (wfop-args instruction)))
+		  (with-output-to-string (out)
+		    (format out "(Can't Displayed):")
+		    (dolist (arg (map 'list #'maybe-read-result (wfop-args instruction)))
+		      (format out " ~a" (cl-waffe2/vm.nodes::describe-tensor arg))))
+		  (map 'list #'maybe-read-result (wfop-args instruction))))))
   
   (let ((outs (multiple-value-list
 	       (apply
 		(the function (wfop-op instruction))
 		(map 'list #'maybe-read-result (wfop-args instruction))))))
-
     
-    (when *safety-mode-p*
-      (when (some (the function (compose #'null #'cl-waffe2/vm.generic-tensor::vec)) outs)
-	(warn "cl-waffe2 VM: Runtime Warning
-The instruction: ~a
+    (when (and (< *opt-level* 3)
+	       (wfop-self instruction)
+	       (tensor-backward (wfop-self instruction))
+	       (if (= *opt-level* 1)
+		   t
+		   (null (wfop-error-check-p instruction)))
+	       (not (ignore-shape-error (tensor-backward (wfop-self instruction)))))
 
-returned a tensor whose its storage vec is null. In runtime, cl-waffe2 VM excepts all returned tensors have a valid storages and the next arguments are overwritten with this invaild tensor. So this could be lead to Assertion Failed ... Error. If you believe this alert is false and desire to delete this warning, set *safety-mode-p*=nil.
-
-out-to returned:
-
-~a" instruction outs))
-
-      (when (not (= (length outs) (length (wfop-out-to instruction))))
+      (when (and (= *opt-level* 1)
+		 (not (= (length outs) (length (wfop-out-to instruction)))))
 	(warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 should be return ~R arguments, but got ~R.
@@ -136,21 +146,37 @@ out-to returned:
 	      (length outs)
 	      (length (wfop-out-to instruction))
 	      outs))
-
+      
       (mapc #'(lambda (excepted received)
 		(when (not (eql (the boolean (scalar-p excepted)) (scalar-p received)))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
-Scalars and Matrices are incompatible:
+~a
 Excepted:
 ~a
 Butgot:
 ~a"
 			instruction
+			(if (scalar-p received)
+			    "returned a ScalarTensor but Matrix is excepted:"
+			    "returned a Matrix but ScalarTensor is excepted:")
 			excepted
 			received))
 
-		(when (not (equal (shape excepted) (shape received)))
+		;; Under *opt-level* = 1, we do runtime shape inspection
+		;; to all the tensors
+
+		;; Under *opt-level* = 2, weodo runtime shape inspection to:
+		;;  1. Tensors with fixed shape
+		;;  2. This is done only the first time.
+		(when (if (= *opt-level* 1)
+			  (not ;; Shape-Equal is slow op
+			   (cl-waffe2/vm.generic-tensor::shape-equal
+			    (shape excepted) (shape received)))
+			  (not
+			   (or (some #'symbolp (shape excepted))
+			       (some #'symbolp (shape received))
+			       (equal (shape excepted) (shape received)))))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 Shapes are incompatible.
@@ -162,19 +188,24 @@ Butgot:
 			excepted
 			received)))
 	    (wfop-out-to instruction) outs))
+    
+    (setf (wfop-error-check-p instruction) T)
 
     (when *logging-vm-execution*
       (format t "
 outs:
-~a
-~%"
-	      outs
-	      ))
+~a"
+	      (if (some #'(lambda (x) (not (every #'numberp (tensor-stride x)))) outs)
+		  (with-output-to-string (out)
+		    (format out "(Can't Displayed):")
+		    (dolist (arg outs)
+		      (format out " ~a" (cl-waffe2/vm.nodes::describe-tensor arg))))
+		  outs)))
     outs))
 
 (defun runtime-error (position condition iseq)
   (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
-disassemble: 
+disassemble:
 ~a
 
 condition:
@@ -218,7 +249,6 @@ Evaluates generated cl-waffe2 IR sequence.
 		    (lambda (c)
 		      (runtime-error position c iseq))))
 	       (write-result (wfop-out-to inst) (apply-instruction inst)))
-	     
 	  finally
 	     (return-from accept-instructions
 	       (apply #'values
