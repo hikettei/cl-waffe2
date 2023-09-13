@@ -5,7 +5,7 @@
 
 (with-page *vm* "cl-waffe2 VM"
   (insert "
-The package `cl-waffe2/vm` is the central of system, provides low-level features: compiling/optimizing/rewriting cl-waffe2 IRs and how they're executed. So, most of APIs are accesible by convinient API wrappers of other packages.
+The package `cl-waffe2/vm` is the central of system, and features are focused on low-level stuffs: compiling/optimizing/rewriting cl-waffe2 IRs and how they're executed. So, most of APIs are accesible by convinient API wrappers of other packages.
 
 - Global Variables
     - [optimization level](./#parameter-opt-level)
