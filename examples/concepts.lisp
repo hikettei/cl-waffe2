@@ -157,12 +157,6 @@
 	  (beta-of  self) (parameter (ax+b `(,@normalized-shape) 0 0)))))
 
 (defmethod layer-norm ((self LayerNorm-Revisit) x)
-  "
-Computes LayerNorm:
-```math
-LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
-```
-"
   (with-slots ((alpha alpha) (beta beta)) self
     (let* ((last-dim (length (dim-of self)))
 	   (u (!mean x :axis (- last-dim) :keepdims t))
@@ -171,7 +165,9 @@ LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
 		    (!sqrt (!add (->contiguous s) (eps-of self))))))
 
       (if (and alpha beta)
-	  (!add (!mul x (!flexible alpha)) (!flexible beta))
+	  ;; both inserts broadcastable axis
+	  (!add (!mul x (%transform alpha[i] -> [~ i]))
+	        (!flexible beta)) ;; !flexible = (%transform alpha[i] -> [~ i])
 	  x))))
 
 (print (call (LayerNorm-Revisit `(10)) (randn `(10 10 10))))

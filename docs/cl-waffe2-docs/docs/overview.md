@@ -50,7 +50,7 @@ This is not only the case of defining networks but: When writing an extension, d
 
 Readers may well feel "How about Julia?" - Yes, I think Julia ecosystems are great, and cl-waffe2 is influenced by Julia everywhere. And, this should be introduced into Common Lisp, not just a few languages!
 
-## Let's get started
+## Let's Get Started!
 
 Note that all sample codes are working under this package:
 
@@ -320,18 +320,19 @@ Lazy Evaluation Programming is not as hard as you'd think - Functions generated 
 ;;  :backward NIL}
 ```
 
-And `node->defun`, `node->lambda`:
+And `node->defun`, `node->lambda`. If you want to create a dedicated Tensor to store the calculation results, you should use the [make-input](https://hikettei.github.io/cl-waffe2/generic-tensor/#function-make-input) function with `name=nil`. InputTensor does not guarantee that the elements are filled with zeros, but the compiler can automatically reconnect them and reduce memory usage.
 
 ```lisp
 (defun my-matmul (a b)
   (let* ((m (first  (shape a)))
 	 (k (second  (shape b)))
-	 (c (make-input `(,m ,k) nil)))
+	 (c (make-input `(,m ,k) nil))) ;; C as output trensor
     (call (MatmulNode-Revisit) a b c)))
 
 (print
  (proceed (my-matmul (randn `(3 3)) (randn `(3 3)))))
 
+;; Composing (!softmax (matmul a b))
 (node->defun %mm-softmax (A[m n] B[n k] -> C[m k])
   (!softmax (my-matmul a b)))
 
@@ -344,7 +345,7 @@ And `node->defun`, `node->lambda`:
   (print (time (%mm-softmax (randn `(3 3)) (randn `(3 3))))))
 ```
 
-And last, if you want to use `MyTensor` anywhere, this can be set by `set-devices-toplevel`:
+And last, The `set-devices-toplevel` function make cl-waffe2 use `MyTensor` anywhere.
 
 ```lisp
 (set-devices-toplevel 'MyTensor 'CPUTensor 'LispTensor)
@@ -352,25 +353,121 @@ And last, if you want to use `MyTensor` anywhere, this can be set by `set-device
 
 ## Advanced Network Constructions
 
-`defmodel` `defmodel-as`
+We call a set of composed `AbstractNode`, or a chunk of nodes with trainable parameters, a [Composite](https://hikettei.github.io/cl-waffe2/nodes/#class-composite) defined by the [defmodel](https://hikettei.github.io/cl-waffe2/nodes/#macro-defmodel) macro.
+
+```lisp
+(defmodel (LayerNorm-Revisit (self normalized-shape &key (eps 1.0e-5) (affine T))
+	   :slots ((alpha :initform nil :accessor alpha-of)
+		   (beta  :initform nil :accessor beta-of)
+		   (shape :initform nil :initarg :normalized-shape :accessor dim-of)
+		   (eps   :initform nil :initarg :eps :accessor eps-of))
+	   ;; Optional
+	   :where (X[~ normalized-shape] -> out[~ normalized-shape])
+	   :on-call-> layer-norm)
+
+  ;; Constructor
+  (when affine
+    (setf (alpha-of self) (parameter (ax+b `(,@normalized-shape) 0 1))
+	  (beta-of  self) (parameter (ax+b `(,@normalized-shape) 0 0)))))
+
+(defmethod layer-norm ((self LayerNorm-Revisit) x)
+  (with-slots ((alpha alpha) (beta beta)) self
+    (let* ((last-dim (length (dim-of self)))
+	   (u (!mean x :axis (- last-dim) :keepdims t))
+	   (s (!mean (!expt (!sub x u) 2) :axis (- last-dim) :keepdims t))
+	   (x (!div (!sub x u)
+		    (!sqrt (!add (->contiguous s) (eps-of self))))))
+
+     ;; !flexible = (%transform alpha[i] -> [~ i])
+     ;; both inserts an broadcastable axis
+      (if (and alpha beta)
+	  (!add (!mul x (%transform alpha[i] -> [~ i]))
+	        (!flexible beta)) 
+	  x))))
+```
+
+As a chunk of nodes with trainable parameter, Composites can be used merely a subroutine:
+
+```lisp
+(proceed
+    (call (LayerNorm-Revisit `(10)) (randn `(10 10 10))))
+```
+
+If you use Composite as a set of composed `AbstractNode`, they're compiled into another types:
+
+```lisp
+(defmodel (Softmax-Model (self)
+	   :on-call-> ((self x)
+		       (declare (ignore self))
+		       (let* ((x1 (!sub x (!mean x  :axis 1 :keepdims t)))
+                              (z  (!sum   (!exp x1) :axis 1 :keepdims t)))
+                         (!div (!exp x1) z)))))
+
+(defmodel-as (Softmax-Model)
+  :where (A[~] -> B[~])
+  :asif :function :named %softmax)
+
+(%softmax (randn `(10 10)))
+```
+
+## Composing
+
+It is not elegant to use `call` more than once when composing multiple models.
+
+```lisp
+(call (AnyModel1)
+      (call (AnyModel2)
+             (call (AnyModel3) X)))
+```
+
+Instead, you can use the the [call->](https://hikettei.github.io/cl-waffe2/utils/#function-call-) function:
+
+```lisp
+(call-> X
+        (AnyModel1)
+        (AnyModel2)
+        (AnyModel3))
+```
+
+If you wanted to insert a function to construct a computation node here, you can also use [asnode](https://hikettei.github.io/cl-waffe2/utils/#function-asnode) function to make the function recognised as a Composite.
+
+```lisp
+(call-> X
+        (AnyModel1)
+        (asnode #'!softmax)
+        (asnode #'!view 0) ;; Slicing the tensor: (!view x 0 t ...)
+        (asnode #'!add 1.0) ;; X += 1.0
+        (asnode !matmul Y) ;; X <- Matmul(X, Y)
+        )
+```
+
+If the Composite can be implemented using only `call->`, the [defsequence](https://hikettei.github.io/cl-waffe2/utils/#macro-defsequence) can be used for a short description:
+
+```lisp
+(defsequence MLP (in-features)
+    "Docstring (optional)"
+    (LinearLayer in-features 512)
+    (asnode #'!tanh)
+    (LinearLayer 512 256)
+    (asnode #'!tanh)
+    (LinearLayer 256 10))
+
+;; Sequences can receive only a single argument.
+(call (MLP 786) (randn `(10 786)))
+```
 
 ## Make everything user-extensible
 
+(サンプルコード用意する) スカラー値でカスタムバックエンド Autodiff
+
 `define-op` Customized backwards グラフ処理のライブラリとして使う
+
 
 `defoptimizer` User defined optimizer
 
+hooker Adam 最適化関数自作
+
 (最適化関数を自作してパラメーターを最適化するサンプル)
-
-## Loop Optimization by Metaprogramming
-
-call-with-view
-
-Loop Collapse
-
-Loop Fusion
-
-Loop Reordering
 
 ## Graph-Level Optimization
 
@@ -378,15 +475,18 @@ cl-waffe2の抽象ノードのコンパイルは以下の手順で実行され�
 
 大事な概念がInputTensorとExistTensor: Tensor Facet...
 
-In-place-mutation
+In-place-mutation <- 有効にするにはInputTensorと!move or !copyを使わないといけない
 
-Memory-locality
+Memory-locality <- InputTensorをたくさん使え
+Again, the subject to locality optimiztion is *InputTensors* whose name=nil,
 
 ## Interop: Common Lisp and cl-waffe2
 
 Change-facet
 
-## Easy to debug, vizualize.
+with-facets
+
+## Debugging
 
 ```lisp
 (!add (randn `(3 3)) (randn `(3)))
@@ -403,6 +503,7 @@ cl-waffe2は賢いので：
 Received:
     (forward
         (ADDNODE-CPUTENSOR ...)
+	 CPUTENSOR{FLOAT}(3)
          CPUTENSOR{FLOAT}(3) ─ B: The length of ~~ do not match. The Rank is too low 
         )
 
@@ -445,16 +546,12 @@ disassemble:
 condition:
   arithmetic error FLOATING-POINT-INVALID-OPERATION signalled
 ```
-Disassemble
 
-Proceed-Bench でボトルネックを可視化する
+Disassemble
 
 ## Graph Rewriting
 
-(Coming Soon...)
+(Still Experimental, Coming soon...)
 
-``defpath`
+We gonna talk about `defpath` which enables theano-like symbolic differentiation and device-specific optimizations.
 
-Symbolic Differentiation and Device Specific Optimization
-
-`defpath` (TODO)
