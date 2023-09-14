@@ -8,9 +8,9 @@
     <a href="https://hikettei.github.io/cl-waffe2/"><strong>Visit the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/hikettei/cl-waffe2/issues">Issues</a>
+    <a href="https://github.com/hikettei/cl-waffe2/blob/master/docs/cl-waffe2-docs/docs/overview.md">Concepts</a>
     ·
-    <a href="https://hikettei.github.io/cl-waffe2/install/">Installing</a>
+    <a href="https://hikettei.github.io/cl-waffe2/install/">Install</a>
     ·
     <a href="https://github.com/hikettei/cl-waffe2/tree/master/examples">Examples</a>
   </p>
