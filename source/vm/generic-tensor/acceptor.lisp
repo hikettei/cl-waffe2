@@ -281,9 +281,9 @@ Before calling the forward method, set any value to these InputTensors first.
     allocator))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs)
-  (let ((input-args (compiled-inputs model)))
+  (let ((input-args (the list (compiled-inputs model))))
     (when input-args
-      (assert (= (length input-args) (length inputs))
+      (assert (= (the fixnum (length input-args)) (the fixnum (length inputs)))
 	  nil
 	  "forward: Can't invoke the forward step of given Compiled-Composite because the number of arguments received is invaild.
     (forward compiled-model~a)
@@ -293,9 +293,49 @@ Before calling the forward method, set any value to these InputTensors first.
 	  (with-output-to-string (out)
 	    (dolist  (i input-args) (format out " ~a" i))))
 
-      (loop for val in inputs
-	    for name in input-args do
-	      (set-input model name val))))
+      (let ((shape-table (make-hash-table))
+	    (places (map 'list #'(lambda (n) (get-input model n)) input-args)))
+	(loop for val   in inputs
+	      for place in places
+	      for name  in input-args do
+		(loop for  shape in (tensor-input-shape place)
+		      for  value in (shape val)
+		      if (or (null (gethash shape shape-table))
+			     (= (gethash shape shape-table) (read-symbol value)))
+			do (setf (gethash shape shape-table) (read-symbol value))
+		      else
+			do (error "forward: Can't forward compiled-composite due to shape-error of inputs.
+At:
+~a
+
+(forward compiled-model~a)
+                        └── Excepted:~a
+                            Butgot:  ~a"
+				  model
+				  (with-output-to-string (out)
+				    (dolist (arg places) (format out " ~a" (tensor-name arg))))
+				  (with-output-to-string (out)
+				    (dolist (arg places) (format out " ~a" (tensor-input-shape arg))))
+				  (with-output-to-string (out)
+				    (dolist (arg inputs)     (format out " ~a" (shape arg)))))
+		      finally
+			 (when (not (= (length (tensor-input-shape place))
+				       (length (shape val))))
+			   (error "forward: Can't forward compiled-composite due to rank-error of inputs.
+At:
+~a
+
+(forward compiled-model~a)
+                        └── Excepted:~a
+                            Butgot:  ~a"
+				  model
+				  (with-output-to-string (out)
+				    (dolist (arg places) (format out " ~a" (tensor-name arg))))
+				  (with-output-to-string (out)
+				    (dolist (arg places) (format out " ~a" (tensor-input-shape arg))))
+				  (with-output-to-string (out)
+				    (dolist (arg inputs)     (format out " ~a" (shape arg)))))))
+		(set-input model name val)))))
   
   ;; Check if all the inputs are embodied?
   (let ((*runtime-mode-p* t))

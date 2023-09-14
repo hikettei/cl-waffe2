@@ -1,31 +1,21 @@
 
 # Setting up Environments
 
-## Are you new to Common Lisp?
-
-I know... there are few people who are attempted to do ML/DL in Common Lisp! while other languages provide a strong baseline and good platforms. However, I still believe in the clear benefits of doing such tasks on Common Lisp.
-
-I've been working with Common Lisp for the past two years, but I realise the attraction that no other language can replace it. At first glance, indeed this language has a strange syntax, and some features of the language may seem too much. but believe me! One day you will learn to use it. In fact, I guess cl-waffe2 is portable to ANSI Common Lisp, but not portable to non-lisp languages.
-
-Anyway, the first step is to set up Common Lisp Environment.
-
-I don't know which is best, and this is just my recommendations.
+## If you're new to Common Lisp:
 
 ### 1. Installing Roswell
 
-Roswell is environment manager of Common Lisp (and much more!)
+Roswell is an environment manager for Common Lisp.
 
 <https://github.com/roswell/roswell>
 
 See the `Readme.md` and install Roswell
 
-### 2. Installing SBCL
+### 2. Installing Common Lisp
 
-There are many implementations of Common Lisp, and SBCL is one of the processing system.
+Common Lisp has several implementations, but I personally recommended SBCL for its performance.
 
-As of this writing(2023/07/02), some features of cl-waffe2 are SBCL-dependent, so this one is recommended.
-
-With roswell:
+If you've installed Roswell:
 
 ```sh
 $ ros install sbcl
@@ -33,40 +23,69 @@ $ ros use <Installed SBCL Version>
 $ ros run # REPL is launched.
 ```
 
-should work.
+should work and everything is done.
 
-### 3. Setting up IDE (Optional)
+### 3. Setting up IDE (optional)
 
-I guess It's a pity to write Common Lisp without REPL. There are a lot of options, but as far as I know, `Emacs with SLIME` or `Lem` is widely supported choice.
+The following editors are recommended as we're working with REPL:
+
+- [Emacs](https://www.gnu.org/software/emacs/) + [Slime](https://slime.common-lisp.dev/)
+
+- [Lem](https://github.com/lem-project/lem) Lem is an emacs-like text editor specialized on Common Lisp.
 
 
 ## Installing cl-waffe2
 
-With roswell, the latest repository can be fetched which is also recognised by `quicklisp`
+As of this writing(2023/9/13), cl-waffe2 is not yet available on Quicklisp. So I'm sorry but you have to install it manually.
+
+With roswell, the latest cl-wafe2 repository can be fetch like:
 
 ```sh
 $ ros install hikettei/cl-waffe2
 ```
 
-Another option is to load `cl-waffe2.asd` configurations manually after cloning cl-waffe2 github repos.
+In this case, you have to note that SBCL also needs to be started via Roswell.
+
+Another valid option would be loading `cl-waffe2.asd` file manually after cloning cl-waffe2 github repos:
 
 ```sh
-$ git clone <Repository>
+$ git clone https://github.com/hikettei/cl-waffe2.git
 $ cd ./cl-waffe2
 $ ros run # start repl
 $ (load "cl-waffe2.asd")
 $ (ql:quickload :cl-waffe2)
-$ (in-pacakge :cl-waffe2-repl)
+$ (in-pacakge :cl-waffe2-repl) # or make repl
 ```
 
+After you ensured it should work, move the `./cl-waffe2` directory to `~/quicklisp/local-projects/` and quicklisp can find the project!
 
-With quicklisp:
+The get the full performance of cl-waffe2, you also have to do the following steps:
 
-(It's going to take a while...)
+### Setting BLAS
 
-## OpenBLAS Backend
+cl-waffe2 searches for and reads the `libblas` file by default. The following steps are only necessary if you get a warning when loading the library
 
-In your init file, (e.g.: `~/.roswell/init.lisp` or `~/.sbclrc`), add the code below for example. (change the path depending on your environment).
+First, install the libopenblas
+
+```sh
+# with ubuntu for example
+$ apt install libopenblas
+
+# With macOS
+$ brew instlal libopenblas
+```
+
+Load the package again:
+
+```lisp
+$ ros run
+$ (load "cl-waffe2.asd")
+$ (ql:quickload :cl-waffe2)
+```
+
+If you've got no warning after loading cl-waffe2, `CPUTensor` is successfully enabled and can recognize the OpenBLAS. If you still get warnings, you have to step an additional configs because cl-waffe2 couldn't find out the location.
+
+So, In your init file, (e.g.: `~/.roswell/init.lisp` or `~/.sbclrc`), add the code below for example. (Change the path depending on your environment. You can find where you've installed the library with `$ locate libblas` for example of macOS).
 
 ```lisp
 ;; In ~~/.sbclrc for example:
@@ -74,9 +93,19 @@ In your init file, (e.g.: `~/.roswell/init.lisp` or `~/.sbclrc`), add the code b
     `((:libblas \"libblas.dylib for example\")))
 ```
 
-One of cl-waffe2 backends `CPUTensor` loads the OpenBLAS shared library of the path written in the `cl-user::*cl-waffe-config*` parameter when cl-waffe2 loaded.
+It should work. If you still get warnings or encountered some problems, feel free to make an [issue](https://github.com/hikettei/cl-waffe2/issues).
 
-## CUDA Backend
+### Building SIMD Extension
 
-(Currently not supported yet...)
+SIMD Extension is an extension for speeding up the execution of mathematical functions and some instructions (including sparse matrix) on the CPU.
+
+```lisp
+$ make build_simd_extension
+```
+
+and everything is ok. Ensure that no warnings are displayed in your terminal after loaded cl-waffe2.
+
+### Is GPU(CUDA/Metal/OpenCL etc...) supported?
+
+Currently, No. But cl-waffe2 is designed to be independent of which devices work on, and writing extension is easy. Personally, I don't have enough environment and equipment to do the test, so I plan to do it one day when I save up the money.
 

@@ -4,14 +4,47 @@
 ;; node to apis ha wakeru?
 
 (with-page *vm* "cl-waffe2 VM"
+  (insert "
+The package `cl-waffe2/vm` is the central of system, and features are focused on low-level stuffs: compiling/optimizing/rewriting cl-waffe2 IRs and how they're executed. So, most of APIs are accesible by convinient API wrappers of other packages.
+
+- Global Variables
+    - [optimization level](./#parameter-opt-level)
+    - [logging](./#parameter-logging-vm-execution)
+- IR and Compiler
+    - [WfInstruction](./#struct-wfinstruction)
+    - [compiler](./#function-compile-forward-and-backward)
+    - [acceptor](./#function-accept-instructions)
+- Analyzing compiled codes
+    - [disassemble](#function-disassemble-waffe2-ir)
+    - [profiling](#function-benchmark-accept-instructions)
+- Adding Symbolic Diff and Device-Specific Optimization
+    - [FusionPathQuery](./#struct-fusionpathquery)
+    - [defpath](./#macro-defpath)")
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
-    (with-op-doc #'cl-waffe2/vm:disassemble-waffe2-ir 'function)
-    (with-op-doc #'cl-waffe2/vm:benchmark-accept-instructions 'function)
+    
+    (with-op-doc '*opt-level* 'variable)
+    (with-op-doc '*logging-vm-execution* 'variable)
+
+    (with-op-doc 'WfInstruction 'structure)
+    
     (with-op-doc #'cl-waffe2/vm:compile-forward-and-backward 'function)
-    (with-op-doc #'cl-waffe2/vm:accept-instructions 'function)))
+    (with-op-doc #'cl-waffe2/vm:accept-instructions 'function)
+    
+    (with-op-doc #'cl-waffe2/vm:disassemble-waffe2-ir 'function
+      (with-example
+	"(with-output-to-string (out)
+    (disassemble-waffe2-ir (!softmax (parameter (randn `(3 3))) :avoid-overflow nil) :stream out))"))
+    
+    (with-op-doc #'cl-waffe2/vm:benchmark-accept-instructions 'function
+      (with-example
+	"(with-output-to-string (out)
+    (proceed-bench (!softmax (randn `(100 100))) :n-sample 100 :stream out))"))
+
+    (with-op-doc 'FusionPathQuery 'structure)
+    (with-op-doc (macro-function 'defpath) 't)))
 
 (with-page *base-impl-nodes* "Standard Nodes"
   (macrolet ((nodedoc (name)
