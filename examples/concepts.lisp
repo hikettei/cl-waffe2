@@ -1,6 +1,4 @@
 
-;; サンプルコードある程度かけてからGist/Tutorialsかく
-
 (defpackage :concepts
   (:use
    :cl
@@ -77,26 +75,40 @@
   (with-devices (MyTensor)
     (let ((a (randn `(100 100)))
 	  (b (randn `(100 100)))
-	  (c (ax+b  `(100 100) 0 0)))
+	  (c (make-input `(100 100) nil)))
       
       (proceed
        (call (MatmulNode-Revisit) a b c)
        :measure-time bench))))
 
+
 ;; Gemm with OpenBLAS
+;; Set bench=t, and measures time
+;; As excepted, this one is 20~30times faster.
 (defun test-gemm-cpu (&key (bench nil))
   (with-devices (CPUTensor)
     (let ((a (randn `(100 100)))
 	  (b (randn `(100 100)))
-	  (c (ax+b  `(100 100) 0 0)))
+	  (c (make-input `(100 100) nil)))
 
       (proceed
        (call (MatmulNode :float) a b c)
        :measure-time bench))))
 
+(proceed-time (!add 1 1))
+
+(proceed-bench (!softmax (randn `(100 100))))
+
 ;; Let cl-waffe2 recognise MyTensor is a default device
 ;; And the priority is: MyTensor -> CPUTensor -> LispTensor
 (set-devices-toplevel 'MyTensor 'CPUTensor 'LispTensor)
+
+(let ((a (make-input `(A B) :A))
+      (b (make-input `(A B) :B)))
+  (let ((model (build (!sum (!mul a b)) :inputs `(:A :B))))
+    (print model)
+    ;; model is a compiled function: f(a b)
+    (forward model (randn `(3 3)) (randn `(3 3)))))
 
 (defun my-matmul (a b)
   (let* ((m (first  (shape a)))
@@ -111,6 +123,7 @@
 (node->defun %mm-softmax (A[m n] B[n k] -> C[m k])
   (!softmax (my-matmul a b)))
 
+;; JIT Enabled Matrix Operations
 (defun local-cached-matmul ()
   ;; Works like Lisp Function
   (print (time (%mm-softmax (randn `(3 3)) (randn `(3 3)))))
@@ -142,12 +155,6 @@
 	  (beta-of  self) (parameter (ax+b `(,@normalized-shape) 0 0)))))
 
 (defmethod layer-norm ((self LayerNorm-Revisit) x)
-  "
-Computes LayerNorm:
-```math
-LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
-```
-"
   (with-slots ((alpha alpha) (beta beta)) self
     (let* ((last-dim (length (dim-of self)))
 	   (u (!mean x :axis (- last-dim) :keepdims t))
@@ -156,7 +163,9 @@ LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
 		    (!sqrt (!add (->contiguous s) (eps-of self))))))
 
       (if (and alpha beta)
-	  (!add (!mul x (!flexible alpha)) (!flexible beta))
+	  ;; both inserts broadcastable axis
+	  (!add (!mul x (%transform alpha[i] -> [~ i]))
+	        (!flexible beta)) ;; !flexible = (%transform alpha[i] -> [~ i])
 	  x))))
 
 (print (call (LayerNorm-Revisit `(10)) (randn `(10 10 10))))
@@ -173,12 +182,107 @@ LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
   :where (A[~] -> B[~])
   :asif :function :named %softmax)
 
-
-;;(call-> x
-;;(asnode ...
-
-
 ;; Section3 Make everything user-extensible
 
-;; define-op    customized backward for scalartensor
-;; defoptimizer user defined optimizer!
+;;; Customized Autodiff
+
+;;; The simplest case of ScalarTensor
+
+(defclass MyScalarTensor (ScalarTensor) nil)
+(set-devices-toplevel 'MyTensor 'CPUTensor 'LispTensor 'MyScalarTensor)
+
+
+(define-op (MyMul (self)
+	    :where (A[scal] B[scal] -> A[scal] where scal = 1)
+	    :out-scalar-p t
+	    :save-for-backward-names (a b)
+	    :forward ((self a b)
+		      (with-setting-save4bw ((a a) (b b))
+			(setf (tensor-vec a) (* (tensor-vec a) (tensor-vec b)))
+			a))
+	    :backward ((self dy)
+		       (with-reading-save4bw ((a a) (b b))
+			 (values
+			  (make-tensor
+			   (* (tensor-vec dy) (tensor-vec b)))
+			  (make-tensor
+			   (* (tensor-vec dy) (tensor-vec a))))))))
+
+(define-op (MySin (self)
+	    :where (A[scal] out[scal] -> out[scal] where scal = 1)
+	    :out-scalar-p t
+	    :save-for-backward-names (a)
+	    :forward ((self a out)
+		      (with-setting-save4bw ((a a))
+			(setf (tensor-vec out) (sin (tensor-vec a)))
+			out))
+	    :backward ((self dy)
+		       (with-reading-save4bw ((a a))
+			 (values
+			  (make-tensor
+			   (* (tensor-vec dy)
+			      (cos (tensor-vec a))))
+			  nil)))))
+(defun !mymul (a b)
+  (call (MyMul) a b))
+
+(defun !mysin (x)
+  (call (MySin) x (make-clone x)))
+
+(defun try-original-autodiff ()
+  (let ((a (parameter (make-tensor 1))))
+    (proceed-backward (!mysin (!mysin a)))
+    (grad a)))
+
+;;; Differentiable Programming
+
+(defoptimizer (MySGD (self param &key (lr 1e-3))
+	       :slots ((lr :initarg :lr :reader sgd-lr))))
+
+(node->defun %step-sgd (Param[~] Grad[~] Lr[scal] -> Param[~] where scal = 1)
+  (A-=B param (A*=scal grad lr)))
+
+(defmethod step-optimize ((optimizer MySGD))
+  (let* ((lr    (make-tensor (sgd-lr optimizer)))
+	 (param (read-parameter optimizer))
+	 (grad  (grad param)))
+    (with-no-grad
+      (%step-sgd param grad lr))))
+
+(defun simple-opt-model ()
+  (let* ((loss (!mean (!matmul (parameter (randn `(3 3)))
+			       (parameter (randn `(3 3))))))
+	 (model (build loss)))
+
+    (mapc (hooker x (MySGD x :lr 1e-3)) (model-parameters model))
+    (forward model)
+    (backward model)
+    (mapc #'call-optimizer! (model-parameters model))))
+#|
+({MYTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3)  
+  ((0.25052267  -0.16212857 -1.3183842)
+   (-1.078968   0.27860558  0.40701634)
+   (-0.10987697 -1.2562615  0.6179133))
+  :facet :exist
+  :requires-grad T
+  :optimizer <AbstractOptimizer: MYSGD() -> TID12604>}
+ {MYTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3)  
+  ((-0.5223165  2.3579814   0.13172081)
+   (0.57671905  0.56324756  1.1230979)
+   (0.10274803  0.008530198 1.7588508))
+  :facet :exist
+  :requires-grad T
+  :optimizer <AbstractOptimizer: MYSGD() -> TID12610>})
+|#
+
+;; Section4 Loop Optimization By Metaprogramming
+
+;; Section5 Graph-Level Optimization
+
+;; Section6 Interop: Common Lisp Array and AbstractTensor
+
+;; Section7 Visualize, eazy to debug
+
+;; Section8 JIT/Caching
+
+;; Section9 Symbolic Differentiation and Device Specific Optimization
