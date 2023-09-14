@@ -12,7 +12,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Home";
+        var mkdocs_page_name = "Overview";
         var mkdocs_page_input_path = "index.md";
         var mkdocs_page_url = null;
       </script>
@@ -41,25 +41,11 @@
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href=".">Home</a>
+                <li class="toctree-l1 current"><a class="reference internal current" href=".">Overview</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#workloads">Workloads</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#concepts">Concepts</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#whats-next">What's next?</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#benchmarks">Benchmarks</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#contribute">Contribute</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#acknowledgments">Acknowledgments</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#licence">LICENCE</a>
+    <li class="toctree-l2"><a class="reference internal" href="#whats-the-next">What's the next?</a>
     </li>
     </ul>
                 </li>
@@ -70,10 +56,6 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="overview/">Tutorials</a>
-                </li>
-              </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="Tips/">Tips</a>
                 </li>
               </ul>
               <ul>
@@ -138,7 +120,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
-      <li>Home</li>
+      <li>Overview</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -169,68 +151,21 @@
 <p><a href="https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml"><img alt="CI" src="https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml/badge.svg?branch=master" /></a></p>
 <h2 id="introduction">Introduction</h2>
 <blockquote>
-<p><strong>⚠️ cl-waffe2 is still in the concept stage and has a limited feature. Also, things are subject to change. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.</strong></p>
+<p>⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.</p>
 </blockquote>
-<p>cl-waffe2 is an experimental Deep Learning Framework working on Common Lisp which dynamically compiles Optimal Common Lisp codes generated from the portable and user-extensible APIs in runtime.
-As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a framework dedicated to solving optimizing/inferencing deep neural network models using AD, all in Common Lisp. This framework is decoupled from other existing libraries by design, but interoperating with other libraries by efficient use of other libraries via with-facet macros and Common Lisp standard arrays is strongly recommended. I'm just focusing on efficient AD.</p>
-<p>Every operation in cl-waffe2 is lazy evaluated and later compiled, and there are two key functions to compile and execute nodes: <code>proceed</code> and <code>build</code>. With the <code>proceed</code> function, cl-waffe2 works as if it is an interpreter, with no compiling overhead in runtime, and it is differentiable.  On the other hand the function <code>build</code> will generate codes which are fully optimized for training models.</p>
-<p>Portability to other devices is a major concern. In particular, cl-waffe2 is designed to put as few barriers between the user and the developer as possible.</p>
-<h3 id="workloads">Workloads</h3>
+<p>cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.</p>
+<h2 id="whats-the-next">What's the next?</h2>
 <ul>
 <li>
-<p>[x] Establish a baseline for generic matrix operations from zero for Common Lisp, as practised by Julia.</p>
-<ul>
-<li>Four data structures used in deep learning: <code>AbstractNode</code> <code>AbstractTensor</code> <code>AbstractOptimizer</code>, and <code>AbstractTrainer</code>.</li>
-<li>Fundamental APIs: <code>View API/Broadcasting/Permution</code> <code>NDArrays with multidimensonal offsets</code> <code>build/proceed</code> <code>facet of tensors</code></li>
-<li>Graph-level optimization of computation nodes. (pruning unused nodes/in-place mutation/inlining view computations)</li>
-<li>For experiments, implement a backend that runs at minimum speed: <code>LispTensor</code>.</li>
-</ul>
+<p><a href="./install">Setting up cl-waffe2</a></p>
 </li>
 <li>
-<p>[ ] Construct JIT Compiler from cl-waffe2 to <code>C++</code>. and fuse operations and loops.</p>
+<p><a href="./overview">Concepts and tutorials</a></p>
 </li>
 <li>
-<p>[ ] Add basic computation nodes for controling nodes: <code>MapNode</code> <code>IfNode</code> etc...</p>
+<p><a href="https://github.com/hikettei/cl-waffe2/tree/master/examples">Examples</a></p>
 </li>
 </ul>
-<h3 id="concepts">Concepts</h3>
-<p>This project has been developed on these primal concepts:</p>
-<ol>
-<li>
-<p><code>Do not run until the node is optimized.</code>, that is, Lazy-Evaluation first.</p>
-</li>
-<li>
-<p>Generic operations powered by multiple kinds of user-defined backends.</p>
-</li>
-<li>
-<p>defined-and-run, closer to defined-by-run APIs.</p>
-</li>
-</ol>
-<p><strong>Everything in this documentation is still incomplete! I guess should be much more polished!</strong></p>
-<h2 id="whats-next">What's next?</h2>
-<ol>
-<li>
-<p><a href="./install">Installing cl-waffe2</a></p>
-</li>
-<li>
-<p><a href="./overview">Learn the concepts with practical tutorials</a></p>
-</li>
-<li>
-<p><a href="./examples">Visit some examples! (Not yet ready...)</a></p>
-</li>
-</ol>
-<h2 id="benchmarks">Benchmarks</h2>
-<pre><code>Coming soon ...
-</code></pre>
-<h2 id="contribute">Contribute</h2>
-<pre><code>Coming soon ...
-</code></pre>
-<h2 id="acknowledgments">Acknowledgments</h2>
-<pre><code>Coming soon...
-</code></pre>
-<h2 id="licence">LICENCE</h2>
-<pre><code>Coming soon...
-</code></pre>
               
             </div>
           </div><footer>
@@ -278,5 +213,5 @@ As a future goal, I'm working on JIT compilation to C++/CUDA, and providing a fr
 
 <!--
 MkDocs version : 1.4.3
-Build Date UTC : 2023-09-12 11:50:13.924388+00:00
+Build Date UTC : 2023-09-14 04:41:19.355954+00:00
 -->

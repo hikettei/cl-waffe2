@@ -41,7 +41,7 @@
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                <li class="toctree-l1"><a class="reference internal" href="..">Overview</a>
                 </li>
               </ul>
               <ul>
@@ -50,10 +50,6 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
-                </li>
-              </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
                 </li>
               </ul>
               <ul>
@@ -91,6 +87,10 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
     </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-impl">[macro] define-impl</a>
+        <ul>
     <li class="toctree-l3"><a class="reference internal" href="#effects_1">Effects</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
@@ -583,16 +583,13 @@ i = 3
               (!matmul (!t da) dout)
               nil))
       :documentation &quot;
-```math
-C\gets{gemm(1.0, A, B, 0.0, C)}
-```&quot;))
+C &lt;- GEMM(1.0 A B 0.0 C)
+&quot;))
 
-You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...)`.
-
-## [macro] define-impl
-
-```lisp
-(define-impl (abstract-name &amp;key (device t) (extends nil) (cache-when-compiled t) (reject-p nil))
+</code></pre>
+<p>You can invoke the forward/backward by using the method forward/backward. <code>(forward node arg1 arg2...)</code> <code>(backward node dout1 arg1 arg2...)</code>.</p>
+<h2 id="macro-define-impl">[macro] define-impl</h2>
+<pre><code class="language-lisp">(define-impl (abstract-name &amp;key (device t) (extends nil) (cache-when-compiled t) (reject-p nil))
         &amp;key (save-for-backward nil) (forward nil) (backward nil))
 </code></pre>
 <p>Defines an implementation of <code>abstract-name</code> which is already declared by <code>defnode</code> macro, with :forward=macro and later compiled.</p>

@@ -41,7 +41,7 @@
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                <li class="toctree-l1"><a class="reference internal" href="..">Overview</a>
                 </li>
               </ul>
               <ul>
@@ -50,10 +50,6 @@
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
-                </li>
-              </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
                 </li>
               </ul>
               <ul>
@@ -71,21 +67,51 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">cl-waffe2/vm</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#function-disassemble-waffe2-ir">[function] disassemble-waffe2-ir</a>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter-opt-level">[parameter] *opt-level*</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-benchmark-accept-instructions">[function] benchmark-accept-instructions</a>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter-logging-vm-execution">[parameter] *logging-vm-execution*</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#inputs">Inputs</a>
+    <li class="toctree-l2"><a class="reference internal" href="#struct-wfinstruction">[struct] WfInstruction</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#slots">Slots</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#return">Return</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#example">Example</a>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-compile-forward-and-backward">[function] compile-forward-and-backward</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#return">Return</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#return_1">Return</a>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-accept-instructions">[function] accept-instructions</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-disassemble-waffe2-ir">[function] disassemble-waffe2-ir</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-benchmark-accept-instructions">[function] benchmark-accept-instructions</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#return_1">Return</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_1">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#struct-fusionpathquery">[struct] FusionPathQuery</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-defpath">[macro] defpath</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#rules">Rules</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_2">Example</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#make-query">make-query</a>
+    </li>
+        </ul>
     </li>
     </ul>
                 </li>
@@ -146,82 +172,230 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="cl-waffe2-vm">cl-waffe2 VM</h1>
-<h2 id="function-disassemble-waffe2-ir">[function] disassemble-waffe2-ir</h2>
-<pre><code class="language-lisp">(disassemble-waffe2-ir toplevel &amp;key (backward t) (stream t) (fuse-p t))
+<p>The package <code>cl-waffe2/vm</code> is the central of system, and features are focused on low-level stuffs: compiling/optimizing/rewriting cl-waffe2 IRs and how they're executed. So, most of APIs are accesible by convinient API wrappers of other packages.</p>
+<ul>
+<li>Global Variables<ul>
+<li><a href="./#parameter-opt-level">optimization level</a></li>
+<li><a href="./#parameter-logging-vm-execution">logging</a></li>
+</ul>
+</li>
+<li>IR and Compiler<ul>
+<li><a href="./#struct-wfinstruction">WfInstruction</a></li>
+<li><a href="./#function-compile-forward-and-backward">compiler</a></li>
+<li><a href="./#function-accept-instructions">acceptor</a></li>
+</ul>
+</li>
+<li>Analyzing compiled codes<ul>
+<li><a href="#function-disassemble-waffe2-ir">disassemble</a></li>
+<li><a href="#function-benchmark-accept-instructions">profiling</a></li>
+</ul>
+</li>
+<li>Adding Symbolic Diff and Device-Specific Optimization<ul>
+<li><a href="./#struct-fusionpathquery">FusionPathQuery</a></li>
+<li><a href="./#macro-defpath">defpath</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="parameter-opt-level">[parameter] <code>*opt-level*</code></h2>
+<p>This parameter indicates the degree of runtime error detection. Whichever you choose, cl-waffe2 never apply something unsafe code transformation. It takes the fixnum from 1 to 3, and the larger, the faster.</p>
+<ul>
+<li>
+<p>Set 1 to use safety-mode, in every instructions, runtime error is checked.</p>
+</li>
+<li>
+<p>Set 2 to use middle-mode, runtime error is checked only when first execution.</p>
+</li>
+<li>
+<p>Set 3 to use fastest-mode, no runtime error checking is done.</p>
+</li>
+</ul>
+<p>Again, whichever levels you choose, the graph cl-waffe2 executes is the same. So the effects on the performance is very small (within &lt; <code>1e-4~1e-5</code> sec).</p>
+<p>In default, set to 2.</p>
+<h2 id="parameter-logging-vm-execution">[parameter] <code>*logging-vm-execution*</code></h2>
+<p>This parameter is useful for printing how all instructions are performed. If set to T, all results and arguments produced by executing <code>cl-waffe2 IR</code> is displayed into the terminal. In default, set to nil.</p>
+<h2 id="struct-wfinstruction">[struct] WfInstruction</h2>
+<p>WfInstruction is IR for cl-waffe2 VM. Its form is represented by an extended Wengert list which is able to return multiple outputs. In this document, we call this <em>cl-waffe2 IR</em>, and compiled cl-waffe2 code, that is, the list of WfInstruction is called <strong>InstructionSeq</strong> or <strong>iseq</strong>. Unlike other frameworks, this IR is not only used to represent backpropagation but also forward propagation.</p>
+<p>In cl-waffe2, WfInstruction is created by compiling AbstractNode, and its operation can be obtained by compiling lisp code or passing lambda functions.</p>
+<p>A single WfInstruction represents:</p>
+<pre><code>out_to[0], out_to[1], ... &lt;- λ(Args[0], Args[1], Args[2], ...)
+ ^wfop-out-to                 ^wfop-op     ^wfop-args
 </code></pre>
-<p>Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to <code>stream</code>. If <code>backward</code> was set to t, <code>backward</code> is also displayed.</p>
-<h2 id="function-benchmark-accept-instructions">[function] benchmark-accept-instructions</h2>
-<pre><code class="language-lisp">(benchmark-accept-instructions iseq &amp;key (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10))
+<p>where λ represents the operation. And, if any, <code>ArgsN</code> is wrapped with <code>SV4BW</code>.</p>
+<pre><code>out_to[0], out_to[1], ... &lt;- λ(SV4BW(Args[0]), Args[1], Args[2], ...)
+                                  ^ wfop-sv4bw
 </code></pre>
-<p>Basically, the function <code>benchmark-accept-instruction</code> executes the given list of instructions with profiling execution time, but at the end of proess, displays the report into <code>stream</code>.</p>
-<h2 id="inputs">Inputs</h2>
-<p><code>n-sample[fixnum]</code> repeats the iseq execution for <code>n-sample</code> times</p>
-<p><code>ignore-first-call[boolean]</code> If t, ignores the first call to avoid including allocating time.</p>
-<p><code>stream[stream]</code> the place to display the result</p>
-<p><code>top-k[fixnum]</code> top-k slowest nodes are displayed at the end of report.</p>
-<h2 id="return">Return</h2>
-<p><code>result[AbstractTensor]</code></p>
-<h2 id="example">Example</h2>
-<pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (with-no-grad (benchmark-accept-instructions (compile-forward-and-backward (!softmax (randn `(128 128)))) :n-sample 1000))
- Time(s)   |   Instruction ( * - Beyonds the average execution time)
-0.005366   | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078760 &lt;= op(TID1078760(128 128) TID1078676(128 128))&gt;
-5.62e-4    | &lt;WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078719 &lt;= op(TID1078719(128 128) TID1078717(128 1))&gt;
-0.001171   | &lt;WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078679 &lt;= op(TID1078679(128 1) TID1078681(1))&gt;
-3.62e-4    | &lt;WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078690 &lt;= op(TID1078690(128 128) TID1078679(128 1))&gt;
-0.084953*  | &lt;WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078690 &lt;= op(TID1078690(128 128) TID1078676(128 128))&gt;
-0.053719*  | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078719 &lt;= op(TID1078719(128 128) TID1078690(128 128))&gt;
-6.69e-4    | &lt;WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] : TID1078742 &lt;= op(TID1078742(1) TID1078714(1))&gt;
-0.120082*  | &lt;WfInst[Compiled: SCALARDIV-CPUTENSOR]               : TID1078719 &lt;= op(TID1078719(128 128) TID1078742(1))&gt;
-0.049947*  | &lt;WfInst[Compiled: SUBNODE-CPUTENSOR]                 : TID1078760 &lt;= op(TID1078760(128 128) TID1078719(128 128))&gt;
-0.004672   | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078839 &lt;= op(TID1078839(128 128) TID1078760(128 128))&gt;
-0.166431*  | &lt;WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078839 &lt;= op(TID1078760(128 128) TID1078839(128 128))&gt;
-0.004736   | &lt;WfInst[Compiled: &lt;DELETED&gt;]                         : TID1078856 &lt;= op(TID1078856(128 128) TID1078839(128 128))&gt;
-0.001068   | &lt;WfInst[Compiled: SCALARMUL-CPUTENSOR]               : TID1078805 &lt;= op(TID1078805(128 1) TID1078807(1))&gt;
-4.96e-4    | &lt;WfInst[Compiled: VIEWTENSORNODE-T]                  : TID1078816 &lt;= op(TID1078816(128 128) TID1078805(128 1))&gt;
-0.004744   | &lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          : TID1078788 &lt;= op(TID1078788(128 128) TID1078760(128 128))&gt;
-0.165539*  | &lt;WfInst[Compiled: EXPNODE-LISPTENSOR]                : TID1078788 &lt;= op(TID1078760(128 128) TID1078788(128 128))&gt;
-0.085777*  | &lt;WfInst[Compiled: ADDNODE-CPUTENSOR]                 : TID1078816 &lt;= op(TID1078816(128 128) TID1078788(128 128))&gt;
-0.050755*  | &lt;WfInst[Compiled: DIVNODE-CPUTENSOR]                 : TID1078856 &lt;= op(TID1078856(128 128) TID1078816(128 128))&gt;
-
-18 Instructions | 15 Tensors
-
- Total Time: 0.801049 sec
-
- Instruction                                         | Total time (s) | Time/Total (n-sample=1000)
-&lt;WfInst[Compiled: EXPNODE-LISPTENSOR]                | 0.33196998   | 41.441906%
-&lt;WfInst[Compiled: ADDNODE-CPUTENSOR]                 | 0.17073      | 21.313303%
-&lt;WfInst[Compiled: SCALARDIV-CPUTENSOR]               | 0.120082     | 14.990594%
-&lt;WfInst[Compiled: MOVETENSORNODE-CPUTENSOR]          | 0.068501     | 8.551412%
-&lt;WfInst[Compiled: DIVNODE-CPUTENSOR]                 | 0.050755     | 6.3360667%
-&lt;WfInst[Compiled: SUBNODE-CPUTENSOR]                 | 0.049947     | 6.2351995%
-&lt;WfInst[Compiled: &lt;DELETED&gt;]                         | 0.004736     | 0.5912248%
-&lt;WfInst[Compiled: SCALARMUL-CPUTENSOR]               | 0.002239     | 0.2795085%
-&lt;WfInst[Compiled: VIEWTENSORNODE-T]                  | 0.0014199999 | 0.17726754%
-&lt;WfInst[Compiled: MOVESCALARTENSORNODE-SCALARTENSOR] | 6.69e-4      | 0.08351549%
-{CPUTENSOR[float] :shape (128 128) :named ChainTMP1078855 
-  ((0.0017760922 0.0030971088 0.017302852  ~ 0.012318904  6.049352e-4  0.0041618845)                    
-   (0.012581187  0.0030174912 0.016748475  ~ 0.007076549  0.007030908  0.0017801385)   
-                 ...
-   (0.0036988985 0.0061271163 0.05046869   ~ 0.009297135  0.003441493  5.820294e-4)
-   (0.045387346  0.004674337  0.0018589711 ~ 0.008918608  0.0024204857 0.00761818))
-  :facet :input
-  :requires-grad NIL
-  :backward NIL}
-CL-WAFFE2-REPL&gt;
-;; (The result may not be the latest)
-</code></pre>
+<p>SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl-waffe2 reads the <code>:save-for-backward</code> slots in the <code>define-impl</code> macro, and the corresponding tensors are copied.</p>
+<h3 id="slots">Slots</h3>
+<p><code>wfop-op[function]</code> corresponds with compiled λ function.</p>
+<p><code>wfop-node[AbstractNode or string or function]</code> The node which generates λ function. For the most case, this slot is set to <code>AbstractNode</code>, but the node is something special, (e.g.: <code>CodeBlock</code>, <code>IfNode</code> etc...), set to <code>function</code>.</p>
+<p><code>wfop-out-to[list of AbstractTensor]</code> indicates list of tensors that results are to be stored.</p>
+<p><code>wfop-self[AbstractTensor]</code> corresponds with <code>out_target</code>, that is, the tensor to store the results</p>
+<p><code>wfop-args[list of AbstractTensor]</code> corresponds with <code>(tensor-variable wfop-self)</code>. tensors to be called with: <code>arg1 arg2 arg3...</code>.</p>
+<p><code>wfop-sv4bw[list of AbstractTensor]</code> indicates list of tensors storing save-for-backward tensors. if the corresponding position is <code>save-for-backward=nil</code>, the corresponding position also become nil.</p>
 <h2 id="function-compile-forward-and-backward">[function] compile-forward-and-backward</h2>
 <pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t))
 </code></pre>
-<p>Compiles into cl-waffe2 IR from topleve to each leaf points (detach-p=t or backward=null variables). set <code>fuse-p</code>=t to get additional optimization to the generated IR.</p>
+<p>Compiles into cl-waffe2 IR (so-called iseq) from the given toplevel to each leaf points (where detach-p=t or backward=null variables). <code>toplevel</code> is AbstractTensor with backwards.</p>
 <p>Tips: <code>disassemble-waffe2-ir</code> to display compiled Instruction Sequence.</p>
-<h2 id="return_1">Return</h2>
+<h3 id="return">Return</h3>
 <p><code>(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout alloc-state)</code></p>
 <h2 id="function-accept-instructions">[function] accept-instructions</h2>
 <pre><code class="language-lisp">(accept-instructions iseq)
 </code></pre>
 <p>Evaluates generated cl-waffe2 IR sequence.</p>
 <p><code>iseq[list]</code> an list of <code>WFInstruction</code></p>
+<h2 id="function-disassemble-waffe2-ir">[function] disassemble-waffe2-ir</h2>
+<pre><code class="language-lisp">(disassemble-waffe2-ir toplevel &amp;key (backward t) (stream t) (fuse-p t))
+</code></pre>
+<p>Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to <code>stream</code>. If <code>backward</code> was set to t, <code>backward</code> is also displayed.</p>
+<h3 id="example">Example</h3>
+<pre><code class="language-lisp">(with-output-to-string (out)
+    (disassemble-waffe2-ir (!softmax (parameter (randn `(3 3))) :avoid-overflow nil) :stream out))
+
+
+disassemble-waffe2-ir:
+ [Forward]: 
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID323 &lt;= op(TID323{float, (3 3)} &lt;Param&gt;TID318{float, (3 3)})&gt;
+&lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID323 &lt;= op(&lt;Param&gt;SV4BW(TID318{float, (3 3)}) TID323{float, (3 3)})&gt;
+&lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID356 &lt;= op(TID356{float, (3 1)} &lt;Input&gt;TID347{float, (1)})&gt;
+&lt;WfInst[op=VIEWTENSORNODE-T]         : TID356 &lt;= op(TID356{float, (3 3)} TID356{float, (3 1)})&gt;
+&lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID356 &lt;= op(TID356{float, (3 3)} TID323{float, (3 3)})&gt;
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID323 &lt;= op(SV4BW(TID323{float, (3 3)}) SV4BW(TID356{float, (3 3)}))&gt;
+
+6 Instructions | 3 Tensors | 1 Scalars
+
+
+ [Pullback]: 
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID418 &lt;= op(TID418{float, (3 3)} &lt;Input&gt;TID415{float, (3 3)})&gt;
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID418 &lt;= op(TID418{float, (3 3)} TID395{float, (3 3)})&gt;
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID448 &lt;= op(TID448{float, (3 3)} &lt;Input&gt;TID415{float, (3 3)})&gt;
+&lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID448 &lt;= op(TID448{float, (3 3)} &lt;Input&gt;TID445{float, (1)})&gt;
+&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID390 &lt;= op(TID390{float, (3 3)} TID448{float, (3 3)})&gt;
+&lt;WfInst[op=VIEWTENSORNODE-T]         : TID395 &lt;= op(TID395{float, (3 3)} TID395{float, (3 1)})&gt;
+&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID395 &lt;= op(TID395{float, (3 3)} TID395{float, (3 3)})&gt;
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID390 &lt;= op(TID390{float, (3 3)} TID395{float, (3 3)})&gt;
+&lt;WfInst[op=SYSTEM-LAZY-CONS-T]       : TID418 TID390 &lt;= op(TID418{float, (3 3)} TID390{float, (3 3)})&gt;
+&lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID334 &lt;= op(TID334{float, (3 3)} TID334{float, (3 3)})&gt;
+&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID418 &lt;= op(TID418{float, (3 3)} TID334{float, (3 3)})&gt;
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : &lt;Input&gt;TID320 &lt;= op(&lt;Input&gt;TID320{float, (3 3)} TID418{float, (3 3)})&gt;
+
+12 Instructions | 7 Tensors | 1 Scalars
+
+
+</code></pre>
+<h2 id="function-benchmark-accept-instructions">[function] benchmark-accept-instructions</h2>
+<pre><code class="language-lisp">(benchmark-accept-instructions iseq &amp;key (n-sample 1) (ignore-first-call nil) (stream t) (top-k 10))
+</code></pre>
+<p>Basically, the function <code>benchmark-accept-instruction</code> executes the given list of instructions with profiling execution time, but at the end of proess, displays the report into <code>stream</code>.</p>
+<h3 id="inputs">Inputs</h3>
+<p><code>n-sample[fixnum]</code> repeats the iseq execution for <code>n-sample</code> times</p>
+<p><code>ignore-first-call[boolean]</code> If t, ignores the first call to avoid including allocating time.</p>
+<p><code>stream[stream]</code> the place to display the result</p>
+<p><code>top-k[fixnum]</code> top-k slowest nodes are displayed at the end of report.</p>
+<h3 id="return_1">Return</h3>
+<p><code>result[AbstractTensor]</code></p>
+<p>See also: <code>proceed-bench</code></p>
+<h3 id="example_1">Example</h3>
+<pre><code class="language-lisp">(with-output-to-string (out)
+    (proceed-bench (!softmax (randn `(100 100))) :n-sample 100 :stream out))
+
+[Sorted by Instructions]
+ Time(s)   |   Instruction ( * - Beyonds the average execution time)
+3.32e-4    | &lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID700 &lt;= op(TID700{float, (100 100)} &lt;Input&gt;TID612{float, (100 100)})&gt;
+9.9e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID694 &lt;= op(TID652{float, (100 1)} TID694{float, (100 1)})&gt;
+1.53e-4    | &lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID694 &lt;= op(TID694{float, (100 1)} &lt;Input&gt;TID621{float, (1)})&gt;
+9.8e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID694 &lt;= op(TID694{float, (100 100)} TID694{float, (100 1)})&gt;
+0.006497*  | &lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID694 &lt;= op(TID694{float, (100 100)} &lt;Input&gt;TID612{float, (100 100)})&gt;
+9.6e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID694 &lt;= op(TID694{float, (100 1)} TID694{float, (100 100)})&gt;
+0.002096*  | &lt;WfInst[op=SCALARDIV-CPUTENSOR]      : TID694 &lt;= op(TID694{float, (100 1)} &lt;Input&gt;TID616{float, (1)})&gt;
+9.1e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID694 &lt;= op(TID694{float, (100 100)} TID694{float, (100 1)})&gt;
+0.004272*  | &lt;WfInst[op=SUBNODE-CPUTENSOR]        : TID700 &lt;= op(TID700{float, (100 100)} TID694{float, (100 100)})&gt;
+0.001026   | &lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID700 &lt;= op(TID700{float, (100 100)} TID700{float, (100 100)})&gt;
+1.27e-4    | &lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID694 &lt;= op(TID694{float, (100 1)} &lt;Input&gt;TID749{float, (1)})&gt;
+9.3e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID694 &lt;= op(TID694{float, (100 100)} TID694{float, (100 1)})&gt;
+0.006432*  | &lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID694 &lt;= op(TID694{float, (100 100)} TID700{float, (100 100)})&gt;
+0.004236*  | &lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID700 &lt;= op(TID700{float, (100 100)} TID694{float, (100 100)})&gt;
+
+14 Instructions | 7 Tensors | Overheads due to SV4BW(...) -&gt; 4.82e-6(s) 
+
+ Total Time: 0.025648 sec
+
+[Sorted by topK]
+ Instruction                         | Total time (s) | Time/Total (n-sample=100)
+&lt;WfInst[op=ADDNODE-CPUTENSOR]        | 0.012929       | 50.40939%
+&lt;WfInst[op=SUBNODE-CPUTENSOR]        | 0.004272       | 16.65627%
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        | 0.004236       | 16.515907%
+&lt;WfInst[op=SCALARDIV-CPUTENSOR]      | 0.002096       | 8.172176%
+&lt;WfInst[op=EXPNODE-CPUTENSOR]        | 0.001026       | 4.000312%
+&lt;WfInst[op=VIEWTENSORNODE-T]         | 4.77e-4        | 1.8597941%
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] | 3.32e-4        | 1.2944479%
+&lt;WfInst[op=SCALARMUL-CPUTENSOR]      | 2.8e-4         | 1.0917032%
+
+</code></pre>
+<h2 id="struct-fusionpathquery">[struct] FusionPathQuery</h2>
+<pre><code class="language-lisp">(make-query abstract-node &amp;key (device t) (dtype t) (pred #'(lambda (node) t)))
+</code></pre>
+<p><code>(make-query ...)</code> and create a new query.</p>
+<p>A single <code>FusionPathQuery</code> becomes t only when satisfies all of following conditions:</p>
+<p><code>abstract-node[symbol]</code> become t when the node is a subtype of <code>abstract-node</code></p>
+<p><code>device[t or symbol]</code>   become t when the node is working under the device or <code>subtype</code> of it.</p>
+<p><code>dtype[t or list]</code>      become t when the <code>dtype</code> is set to t, or the list of dtype in arguments are corresponds with the list. (e.g.: <code>(list :float :float)</code>)</p>
+<p><code>pred[function]</code>        specifies an additional predicator, the function receives <code>(node)</code> as arguments and return t to accept it. (<code>arguments-tensor</code> is an list of tensors, which <code>forward</code> or <code>call</code> used.)</p>
+<p>This structure is excepted to be combined with <code>defpath</code>.</p>
+<h2 id="macro-defpath">[macro] defpath</h2>
+<pre><code class="language-lisp">(defpath (fusion-name &amp;rest query-list) &amp;key (reject-p #'(lambda ())) (replaced-with nil))
+</code></pre>
+<p>⚠️ This API is still in the conceptial stage, tests are not enough. DO NOT USE THIS.</p>
+<p>The macro defpath introduces to cl-waffe2 <strong>Symbolic Differentiation</strong>. Users can define a <code>FusionQueryPath</code> to relocate compiled instructions with reference to the search. Composing the sequence of generated IRs to suit the device or model is the easiest way to speed up your model, cl-waffe2 searches for compiled nodes and replaces those matching the conditions specified in <code>query-list</code> with the computed nodes specified in <code>replaced-with</code>, if <code>:fuse-p</code> is set to t (default: <code>t</code>). In the simplest case, <code>defpath</code> can detect <code>[AddNode-CPUTensor] [MulNode-CPUTensor]</code> sequence and replace it with <code>[AddMulNode-CPUTensor]</code> node to reduce the number of instructions.</p>
+<pre><code class="language-lisp">[When adding a new device to cl-waffe2...]
+ 1. Declare the new device (e.g.: CPUTensor, CUDATensor ...)
+ 2. Prepare allocator and accessors (e.g.: initialize-instance method, vref and (setf vref))
+ 3. Implement existing operations with define-impl macro
+ 4. Blush up the generated IR with defpath macro to fuse more operations in a small cycle. &lt;- defpath, here!
+</code></pre>
+<p>The created and registered path, will be reset with the <code>(reset-all-path!)</code> function. All registered paths are stored in <code>*user-defined-path-list*</code> parameter.</p>
+<h3 id="rules">Rules</h3>
+<p>cl-waffe2 replaces the existing operations with following the rules:</p>
+<ol>
+<li>The search is performed ignoring SaveForBackwardNode. If it is contained in the area to be replaced, it is moved to the last sequence of replaced one.</li>
+</ol>
+<pre><code class="language-lisp">;; Example
+Rule: [A] [B] -&gt; [C]
+</code></pre>
+<pre><code class="language-lisp">Before Fusion:
+
+[A]
+[SAVE_FOR_BACKWARD]
+[B]
+[M]
+[N]
+</code></pre>
+<pre><code class="language-lisp">Searching will be done ignoring [SAVE_FOR_BACKWARD]
+
+^ [A]
+| [B]
+| [M]
+| [N]
+reading in this direction.
+</code></pre>
+<pre><code class="language-lisp">After fusion:
+
+[C]  ;; [A] [B] -&gt; [C]
+[SAVE_FOR_BACKWARD] ;; placed after the operation
+[M]
+[N]
+</code></pre>
+<ol>
+<li><code>defpath</code> priority is given to those registered first.</li>
+</ol>
+<p>Repeat the search until no more targets are found to replace it.</p>
+<ol>
+<li>query-list</li>
+</ol>
+<p>Not replaced until the <code>query-list</code> matches everything, including the order.</p>
+<h3 id="example_2">Example</h3>
+<p>(TODO: For the case of ReLU)</p>
+<h3 id="make-query">make-query</h3>
               
             </div>
           </div><footer>

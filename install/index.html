@@ -41,37 +41,37 @@
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                <li class="toctree-l1"><a class="reference internal" href="..">Overview</a>
                 </li>
               </ul>
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="./">Install</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#are-you-new-to-common-lisp">Are you new to Common Lisp?</a>
+    <li class="toctree-l2"><a class="reference internal" href="#if-youre-new-to-common-lisp">If you're new to Common Lisp:</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#1-installing-roswell">1. Installing Roswell</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#2-installing-sbcl">2. Installing SBCL</a>
+    <li class="toctree-l3"><a class="reference internal" href="#2-installing-common-lisp">2. Installing Common Lisp</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#3-setting-up-ide-optional">3. Setting up IDE (Optional)</a>
+    <li class="toctree-l3"><a class="reference internal" href="#3-setting-up-ide-optional">3. Setting up IDE (optional)</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#installing-cl-waffe2">Installing cl-waffe2</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#setting-blas">Setting BLAS</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#openblas-backend">OpenBLAS Backend</a>
+    <li class="toctree-l3"><a class="reference internal" href="#building-simd-extension">Building SIMD Extension</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#cuda-backend">CUDA Backend</a>
+    <li class="toctree-l3"><a class="reference internal" href="#is-gpucudametalopencl-etc-supported">Is GPU(CUDA/Metal/OpenCL etc...) supported?</a>
+    </li>
+        </ul>
     </li>
     </ul>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
-                </li>
-              </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../Tips/">Tips</a>
                 </li>
               </ul>
               <ul>
@@ -146,54 +146,78 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="setting-up-environments">Setting up Environments</h1>
-<h2 id="are-you-new-to-common-lisp">Are you new to Common Lisp?</h2>
-<p>I know... there are few people who are attempted to do ML/DL in Common Lisp! while other languages provide a strong baseline and good platforms. However, I still believe in the clear benefits of doing such tasks on Common Lisp.</p>
-<p>I've been working with Common Lisp for the past two years, but I realise the attraction that no other language can replace it. At first glance, indeed this language has a strange syntax, and some features of the language may seem too much. but believe me! One day you will learn to use it. In fact, I guess cl-waffe2 is portable to ANSI Common Lisp, but not portable to non-lisp languages.</p>
-<p>Anyway, the first step is to set up Common Lisp Environment.</p>
-<p>I don't know which is best, and this is just my recommendations.</p>
+<h2 id="if-youre-new-to-common-lisp">If you're new to Common Lisp:</h2>
 <h3 id="1-installing-roswell">1. Installing Roswell</h3>
-<p>Roswell is environment manager of Common Lisp (and much more!)</p>
+<p>Roswell is an environment manager for Common Lisp.</p>
 <p><a href="https://github.com/roswell/roswell">https://github.com/roswell/roswell</a></p>
 <p>See the <code>Readme.md</code> and install Roswell</p>
-<h3 id="2-installing-sbcl">2. Installing SBCL</h3>
-<p>There are many implementations of Common Lisp, and SBCL is one of the processing system.</p>
-<p>As of this writing(2023/07/02), some features of cl-waffe2 are SBCL-dependent, so this one is recommended.</p>
-<p>With roswell:</p>
+<h3 id="2-installing-common-lisp">2. Installing Common Lisp</h3>
+<p>Common Lisp has several implementations, but I personally recommended SBCL for its performance.</p>
+<p>If you've installed Roswell:</p>
 <pre><code class="language-sh">$ ros install sbcl
 $ ros use &lt;Installed SBCL Version&gt;
 $ ros run # REPL is launched.
 </code></pre>
-<p>should work.</p>
-<h3 id="3-setting-up-ide-optional">3. Setting up IDE (Optional)</h3>
-<p>I guess It's a pity to write Common Lisp without REPL. There are a lot of options, but as far as I know, <code>Emacs with SLIME</code> or <code>Lem</code> is widely supported choice.</p>
+<p>should work and everything is done.</p>
+<h3 id="3-setting-up-ide-optional">3. Setting up IDE (optional)</h3>
+<p>The following editors are recommended as we're working with REPL:</p>
+<ul>
+<li>
+<p><a href="https://www.gnu.org/software/emacs/">Emacs</a> + <a href="https://slime.common-lisp.dev/">Slime</a></p>
+</li>
+<li>
+<p><a href="https://github.com/lem-project/lem">Lem</a> Lem is an emacs-like text editor specialized on Common Lisp.</p>
+</li>
+</ul>
 <h2 id="installing-cl-waffe2">Installing cl-waffe2</h2>
-<p>With roswell, the latest repository can be fetched which is also recognised by <code>quicklisp</code></p>
+<p>As of this writing(2023/9/13), cl-waffe2 is not yet available on Quicklisp. So I'm sorry but you have to install it manually.</p>
+<p>With roswell, the latest cl-wafe2 repository can be fetch like:</p>
 <pre><code class="language-sh">$ ros install hikettei/cl-waffe2
 </code></pre>
-<p>Another option is to load <code>cl-waffe2.asd</code> configurations manually after cloning cl-waffe2 github repos.</p>
-<pre><code class="language-sh">$ git clone &lt;Repository&gt;
+<p>In this case, you have to note that SBCL also needs to be started via Roswell.</p>
+<p>Another valid option would be loading <code>cl-waffe2.asd</code> file manually after cloning cl-waffe2 github repos:</p>
+<pre><code class="language-sh">$ git clone https://github.com/hikettei/cl-waffe2.git
 $ cd ./cl-waffe2
 $ ros run # start repl
 $ (load &quot;cl-waffe2.asd&quot;)
 $ (ql:quickload :cl-waffe2)
-$ (in-pacakge :cl-waffe2-repl)
+$ (in-pacakge :cl-waffe2-repl) # or make repl
 </code></pre>
-<p>With quicklisp:</p>
-<p>(It's going to take a while...)</p>
-<h2 id="openblas-backend">OpenBLAS Backend</h2>
-<p>In your init file, (e.g.: <code>~/.roswell/init.lisp</code> or <code>~/.sbclrc</code>), add the code below for example. (change the path depending on your environment).</p>
+<p>After you ensured it should work, move the <code>./cl-waffe2</code> directory to <code>~/quicklisp/local-projects/</code> and quicklisp can find the project!</p>
+<p>The get the full performance of cl-waffe2, you also have to do the following steps:</p>
+<h3 id="setting-blas">Setting BLAS</h3>
+<p>cl-waffe2 searches for and reads the <code>libblas</code> file by default. The following steps are only necessary if you get a warning when loading the library</p>
+<p>First, install the libopenblas</p>
+<pre><code class="language-sh"># with ubuntu for example
+$ apt install libopenblas
+
+# With macOS
+$ brew instlal libopenblas
+</code></pre>
+<p>Load the package again:</p>
+<pre><code class="language-lisp">$ ros run
+$ (load &quot;cl-waffe2.asd&quot;)
+$ (ql:quickload :cl-waffe2)
+</code></pre>
+<p>If you've got no warning after loading cl-waffe2, <code>CPUTensor</code> is successfully enabled and can recognize the OpenBLAS. If you still get warnings, you have to step an additional configs because cl-waffe2 couldn't find out the location.</p>
+<p>So, In your init file, (e.g.: <code>~/.roswell/init.lisp</code> or <code>~/.sbclrc</code>), add the code below for example. (Change the path depending on your environment. You can find where you've installed the library with <code>$ locate libblas</code> for example of macOS).</p>
 <pre><code class="language-lisp">;; In ~~/.sbclrc for example:
 (defparameter *cl-waffe-config*
     `((:libblas \&quot;libblas.dylib for example\&quot;)))
 </code></pre>
-<p>One of cl-waffe2 backends <code>CPUTensor</code> loads the OpenBLAS shared library of the path written in the <code>cl-user::*cl-waffe-config*</code> parameter when cl-waffe2 loaded.</p>
-<h2 id="cuda-backend">CUDA Backend</h2>
-<p>(Currently not supported yet...)</p>
+<p>It should work. If you still get warnings or encountered some problems, feel free to make an <a href="https://github.com/hikettei/cl-waffe2/issues">issue</a>.</p>
+<h3 id="building-simd-extension">Building SIMD Extension</h3>
+<p>SIMD Extension is an extension for speeding up the execution of mathematical functions and some instructions (including sparse matrix) on the CPU.</p>
+<pre><code class="language-lisp">$ make build_simd_extension
+</code></pre>
+<p>and everything is ok. Ensure that no warnings are displayed in your terminal after loaded cl-waffe2.</p>
+<h3 id="is-gpucudametalopencl-etc-supported">Is GPU(CUDA/Metal/OpenCL etc...) supported?</h3>
+<p>Currently, No. But cl-waffe2 is designed to be independent of which devices work on, and writing extension is easy. Personally, I don't have enough environment and equipment to do the test, so I plan to do it one day when I save up the money.</p>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href=".." class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../overview/" class="btn btn-neutral float-right" title="Tutorials">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
