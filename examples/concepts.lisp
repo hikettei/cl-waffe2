@@ -77,26 +77,40 @@
   (with-devices (MyTensor)
     (let ((a (randn `(100 100)))
 	  (b (randn `(100 100)))
-	  (c (ax+b  `(100 100) 0 0)))
+	  (c (make-input `(100 100) nil)))
       
       (proceed
        (call (MatmulNode-Revisit) a b c)
        :measure-time bench))))
 
+
 ;; Gemm with OpenBLAS
+;; Set bench=t, and measures time
+;; As excepted, this one is 20~30times faster.
 (defun test-gemm-cpu (&key (bench nil))
   (with-devices (CPUTensor)
     (let ((a (randn `(100 100)))
 	  (b (randn `(100 100)))
-	  (c (ax+b  `(100 100) 0 0)))
+	  (c (make-input `(100 100) nil)))
 
       (proceed
        (call (MatmulNode :float) a b c)
        :measure-time bench))))
 
+(proceed-time (!add 1 1))
+
+(proceed-bench (!softmax (randn `(100 100))))
+
 ;; Let cl-waffe2 recognise MyTensor is a default device
 ;; And the priority is: MyTensor -> CPUTensor -> LispTensor
 (set-devices-toplevel 'MyTensor 'CPUTensor 'LispTensor)
+
+(let ((a (make-input `(A B) :A))
+      (b (make-input `(A B) :B)))
+  (let ((model (build (!sum (!mul a b)) :inputs `(:A :B))))
+    (print model)
+    ;; model is a compiled function: f(a b)
+    (forward model (randn `(3 3)) (randn `(3 3)))))
 
 (defun my-matmul (a b)
   (let* ((m (first  (shape a)))
@@ -111,6 +125,7 @@
 (node->defun %mm-softmax (A[m n] B[n k] -> C[m k])
   (!softmax (my-matmul a b)))
 
+;; JIT Enabled Matrix Operations
 (defun local-cached-matmul ()
   ;; Works like Lisp Function
   (print (time (%mm-softmax (randn `(3 3)) (randn `(3 3)))))
@@ -173,6 +188,7 @@ LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
   :where (A[~] -> B[~])
   :asif :function :named %softmax)
 
+;; Composing Several Tensors
 
 ;;(call-> x
 ;;(asnode ...
@@ -182,3 +198,16 @@ LayerNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
 
 ;; define-op    customized backward for scalartensor
 ;; defoptimizer user defined optimizer!
+
+
+;; Section4 Loop Optimization By Metaprogramming
+
+;; Section5 Graph-Level Optimization
+
+;; Section6 Interop: Common Lisp Array and AbstractTensor
+
+;; Section7 Visualize, eazy to debug
+
+;; Section8 JIT/Caching
+
+;; Section9 Symbolic Differentiation and Device Specific Optimization

@@ -337,9 +337,10 @@ Declares a new `AbstractNode`.
 		      (!matmul (!t da) dout)
 		      nil))
 	  :documentation \"
-```math
-C\\gets{gemm(1.0, A, B, 0.0, C)}
-```\"))
+C <- GEMM(1.0 A B 0.0 C)
+\"))
+
+```
 
 You can invoke the forward/backward by using the method forward/backward. `(forward node arg1 arg2...)` `(backward node dout1 arg1 arg2...)`.
 "
