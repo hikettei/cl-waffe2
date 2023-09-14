@@ -28,11 +28,13 @@ Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](h
 
 ## ✨Features
 
-- cl-waffe2 brings `AbstractTensor` to Common Lisp.
-- Extensible: Operations can be extended/reimplemented with any matrix operation libraries you like! Plus, No code rewriting when changing devices.
-- Inlining:  Anyone can write a optimized loop iteration, for example, `Loop Collapse` and `Loop Fusion`, computing offsets in advance, and scheduling multi-threading by `lparallel`.
-- Profiling: Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
-- Nodes: Systematic macros for building computation nodes and easy to visualize!
+- cl-waffe2 brings **AbstractTensor** to Common Lisp.
+- **Extensible** All operations can be extended/reimplemented with any matrix operation libraries you like! Plus, AbstractNode guarantees that no code rewriting is needed when changing devices.
+- **Inlining**  Anyone can write an optimized loops, for example, `Loop Collapse` and `Loop Fusion`, computing offsets in advance, and scheduling multi-threading by `lparallel`.
+- **Graph-Level Optimization** cl-waffe2 provides an abstract graph optimization tool that can be used on any devices.
+- **Visualize** Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
+- **debugging** Shape Errors are detected before the operation is performed. In addition, All objects in cl-waffe2 are nicely rendered in your terminal.
+- **Systematic Nodes**: AbstractNodes and Models are written with minimum codes. Moreover, they're easy to compose and compile.
 - 👏 Its core part and VM are 100% written on **ANSI Common Lisp**.
 
 ## 🍃 Quicklook
