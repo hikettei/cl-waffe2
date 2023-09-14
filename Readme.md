@@ -22,9 +22,9 @@
 
 > ⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 
-cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, powered by `JIT Compiler`.
+cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations, and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.
 
-Visit my preceding project (not relevant to the cl-waffe2 project): [cl-waffe](https://github.com/hikettei/cl-waffe).
+The name of this framework is cl-waffe**2** because it took over my previous project: [cl-waffe](https://github.com/hikettei/cl-waffe).
 
 ## ✨Features
 
@@ -66,13 +66,15 @@ In the simplest example, the `build` function traces and compiles the network fr
 ;;  :backward NIL} 
 ```
 
+We also provide [example projects](https://github.com/hikettei/cl-waffe2/tree/master/examples) here!
+
 # 📈 Experiments
 
 (TODO)
 
-# 📕 References/Acknowledgments
+# 📕 References and Acknowledgments
 
-・All comments on this Reddit post: [Does anyone have any interest in my deep-learning framework?](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/).
+- All comments on this Reddit post: [Does anyone have any interest in my deep-learning framework?](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/).
 
 - digikar99 for giving me intriguing perspectives on some semantics and the publication of a large number of valuable references.
     - [Features of Common Lispy approach to (Better) Numpy](https://gist.github.com/digikar99/ba2f0bb34021bfdc086b9c1c712ca228)
