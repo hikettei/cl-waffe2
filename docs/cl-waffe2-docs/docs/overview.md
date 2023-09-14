@@ -143,7 +143,7 @@ One of the implementation of the device, can be given by the [define-impl](https
 			 ,c)))
 ```
 
-A blueprint of the lambda functions described here is later compiled by `(compile nil body)`, and depending on the slices(offsets), ranks, dtypes, shapes, and permutations, functions are cached so users don't have to worry about the performance issue due to `eval`. On the contrary, the loop order is optimised (reordering, collapsing and lparallel) and can be expected to be about `1.1>` times faster on average compared to loops without them.
+A blueprint of the lambda functions described here is later compiled by `(compile nil body)`, and depending on the slices(offsets), ranks, dtypes, shapes, and permutations, functions are cached so users don't have to worry about the performance issue due to `eval`. On the contrary, the loop order is optimised (reordering, collapsing and lparallel) and can be expected to be about `1.1` times faster on average compared to loops without them.
 
 So, we've got new implementation of `gemm`, let's get this going. Your `MyTensor` is registered as a cl-waffe2 device.
 
@@ -563,7 +563,7 @@ See also: [Examples](https://github.com/hikettei/cl-waffe2/tree/master/examples)
 
 (TODO)
 
-```
+```lisp
 ~~ [Steps] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1.  Network Construction : Create a network of AbstractNode with multiple backends.
 2.  Sorting/Pruning      : Sort the network and prune unused nodes.
