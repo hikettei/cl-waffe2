@@ -1,7 +1,5 @@
 # Programmable Deep Learning Framework
 
-> All sample codes are available in the `...` file.
-
 In the recent years, the widely accepted libraries and frameworks in the field of data science, such as matrix operations and mathematical optimization, have concentrated on popular and attractive programming languages: Python and Julia. But did you know that a long time ago (about 40~50 years), artificial intelligences are all about Lisp? At that time, research into artificial intelligences using symbolic logics was very popular, and Lisp and Prolog were the languages of choice. As the time went on, however, such research became less and less common, and instead languages that could easily handle large matrices became mainstream, which is roughly the history to date. However, even without the influence of symbolic theory, Common Lisp is still powerful language and indeed I'm one of Lispers who believes the advantages of applying this into data science. In this section, I will explain the concepts and benefits of my project cl-waffe2, an elegant and extensible Deep Learning Framework on Common Lisp.
 
 ## Why not: Keep Using Python?
@@ -119,7 +117,7 @@ So first, we need the device to execute the node. cl-waffe2 widely adapts CLOS a
 (defclass MyTensor (LispTensor) nil)
 ```
 
-`Matrix Multiplication` is the operation performed in every two dimensions. If the given tensor is 3D/4D..., it is batched and applied. If it is sliced, the offsets are added in that part. Regardless of which matmul implementation is used, but **at least** 2D tensor is needed, the process of adding offsets and batching follows the specification of cl-waffe2. So, we are going to use the [call-with-view](https://hikettei.github.io/cl-waffe2/generic-tensor/#function-call-with-view) function returning an S-expression that optimized and collapsed loops through a given tensor up to a defined dimension. And, describe the steps of calling `gemm!` as if writing a macro. (Of course, there is another way that writes a function directly though.)
+`Matrix Multiplication` is the operation performed in every two dimensions. If the given tensor is 3D/4D..., it is batched and applied. If it is sliced, the offsets are added in that part. Regardless of which matmul implementation is used, but **at least** 2D tensor is needed, the process of adding offsets and batching follows the specification of cl-waffe2. So, we are going to use the [call-with-view](https://hikettei.github.io/cl-waffe2/generic-tensor/#function-call-with-view) function returning an S-expression that optimized and collapsed loops through a given tensor up to a defined dimension in order to maximize parallelization of kernel functions. And, describe the steps of calling `gemm!` as if writing a macro. (Of course, there is another way that writes a function directly though.)
 
 One of the implementation of the device, can be given by the [define-impl](https://hikettei.github.io/cl-waffe2/nodes/#macro-define-impl) macro.
 
@@ -458,41 +456,145 @@ If the Composite can be implemented using only `call->`, the [defsequence](https
 
 ## Make everything user-extensible
 
-(サンプルコード用意する) スカラー値でカスタムバックエンド Autodiff
+### Customized Autodiff - cl-waffe2 as a graph processing library
 
-`define-op` Customized backwards グラフ処理のライブラリとして使う
+(TODO)
 
+```lisp
+(defclass MyScalarTensor (ScalarTensor) nil)
+(set-devices-toplevel 'MyTensor 'CPUTensor 'LispTensor 'MyScalarTensor)
+```
 
-`defoptimizer` User defined optimizer
+```lisp
+(define-op (MyMul (self)
+	    :where (A[scal] B[scal] -> A[scal] where scal = 1)
+	    :out-scalar-p t
+	    :save-for-backward-names (a b)
+	    :forward ((self a b)
+		      (with-setting-save4bw ((a a) (b b))
+			(setf (tensor-vec a) (* (tensor-vec a) (tensor-vec b)))
+			a))
+	    :backward ((self dy)
+		       (with-reading-save4bw ((a a) (b b))
+			 (values
+			  (make-tensor
+			   (* (tensor-vec dy) (tensor-vec b)))
+			  (make-tensor
+			   (* (tensor-vec dy) (tensor-vec a))))))))
 
-hooker Adam 最適化関数自作
+(define-op (MySin (self)
+	    :where (A[scal] out[scal] -> out[scal] where scal = 1)
+	    :out-scalar-p t
+	    :save-for-backward-names (a)
+	    :forward ((self a out)
+		      (with-setting-save4bw ((a a))
+			(setf (tensor-vec out) (sin (tensor-vec a)))
+			out))
+	    :backward ((self dy)
+		       (with-reading-save4bw ((a a))
+			 (values
+			  (make-tensor
+			   (* (tensor-vec dy)
+			      (cos (tensor-vec a))))
+			  nil)))))
+(defun !mymul (a b)
+  (call (MyMul) a b))
 
-(最適化関数を自作してパラメーターを最適化するサンプル)
+(defun !mysin (x)
+  (call (MySin) x (make-clone x)))
 
-## Graph-Level Optimization
+(defun try-original-autodiff ()
+  (let ((a (parameter (make-tensor 1))))
+    (proceed-backward (!mysin (!mysin a)))
+    (grad a)))
+```
 
-cl-waffe2の抽象ノードのコンパイルは以下の手順で実行される:
+### Differentiable Programming
 
-大事な概念がInputTensorとExistTensor: Tensor Facet...
+(TODO)
 
-In-place-mutation <- 有効にするにはInputTensorと!move or !copyを使わないといけない
+```lisp
+(defoptimizer (MySGD (self param &key (lr 1e-3))
+	       :slots ((lr :initarg :lr :reader sgd-lr))))
 
-Memory-locality <- InputTensorをたくさん使え
-Again, the subject to locality optimiztion is *InputTensors* whose name=nil,
+(node->defun %step-sgd (Param[~] Grad[~] Lr[scal] -> Param[~] where scal = 1)
+  (A-=B param (A*=scal grad lr)))
 
-## Interop: Common Lisp and cl-waffe2
+(defmethod step-optimize ((optimizer MySGD))
+  (let* ((lr    (make-tensor (sgd-lr optimizer)))
+	 (param (read-parameter optimizer))
+	 (grad  (grad param)))
+    (with-no-grad
+      (%step-sgd param grad lr))))
+```
 
-Change-facet
+```lisp
+(defun simple-opt-model ()
+  (let* ((loss (!mean (!matmul (parameter (randn `(3 3)))
+			       (parameter (randn `(3 3))))))
+	 (model (build loss)))
 
-with-facets
+    (mapc (hooker x (MySGD x :lr 1e-3)) (model-parameters model))
+    
+    (forward model)
+    (backward model)
+    
+    (mapc #'call-optimizer! (model-parameters model))))
+    
+({MYTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3)  
+  ((0.25052267  -0.16212857 -1.3183842)
+   (-1.078968   0.27860558  0.40701634)
+   (-0.10987697 -1.2562615  0.6179133))
+  :facet :exist
+  :requires-grad T
+  :optimizer <AbstractOptimizer: MYSGD() -> TID12604>}
+ {MYTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3)  
+  ((-0.5223165  2.3579814   0.13172081)
+   (0.57671905  0.56324756  1.1230979)
+   (0.10274803  0.008530198 1.7588508))
+  :facet :exist
+  :requires-grad T
+  :optimizer <AbstractOptimizer: MYSGD() -> TID12610>})
+```
+
+See also: [Examples](https://github.com/hikettei/cl-waffe2/tree/master/examples)
+
+## Maximize the benefits of Graph-Level Optimization
+
+(TODO)
+
+```
+~~ [Steps] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.  Network Construction : Create a network of AbstractNode with multiple backends.
+2.  Sorting/Pruning      : Sort the network and prune unused nodes.
+3.  In-place mutation    : Optimize the list by deleting unused MoveTensorNode.
+4.  More Localize        : Reconnecting InputTensors, the comiler optimizes the locality of memory.
+5.  Reschedule           : Create an allocation planning considering 4. and in-place ops: !view !permute !reshape etc.
+6.  Backward(Optional)   : Construct backward propagation
+7.  Adjoint Optimization : Minimizes the number of copies arising at adjoints
+8.  Compile/Inline       : If any, compiles lisp blueprints generated by call-with-view (If cached, ignored)
+9.  Rewriting            : If any, replaces the list of declared patterns by the defpath macro
+10. Completed -> Compiled-Composite is cached/inlined everywhere
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```
+
+## Interop: Common Lisp Array and cl-waffe2 AbstractTensor
+
+(TODO)
+
+See also: [Converting AbstractTensor and other arrays](https://hikettei.github.io/cl-waffe2/utils/#tensor-facet-converting-abstracttensor-anything)
 
 ## Debugging
+
+(TODO)
+
+cl-waffe2 is enough clever to detect Shape-Error and suggest an alternative arising from wrong inputs. In this case, both ranks are invaild because broadcasing rank-up rule is not applied in cl-waffe2:
 
 ```lisp
 (!add (randn `(3 3)) (randn `(3)))
 ```
 
-cl-waffe2は賢いので：
+If you do this, you will get the following error before **running the operation**
 
 ```lisp
 [cl-waffe] Shaping-Error: [Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invaild arguments.
@@ -521,37 +623,97 @@ B:
     ─ Use (!flexible tensor) to explict a rank-up rule of broadcasting.
 ```
 
-このように提案をしてくれて!flexible宣言でTensorの先頭にBroadcasting可能軸を追加することを提案してくれる（注: cl-waffe2はAbstractNode側で`[~]`になっている部分かつ、Tensor側でどこに1xNを挿入するか宣言しないとBroadcastingされない）
+When adding or repeating ranks by broadcasting rule, it is necessary to declare in advance in which position they are to be added:
 
 ```lisp
+;; X[a b c] -> X[~ a b c]
 (!flexible x :at 0)
+
+;; X[a] -> X[~ a]
 (%transform (randn `(3))[i] -> [~ i])
 ```
 
-あまり最適化ばかりに注力せず、ちゃんとdebugしやすいようにしてある。
-
-Disassemble ...
+Following the suggestion, fix the code:
 
 ```lisp
-cl-waffe2 VM: Encountered Runtime Error at 5th instruction.
-disassemble: 
-2 : <WfInst[op=COSNODE-CPUTENSOR]   : TID989931 <= op(TID989931{float, (3 3)} TID989931{float, (3 3)})>
-3 : <WfInst[op=SINNODE-CPUTENSOR]   : TID989931 <= op(TID989931{float, (3 3)} TID989931{float, (3 3)})>
-4 : <WfInst[op=SCALARMUL-CPUTENSOR] : TID989931 <= op(TID989931{float, (3 3)} <Input>TID989987{float, (1)})>
-5*: <WfInst[op=SQRTNODE-CPUTENSOR]  : TID989931 <= op(TID989931{float, (3 3)} TID989931{float, (3 3)})>
-6 : <WfInst[op=SINNODE-CPUTENSOR]   : TID989931 <= op(TID989931{float, (3 3)} TID989931{float, (3 3)})>
-7 : <WfInst[op=SINNODE-CPUTENSOR]   : TID989931 <= op(TID989931{float, (3 3)} TID989931{float, (3 3)})>
+(defparmeter out (!add (randn `(3 3)) (!flexible (randn `(3)))))
+```
+
+And passed:
+
+```lisp
+(proceed out)
+```
+
+This is a case of before execution, speaking of runtime error (e.g.: floating-point overflow), it gets a bit complicated; you have to face the disassembled code to find out the details.
+
+When doing (!sqrt x) where x is a negative number:
+
+```lisp
+(proceed
+ (!sin
+  (!sqrt
+   (!mul -1.0
+         (!sin (ax+b `(3 3) 0 1))))))
+```
+
+As excepted it produces FLOATING-POINT-INVAILD-OPERATION:
+
+```lisp
+cl-waffe2 VM: Encountered Runtime Error at 3th instruction.
+disassemble:
+0 : <WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID14200 <= op(TID14200{float, (3 3)} <Input>TID14197{float, (3 3)})>
+1 : <WfInst[op=SINNODE-CPUTENSOR]        : TID14200 <= op(<Input>TID14197{float, (3 3)} TID14200{float, (3 3)})>
+2 : <WfInst[op=SCALARMUL-CPUTENSOR]      : TID14200 <= op(TID14200{float, (3 3)} <Input>TID14218{float, (1)})>
+3*: <WfInst[op=SQRTNODE-CPUTENSOR]       : TID14200 <= op(TID14200{float, (3 3)} TID14200{float, (3 3)})>
+4 : <WfInst[op=SINNODE-CPUTENSOR]        : TID14200 <= op(TID14200{float, (3 3)} TID14200{float, (3 3)})>
 
 
 condition:
   arithmetic error FLOATING-POINT-INVALID-OPERATION signalled
 ```
 
-Disassemble
+Use the [disassemble-waffe2-ir](https://hikettei.github.io/cl-waffe2/vm/#function-disassemble-waffe2-ir) function to check the full disassembled code instead of proceed:
+
+```lisp
+(disassemble-waffe2-ir
+ (!sin
+  (!sqrt
+   (!mul -1.0
+         (!sin (parameter (ax+b `(3 3) 0 1)))))))
+```
+
+```lisp
+disassemble-waffe2-ir:
+ [Forward]: 
+<WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID14654 <= op(TID14654{float, (3 3)} <Param>TID14649{float, (3 3)})>
+<WfInst[op=SINNODE-CPUTENSOR]        : TID14654 <= op(<Param>SV4BW(TID14649{float, (3 3)}) TID14654{float, (3 3)})>
+<WfInst[op=SCALARMUL-CPUTENSOR]      : TID14654 <= op(SV4BW(TID14654{float, (3 3)}) <Input>TID14675{float, (1)})>
+<WfInst[op=SQRTNODE-CPUTENSOR]       : TID14654 <= op(SV4BW(TID14654{float, (3 3)}) TID14654{float, (3 3)})>
+<WfInst[op=SINNODE-CPUTENSOR]        : TID14654 <= op(SV4BW(TID14654{float, (3 3)}) TID14654{float, (3 3)})>
+
+5 Instructions | 2 Tensors | 1 Scalars
+
+
+ [Pullback]: 
+<WfInst[op=MOVETENSORNODE-CPUTENSOR]    : TID14764 <= op(TID14764{float, (3 3)} <Input>TID14742{float, (3 3)})>
+<WfInst[op=COSNODE-CPUTENSOR]           : TID14732 <= op(TID14732{float, (3 3)} TID14732{float, (3 3)})>
+<WfInst[op=MULNODE-CPUTENSOR]           : TID14764 <= op(TID14764{float, (3 3)} TID14732{float, (3 3)})>
+<WfInst[op=INVERSETENSORNODE-CPUTENSOR] : TID14710 <= op(TID14710{float, (3 3)})>
+<WfInst[op=SCALARMUL-CPUTENSOR]         : TID14710 <= op(TID14710{float, (3 3)} <Input>TID14782{float, (1)})>
+<WfInst[op=MULNODE-CPUTENSOR]           : TID14764 <= op(TID14764{float, (3 3)} TID14710{float, (3 3)})>
+<WfInst[op=SCALARMUL-CPUTENSOR]         : TID14764 <= op(TID14764{float, (3 3)} <Input>TID14675{float, (1)})>
+<WfInst[op=COSNODE-CPUTENSOR]           : TID14665 <= op(TID14665{float, (3 3)} TID14665{float, (3 3)})>
+<WfInst[op=MULNODE-CPUTENSOR]           : TID14764 <= op(TID14764{float, (3 3)} TID14665{float, (3 3)})>
+<WfInst[op=MOVETENSORNODE-CPUTENSOR]    : <Input>TID14651 <= op(<Input>TID14651{float, (3 3)} TID14764{float, (3 3)})>
+
+10 Instructions | 6 Tensors | 2 Scalars
+```
+
 
 ## Graph Rewriting
 
-(Still Experimental, Coming soon...)
+(Still Experimental, but coming soon...)
 
 We gonna talk about `defpath` which enables theano-like symbolic differentiation and device-specific optimizations.
 

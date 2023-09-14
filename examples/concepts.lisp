@@ -1,6 +1,4 @@
 
-;; サンプルコードある程度かけてからGist/Tutorialsかく
-
 (defpackage :concepts
   (:use
    :cl
@@ -184,17 +182,98 @@
   :where (A[~] -> B[~])
   :asif :function :named %softmax)
 
-;; Composing Several Tensors
-
-;;(call-> x
-;;(asnode ...
-
-
 ;; Section3 Make everything user-extensible
 
-;; define-op    customized backward for scalartensor
-;; defoptimizer user defined optimizer!
+;;; Customized Autodiff
 
+;;; The simplest case of ScalarTensor
+
+(defclass MyScalarTensor (ScalarTensor) nil)
+(set-devices-toplevel 'MyTensor 'CPUTensor 'LispTensor 'MyScalarTensor)
+
+
+(define-op (MyMul (self)
+	    :where (A[scal] B[scal] -> A[scal] where scal = 1)
+	    :out-scalar-p t
+	    :save-for-backward-names (a b)
+	    :forward ((self a b)
+		      (with-setting-save4bw ((a a) (b b))
+			(setf (tensor-vec a) (* (tensor-vec a) (tensor-vec b)))
+			a))
+	    :backward ((self dy)
+		       (with-reading-save4bw ((a a) (b b))
+			 (values
+			  (make-tensor
+			   (* (tensor-vec dy) (tensor-vec b)))
+			  (make-tensor
+			   (* (tensor-vec dy) (tensor-vec a))))))))
+
+(define-op (MySin (self)
+	    :where (A[scal] out[scal] -> out[scal] where scal = 1)
+	    :out-scalar-p t
+	    :save-for-backward-names (a)
+	    :forward ((self a out)
+		      (with-setting-save4bw ((a a))
+			(setf (tensor-vec out) (sin (tensor-vec a)))
+			out))
+	    :backward ((self dy)
+		       (with-reading-save4bw ((a a))
+			 (values
+			  (make-tensor
+			   (* (tensor-vec dy)
+			      (cos (tensor-vec a))))
+			  nil)))))
+(defun !mymul (a b)
+  (call (MyMul) a b))
+
+(defun !mysin (x)
+  (call (MySin) x (make-clone x)))
+
+(defun try-original-autodiff ()
+  (let ((a (parameter (make-tensor 1))))
+    (proceed-backward (!mysin (!mysin a)))
+    (grad a)))
+
+;;; Differentiable Programming
+
+(defoptimizer (MySGD (self param &key (lr 1e-3))
+	       :slots ((lr :initarg :lr :reader sgd-lr))))
+
+(node->defun %step-sgd (Param[~] Grad[~] Lr[scal] -> Param[~] where scal = 1)
+  (A-=B param (A*=scal grad lr)))
+
+(defmethod step-optimize ((optimizer MySGD))
+  (let* ((lr    (make-tensor (sgd-lr optimizer)))
+	 (param (read-parameter optimizer))
+	 (grad  (grad param)))
+    (with-no-grad
+      (%step-sgd param grad lr))))
+
+(defun simple-opt-model ()
+  (let* ((loss (!mean (!matmul (parameter (randn `(3 3)))
+			       (parameter (randn `(3 3))))))
+	 (model (build loss)))
+
+    (mapc (hooker x (MySGD x :lr 1e-3)) (model-parameters model))
+    (forward model)
+    (backward model)
+    (mapc #'call-optimizer! (model-parameters model))))
+#|
+({MYTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3)  
+  ((0.25052267  -0.16212857 -1.3183842)
+   (-1.078968   0.27860558  0.40701634)
+   (-0.10987697 -1.2562615  0.6179133))
+  :facet :exist
+  :requires-grad T
+  :optimizer <AbstractOptimizer: MYSGD() -> TID12604>}
+ {MYTENSOR[float] :shape (3 3) -> :view (<T> <T>) -> :visible-shape (3 3)  
+  ((-0.5223165  2.3579814   0.13172081)
+   (0.57671905  0.56324756  1.1230979)
+   (0.10274803  0.008530198 1.7588508))
+  :facet :exist
+  :requires-grad T
+  :optimizer <AbstractOptimizer: MYSGD() -> TID12610>})
+|#
 
 ;; Section4 Loop Optimization By Metaprogramming
 
