@@ -5,29 +5,39 @@
 (defparameter *restart-variable-from* nil)
 
 
+;; AbstractNode is all about cl-waffe2 -
 (defclass AbstractNode ()
-  ((local-variables :accessor node-local-variables :type list :initform nil) ;; <- [Refactor] Not Used
+  (;;(local-variables :accessor node-local-variables :type list :initform nil) ;; <- [Refactor] Not Used
    (where-decl :initarg :where-decl :initform nil :accessor read-where)
+   
    ;; Shape Transmission States
+   ;; Broadcastable Version
    (function-node
     :initarg
     :function-node
     :reader abstractnode-node
     :type function) ;; [x ~ y] [y z] -> [z x]
+
+   ;; Not broadcastable Version
    (function-node1
     :initarg
     :function-node1
     :reader abstractnode-node1
     :type (or null function)) ;; [x y] [y z] -> [z x], ~ is removed. If ~ isn't used at function-node, set nil
 
-   ;; Broadcasting
+
+   ;; Broadcastable Positions
    (uprank-state :initform nil :initarg :uprank-state :reader uprank-state :type list)
    (transmission-state :initarg :transmission-state :reader transmission-state :type list)
-   
+
+   ;; Utils
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
    (excepted-output-shape :initform nil :type list :accessor node-output-shape) ;; <- Debug Information
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean)   ;;
 
+   ;; [TODO] (tpsort-id :initform (gensym)) ...
+   
+   ;; :save-for-backward
    (sv4bw-places :initform nil :type list :accessor node-sv4bw) ;; (list AbstractTensor ...)
    
    ;; For cl-waffe2 VM
@@ -79,19 +89,18 @@ And backward: `(backward node prev-gradient arg1 arg2 ...)`
 
 "))
 
-;; Optim:
+;; Issues of current broadcasting semantic?
+;; Can't distinguish it:
+;;  (3 -1 3)
+;;  (3 3 -1)
 ;;
-;; (3 -1 3)
-;; (3 3 -1)
-;;
-;; (-1 3 3)
-;;    (3 3)
+;;  (-1 3 3)
+;;     (3 3)
 ;;
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Forward Mode Network Construction
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			       
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~			       
 (defmethod forward :around ((node AbstractNode) &rest inputs)
   ;; With the forward method, AbstractNode is invoked and
   ;;  1. Dispatches broadcasting-auto

@@ -16,6 +16,14 @@
 ;;     L (Utils) defmodel-as Converts Composite into a function/AbstractNode
 ;; ====================================================================================
 
+;;
+;; [JAOT-Like Shape-Error Detection?]
+;;
+;; [Parameter] *ealier-compiling-mode*
+;;
+;;
+;;
+
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
 (defparameter *node-reject-case-table* (make-hash-table))
@@ -63,7 +71,6 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 See also: `the implementation of JITLispTensor`.
 "))
 
-;; [TODO] Add to docs.
 (defgeneric on-finished-compiling (current-node)
   (:documentation "
 ## [generic] on-finished-compiling
@@ -163,6 +170,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :view-route (if (and traceable? *call-with-view-route*)
 		   *call-with-view-route*)))
 
+;; [TODO] Display Warnings when backend-priority aren't all compatible
 (defmacro with-devices ((&rest backend-priority) &body body)
   "
 ## [macro] with-devices
