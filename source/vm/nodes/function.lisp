@@ -43,7 +43,9 @@
 	  (tensor-vec out) (cl-waffe2/vm.generic-tensor::vec tensor))
     out))
 
-;; [Experimental] Aot Shape-Error Detection?
+#|
+;; [TODO] Docs/AOT ShapeError Detection
+;; [Experimental] JAot Shape-Error Detection?
 ;;  1. This setting should be disabled with parameters
 ;;  2. forward earlier compilingで有効にする <- dispatchingしない defnode宣言だけで十分
 ;;     ^ eval-when (:compile-toplevel) ... でHash-Tableに記録しておく + dtypeの検査などを省く + not-found errorにしないように
@@ -54,12 +56,14 @@
 ;; Still Experimental and a lot of challenges are remained:
 ;;  ScalarTensor/Dtype
 ;; Inserts AoT Shape-Error Inspection Code
+;; Add: (with-aot-shape-error-mode
+;; What we gonna do is ... something like auto-generated test codes
 
-(defmacro with-aot-shape-error-detection ((&key
-					     (in-names nil)
-					     (in-shapes nil)
-					     (out-names nil)
-					     (out-shapes nil))
+(defmacro with-aot-shape-error-inspection ((&key
+					      (in-names nil)
+					      (in-shapes nil)
+					      (out-names nil)
+					      (out-shapes nil))
 					  &body
 					    body)
   "## [macro] with-aot-shape-error-detection
@@ -70,18 +74,18 @@ Wrap the body you want to enable aot shape-error detection"
   (eval-when (:execute)
     (if (or (not *jaot-shape-error-detection*)
 	    (some #'(lambda (shape)
-		      (some #'(lambda (x) (symbol-eq x '~))
-			    shape))
+		      (every #'(lambda (x) (symbol-eq x '~))
+			     shape))
 		  in-shapes))
 	body
 	(let* ((in-tensors  (loop for name in in-names
 			 	  for shape in in-shapes
 				  collect
-				  (make-input shape name)))
+				  (make-input (loop for s in shape unless (symbol-eq s '~) collect s) name)))
 	       ;; [TODO] Implement :forward but JAOT Mode
 	       ;; [TODO] Just tracing the transimissions of forward
 	       ;; [TODO] Should be displayed as just a warning, not an error
-	       ;; [TODO]
+	       ;; [TODO] Do Not Think Too Much About... About dtype and 
 	       (outs (multiple-value-list (apply #'call (cl-waffe2::asnode (compile nil `,(car body))) in-tensors))))
 	  ;; out-shapesが~を含むとき -> Ignore
 	  (assert (every #'equal out-shapes
@@ -90,15 +94,19 @@ Wrap the body you want to enable aot shape-error detection"
 		  "AOT Shape Error: Out is invaild. ~a ~a" out-shapes (map 'list #'shape outs))
 	  `(progn ,@body)))))
 
-;;(use-package :cl-waffe2/base-impl)
 
 (defun aot-error-test ()
-  (with-aot-shape-error-detection (:in-names (:A :B)
-				   :in-shapes ((x y) (x y))
-				   :out-names (:OUT)
-				   :out-shapes ((1 1)))
+  (with-aot-shape-error-inspection (:in-names (:A :B)
+				    :in-shapes ((x y) (x y))
+				    :out-names (:OUT)
+				    :out-shapes ((1 1)))
     (lambda (x y)
-      (cl-waffe2/base-impl:!mean (cl-waffe2/base-impl:!add y (cl-waffe2/base-impl:!matmul x (cl-waffe2/base-impl:!t x)))))))
+      (cl-waffe2/base-impl:!mean
+       (cl-waffe2/base-impl:!add
+	y
+	(cl-waffe2/base-impl:!matmul
+	 x
+	 (cl-waffe2/base-impl:!t x)))))))
 
-
+|#
 

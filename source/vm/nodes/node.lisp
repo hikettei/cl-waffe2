@@ -7,8 +7,7 @@
 
 ;; AbstractNode is all about cl-waffe2 -
 (defclass AbstractNode ()
-  (;;(local-variables :accessor node-local-variables :type list :initform nil) ;; <- [Refactor] Not Used
-   (where-decl :initarg :where-decl :initform nil :accessor read-where)
+  ((where-decl :initarg :where-decl :initform nil :accessor read-where)
    
    ;; Shape Transmission States
    ;; Broadcastable Version

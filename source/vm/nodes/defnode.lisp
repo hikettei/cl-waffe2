@@ -16,14 +16,6 @@
 ;;     L (Utils) defmodel-as Converts Composite into a function/AbstractNode
 ;; ====================================================================================
 
-;;
-;; [JAOT-Like Shape-Error Detection?]
-;;
-;; [Parameter] *ealier-compiling-mode*
-;;
-;;
-;;
-
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
 (defparameter *node-reject-case-table* (make-hash-table))

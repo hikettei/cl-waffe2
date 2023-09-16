@@ -6,7 +6,24 @@
 (defparameter *indent-level* 0)
 (defparameter *indent-with* " ")
 
-;; └┘
+;; WIP
+(defun make-disassembled-tree (toplevel)
+  (let ((result-fw (make-hash-table))
+	(result-bw (make-hash-table)))
+    (flet ((sort-helper! (iseq table)
+	     (dolist (inst iseq)
+	       (let ((out-to (cl-waffe2/vm:wfop-out-to inst))
+		     (args   (cl-waffe2/vm:wfop-args   inst)))
+		 (dolist (out out-to)
+		   (setf (gethash (tensor-iid out) table)
+			 `(,@(gethash (tensor-iid out) table) ,@args)))))))
+
+      (multiple-value-bind (iseq-fw iseq-bw) (cl-waffe2/vm:compile-forward-and-backward toplevel)
+	(sort-helper! iseq-fw result-fw)
+	(sort-helper! iseq-bw result-bw)
+	;;(print (gethash (tensor-iid )))
+	(values result-fw result-bw)))))
+
 (defun dprint (toplevel &key (stream t) (print-device t) (indent-width 4) (initial-indent 0) (max-count nil) &aux (seen nil) (count 0))
   "
 ## [function] dprint
