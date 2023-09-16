@@ -313,5 +313,21 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 				(tensor-id (second (wfop-args inst)))))))
 
 
-
+(defun lazy-clone-wreckage (place tensor)
+  (declare (type AbstractTensor place tensor)
+	   (ignore tensor))
+  (tensor-vec place)
+  place)
+  
+;; Replaces all MoveTensorNode where :maybe-in-place=t with compiler functions
+(defun %prune-maybe-in-place! (iseq)
+  (declare (type list iseq)
+	   (optimize (speed 3)))
+  (loop for inst of-type WfInstruction in iseq
+	if (and (movetensor-p (wfop-node inst))
+		(not (movetensor-ignore-me (wfop-node inst)))
+		(move-maybe-in-place (wfop-node inst)))
+	  do (setf (wfop-op inst) #'lazy-clone-wreckage
+		   (wfop-node inst) #'(lambda () "ALLOC{INTERNAL}")))
+  nil)
 

@@ -6,9 +6,10 @@
 ;; Copying APIs
 ;; ===============================================================
 
-(defnode (MoveTensorNode (myself dtype &key (save-for-backward nil))
+(defnode (MoveTensorNode (myself dtype &key (save-for-backward nil) (maybe-in-place nil))
 	  :where (A[~] B[~] -> A[~])
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (maybe-in-place :initform nil :initarg :maybe-in-place :type boolean :reader move-maybe-in-place)
 		  (internal-lazy-save-for-backward :initform nil :accessor mv-lazy-sv4bw :type boolean)
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
@@ -42,9 +43,10 @@ A\\gets{B}
 
 "))
 
-(defnode (MoveScalarTensorNode (myself &key (save-for-backward nil))
+(defnode (MoveScalarTensorNode (myself &key (save-for-backward nil) (maybe-in-place nil))
 	  :out-scalar-p t
 	  :slots ((ignore-me :initform nil :accessor movetensor-ignore-me :type boolean)
+		  (maybe-in-place :initform nil :initarg :maybe-in-place :type boolean :reader move-maybe-in-place)
 		  (internal-lazy-save-for-backward :initform nil :accessor mv-lazy-sv4bw :type boolean)
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
@@ -55,8 +57,7 @@ A\\gets{B}
 				  (eql (tensor-attribute dy) :chain)
 				  (movetensor-ignore-me self))
 				 dout
-				 (!copy dout :force t))))
-		       
+				 (!copy dout :force t))))		       
 		       ;; dx/dy never shares pointer, so just moving to dx/dy is enough i guess.
 		       
 		       (values
@@ -75,22 +76,21 @@ A\\gets{B}
 			      ,x)
 			    ,y)))
 
-(declaim (ftype (function (AbstractTensor AbstractTensor &key (:force boolean)) (values AbstractTensor &optional))
+(declaim (ftype (function (AbstractTensor AbstractTensor &key (:force boolean) (:maybe-in-place boolean)) (values AbstractTensor &optional))
 		!move))
-
-(defun !move (place tensor &key (force nil))
+(defun !move (place tensor &key (force nil) (maybe-in-place nil))
   "
 ## [function] !move
 
 ```lisp
-(!move place tensor)
+(!move place tensor &key (force nil) (maybe-in-place nil))
 ```
 
 ```math
 A\\gets{B}
 ```
 
-The function !move returns a node which moves tensor's visible elements into place's visible elements.
+The function `!move` moves all the visible elements of tensor into all the visible elements of place.
 
 ### nodes
 
@@ -102,37 +102,46 @@ one of: `MoveTensorNode` `ScalarTensorNode`
 
 `tensor[AbstractTensor]` tensor to be referred.
 
-`force[boolean]` If t, the pruning of operation by cl-waffe2 will never done.
+`force[boolean]` If, pruning/in-place-mutation by compilers aren't applied
+
+`maybe-in-place[boolean]` Set T to ignore the copy; the operation is replaced with the function just returning `place`. Moves with this parameter, is displayed as `ALLOC{INTENRAL}` when disassembled.
 
 ### Output
 
-Unevaluated Copied Tensor."
+`Tensor[AbstractTensor]`
+"
   (if (and (scalar-p place)
 	   (scalar-p place))
       (forward (MoveScalarTensorNode :save-for-backward force) place tensor)
       ;; The problem is that: it is unknown whether place or tensor is returned until optimize-computation-node! is called.
-      (forward (MoveTensorNode (dtype place) :save-for-backward force)
+      (forward (MoveTensorNode (dtype place) :save-for-backward force :maybe-in-place maybe-in-place)
 	       place
 	       tensor)))
 
-(declaim (ftype (function (AbstractTensor &key (:force boolean)) (values AbstractTensor &optional))
+(declaim (ftype (function (AbstractTensor &key (:force boolean) (:maybe-in-place boolean)) (values AbstractTensor &optional))
 		!copy))
-(defun !copy (tensor &key (force nil))
+(defun !copy (tensor &key (force nil) (maybe-in-place nil))
   "
 ## [function] !copy
 
 ```lisp
-(!copy tensor)
+(!copy tensor &key (force nil) (maybe-in-place nil))
 ```
 
-The function !copy returns a node which makes a copy the tensor's visible area.
+The function !copy makes a clone of given tensor which is InputTensor, and moves the elements of tensor into the new tensor. broadcasted elements are keep broadcasted (if you want to create contiguous tensors, use `->contiguous`). Copies are prone to bottlenecks in the network, so a lot of special optimisation is applied. If you want to exclude it, set `:force` to t. Thanks to such optimisations, unlike other libraries, this function is used to create a temporary region of Tensor.
 
-Note that: the function `!copy` never creates a new tensor larger than (tensor-vec tensor) has, (i.e.: copying broadcasted tensor will return broadcasted and copied tensor).
+```lisp
+(defun my-add (a b)
+    (call (AddNode :float) (!copy a) b))
+```
 
-`!copy` is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns `InputTensor`, not `AbstractTensor`.
+In this case, the my-add function can be used as a function without side effects. However, after compilation, any unneeded copies are removed.
 
-Input:  Tensor[AbstractTensor]
-Output: Tensor[AbstractTensor]"
+If the value of tensor is immediately overwritten and the element does not need to be copied, then `:maybe-in-place` should be set to T. And, the elements of retuend tensor is filled random because it is brought from memory-pool.
+
+Input:  `Tensor[AbstractTensor]`
+Output: `Tensor[AbstractTensor]`
+"
   (let* ((out (make-input (actual-shape tensor) nil
 			  :create-from tensor
 			  :scalar-p (scalar-p tensor)
@@ -150,7 +159,7 @@ Output: Tensor[AbstractTensor]"
 	 (out (if broadcasted-p
 		  (apply #'!view out broadcasts)
 		  out))
-	 (res (!move out tensor :force force)))
+	 (res (!move out tensor :force force :maybe-in-place maybe-in-place)))
     ;; Extend flexible-p, because !copy is used to make a cache before using basic-function like !add
     (extend-states res tensor)))
 

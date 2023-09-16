@@ -961,7 +961,6 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
       (setf (slot-value result 'projected-p) (tensor-projected-p out))
       result)))
 
-
 (defun render-shape (tensor)
   "Returns a shape"
   (let ((flexible-p (tensor-flexible-p tensor))
