@@ -453,11 +453,15 @@ This function is setfable and inlined.
 				 :dtype (dtype tensor)
 				 :requires-grad nil)
 		    tensor)
-	  (set-grad (make-tensor
-		     (tensor-visible-shape tensor)
-		     :dtype (getf initargs :dtype)
-		     :requires-grad nil
-		     :order (getf initargs :order))
+	  (set-grad (or
+		     (when create-from
+		       (grad create-from))
+		     (make-tensor;;input
+		      (tensor-visible-shape tensor)
+		      ;;nil
+		      :dtype (getf initargs :dtype)
+		      :requires-grad nil
+		      :order (getf initargs :order)))
 		    tensor)))))
 
 (defun transfer-vec-information (from to)
@@ -960,7 +964,6 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 		(view out))))
       (setf (slot-value result 'projected-p) (tensor-projected-p out))
       result)))
-
 
 (defun render-shape (tensor)
   "Returns a shape"

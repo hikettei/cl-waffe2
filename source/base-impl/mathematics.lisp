@@ -117,11 +117,11 @@ OUT_{copy}\\gets{~(~a~)(X)}
 			    (forward (,scal-node-name) x (!copy x))))
 		      (if ->
 			  (forward (,node-name) x ->)
-			  (forward (,node-name) x (!copy x)))))))))
+			  (forward (,node-name) x (!copy x :maybe-in-place t)))))))))
 
   ;; define-elwise-node will define: nameNode, !name.
-
-  ;; To Investigate, the function !abs consumes 2x time larger memory than required.
+  ;; To Investigate: the function !abs consumes 2x time larger memory than required.
+  
   (define-elwise-node (abs #'abs)
       (t nil)
     ((self dout dx dy)
@@ -281,7 +281,7 @@ Output:
 	       n)))
     (if ->
 	(forward (ExptNode) x -> n)
-	(forward (ExptNode) x (make-clone x) n))))
+	(forward (ExptNode) x (!copy x :maybe-in-place t) n))))
 
 ;; !pow
 
