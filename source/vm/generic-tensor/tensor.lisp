@@ -950,13 +950,16 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
     (setf (tensor-facet out) :exist)
     (setf (slot-value out 'requires-grad) t)
     (setf (tensor-name out) nil)
-    (if (scalar-p tensor)
-	(make-tensor (tensor-vec tensor)
-		     :requires-grad t
-		     :dtype (dtype tensor)
-		     :order (order tensor))
-	;; detach from computation node.
-	(view out))))
+    (let ((result
+	    (if (scalar-p tensor)
+		(make-tensor (tensor-vec tensor)
+			     :requires-grad t
+			     :dtype (dtype tensor)
+			     :order (order tensor))
+		;; detach from computation node.
+		(view out))))
+      (setf (slot-value result 'projected-p) (tensor-projected-p out))
+      result)))
 
 
 (defun render-shape (tensor)
