@@ -453,12 +453,15 @@ This function is setfable and inlined.
 				 :dtype (dtype tensor)
 				 :requires-grad nil)
 		    tensor)
-	  (set-grad (make-input
-		     (tensor-visible-shape tensor)
-		     nil
-		     :dtype (getf initargs :dtype)
-		     ;;:requires-grad nil
-		     :order (getf initargs :order))
+	  (set-grad (or
+		     (when create-from
+		       (grad create-from))
+		     (make-tensor;;input
+		      (tensor-visible-shape tensor)
+		      ;;nil
+		      :dtype (getf initargs :dtype)
+		      :requires-grad nil
+		      :order (getf initargs :order)))
 		    tensor)))))
 
 (defun transfer-vec-information (from to)
