@@ -308,6 +308,12 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
     (simulate-memory-pool! iseq)
     (%in-place-vm-ops! iseq-bw-flat)
 
+    ;; Overwrite MoveTensor with maybe-in-place=t
+    ;; Copies, which is immediately overwritten, is replaced by a calculation that only makes an assignment.
+    (%prune-maybe-in-place! iseq)
+    (%prune-maybe-in-place! iseq-bw-flat)
+    
+
     ;; Iseq-bw-flat is well optimized by simulate-memory-pool! iseq
     ;; So there's no need to call it again (only to result the wrong result)
     ;; %in-place-vm-ops! is working enough.

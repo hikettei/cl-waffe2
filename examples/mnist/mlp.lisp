@@ -77,7 +77,7 @@
       (with-no-grad
 	(format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
 
-      (format t "Benchmaking (Forward Step, 1Epoch, n-sample=1000)...~%")
+      (format t "Benchmaking (Forward Step, 1Epoch, n-sample=600)...~%")
 
       (proceed-bench
        (!sum (softmax-cross-entropy
@@ -85,7 +85,7 @@
 	       (MLP-Sequence 784 256 10)
 	       (randn `(100 784)))
 	      (randn `(100 10))))
-       :n-sample 1000
+       :n-sample 600
        :backward t)
       compiled-model)))
 

@@ -5,9 +5,12 @@
 ;; [TODO] Add WfInstrucion to the docstring
 ;; WfInstruciton = cl-waffe2 IR
 
+;; {GRAD} <- Gradient Adder
+;; {INTERNAL} <- Rewritten by cl-waffe2 compiler
+
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (block-iseq nil) (fused-body-cache nil) (call-with-view nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (block-iseq nil) (fused-body-cache nil) (call-with-view nil) (grad-adder-p nil))))
   "
 ## [struct] WfInstruction
 
@@ -57,7 +60,8 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (bw-is-leaf-p nil :type boolean)
   (call-with-view call-with-view :type (or null cl-waffe2/vm.generic-tensor::Ranked-Loop))
   (fuse-prev fuse-prev :type (or null list))
-  (fused-body-cache fused-body-cache :type (or null list)))
+  (fused-body-cache fused-body-cache :type (or null list))
+  (grad-adder-p grad-adder-p :type boolean))
 
 ;; (defstruct (Composable-Operator <- separate call-with-view from body
 ;; (defun .cop (cop1 cop2) ...)
@@ -114,7 +118,10 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 		(format nil "~%")))))
 
 (defmethod instruction-opname ((inst WFInstruction))
-  (format nil "<WfInst[op=~a]"
+  (format nil "<WfInst[op=~a~a]"
+	  (if (wfop-grad-adder-p inst)
+	      "{GRAD}"
+	      "")
 	  (if (functionp (wfop-node inst))
 	      (funcall (wfop-node inst))
 	      (if (movetensor-p (wfop-node inst))
@@ -131,7 +138,10 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 (defmethod instruction-opname-table ((inst WFInstruction))
   (cl-ppcre:regex-replace-all
    "(\\n|\\s*$)"
-   (format nil "~a"
+   (format nil "~a~a"
+	   (if (wfop-grad-adder-p inst)
+	       "{GRAD}"
+	       "")
 	   (if (functionp (wfop-node inst))
 	       (funcall (wfop-node inst))
 	       (if (movetensor-p (wfop-node inst))
@@ -313,5 +323,21 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 				(tensor-id (second (wfop-args inst)))))))
 
 
-
+(defun lazy-clone-wreckage (place tensor)
+  (declare (type AbstractTensor place tensor)
+	   (ignore tensor))
+  (tensor-vec place)
+  place)
+  
+;; Replaces all MoveTensorNode where :maybe-in-place=t with compiler functions
+(defun %prune-maybe-in-place! (iseq)
+  (declare (type list iseq)
+	   (optimize (speed 3)))
+  (loop for inst of-type WfInstruction in iseq
+	if (and (movetensor-p (wfop-node inst))
+		(not (movetensor-ignore-me (wfop-node inst)))
+		(move-maybe-in-place (wfop-node inst)))
+	  do (setf (wfop-op inst) #'lazy-clone-wreckage
+		   (wfop-node inst) #'(lambda () "ALLOC{INTERNAL}")))
+  nil)
 

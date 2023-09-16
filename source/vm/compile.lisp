@@ -145,7 +145,8 @@
 	   (setf (gethash (tensor-iid tensor) dout-table) val)))
 
     (set-dout (wfop-self (car iseq)) dout-toplevel)
-    (loop for inst of-type WfInstruction in iseq
+    (loop ;;with grad-id-appeared-list list = nil
+	  for inst of-type WfInstruction in iseq
 	  if (get-dout (wfop-self inst))
 	    append
 	    (let* ((self   (wfop-self   inst))
@@ -175,7 +176,12 @@
 	       ;; Expand Gradient Adders
 	       (loop for var in args
 		     if (and (slot-value var 'requires-grad) (get-dout var))
-		       append (expand-gradient-adder var (get-dout var))))))))
+		       append (let* ((grad (get-dout var))
+				     (out  (expand-gradient-adder var grad)))
+								  ;; Ensure that grad never conflicts
+								  ;;:setq (not (find (the symbol (tensor-id grad)) grad-id-appeared-list)))))
+				;;(push (tensor-id grad) grad-id-appeared-list)
+				out)))))))
 
 
 (defvar *compile-option* nil)

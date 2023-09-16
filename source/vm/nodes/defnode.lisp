@@ -63,7 +63,6 @@ Return S expression to be embodied in the compiled code if needed, especially, d
 See also: `the implementation of JITLispTensor`.
 "))
 
-;; [TODO] Add to docs.
 (defgeneric on-finished-compiling (current-node)
   (:documentation "
 ## [generic] on-finished-compiling
@@ -163,6 +162,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :view-route (if (and traceable? *call-with-view-route*)
 		   *call-with-view-route*)))
 
+;; [TODO] Display Warnings when backend-priority aren't all compatible
 (defmacro with-devices ((&rest backend-priority) &body body)
   "
 ## [macro] with-devices

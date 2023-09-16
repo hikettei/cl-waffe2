@@ -435,7 +435,7 @@ If you wanted to insert a function to construct a computation node here, you can
         (asnode #'!softmax)
         (asnode #'!view 0) ;; Slicing the tensor: (!view x 0 t ...)
         (asnode #'!add 1.0) ;; X += 1.0
-        (asnode !matmul Y) ;; X <- Matmul(X, Y)
+        (asnode #'!matmul Y) ;; X <- Matmul(X, Y)
         )
 ```
 
@@ -578,6 +578,14 @@ See also: [Examples](https://github.com/hikettei/cl-waffe2/tree/master/examples)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
+The most challenging part of this framework is (8.), `call-with-view`. As far as I researched, Most of Previous works of JIT Compilers generates C/C++ codes and jit compiing them by invoking gcc but it means an unignorable overhead will occurs when compiling. cl-waffe2, however, compiles into Common Lisp Code, which is approximately 20x timers faster than invoking gcc, and with the appropriate optimization, it is not impossible to make it run as fast as C/C++. Plus, extensibility to other devices are also our major concerns. The call-with-view function maximizes the performance of calling foreign libraries; leave the less steps of iterations, the larger part of arrays, to foreign functions called via `cffi`. Compiled lambda fucntions by call-with-view are cached and dispatched depending on their dtypes, shapes, views... So, cl-waffe2 compiler performs signifcantly faster compiling time.
+
+(TODO)
+
+InputTensor is ...
+
+Plus, Common Lisp macro systems are enabled pseudo-AoT Shape-Error detecting ...
+
 ## Interop: Common Lisp Array and cl-waffe2 AbstractTensor
 
 (TODO)
@@ -597,7 +605,7 @@ cl-waffe2 is enough clever to detect Shape-Error and suggest an alternative aris
 If you do this, you will get the following error before **running the operation**
 
 ```lisp
-[cl-waffe] Shaping-Error: [Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invaild arguments.
+[Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invaild arguments.
 
  The constraint:
     ADDNODE-CPUTENSOR: (A[~] B[~] -> A[~])
@@ -605,7 +613,7 @@ If you do this, you will get the following error before **running the operation*
 Received:
     (forward
         (ADDNODE-CPUTENSOR ...)
-	 CPUTENSOR{FLOAT}(3)
+         CPUTENSOR{FLOAT}(3 3)
          CPUTENSOR{FLOAT}(3) ─ B: The length of ~~ do not match. The Rank is too low 
         )
 
@@ -616,11 +624,18 @@ B:
 Excepted:
     (forward
         (ADDNODE-CPUTENSOR ...)
+        A(3 3)
         B(3) ─> B: 
         )
 
 B:
+    ─ 
     ─ Use (!flexible tensor) to explict a rank-up rule of broadcasting.
+
+Predicted outputs of ADDNODE-CPUTENSOR:  ((3 3))
+
+The operation was:
+<Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>
 ```
 
 When adding or repeating ranks by broadcasting rule, it is necessary to declare in advance in which position they are to be added:
