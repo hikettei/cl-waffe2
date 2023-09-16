@@ -14,7 +14,6 @@
 		  (save-for-backward :initarg :save-for-backward :accessor movetensor-save-for-backward :type boolean)) ;; when t, ignored.
 	  
 	  :backward ((self dout dx dy)
-		     ;;(declare (ignore dx))
 		     (let ((dy-out
 			     (if (and
 				  (eql (tensor-attribute dy) :chain)
