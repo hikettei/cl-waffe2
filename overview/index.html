@@ -516,7 +516,7 @@ CONCEPTS&gt; (proceed-bench (!softmax (randn `(100 100))))
         (asnode #'!softmax)
         (asnode #'!view 0) ;; Slicing the tensor: (!view x 0 t ...)
         (asnode #'!add 1.0) ;; X += 1.0
-        (asnode !matmul Y) ;; X &lt;- Matmul(X, Y)
+        (asnode #'!matmul Y) ;; X &lt;- Matmul(X, Y)
         )
 </code></pre>
 <p>If the Composite can be implemented using only <code>call-&gt;</code>, the <a href="https://hikettei.github.io/cl-waffe2/utils/#macro-defsequence">defsequence</a> can be used for a short description:</p>
@@ -637,6 +637,10 @@ CONCEPTS&gt; (proceed-bench (!softmax (randn `(100 100))))
 10. Completed -&gt; Compiled-Composite is cached/inlined everywhere
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 </code></pre>
+<p>The most challenging part of this framework is (8.), <code>call-with-view</code>. As far as I researched, Most of Previous works of JIT Compilers generates C/C++ codes and jit compiing them by invoking gcc but it means an unignorable overhead will occurs when compiling. cl-waffe2, however, compiles into Common Lisp Code, which is approximately 20x timers faster than invoking gcc, and with the appropriate optimization, it is not impossible to make it run as fast as C/C++. Plus, extensibility to other devices are also our major concerns. The call-with-view function maximizes the performance of calling foreign libraries; leave the less steps of iterations, the larger part of arrays, to foreign functions called via <code>cffi</code>. Compiled lambda fucntions by call-with-view are cached and dispatched depending on their dtypes, shapes, views... So, cl-waffe2 compiler performs signifcantly faster compiling time.</p>
+<p>(TODO)</p>
+<p>InputTensor is ...</p>
+<p>Plus, Common Lisp macro systems are enabled pseudo-AoT Shape-Error detecting ...</p>
 <h2 id="interop-common-lisp-array-and-cl-waffe2-abstracttensor">Interop: Common Lisp Array and cl-waffe2 AbstractTensor</h2>
 <p>(TODO)</p>
 <p>See also: <a href="https://hikettei.github.io/cl-waffe2/utils/#tensor-facet-converting-abstracttensor-anything">Converting AbstractTensor and other arrays</a></p>
@@ -646,7 +650,7 @@ CONCEPTS&gt; (proceed-bench (!softmax (randn `(100 100))))
 <pre><code class="language-lisp">(!add (randn `(3 3)) (randn `(3)))
 </code></pre>
 <p>If you do this, you will get the following error before <strong>running the operation</strong></p>
-<pre><code class="language-lisp">[cl-waffe] Shaping-Error: [Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invaild arguments.
+<pre><code class="language-lisp">[Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invaild arguments.
 
  The constraint:
     ADDNODE-CPUTENSOR: (A[~] B[~] -&gt; A[~])
@@ -654,7 +658,7 @@ CONCEPTS&gt; (proceed-bench (!softmax (randn `(100 100))))
 Received:
     (forward
         (ADDNODE-CPUTENSOR ...)
-     CPUTENSOR{FLOAT}(3)
+         CPUTENSOR{FLOAT}(3 3)
          CPUTENSOR{FLOAT}(3) ─ B: The length of ~~ do not match. The Rank is too low 
         )
 
@@ -665,11 +669,18 @@ B:
 Excepted:
     (forward
         (ADDNODE-CPUTENSOR ...)
+        A(3 3)
         B(3) ─&gt; B: 
         )
 
 B:
+    ─ 
     ─ Use (!flexible tensor) to explict a rank-up rule of broadcasting.
+
+Predicted outputs of ADDNODE-CPUTENSOR:  ((3 3))
+
+The operation was:
+&lt;Node: ADDNODE-CPUTENSOR (A[~] B[~] -&gt; A[~])&gt;
 </code></pre>
 <p>When adding or repeating ranks by broadcasting rule, it is necessary to declare in advance in which position they are to be added:</p>
 <pre><code class="language-lisp">;; X[a b c] -&gt; X[~ a b c]
