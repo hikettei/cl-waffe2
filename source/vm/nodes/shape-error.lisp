@@ -156,11 +156,11 @@ The operation was:
 		      (loop for errors in error-by-position
 			    for act in received
 			    for nth fixnum upfrom 0
-			    for in-name in in-args
-			    if errors do
+			    for in-name in in-args do
 			      (princ #\Newline args)
 			      (princ "         " args)
 			      (princ (describe-tensor act) args)
+			    if errors do
 			      ;; If errors are too many: move into another place
 			      (if (> (length errors) 1)
 				  (progn
@@ -170,7 +170,9 @@ The operation was:
 				      (princ (msgof-in-short err) args)
 				      (princ " " args)))
 				  (progn
-				    (format args " ── ~a" (msgof-content (car errors)))))))
+				    (format args " ── ~a" (msgof-content (car errors)))))
+			    else do
+			      (format nil "~%         ~a" (describe-tensor act))))
 		    ;; print-laters
 		    (if print-laters
 			(with-output-to-string (tmp)			  
@@ -185,11 +187,11 @@ The operation was:
 		      (loop for errors in error-by-position
 			    for name in in-args
 			    for act  in received
-			    for nth upfrom 0
-			    if errors do
+			    for nth upfrom 0 do
 			      (princ #\Newline args)
 			      (princ "        " args)
-			      (format args "~a~a" name (shape act))
+			      (format args "~a~a" name (shape act))			      
+			    if errors do
 			      (if (> (length errors) 1)
 				  (format args " ─> ~a: " name)
 				  (format args " ── ~a" (msgof-suggestion (car errors))))))
