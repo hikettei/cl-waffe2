@@ -198,6 +198,7 @@
 ;;  Inference/Exports
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; [TODO] Reusing previous inputs
 (defun compile-gpt2-model (model &key (disassemble nil) (bench nil))
   (with-no-grad
     (let* ((compiled-model (build (call model (make-input `(batch-size N) :prev)) :inputs `(:prev))))
@@ -218,10 +219,10 @@
   (let ((decode-list))
     (dotimes (i length)
       (format t "[~a/~a]~%" i length)
-      (let ((result (proceed (->scal (!argmax (lm-head model (!view (forward compiled-model source) t -1))))))
+      (let ((result    (proceed (->scal (!argmax (lazy-print (lm-head model (!view (forward compiled-model source) t -1 t)))))))
 	    (new-array (ax+b `(,(car (shape source)) ,(1+ (second (shape source)))) 0 0)))
 	(push (tensor-vec result) decode-list)
-	(with-facets ((s* (source :direction 'simple-array))
+	(with-facets ((s* (source    :direction 'simple-array))
 		      (a* (new-array :direction 'simple-array)))
 	  (loop with s* list = (coerce s* 'list)
 		for idx upfrom 0 below (second (shape new-array)) do
@@ -229,7 +230,6 @@
 					  (+ 0.0 (tensor-vec result))))))
 	(setq source new-array)))
     (reverse decode-list)))
-
 
 ;; Workload:
 ;; 1. inference anyway
