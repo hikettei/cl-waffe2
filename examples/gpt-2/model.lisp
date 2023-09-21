@@ -94,9 +94,8 @@
 ;; Forward process of gpt2-layer
 (defmethod gpt2layer-call ((self GPT2Layer) x past)
   (declare (type AbstractTensor x)
-	   (type (or null AbstractTensor) past))
-  (with-slots ((orig orig)
-	       (ln-1-g ln-1-g)
+	   (type (or null list) past))
+  (with-slots ((ln-1-g ln-1-g)
 	       (ln-1-b ln-1-b)
 	       (ln-2-g ln-2-g)
 	       (ln-2-b ln-2-b)
@@ -118,7 +117,7 @@
 		     ;; Projection: 786 -> 786*3		    
 		     (asnode #'!matmul attn-attn-w) ;; X[Batch N Embedding_Dim] @ W[786 2304] + B[2304]
 		     (asnode #'!add (%transform attn-attn-b[i] -> [~ i]))
-		     (assetq (nil present) #'SelfAttention past orig) ;; NIL, PRESENT <- SelfAttention(past, orig-model)
+		     (assetq (nil present) #'SelfAttention past) ;; NIL, PRESENT <- SelfAttention(x, past)
 		     (asnode #'!matmul attn-proj-w)
 		     (asnode #'!add (%transform attn-proj-b[i] -> [~ i]))))
 	   (x (!add x attn)) ;; Residual Connection
@@ -132,7 +131,7 @@
 		     (asnode #'!matmul mlp-proj-w)
 		     (asnode #'!add    (%transform mlp-proj-b[i] -> [~ i])))))
       ;; Residual Connection
-      (!add x m))))
+      (values (!add x m) present))))
 
 
 (defmodel (GPT2 (self &key (save-dir "./examples/gpt-2/assets/models/gpt-2-117M/gpt2-waffe2/model"))
@@ -200,59 +199,40 @@
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defun compile-gpt2-model (&key (use-instead nil) (disassemble nil))
-  (let* ((model (or use-instead (GPT2)))
-	 (model-past
-	   (build
-	    (call model
-		  (make-input `(batch-size N0) :prev)
-		  (make-input `(batch-size N1 embedding-dim) :past))
-	    :inputs `(:prev :past)))
-	 (model-no-past
-	   (build
-	    (call
+  (with-no-grad
+    (let* ((model (or use-instead (GPT2))))
+
+      (multiple-value-bind (out presents)
+	  (call
+	   model
+	   (make-input `(batch-size N0) :prev))
+	(multiple-value-bind (out1 presents1)
+	    (apply
+	     #'call
 	     model
 	     (make-input `(batch-size N0) :prev)
-	     nil)
-	    :inputs `(:prev))))
+	     presents)
+	  (declare (ignore presents1))
 
-    (when disassemble
-      (disassemble-waffe2-ir
-       (call model (make-input `(batch-size N0) :prev) nil)))
-    
-    (values
-     model
-     #'(lambda (prev &rest past)
-	 (if (null past)
-	     (forward model-no-past prev)
-	     (apply #'forward model-past prev past))))))
+	  (let ((model-initial (print (build out :inputs `(:prev))))
+		(model-subsequent (build out1 :inputs `(:prev))))
+	    
+	    (when disassemble
+	      (disassemble-waffe2-ir
+	       (call model (make-input `(batch-size N0) :prev))))
+	    
+	    (values
+	     model
+	     #'(lambda (prev first-p)
+		 (if first-p
+		     (forward model-initial    prev)
+		     (forward model-subsequent prev))))))))))
 
 (defun start-token () (gethash "<|endoftext|>" *encoder-json*))
 
 (defun gpt2-inference (model compiled-model source input &key (length 10) (temperature 1.0))
   (declare (ignore temperature))
-  ;;mem-k mem-v: Not used for a now
-  (setf (slot-value model 'memory-k) nil
-        (slot-value model 'memory-v) nil)
-
-  (let ((result))
-    (loop with slen fixnum   = (second (shape input))
-	  with batch-size    = (car    (shape source))
-	  with embedding-dim = (third  (shape source))
-	  for nth fixnum upfrom slen below (+ slen length) do
-	    (format t "~a/~a...~%" nth (+ slen length))
-	    (setq source (get-input compiled-model :x-source))
-	    (setq input  (get-input compiled-model :x-input))
-	    (let* ((N (second (shape source))))
-	      (let* ((out     (forward compiled-model))
-		     (tmp     (make-input `(1 ,N ,(third (shape out))) nil))
-		     (tmp     (->contiguous (!view (!move tmp out) 0 -1)))
-		     (out     (lm-head model tmp))
-		     (idx     (tensor-vec (proceed (->scal (!argmax (!softmax out) :axis 1))))))
-
-		(set-input compiled-model :x-source (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
-		(extend-source-input-2d compiled-model :x-input  input  nth (coerce idx 'single-float))
-		(push idx result))))
-    (reverse result)))
+  nil)
 
 ;; Workload:
 ;; 1. inference anyway
@@ -263,6 +243,11 @@
 
 (defun launch-repl (&key (use-model nil) (length 50) (temperature 1.0))
   (format t "length=~a~%" length)
+  (print (compile-gpt2-model :disassemble t))
+
+  (return-from launch-repl)
+  ;; TODO
+  
   (with-no-grad
     (let ((model (or use-model (GPT2))))
       (format t "[INFO] The model was restored from the trained weight!~%")
