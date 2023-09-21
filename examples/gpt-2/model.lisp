@@ -219,7 +219,7 @@
   (let ((decode-list))
     (dotimes (i length)
       (format t "[~a/~a]~%" i length)
-      (let ((result    (proceed (->scal (!argmax (lazy-print (lm-head model (!view (forward compiled-model source) t -1 t)))))))
+      (let ((result    (proceed (->scal (!argmax (lm-head model (!view (forward compiled-model source) t -1 t))))))
 	    (new-array (ax+b `(,(car (shape source)) ,(1+ (second (shape source)))) 0 0)))
 	(push (tensor-vec result) decode-list)
 	(with-facets ((s* (source    :direction 'simple-array))
