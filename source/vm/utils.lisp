@@ -15,6 +15,8 @@
                            :initial-value (apply fn1 args))))
       #'identity))
 
+(declaim (ftype (function (AbstractTensor) list) topological-sort))
+#+sbcl(setf sb-ext:*inline-expansion-limit* 30)
 (defun topological-sort (var)
   (declare (type AbstractTensor var)
 	   (optimize (speed 3)))
@@ -32,6 +34,7 @@
 		     (dolist (prev (tensor-variables v))
 		       (top-sort-helper prev (detach-p v)))
 		     (push v top-sort)))))
+      #+sbcl(declare (inline top-sort-helper))
       (top-sort-helper var (detach-p var))
       (reverse top-sort))))
 

@@ -35,7 +35,7 @@
 ;;     - VMの最適化
 
 ;;  2. モデル gc-reachable
-;;
+;;  3. Fusion Path
 ;;
 
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
