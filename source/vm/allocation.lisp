@@ -15,7 +15,7 @@
 ;;    |
 ;;    | Creating a new scope
 ;;    -------|- [build: %vm-move] ----------
-;;           | A -> (R1, R2) B -> (R1, R2) | <- Similary, the new scope is created 
+;;           | A -> (R1, R2) B -> (R1, R2) | <- In the same way, the new scope is created
 ;;           | Pool = NIL                  |    The superior tensor's storage vec is filled with something
 ;;           ------------------------------|    So they never use %vm-move scope memory-pool
 ;;    |
@@ -27,6 +27,16 @@
 ;; ^ defmodel-as :asif :node is implemented by it.
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;
+;; [TODO]
+;;  1. コンパイル時間の削減
+;;     - compiler-macroでcall/forwardをインライン化
+;;     - VMの最適化
+
+;;  2. モデル gc-reachable
+;;
+;;
 
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
@@ -261,16 +271,19 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	    collect inst)))
 
 (defun iseq-update-tensor-name! (iseq from to)
+  (declare (type list iseq)
+	   (type symbol from to)
+	   (optimize (speed 3)))
   (loop for inst in iseq do
-    (dolist (o (remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-id))
+    (dolist (o (wfop-out-to inst));;(remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-id))
       (when (eql (tensor-id o) from)
 	(when (not (tensor-id-lock-p o))
 	  (setf (tensor-id o) to))))
-    (dolist (a (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id))
+    (dolist (a (wfop-args inst));;(remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id))
       (when (eql (tensor-id a) from)
 	(when (not (tensor-id-lock-p a))
 	  (setf (tensor-id a) to))))))
-	
+
 (defun optimize-memory-locality! (iseq-fw iseq-bw)
   (declare (type list iseq-fw)
 	   (type (or null list) iseq-bw))

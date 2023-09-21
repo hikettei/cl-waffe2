@@ -251,13 +251,19 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
 	    (values forward (or bw backward) leaves dout allocation)))))))
 
-(defun findout-origin (table tensor &key (limit 10))
-  (let ((last-ref (tensor-id tensor)))
-    (loop while t for n upfrom 0 do
-      (if (> n limit) (return-from findout-origin last-ref))      
-      (if (null (gethash last-ref table))
-	  (return-from findout-origin last-ref)
-	  (setq last-ref (gethash last-ref table))))))
+#+sbcl(declaim (inline findout-origin))
+(let (#+sbcl(sb-ext:*inline-expansion-limit* 4))
+  (defun findout-origin (table tensor &key (limit 10))
+    (declare (type hash-table table)
+	     (type AbstractTensor tensor)
+	     (optimize (speed 3))
+	     (type fixnum limit))
+    (let ((last-ref (tensor-id tensor)))
+      (loop while t for n fixnum upfrom 0 do
+	(if (> n limit) (return-from findout-origin last-ref))      
+	(if (null (gethash last-ref table))
+	    (return-from findout-origin last-ref)
+	    (setq last-ref (gethash last-ref table)))))))
 
 (defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
   "
