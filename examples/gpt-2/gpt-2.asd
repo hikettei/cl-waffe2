@@ -15,6 +15,7 @@
   :depends-on (:cl-waffe2 :alexandria :numpy-file-format :jonathan :cl-ppcre)
   :components ((:file "package")
 	       (:file "utils")
-	       (:file "model")))
+	       (:file "model")
+	       (:file "tokenizer")))
 
 

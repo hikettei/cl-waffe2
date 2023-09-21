@@ -100,21 +100,13 @@ In your terminal, and cl-waffe2 will load it."))
 				  :fuse nil)
 			       ,ctx-out))))))
 
-(defun !gpt2-load-pe (ctx-out ctx wte wpe)
-  (call
-   (GPT2PositionalEmbedding
-    (read-config :n-vocab)
-    (read-config :n-ctx)
-    (read-config :n-emb))
-   ctx wte wpe ctx-out))
-
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Defines Activations
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; [TODO] Move this into :cl-waffe2/nn package
 ;; eps=1.0e-5, [FixME] rounding error of mean
-(defun !gpt2-layernorm (x g b &key (eps 1.0e-5))
+(defun LayerNorm-Revisit (x g b &key (eps 1.0e-5))
   ;; X ... [N, Sentene_length, Embedding_DIM]
   ;; g/b... [Embedding_DIM]
 
@@ -137,20 +129,21 @@ In your terminal, and cl-waffe2 will load it."))
   (!add (!matmul (!t x) (!flexible weight))
 	(%transform bias[i] -> bias[~ i])))
 
+(defmacro asSetq ((&rest out-binds) func &rest inputs &aux (out (gensym)) (x (gensym)))
+  `(asnode
+    #'(lambda (,x)
+	(let ((,out (multiple-value-list (funcall ,func ,x ,@inputs))))
+	  ,@(loop for out in out-binds
+		  for nth upfrom 0
+		  if out
+		    collect `(setq ,out (nth ,nth ,out)))
+	  (apply #'values ,out)))))
+	
+
 
 ;; Known issue:
 ;; SLEEF stanh overflows under |x| > 10000.0 range...
 ;; GeLU but tanh is safe
-
-(defun !gelu-lisptanh (x)
-  (!* 0.5 x
-      (!+ 1
-	  (let ((o (!* (coerce (sqrt (/ 2.0 pi)) (dtype->lisp-type (dtype x)))
-		       (!+ x
-			   (!* 0.044715 (!expt x 3))))))
-	    (with-devices (LispTensor)
-	      (!tanh o))))))
-
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  MHA
@@ -174,7 +167,7 @@ In your terminal, and cl-waffe2 will load it."))
 	 (x-shape `(,@(butlast (shape x) 2) ,(apply #'* (last (shape x) 2)))))
     (apply #'!reshape x x-shape)))
 
-(defun self-attention (x gpt2) ;; X ...[N 2304]
+(defun SelfAttention (x past gpt2) ;; X ...[N 2304]
   (with-slots ((memory-k memory-k) (memory-v memory-v)) gpt2
     (let* ((K (split-heads x :K))
 	   (V (split-heads x :V))
