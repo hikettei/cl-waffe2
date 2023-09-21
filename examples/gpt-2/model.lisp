@@ -1,13 +1,9 @@
 
 (in-package :gpt-2-example)
 
-;; In order to measure the performance of Fusion Ops, I've deciced to make a inference on GPT-2 on cl-waffe2 in advance.
-
-;; This file provides an example case of inferecing GPT-2 Model with cl-waffe2
-
-;; [TODO] Python script Converting ONNX model into cl-waffe2 model (make any format? for cl-waffe2?)
-;; [TODO] Add: EmbeddingLayer, !split !concatenate?
-
+;; 
+;; [TODO] Opt: Compiling !matmul
+;;        Use: Standard APIs
 
 (defparameter *model-params*
   `((:n-vocab . 50257)
@@ -70,7 +66,7 @@
 		   (mlp-proj-b :initform nil)
 
 		   (nth-layer :initarg :nth-layer :initform nil))
-	   :on-call-> gpt2-layer-call)
+	   :on-call-> gpt2layer-call)
   (let* ((layer-dir (format nil "~a/h~a" save-dir nth-layer)))
     ;; layer-dir = save_dir/hN/...
     (setf (slot-value self 'ln-1-g)      (load-npy "~a/ln_1/g.npy" layer-dir)
@@ -96,9 +92,10 @@
   (format stream "~%N_LAYER=~a" (slot-value model 'nth-layer)))	  
 
 ;; Forward process of gpt2-layer
-(defmethod gpt2-layer-call ((self GPT2Layer) x)
-  (with-slots ((orig orig)
-	       (ln-1-g ln-1-g)
+(defmethod gpt2layer-call ((self GPT2Layer) x past)
+  (declare (type AbstractTensor x)
+	   (type (or null list) past))
+  (with-slots ((ln-1-g ln-1-g)
 	       (ln-1-b ln-1-b)
 	       (ln-2-g ln-2-g)
 	       (ln-2-b ln-2-b)
@@ -112,49 +109,80 @@
 	       (attn-proj-b attn-proj-b))
       self
 
-    (let* ((attn
+    ;; GPT2Layer = Block(LayerNorm, Attention, LayerNorm, MLP)
+    (let* ((present nil)
+	   (attn
 	     (call-> x
-		     (asnode #'!gpt2-layernorm ln-1-g ln-1-b)
-		     ;; Projection: 786 -> 786*3
+		     (asnode #'LayerNorm-Revisit ln-1-g ln-1-b)
+		     ;; Projection: 786 -> 786*3		    
 		     (asnode #'!matmul attn-attn-w) ;; X[Batch N Embedding_Dim] @ W[786 2304] + B[2304]
 		     (asnode #'!add (%transform attn-attn-b[i] -> [~ i]))
-		     (asnode #'self-attention orig)
+		     (assetq (nil present) #'SelfAttention past) ;; NIL, PRESENT <- SelfAttention(x, past)
 		     (asnode #'!matmul attn-proj-w)
 		     (asnode #'!add (%transform attn-proj-b[i] -> [~ i]))))
 	   (x (!add x attn)) ;; Residual Connection
 	   (m
 	     (call-> x
 		     ;; Feed Forward Network
-		     (asnode #'!gpt2-layernorm ln-2-g ln-2-b)
+		     (asnode #'LayerNorm-Revisit ln-2-g ln-2-b)
 		     (asnode #'!matmul mlp-fc-w) ;; X(768 N).T @ W(1 768 3072) + B(3072)
 		     (asnode #'!add    (%transform mlp-fc-b[i]   -> [~ i]))
 		     (asnode #'!gelu-lisptanh)
 		     (asnode #'!matmul mlp-proj-w)
 		     (asnode #'!add    (%transform mlp-proj-b[i] -> [~ i])))))
       ;; Residual Connection
-      (!add x m))))
+      (values (!add x m) present))))
 
 
 (defmodel (GPT2 (self &key (save-dir "./examples/gpt-2/assets/models/gpt-2-117M/gpt2-waffe2/model"))
-	   :slots ((ln-f-g :initform nil)
-		   (ln-f-b :initform nil)
-		   (wte    :initform nil)
-		   (wpe    :initform nil)
-		   (layers :initform nil)
-		   		   
-		   (memory-k :initform nil)
-		   (memory-v :initform nil))
-	   :on-call-> gpt2-call)
-  (let ((n-layer (read-config :n-layer)))
-    (setf (slot-value self 'wte)    (load-npy "~a/wte.npy" save-dir)
-	  (slot-value self 'wpe)    (load-npy "~a/wpe.npy" save-dir)
-	  
-	  (slot-value self 'ln-f-g) (load-npy "~a/ln_f/g.npy" save-dir)
-	  (slot-value self 'ln-f-b) (load-npy "~a/ln_f/b.npy" save-dir))
-	  
+	   :slots ((ln        :initform nil)
+		   (embedding :initform nil)
+		   (wte       :initform nil)
+		   (wpe       :initform nil)
+		   (layers    :initform nil)))
+  (let ((n-layer (read-config :n-layer)))    
+    (setf (slot-value self 'embedding) (GPT2PositionalEmbedding
+					(read-config :n-vocab)
+					(read-config :n-ctx)
+					(read-config :n-emb))
+	  (slot-value self 'wte)    (load-npy "~a/wte.npy" save-dir)
+	  (slot-value self 'wpe)    (load-npy "~a/wpe.npy" save-dir))
+
+    (let* ((alpha (load-npy "~a/ln_f/g.npy" save-dir))
+	   (beta  (load-npy "~a/ln_f/b.npy" save-dir)))
+      ;; Initializing alpha beta when creating LayerNorm
+      ;; Is nothing but waste of memory??
+      (setf (slot-value self 'ln) (LayerNorm (shape alpha))
+	    (alpha-of (slot-value self 'ln)) alpha
+	    (beta-of (slot-value self 'ln)) beta))    
+    
     (setf (slot-value self 'layers)
 	  (loop for layer-n upfrom 0 below n-layer
 		collect (GPT2Layer self save-dir layer-n)))))
+
+(defmethod call ((self GPT2) &rest inputs)
+  ;; Inputs: Prev Past1 Past2 Past3 ...
+  (let ((prev        (car inputs))
+	(layer-pasts (cdr inputs))
+	(presents nil))
+    (with-slots ((layers layers) (embedding embedding) (wte wte) (wpe wpe) (ln ln)) self
+      ;; Return: (values output presents)
+      (values
+       (call->
+	(make-input `(,(car (shape prev)) ,(second (shape prev)) ,(read-config :n-emb)) nil)
+	
+	;; Composes: [PE] -> [N * Layers] -> LayerNorm
+	(asnode #'(lambda (x) (call embedding prev wte wpe x)))
+	(asnode
+	 #'(lambda (x-out &aux (present nil))
+	     (loop for layer in layers
+		   for n upfrom 0 do
+		     (multiple-value-setq (x-out present)
+		       (call layer x-out (nth n layer-pasts)))
+		     (push present presents))
+	     x-out))
+	ln)
+       presents))))
 
 ;; Customized printings
 (defmethod on-print-object ((model GPT2) stream)
@@ -163,217 +191,45 @@
 	    (dolist (layer (slot-value model 'layers))
 	      (format out "~a~%" layer)))))
 
-(defun !gpt2-layers (x-out self)
-  (with-slots ((layers layers)) self
-    (loop for layer in layers do
-      (setq x-out (call layer x-out)))
-    x-out))
-
-;; Forward process for GPT2
-(defmethod gpt2-call ((self GPT2) x-out x)
-  (with-slots ((wte wte) (wpe wpe) (ln-f-g ln-f-g) (ln-f-b ln-f-b)) self
-    (call-> x-out
-	    (asnode #'!gpt2-load-pe   x wte wpe) ;; X-out <- GPT2Pe(x, wte, wpe)
-	    (asnode #'!gpt2-layers    self)
-	    (asnode #'!gpt2-layernorm ln-f-g ln-f-b))))
-
 (defmethod lm-head ((self GPT2) x)
   (!matmul (!rankup x -1) (!t (slot-value self 'wte))))
-
-
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;;  Tokenizers
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-;; Reference: https://github.com/graykode/gpt-2-Pytorch/blob/master/GPT2/encoder.py
-
-(defparameter *encoder-json* nil)
-(defparameter *decoder-json* nil)
-
-(defparameter *pat* (create-scanner "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+"))
-
-(defparameter *bpe-merges* nil)
-
-(defun load-bpe-merges (&key (save-path "./examples/gpt-2/assets/models/gpt-2-117M/vocab.bpe"))
-  (let* ((bpe (uiop:read-file-string save-path))
-	 (bpe (subseq bpe 1 (1- (length bpe))))
-	 (out (make-hash-table :test #'equal))
-	 (pairs (cdr (loop for mstr in (split "\\n" bpe) collect (split " " mstr)))))
-    (loop for p in pairs
-	  for i upfrom 0 do
-	    (setf (gethash p out) i))
-    (setf *bpe-merges* out)
-    t))
-
-(defun load-encoder-json (&key (save-path "./examples/gpt-2/assets/models/gpt-2-117M/encoder.json"))
-  (format t "[INFO] Loading encoder.json ...~%")
-  (let ((encoder-str (time (parse (uiop:read-file-string save-path))))
-	(dict (make-hash-table :test #'equal))
-	(dec-dict (make-hash-table)))
-    (format t "[INFO] Parsing was done... n_vocab=~a~%" (/ (length encoder-str) 2))
-    (loop while encoder-str do
-      (let ((key (pop encoder-str))
-	    (val (pop encoder-str)))
-	(setf (gethash val dec-dict) (format nil "~a" key))
-	(setf (gethash (format nil "~a" key) dict) val)))
-    (setf *decoder-json* dec-dict)
-    (setf *encoder-json* dict)))
-
-(defun get-pairs (token)
-  (declare (type string token))
-
-  ;; token ... Hi Gthere, ...
-  (loop for index fixnum upfrom 0 below (1- (length token))
-	collect
-	(list (string (aref token index)) (string (aref token (1+ index))))))
-
-(defun countup-nth (word token n)
-  (let ((count 0)
-	(n (1+ n)))
-    (loop for tkn in token
-	  for pos upfrom 0
-	  if (equal tkn word)
-	    do (incf count 1)
-	  if (= count n)
-	    do (return-from countup-nth pos))))
-
-(defun bpe-split (token)
-  (declare (type string token))
-  (let ((word (list token))
-	(out-of-range (* -1 (+ 1 (length (hash-table-keys *bpe-merges*)))))
-	(pairs (get-pairs token)))
-
-    (loop named bpe-iter while t do
-      (let* ((smallest (loop for pair in pairs minimize (or (gethash pair *bpe-merges*) out-of-range)))
-	     (bigram   (find smallest pairs :test #'eql :key #'(lambda (x) (gethash x *bpe-merges*)))))
-	(when (null bigram)
-	  (return-from bpe-iter))
-
-	(multiple-value-bind (first second) (apply #'values bigram)
-	  (let ((new-word)
-		(i 0))
-	    (loop named bpe-word-iter while (< i (length word)) do
-	      (if (or (null (find first word :test #'equal))
-		      (not (< i (count first word :test #'equal))))
-		  (progn
-		    ;; Break
-		    (setq new-word
-			  `(,@new-word
-			    ,@(subseq word i (length word))))
-		    (return-from bpe-word-iter))
-		  (let ((j (countup-nth first word i)))
-		    (setq new-word
-			  `(,@new-word
-			    ,@(subseq word i j)))
-		    (setq i j)
-		    (if (and (equal (nth i word) first)
-			     (< i (1- (length word)))
-			     (equal (nth (1+ i) word) second))
-			(progn
-			  (setq new-word
-				`(,@new-word
-				  ,(concatenate 'string first second)))
-			  (incf i 2))
-			(progn
-			  (setq new-word
-				`(,@new-word ,(nth i word)))
-			  (incf i 1))))))
-	    (setq word new-word)
-	    (if (= (length word) 1)
-		(return-from bpe-iter)
-		(setq pairs (get-pairs word)))))))
-    word))
-
-
-(defun encode-sentence (sentence) ;; (read-line)
-  (declare (type string sentence))
-  (let ((tokens (all-matches-as-strings *pat* sentence))
-	(bpe-tokens))
-    (loop for token in tokens do
-      (let* ((token (loop for n upfrom 0 below (length token)
-			  collect (gethash (char-code (aref token n)) *byte2unicode*)))
-	     (token (apply #'concatenate 'string token)))
-	(dolist (bpetoken (bpe-split token))
-	  (push (+ 0.0 (or (gethash bpetoken *encoder-json*) 0)) bpe-tokens))))
-    (let ((tokens (reverse bpe-tokens)))
-      (change-facet
-       (make-array `(1 ,(length tokens))
-		   :element-type 'single-float
-		   :initial-contents `(,tokens))
-       :direction 'AbstractTensor))))
-
-(defun decode-sentence (list)
-  (declare (type list list))
-  (let ((text (apply #'concatenate 'string (loop for token in list collect (gethash token *decoder-json*)))))
-    (with-output-to-string (out)
-      (loop for pos fixnum upfrom 0 below (length text) do
-	(let ((code (gethash (char-code (aref text pos)) *byte2unicode*)))
-	  (if code
-	      (princ code out)
-	      (princ " " out)))))))
-
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Inference/Exports
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-(defparameter N 0 "Indicates the length of sentence")
+;; [TODO] Reusing previous inputs
+(defun compile-gpt2-model (model &key (disassemble nil) (bench nil))
+  (with-no-grad
+    (let* ((compiled-model (build (call model (make-input `(batch-size N) :prev)) :inputs `(:prev))))
+      (when disassemble
+	(disassemble-waffe2-ir (call model (make-input `(batch-size N) :prev))))
 
-;; [TODO] Optimize it:
-;; [TODO] Impl: !concat
-(defun extend-source-input (model name source N)
-  ;; Extend the source into N+1 Area
-  (set-input model
-	     name
-	     (let ((out (!move (!view
-				(make-tensor `(,(car (shape source)) ,(+ 1 N) ,(third (shape source))))		
-				t
-				`(0 ,N))
-			       source)))
-	       (proceed (->contiguous (!view out t `(0 ,(+ 1 N))))))))
-
-(defun extend-source-input-2d (model name source N extend-with)
-  ;; Extend the source into N+1 Area
-  (set-input model
-	     name
-	     (let ((out (!move (!view
-				(make-tensor `(,(car (shape source)) ,(+ 1 N)))
-				t
-				`(0 ,N))
-			       source)))
-	       (proceed (->contiguous (!view out t `(0 ,(+ 1 N)))))))
-  (dotimes (batch-n (car (shape source)))
-    (setf (mref (get-input model name) batch-n N) extend-with)))
+      (when bench
+	(proceed-bench
+	 (call model (ax+b `(1 10) 0 1))))
+      
+      compiled-model)))
 
 (defun start-token () (gethash "<|endoftext|>" *encoder-json*))
 
-(defun gpt2-inference (model compiled-model source input &key (length 10) (temperature 1.0))
+(defun gpt2-inference (model compiled-model source &key (length 10) (temperature 1.0))
   (declare (ignore temperature))
-  ;;mem-k mem-v: Not used for a now
-  (setf (slot-value model 'memory-k) nil
-        (slot-value model 'memory-v) nil)
 
-  (let ((result))
-    (loop with slen fixnum   = (second (shape input))
-	  with batch-size    = (car    (shape source))
-	  with embedding-dim = (third  (shape source))
-	  for nth fixnum upfrom slen below (+ slen length) do
-	    (format t "~a/~a...~%" nth (+ slen length))
-	    (setq source (get-input compiled-model :x-source))
-	    (setq input  (get-input compiled-model :x-input))
-	    ;;(print "INPUT")
-	    ;;(print (tensor-vec input))
-	    (let* ((N (second (shape source))))
-	      (let* ((out     (forward compiled-model))
-		     (tmp     (make-input `(1 ,N ,(third (shape out))) nil))
-		     (tmp     (->contiguous (!view (!move tmp out) 0 -1)))
-		     (out     (lm-head model tmp))
-		     (idx     (tensor-vec (proceed (->scal (!argmax (!softmax out) :axis 1))))))
-
-		(set-input compiled-model :x-source (make-tensor `(,(car (shape source)) ,(1+ N) ,(third (shape source)))))
-		(extend-source-input-2d compiled-model :x-input  input  nth (coerce idx 'single-float))
-		(push idx result))))
-    (reverse result)))
+  (let ((decode-list))
+    (dotimes (i length)
+      (format t "[~a/~a]~%" i length)
+      (let ((result    (proceed (->scal (!argmax (lm-head model (!view (forward compiled-model source) t -1 t))))))
+	    (new-array (ax+b `(,(car (shape source)) ,(1+ (second (shape source)))) 0 0)))
+	(push (tensor-vec result) decode-list)
+	(with-facets ((s* (source    :direction 'simple-array))
+		      (a* (new-array :direction 'simple-array)))
+	  (loop with s* list = (coerce s* 'list)
+		for idx upfrom 0 below (second (shape new-array)) do
+		  (setf (aref a* idx) (or (nth idx s*)
+					  (+ 0.0 (tensor-vec result))))))
+	(setq source new-array)))
+    (reverse decode-list)))
 
 ;; Workload:
 ;; 1. inference anyway
@@ -384,6 +240,7 @@
 
 (defun launch-repl (&key (use-model nil) (length 50) (temperature 1.0))
   (format t "length=~a~%" length)
+  
   (with-no-grad
     (let ((model (or use-model (GPT2))))
       (format t "[INFO] The model was restored from the trained weight!~%")
@@ -403,27 +260,15 @@
 
 	  (format t "[INFO] Compiling GPT2 Model...~%")
 	  
-	  (let* ((source         (make-input `(1 N 768) :x-source))  ;; (Batch_Size Sentence_Length Embedding_dim)
-		 (input-tensor   (make-input `(1 N)     :x-input))   ;; (Batch_Size Sentence_Length)
-		 (compiled-model (time (build (call model source input-tensor)))))
-	    
+	  (let* ((compiled-model (time (compile-gpt2-model model))))	    
 	    (if (equal input "benchmark")
 		(progn
 		  (format t "N_SAMPLE=10, LENGTH=10~%")
 		  (proceed-bench
-		   (call model (ax+b `(1 10 768) 0 0) (uniform-random `(1 10) 0 100))
+		   (call model (ax+b `(1 10) 0 0))
 		   :n-sample 10))
-		(let* ((input-sentence (encode-sentence input))
-		       (initial-length (second (shape input-sentence)))
-		       (input-source   (ax+b `(1 ,initial-length 768) 0 0)))
-		  
-		  ;; X Embedding ... (1 N 768)
-		  ;; X Sparse    ... (1 N)
-
-		  (set-input compiled-model :x-source input-source)
-		  (set-input compiled-model :x-input  input-sentence)
-		  
-		  (let ((generated-sentence-list (gpt2-inference model compiled-model input-source input-sentence :length length :temperature temperature)))
+		(let* ((source (encode-sentence input)))
+		  (let ((generated-sentence-list (gpt2-inference model compiled-model source :length length :temperature temperature)))
 		    (format t "~%GPT2> ~a~%" (decode-sentence generated-sentence-list)))
 		  
 		  (return-from launch-repl)))))))))

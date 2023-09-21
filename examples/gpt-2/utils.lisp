@@ -8,6 +8,8 @@
   (format t "[INFO] load-npy attempts to load ~a...~%" (apply #'format nil path args))
   (parameter (change-facet (numpy-file-format:load-array (apply #'format nil path args)) :direction 'AbstractTensor)))
 
+(defun read-symbol (a) (cl-waffe2/vm.generic-tensor::read-symbol a))
+
 (defun incf-tensor-ptr (tensor tensor-ptr &key (offset 0))
   (cl-waffe2/backends.cpu::incf-tensor-ptr tensor tensor-ptr :offset offset))
 
@@ -21,7 +23,10 @@
   ;; WPE = [N-CTX Embedding-Size]
   (declare (type AbstractTensor ctx wte wpe ctx-out))
 
-  (let ((embedding-size (second (shape wte))))
+  (let ((embedding-size (second (shape wte)))
+	(iternum (if (numberp (second (shape ctx)))
+		     (second (shape ctx))
+		     `(read-symbol ',(second (shape ctx))))))
     (with-gensyms (position-n vocab-index wte-position wpe-position)
       `(progn
 	 (cl-waffe2/backends.cpu::waffe2-smul-scal
@@ -29,7 +34,7 @@
 	  (incf-tensor-ptr ,ctx-out ,ctx-out-ptr :offset ,(offset-of ctx-out-view 0))
 	  1
 	  0.0)
-	 (loop for ,position-n fixnum upfrom 0 below ,(second (shape ctx)) do
+	 (loop for ,position-n fixnum upfrom 0 below ,iternum do
 	   (let* ((,vocab-index (aref (tensor-vec ,ctx) (+ ,position-n ,(offset-of ctx-view 0))))
 		  (,wte-position (* (round (the single-float ,vocab-index)) ,embedding-size))
 		  (,wpe-position (* ,position-n ,embedding-size)))
@@ -100,21 +105,13 @@ In your terminal, and cl-waffe2 will load it."))
 				  :fuse nil)
 			       ,ctx-out))))))
 
-(defun !gpt2-load-pe (ctx-out ctx wte wpe)
-  (call
-   (GPT2PositionalEmbedding
-    (read-config :n-vocab)
-    (read-config :n-ctx)
-    (read-config :n-emb))
-   ctx wte wpe ctx-out))
-
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Defines Activations
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; [TODO] Move this into :cl-waffe2/nn package
 ;; eps=1.0e-5, [FixME] rounding error of mean
-(defun !gpt2-layernorm (x g b &key (eps 1.0e-5))
+(defun LayerNorm-Revisit (x g b &key (eps 1.0e-5))
   ;; X ... [N, Sentene_length, Embedding_DIM]
   ;; g/b... [Embedding_DIM]
 
@@ -129,19 +126,6 @@ In your terminal, and cl-waffe2 will load it."))
       (%transform g[i] -> g[~ i]))
      (%transform b[i] -> b[~ i]))))
 
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;;  Defines more utils
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-(defun !affine (x weight bias)
-  (!add (!matmul (!t x) (!flexible weight))
-	(%transform bias[i] -> bias[~ i])))
-
-
-;; Known issue:
-;; SLEEF stanh overflows under |x| > 10000.0 range...
-;; GeLU but tanh is safe
-
 (defun !gelu-lisptanh (x)
   (!* 0.5 x
       (!+ 1
@@ -151,6 +135,67 @@ In your terminal, and cl-waffe2 will load it."))
 	    (with-devices (LispTensor)
 	      (!tanh o))))))
 
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  Defines more utils
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(defun !affine (x weight bias)
+  (!add (!matmul (!t x) (!flexible weight))
+	(%transform bias[i] -> bias[~ i])))
+
+(defmacro asSetq ((&rest out-binds) func &rest inputs &aux (out (gensym)) (x (gensym)))
+  "out-binds = (asnode lambda x: (funcall func x inputs...))"
+  `(asnode
+    #'(lambda (,x)
+	(let ((,out (multiple-value-list (funcall ,func ,x ,@inputs))))
+	  ,@(loop for out in out-binds
+		  for nth upfrom 0
+		  if out
+		    collect `(setq ,out (nth ,nth ,out)))
+	  (apply #'values ,out)))))
+
+;; not working
+(defun !cat (a b
+	     &key (dim 0)
+	     &aux (dim (if (>= dim 0)
+			   dim
+			   (+ dim (dims a)))))
+  (let ((a-views (loop for nth upfrom 0
+		       for a   in (shape a)
+		       if (= nth dim)
+			 collect `(0, a)
+		       else
+			 collect t))
+	(b-views (loop for nth upfrom 0
+		       for a   in (shape a)
+		       for b   in (shape b)
+		       if (= nth dim)
+			 collect `(,a ,(+ a b))
+		       else
+			 collect t))		       
+	(out (make-input (loop for nth upfrom 0
+			       for a in (shape a)
+			       for b in (shape b)
+			       if (= nth dim)
+				 collect (+ a b)
+			       else
+				 collect (progn
+					   (assert (= a b) nil "!cat: Assertion Failed")
+					   a))
+			 nil
+			 :dtype (dtype a))))
+    (call-> out
+	    (apply #'asnode #'!view a-views)
+	    (asnode #'!move a)
+	    (asnode #'!view)
+	    (apply #'asnode #'!view b-views)
+	    (asnode #'!move b)
+	    (asnode #'!view t))))
+
+
+;; Known issue:
+;; SLEEF stanh overflows under |x| > 10000.0 range...
+;; GeLU but tanh is safe
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  MHA
@@ -174,28 +219,25 @@ In your terminal, and cl-waffe2 will load it."))
 	 (x-shape `(,@(butlast (shape x) 2) ,(apply #'* (last (shape x) 2)))))
     (apply #'!reshape x x-shape)))
 
-(defun self-attention (x gpt2) ;; X ...[N 2304]
-  (with-slots ((memory-k memory-k) (memory-v memory-v)) gpt2
-    (let* ((K (split-heads x :K))
-	   (V (split-heads x :V))
-	   ;;(x (with-instant-kernel x ;; Embedding Lisp Code Directly to cl-waffe2 IR
-	   ;;	`(if (or (slot-value ,gpt2 'memory-k) (slot-value ,gpt2 'memory-v))
-	   ;;	     ;; Layer-Past isn't none
-	   ;;	     (progn
-	   ;;	       (setf (detach-p ,K) T)
-	   ;;	       (setf (detach-p ,V) T)
-	   ;;	       ;; ... Concatenate past keys
-	   ;;	       )
-	   ;;	     ,x)))
-	   (Q (split-heads x :Q)))
+(defun SelfAttention (x past) ;; X ...[N 2304]
+  (let* ((K (split-heads x :K))
+	 (V (split-heads x :V))
+	 (Q (split-heads x :Q)))
 
-      (let ((w (!matmul Q K)))
-	;; (1 768 768)
-	(call-> w
-		(asnode #'!div (make-tensor (car (last (shape w)))))
-		(asnode #'!softmax :avoid-overflow nil)
-		(asnode #'!matmul v)
-		(asnode #'merge-heads))))))
+    (when past
+      (let ((pkey (car past))
+	    (pval (second past)))
+	(setq K (!cat pkey (!t K) :dim -1))
+	(setq V (!cat pval V :dim -2))))
+    
+    (let ((w (!matmul Q K)))
+      (values
+       (call-> w
+	       (asnode #'!div (make-tensor (car (last (shape w)))))
+	       (asnode #'!softmax :avoid-overflow nil)
+	       (asnode #'!matmul v)
+	       (asnode #'merge-heads))
+       (list K V)))))
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~
 ;; Constant Table for BPE
