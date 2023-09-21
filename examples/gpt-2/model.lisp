@@ -127,7 +127,7 @@
 		     (asnode #'LayerNorm-Revisit ln-2-g ln-2-b)
 		     (asnode #'!matmul mlp-fc-w) ;; X(768 N).T @ W(1 768 3072) + B(3072)
 		     (asnode #'!add    (%transform mlp-fc-b[i]   -> [~ i]))
-		     (asnode #'!gelu)
+		     (asnode #'!gelu-lisptanh)
 		     (asnode #'!matmul mlp-proj-w)
 		     (asnode #'!add    (%transform mlp-proj-b[i] -> [~ i])))))
       ;; Residual Connection
@@ -169,7 +169,7 @@
       ;; Return: (values output presents)
       (values
        (call->
-	(make-input `(batch-size N0 embedding-dim) nil)
+	(make-input `(,(car (shape prev)) ,(second (shape prev)) ,(read-config :n-emb)) nil)
 	
 	;; Composes: [PE] -> [N * Layers] -> LayerNorm
 	(asnode #'(lambda (x) (call embedding prev wte wpe x)))
@@ -198,41 +198,38 @@
 ;;  Inference/Exports
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-(defun compile-gpt2-model (&key (use-instead nil) (disassemble nil))
+(defun compile-gpt2-model (model &key (disassemble nil) (bench nil))
   (with-no-grad
-    (let* ((model (or use-instead (GPT2))))
+    (let* ((compiled-model (build (call model (make-input `(batch-size N) :prev)) :inputs `(:prev))))
+      (when disassemble
+	(disassemble-waffe2-ir (call model (make-input `(batch-size N) :prev))))
 
-      (multiple-value-bind (out presents)
-	  (call
-	   model
-	   (make-input `(batch-size N0) :prev))
-	(multiple-value-bind (out1 presents1)
-	    (apply
-	     #'call
-	     model
-	     (make-input `(batch-size N0) :prev)
-	     presents)
-	  (declare (ignore presents1))
-
-	  (let ((model-initial (print (build out :inputs `(:prev))))
-		(model-subsequent (build out1 :inputs `(:prev))))
-	    
-	    (when disassemble
-	      (disassemble-waffe2-ir
-	       (call model (make-input `(batch-size N0) :prev))))
-	    
-	    (values
-	     model
-	     #'(lambda (prev first-p)
-		 (if first-p
-		     (forward model-initial    prev)
-		     (forward model-subsequent prev))))))))))
+      (when bench
+	(proceed-bench
+	 (call model (ax+b `(1 10) 0 1))))
+      
+      compiled-model)))
 
 (defun start-token () (gethash "<|endoftext|>" *encoder-json*))
 
-(defun gpt2-inference (model compiled-model source input &key (length 10) (temperature 1.0))
+(defun gpt2-inference (model compiled-model source &key (length 10) (temperature 1.0))
   (declare (ignore temperature))
-  nil)
+
+  (let ((decode-list))
+    (dotimes (i length)
+      (format t "[~a/~a]~%" i length)
+      (let ((result (proceed (->scal (!argmax (lm-head model (!view (forward compiled-model source) t -1))))))
+	    (new-array (ax+b `(,(car (shape source)) ,(1+ (second (shape source)))) 0 0)))
+	(push (tensor-vec result) decode-list)
+	(with-facets ((s* (source :direction 'simple-array))
+		      (a* (new-array :direction 'simple-array)))
+	  (loop with s* list = (coerce s* 'list)
+		for idx upfrom 0 below (second (shape new-array)) do
+		  (setf (aref a* idx) (or (nth idx s*)
+					  (+ 0.0 (tensor-vec result))))))
+	(setq source new-array)))
+    (reverse decode-list)))
+
 
 ;; Workload:
 ;; 1. inference anyway
@@ -243,10 +240,6 @@
 
 (defun launch-repl (&key (use-model nil) (length 50) (temperature 1.0))
   (format t "length=~a~%" length)
-  (print (compile-gpt2-model :disassemble t))
-
-  (return-from launch-repl)
-  ;; TODO
   
   (with-no-grad
     (let ((model (or use-model (GPT2))))
@@ -267,28 +260,15 @@
 
 	  (format t "[INFO] Compiling GPT2 Model...~%")
 	  
-	  (let* ((source         (make-input `(1 N 768) :x-source))  ;; (Batch_Size Sentence_Length Embedding_dim)
-		 (input-tensor   (make-input `(1 N)     :x-input))   ;; (Batch_Size Sentence_Length)
-		 (compiled-model (time (build (call model source input-tensor)))))
-	    (time (build (call model source input-tensor)))
-	    
+	  (let* ((compiled-model (time (compile-gpt2-model model))))	    
 	    (if (equal input "benchmark")
 		(progn
 		  (format t "N_SAMPLE=10, LENGTH=10~%")
 		  (proceed-bench
-		   (call model (ax+b `(1 10 768) 0 0) (uniform-random `(1 10) 0 100))
+		   (call model (ax+b `(1 10) 0 0))
 		   :n-sample 10))
-		(let* ((input-sentence (encode-sentence input))
-		       (initial-length (second (shape input-sentence)))
-		       (input-source   (ax+b `(1 ,initial-length 768) 0 0)))
-		  
-		  ;; X Embedding ... (1 N 768)
-		  ;; X Sparse    ... (1 N)
-
-		  (set-input compiled-model :x-source input-source)
-		  (set-input compiled-model :x-input  input-sentence)
-		  
-		  (let ((generated-sentence-list (gpt2-inference model compiled-model input-source input-sentence :length length :temperature temperature)))
+		(let* ((source (encode-sentence input)))
+		  (let ((generated-sentence-list (gpt2-inference model compiled-model source :length length :temperature temperature)))
 		    (format t "~%GPT2> ~a~%" (decode-sentence generated-sentence-list)))
 		  
 		  (return-from launch-repl)))))))))

@@ -126,6 +126,15 @@ In your terminal, and cl-waffe2 will load it."))
       (%transform g[i] -> g[~ i]))
      (%transform b[i] -> b[~ i]))))
 
+(defun !gelu-lisptanh (x)
+  (!* 0.5 x
+      (!+ 1
+	  (let ((o (!* (coerce (sqrt (/ 2.0 pi)) (dtype->lisp-type (dtype x)))
+		       (!+ x
+			   (!* 0.044715 (!expt x 3))))))
+	    (with-devices (LispTensor)
+	      (!tanh o))))))
+
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Defines more utils
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,20 +154,25 @@ In your terminal, and cl-waffe2 will load it."))
 		    collect `(setq ,out (nth ,nth ,out)))
 	  (apply #'values ,out)))))
 
+;; not working
 (defun !cat (a b
 	     &key (dim 0)
-	     &aux (dim (if (> dim 0)
+	     &aux (dim (if (>= dim 0)
 			   dim
-			   (+ dim (length (dims a))))))
+			   (+ dim (dims a)))))
   (let ((a-views (loop for nth upfrom 0
 		       for a   in (shape a)
 		       if (= nth dim)
-			 collect `(0, a)))
+			 collect `(0, a)
+		       else
+			 collect t))
 	(b-views (loop for nth upfrom 0
 		       for a   in (shape a)
 		       for b   in (shape b)
 		       if (= nth dim)
-			 collect `(,a ,b)))		       
+			 collect `(,a ,(+ a b))
+		       else
+			 collect t))		       
 	(out (make-input (loop for nth upfrom 0
 			       for a in (shape a)
 			       for b in (shape b)
@@ -173,7 +187,7 @@ In your terminal, and cl-waffe2 will load it."))
     (call-> out
 	    (apply #'asnode #'!view a-views)
 	    (asnode #'!move a)
-	    (asnode #'!view t)
+	    (asnode #'!view)
 	    (apply #'asnode #'!view b-views)
 	    (asnode #'!move b)
 	    (asnode #'!view t))))
