@@ -147,6 +147,26 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#symbolic-diff">Symbolic Diff</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#parameter-enable-symbolic-path">[parameter] *enable-symbolic-path*</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-symbolic-path">[macro] define-symbolic-path</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_4">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#effects_4">Effects</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-bypass">[macro] define-bypass</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#events-for-embedding-jit-generated-code-in-runtime">Events for Embedding JIT-Generated Code in runtime</a>
     </li>
     </ul>
@@ -784,6 +804,91 @@ input-form = (save-place tensor)
 <p>If <code>named</code> is not <code>NIL</code>, this macro defines a new function or AbstractNode after <code>named</code>.</p>
 <h3 id="notes">Notes</h3>
 <p>Depending on the <code>device</code> and <code>dtype</code> used of arguments, several methods are compiled and dispatched.</p>
+<h2 id="symbolic-diff">Symbolic Diff</h2>
+<h2 id="parameter-enable-symbolic-path">[parameter] <code>*enable-symbolic-path*</code></h2>
+<p>Indicates function calls replaced with <code>define-symbolic-path</code> and <code>define-bypass</code> effects on the result.</p>
+<p>Set T to enable symbolic diff. In default: <code>T</code>.</p>
+<h2 id="macro-define-symbolic-path">[macro] define-symbolic-path</h2>
+<pre><code class="language-lisp">(define-symbolci-path (subject &amp;rest clause) (&amp;key (device t) (env (gensym))) (&amp;rest form-binds) &amp;body replacement)
+</code></pre>
+<p>Defines a compiler-macro so-called <strong>Symbolic Differentiation</strong> which fuses several nodes into one, or replaces with another nodes. Sometimes, can combine cl-waffe2 functions to compose bad a computation node in tern of speed and safety; nodes (e.g: <code>(log (1+ x))</code>, <code>(log (exp x))</code>) should be represented as <code>(log1p x)</code> or <code>x</code> in the first place for reverse mode autodiff, and some nodes like <code>(!div X X)</code> should be deleted before compiling. This macro, however, enables that detecting such combinations and replacing them with another node before compiling.</p>
+<p>First, describe <code>subject</code> the function name to be replaced (e.g.:<code>!log</code> <code>!sum</code> <code>!sin</code> etc...). And then, each <code>caluses</code> receive an argument of corresponding position, and determine if the form can be replaced or transformed. Plus, currently using devices can be included to the condition: Only after a car of <code>*using-backend*</code> is a subtype of <code>device</code>, symbolic path is replaced. At the last, each result of <code>clauses</code> will be binded to <code>form-binds</code>, and return the improved code at the <code>replacement</code> in a manner of <code>defmacro.</code> If needed, <code>&amp;environment</code> is binded to the <code>env</code>.</p>
+<h3 id="inputs_4">Inputs</h3>
+<ul>
+<li><code>clauses[form]</code> <code>((var) body)</code></li>
+</ul>
+<h3 id="effects_4">Effects</h3>
+<ul>
+<li>defines a compiler-macro named after <code>subject</code>.</li>
+</ul>
+<h3 id="example_4">Example</h3>
+<p>Considering composing <code>(!!log (!!+ x 1))</code></p>
+<pre><code class="language-lisp">(defun !!log (x)
+  (print &quot;LOG&quot;)
+  (log x))
+
+(defun !!+   (a b)
+  (print &quot;+&quot;)
+  (+ a b))
+
+(defun !!log1p (x)
+  (print &quot;LOG1P&quot;)
+  (log (+ 1 x)))
+</code></pre>
+<pre><code class="language-lisp">(define-symbolic-path (!!log
+               ((x)
+            (trivia:match x
+              ((or (list '!!+ 1 var)
+                   (list '!!+ var 1))
+               var))))          
+    (:device cl-waffe2/backends.cpu:CPUTensor)
+    (x)
+  `(!!log1p ,x))
+</code></pre>
+<pre><code class="language-lisp">(defun test-form (x)
+  (!!log (!!+ 1 (!!log x))))
+</code></pre>
+<pre><code class="language-lisp">(test-form 2)
+;; LOG
+;; LOG1P
+;; 0.52658904
+(test-form 2)
+(setf *enable-symbolic-path* NIL) ;; Disable this feature
+;; LOG
+;; +
+;; LOG
+;; 0.52658904
+</code></pre>
+<p>Since the macro defines a compile-macro, this optimizing feature can be added one per one function. For example, If the purpose is to replace the standard implementation of <code>cl-waffe2/nn:!relu</code> with another fused and device-specific implementation, use the <code>define-bypass</code> macro.</p>
+<h2 id="macro-define-bypass">[macro] define-bypass</h2>
+<pre><code class="language-lisp">(define-bypass device name replacement)
+</code></pre>
+<p>Defines a compiler-macro called <strong>bypass</strong>, which replaces an existing function call with another one. If you want to fuse nodes created by functions which creates computation node (e.g.: !relu !softmax !gelu), declare an alternative route with this function, and they can be replaced with like: ReLUNode, SoftmaxNode, GeLUNode.</p>
+<p>The replacing is done when one of <code>*using-backend*</code> is the equivalent to <code>name[symbol]</code>, the funcall of <code>name[symbol]</code> will be replaced with <code>replacement[symbol]</code>. Note that before and after the replacement, they both should take the same arguments, same keywords. Unlike <code>define-symbolic-path</code>, there is no restriction of numbers that can be registered as a bypass to the single function; A single <code>!relu</code> can be replaced with: <code>!relu-cpu-fuse</code>, <code>!relu-cuda-fuse</code> for example.</p>
+<h3 id="example_5">Example</h3>
+<pre><code class="language-lisp">(defun !!relu (x)
+  (print &quot;RELU&quot;)
+  x)
+
+(defun !!relu-fuse (x)
+  (print &quot;RELU_FUSE&quot;)
+  x)
+
+(defun op (x)
+  (!!relu x))
+
+(define-bypass cl-waffe2/backends.cpu:CPUTensor !!relu !!relu-fuse)
+
+(op 3)
+;; RELU_FUSE
+;; 3
+
+(setf *enable-symbolic-path* nil)
+
+(op 3)
+;; RELU
+;; 1
+</code></pre>
 <h2 id="events-for-embedding-jit-generated-code-in-runtime">Events for Embedding JIT-Generated Code in runtime</h2>
 <p>If the node is needed to be compiled, compile.NIL</p>
               
