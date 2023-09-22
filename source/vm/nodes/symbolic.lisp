@@ -109,7 +109,11 @@ Since the macro defines a compile-macro, this optimizing feature can be added on
   (replacement nil :type symbol))
 
 (defun find-from-feature-table (device list)
-  (find device list :test #'(lambda (x y) (eql y x)) :key #'features-table-key))
+  (dolist (d device)
+    (let ((result (find d list :test #'eql :key #'features-table-key)))
+      (when result
+	(return-from find-from-feature-table result)))))
+    
 
 (defmacro define-bypass (device name replacement)
   "
@@ -160,7 +164,7 @@ The replacing is done when one of `*using-backend*` is the equivalent to `name[s
 	      (setf (gethash device (gethash name *bypass-table*)) (make-features-table :key device :replacement replacement))
 	      `(define-compiler-macro ,name (&whole ,form &rest ,args)
 		 `(let ((,',result (and *enable-symbolic-path*
-					(find-from-feature-table (car *using-backend*) (hash-table-values (gethash ',',name *bypass-table*))))))
+					(find-from-feature-table *using-backend* (hash-table-values (gethash ',',name *bypass-table*))))))
 		    (progn;load-time-value
 		      (locally (declare (notinline ,',name))
 			(if ,',result
@@ -169,3 +173,4 @@ The replacing is done when one of `*using-backend*` is the equivalent to `name[s
 	    (progn
 	      (setf (gethash device (gethash name *bypass-table*)) (make-features-table :key device :replacement replacement))
 	      T))))))
+
