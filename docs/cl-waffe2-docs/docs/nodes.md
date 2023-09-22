@@ -714,5 +714,119 @@ If `named` is not `NIL`, this macro defines a new function or AbstractNode after
 
 Depending on the `device` and `dtype` used of arguments, several methods are compiled and dispatched.
 
+## Symbolic Diff
+
+## [parameter] `*enable-symbolic-path*`
+
+Indicates function calls replaced with `define-symbolic-path` and `define-bypass` effects on the result.
+
+Set T to enable symbolic diff. In default: `T`.
+
+## [macro] define-symbolic-path
+
+```lisp
+(define-symbolci-path (subject &rest clause) (&key (device t) (env (gensym))) (&rest form-binds) &body replacement)
+```
+
+Defines a compiler-macro so-called **Symbolic Differentiation** which fuses several nodes into one, or replaces with another nodes. Sometimes, can combine cl-waffe2 functions to compose bad a computation node in tern of speed and safety; nodes (e.g: `(log (1+ x))`, `(log (exp x))`) should be represented as `(log1p x)` or `x` in the first place for reverse mode autodiff, and some nodes like `(!div X X)` should be deleted before compiling. This macro, however, enables that detecting such combinations and replacing them with another node before compiling.
+
+First, describe `subject` the function name to be replaced (e.g.:`!log` `!sum` `!sin` etc...). And then, each `caluses` receive an argument of corresponding position, and determine if the form can be replaced or transformed. Plus, currently using devices can be included to the condition: Only after a car of `*using-backend*` is a subtype of `device`, symbolic path is replaced. At the last, each result of `clauses` will be binded to `form-binds`, and return the improved code at the `replacement` in a manner of `defmacro.` If needed, `&environment` is binded to the `env`.
+
+### Inputs
+
+- `clauses[form]` `((var) body)`
+
+### Effects
+
+- defines a compiler-macro named after `subject`.
+
+### Example
+
+Considering composing `(!!log (!!+ x 1))`
+
+```lisp
+(defun !!log (x)
+  (print "LOG")
+  (log x))
+
+(defun !!+   (a b)
+  (print "+")
+  (+ a b))
+
+(defun !!log1p (x)
+  (print "LOG1P")
+  (log (+ 1 x)))
+```
+
+```lisp
+(define-symbolic-path (!!log
+		       ((x)
+			(trivia:match x
+			  ((or (list '!!+ 1 var)
+			       (list '!!+ var 1))
+			   var))))			
+    (:device cl-waffe2/backends.cpu:CPUTensor)
+    (x)
+  `(!!log1p ,x))
+```
+
+```lisp
+(defun test-form (x)
+  (!!log (!!+ 1 (!!log x))))
+```
+
+```lisp
+(test-form 2)
+;; LOG
+;; LOG1P
+;; 0.52658904
+(test-form 2)
+(setf *enable-symbolic-path* NIL) ;; Disable this feature
+;; LOG
+;; +
+;; LOG
+;; 0.52658904
+```
+
+Since the macro defines a compile-macro, this optimizing feature can be added one per one function. For example, If the purpose is to replace the standard implementation of `cl-waffe2/nn:!relu` with another fused and device-specific implementation, use the `define-bypass` macro.
+
+## [macro] define-bypass
+
+```lisp
+(define-bypass device name replacement)
+```
+
+Defines a compiler-macro called **bypass**, which replaces an existing function call with another one. If you want to fuse nodes created by functions which creates computation node (e.g.: !relu !softmax !gelu), declare an alternative route with this function, and they can be replaced with like: ReLUNode, SoftmaxNode, GeLUNode.
+
+The replacing is done when one of `*using-backend*` is the equivalent to `name[symbol]`, the funcall of `name[symbol]` will be replaced with `replacement[symbol]`. Note that before and after the replacement, they both should take the same arguments, same keywords. Unlike `define-symbolic-path`, there is no restriction of numbers that can be registered as a bypass to the single function; A single `!relu` can be replaced with: `!relu-cpu-fuse`, `!relu-cuda-fuse` for example.
+
+### Example
+
+```lisp
+(defun !!relu (x)
+  (print "RELU")
+  x)
+
+(defun !!relu-fuse (x)
+  (print "RELU_FUSE")
+  x)
+
+(defun op (x)
+  (!!relu x))
+
+(define-bypass cl-waffe2/backends.cpu:CPUTensor !!relu !!relu-fuse)
+
+(op 3)
+;; RELU_FUSE
+;; 3
+
+(setf *enable-symbolic-path* nil)
+
+(op 3)
+;; RELU
+;; 1
+```
+
+
 ## Events for Embedding JIT-Generated Code in runtime
 If the node is needed to be compiled, compile.NIL

@@ -420,7 +420,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1394 
+{CPUTENSOR[float] :shape (A 10) :id TID1830 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
@@ -470,7 +470,7 @@ Reading all variables in the computation node, the method get-input returns an c
 A principle operator to extend your functions to higher arrays.
 
 ```lisp
-(call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil) (fuse nil))
+(call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil))
 ```
 
 The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
@@ -538,8 +538,7 @@ See also: `with-ranked-loop` to the more elegant wrapping macro.
                     &key
                        (kernel-size 1)
                        (shuffle-rank t)
-                       (lparallel nil)
-                       (fuse nil))
+                       (lparallel nil))
                     &body body))
 ```
 

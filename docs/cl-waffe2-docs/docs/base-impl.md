@@ -363,14 +363,14 @@ Is the equivalent to just doing `(reduce #'!DIV numbers)`
 ## [function] !move
 
 ```lisp
-(!move place tensor)
+(!move place tensor &key (force nil) (maybe-in-place nil))
 ```
 
 ```math
 A\gets{B}
 ```
 
-The function !move returns a node which moves tensor's visible elements into place's visible elements.
+The function `!move` moves all the visible elements of tensor into all the visible elements of place.
 
 ### nodes
 
@@ -382,25 +382,34 @@ one of: `MoveTensorNode` `ScalarTensorNode`
 
 `tensor[AbstractTensor]` tensor to be referred.
 
-`force[boolean]` If t, the pruning of operation by cl-waffe2 will never done.
+`force[boolean]` If, pruning/in-place-mutation by compilers aren't applied
+
+`maybe-in-place[boolean]` Set T to ignore the copy; the operation is replaced with the function just returning `place`. Moves with this parameter, is displayed as `ALLOC{INTENRAL}` when disassembled.
 
 ### Output
 
-Unevaluated Copied Tensor.
+`Tensor[AbstractTensor]`
+
 ## [function] !copy
 
 ```lisp
-(!copy tensor)
+(!copy tensor &key (force nil) (maybe-in-place nil))
 ```
 
-The function !copy returns a node which makes a copy the tensor's visible area.
+The function !copy makes a clone of given tensor which is InputTensor, and moves the elements of tensor into the new tensor. broadcasted elements are keep broadcasted (if you want to create contiguous tensors, use `->contiguous`). Copies are prone to bottlenecks in the network, so a lot of special optimisation is applied. If you want to exclude it, set `:force` to t. Thanks to such optimisations, unlike other libraries, this function is used to create a temporary region of Tensor.
 
-Note that: the function `!copy` never creates a new tensor larger than (tensor-vec tensor) has, (i.e.: copying broadcasted tensor will return broadcasted and copied tensor).
+```lisp
+(defun my-add (a b)
+    (call (AddNode :float) (!copy a) b))
+```
 
-`!copy` is used to make a cache before calling destructive operation to avoid side effects, therefore if the copy is included to be useless by compiler, this operations is being ignored without changing its behaviour. And this is why !copy returns `InputTensor`, not `AbstractTensor`.
+In this case, the my-add function can be used as a function without side effects. However, after compilation, any unneeded copies are removed.
 
-Input:  Tensor[AbstractTensor]
-Output: Tensor[AbstractTensor]
+If the value of tensor is immediately overwritten and the element does not need to be copied, then `:maybe-in-place` should be set to T. And, the elements of retuend tensor is filled random because it is brought from memory-pool.
+
+Input:  `Tensor[AbstractTensor]`
+Output: `Tensor[AbstractTensor]`
+
 ## [function] !permute
 
 In cl-waffe2, each tensor has a slot `(tensor-permute-order tensor)`, which indicates the order of the dimensions to be invoked. The function `!permute` returns a view of the original tensor input with its dimensions permuted.
@@ -1479,6 +1488,56 @@ OUT_{copy}\gets{loge(X)}
 ### SideEffects
 
 `->` is destructed.
+
+## [function] !log1p
+
+```lisp
+(!log1p x &key (-> nil))
+```
+
+The function !log1p takes `x` as an argument, applying a log1p function into each element and writes the result into `->`.
+
+```math
+OUT_{copy}\gets{log1p(X)}
+```
+
+(where `OUT` = `->`)
+
+### Inputs
+
+`x` [AbstractTensor or ScalarTensor or number]
+
+`->` (nil or AbstractTensor). the place to set the result. If nil, a new tensor is allocated.
+
+### Returns
+
+`->`
+
+### Nodes
+
+`SCALAR-LOG1PNODE` `LOG1PNODE`
+
+### SideEffects
+
+`->` is destructed.
+
+## [function] !expt
+
+```lisp
+(!expt x n &key (-> nil))
+```
+
+The function !expt applies (expt X N) into each element, writing the result into out.
+
+### Inputs
+
+- N ScalarTensor
+- X AbstractTensor
+- Out AbstractTensor or nil
+
+### Output
+
+- out AbstractTensor
 
 ## [function] !sum
 
