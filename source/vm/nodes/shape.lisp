@@ -1,6 +1,36 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
+(defstruct Compiled-Subscript
+  "
+## [struct] Compiled-Subscript"
+  (where nil :type list)
+  (ignore-shape-error nil :type boolean)
+  (compiled-f1 nil :type function)
+  (compiled-f2 nil :type function))
+
+(defun next-inputs (node compiled-subscript ignore-shape-error restart-case &rest inputs)
+  (declare (optimize (speed 3))
+           (type Compiled-Subscript compiled-subscript)
+	   (type boolean ignore-shape-error)
+	   (type (or null function) restart-case))
+
+  (with-slots ((f1 compiled-f1) (f2 compiled-f2)) compiled-subscript
+    (multiple-value-bind (out-state detected-errors) (funcall f1 inputs) ;; ... Finishes in < 1e-6 sec
+      (if detected-errors
+	  (progn
+	    ;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
+	    (multiple-value-bind (out-state1 detected-errors-1) (funcall f2 inputs)
+	      (if (and detected-errors-1
+		       (not (or
+			     ignore-shape-error
+			     (compiled-subscript-ignore-shape-error compiled-subscript))))
+		  (if restart-case
+		      (funcall restart-case)
+		      (describe-problems node detected-errors inputs out-state))
+		  out-state1)))
+	  out-state))))
+
 (defun symbol-eq (x y)
   (and
    (symbolp x)

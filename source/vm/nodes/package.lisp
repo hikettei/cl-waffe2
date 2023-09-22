@@ -29,7 +29,6 @@
 		#:movetensor-p
 		#:shaping-error
 		#:tensor-protect-me
-		#:*ranked-loop-result-cacher*
 		#:shape-equal
 		#:order
 		#:dtype
@@ -39,10 +38,18 @@
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
+		#:get-input
 		#:make-compiled-kernel
 		#:system-lazy-set-save-for-backward
 		#:system-lazy-read-save-for-backward
 		#:scalar-p)
+
+  ;; Symbolic Diff
+  (:export
+   #:define-symbolic-path
+   #:define-bypass
+   #:*enable-symbolic-path*)
+  
   (:export
    ;; External JIT
    #:make-backward

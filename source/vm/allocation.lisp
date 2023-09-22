@@ -15,7 +15,7 @@
 ;;    |
 ;;    | Creating a new scope
 ;;    -------|- [build: %vm-move] ----------
-;;           | A -> (R1, R2) B -> (R1, R2) | <- Similary, the new scope is created 
+;;           | A -> (R1, R2) B -> (R1, R2) | <- In the same way, the new scope is created
 ;;           | Pool = NIL                  |    The superior tensor's storage vec is filled with something
 ;;           ------------------------------|    So they never use %vm-move scope memory-pool
 ;;    |
@@ -27,6 +27,27 @@
 ;; ^ defmodel-as :asif :node is implemented by it.
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;;
+;; [TODO]
+;;  1. コンパイル時間の削減
+;;     - compiler-macroでcall/forwardをインライン化
+;;     - VMの最適化
+;;     - (100 100) > の大きいスケールならVMの最適化はこれ以上必要ない ノードの構築が重たい
+;;  2. ノードの割り当て。。。作成時じゃなくてcallしたとき？
+
+;;  2. モデル gc-reachable
+;;  3. Fusion Path ... compiler-macro based symbolic diff
+;;  4. Package構造のリファクタリング
+;;     cl-waffe2/vm, cl-waffe2/vm.generic-tensor, cl-waffe2/vm.nodes
+;;     -> cl-waffe2/core (= cl-waffe2 cl-waffe2/vm.ad cl-waffe2/vm.abstract-tensor cl-waffe2/vm.nodes cl-waffe2/vm.distributions)
+
+;;  5. Refactor Loop Fusion関連のコードを消す
+;; define-symbolic-diff (:device (t) (!add (!+ 1.0 x)))
+;;  6. adjustable shapeのsolver
+;;  7. define-impl cacheできないやつ削除
+;;  ...
+;;  8. defmodel-as :node Fix
 
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
@@ -130,7 +151,7 @@ If the re-allocation is performed, frees the old one.
 		     :device (class-of tensor)))))
 	  (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use)))))
     (setf (vmalloc-allocated-p allocation) T)))
-
+ 
 (defun copy-allocate (allocation)
   "Makes a copy of given allocation and its storage vec is also copied so no thread-conflicts would happen."
   (declare (type VMAllocation allocation))
@@ -140,9 +161,8 @@ If the re-allocation is performed, frees the old one.
     (loop for key being the hash-keys      in (vmalloc-id2pool allocation)
 	  for tensor being the hash-values in (vmalloc-id2pool allocation) do
 	    (let ((use (if (scalar-p tensor)
-			   (if (scalar-p tensor)
-			       (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
-			       (make-clone tensor (tensor-name tensor))))))
+			   (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
+			   (make-clone tensor nil))))
 	      (setf (slot-value use 'cl-waffe2/vm.generic-tensor::input-shape)
 		    (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
 	      (setf (tensor-id use) (tensor-id tensor))
@@ -261,16 +281,19 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	    collect inst)))
 
 (defun iseq-update-tensor-name! (iseq from to)
+  (declare (type list iseq)
+	   (type symbol from to)
+	   (optimize (speed 3)))
   (loop for inst in iseq do
-    (dolist (o (remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-id))
+    (dolist (o (wfop-out-to inst));;(remove-duplicates (wfop-out-to inst) :test #'eql :key #'tensor-id))
       (when (eql (tensor-id o) from)
 	(when (not (tensor-id-lock-p o))
 	  (setf (tensor-id o) to))))
-    (dolist (a (remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id))
+    (dolist (a (wfop-args inst));;(remove-duplicates (wfop-args inst) :test #'eql :key #'tensor-id))
       (when (eql (tensor-id a) from)
 	(when (not (tensor-id-lock-p a))
 	  (setf (tensor-id a) to))))))
-	
+
 (defun optimize-memory-locality! (iseq-fw iseq-bw)
   (declare (type list iseq-fw)
 	   (type (or null list) iseq-bw))

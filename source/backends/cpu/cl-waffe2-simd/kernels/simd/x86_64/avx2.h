@@ -300,13 +300,15 @@ waffe2_svec static inline waffe2_simd_sacosh(waffe2_svec x) { return Sleef_acosh
 waffe2_dvec static inline waffe2_simd_datanh(waffe2_dvec x) { return Sleef_atanhd4_u10avx2(x); }
 waffe2_svec static inline waffe2_simd_satanh(waffe2_svec x) { return Sleef_atanhf8_u10avx2(x); }
 
-
 waffe2_dvec static inline waffe2_simd_dpow(waffe2_dvec x, waffe2_dvec y) { return Sleef_powd4_u10avx2(x, y); }
 waffe2_svec static inline waffe2_simd_spow(waffe2_svec x, waffe2_svec y) { return Sleef_powf8_u10avx2(x, y); }
 
 // loge
 waffe2_dvec static inline waffe2_simd_dlog(waffe2_dvec x) { return Sleef_logd4_u10avx2(x); }
 waffe2_svec static inline waffe2_simd_slog(waffe2_svec x) { return Sleef_logf8_u10avx2(x); }
+
+waffe2_dvec static inline waffe2_simd_dlog1p(waffe2_dvec x) { return Sleef_log1pd4_u10avx2(x); }
+waffe2_svec static inline waffe2_simd_slog1p(waffe2_svec x) { return Sleef_log1pf8_u10avx2(x); }
 
 waffe2_dvec static inline waffe2_simd_dlog10(waffe2_dvec x) { return Sleef_log10d4_u10avx2(x); }
 waffe2_svec static inline waffe2_simd_slog10(waffe2_svec x) { return Sleef_log10f8_u10avx2(x); }

@@ -179,4 +179,20 @@
       (= (tensor-vec out) 6))))
 
 
+(defun bypass (x)
+  (+ 1 x))
+
+(defun bypass-fuse (x)
+  x)
+
+(define-bypass cl-waffe2/backends.cpu:CPUTensor bypass bypass-fuse)
+
+(defun bypass-test (x)
+  (with-devices (cl-waffe2/backends.cpu:CPUTensor)
+    (= x (bypass x))))
+
+(test define-bypass-test
+  (is (bypass-test 10)))
+
+
 

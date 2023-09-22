@@ -205,6 +205,7 @@
   (define-math-op atanh)
 
   (define-math-op log)
+  (define-math-op log1p)
   (define-math-op log2)
   (define-math-op log10)
 

@@ -245,6 +245,14 @@ OUT_{copy}\\gets{~(~a~)(X)}
      (declare (ignore out))
      (values
       (!mul dout (!div 1 x))
+      nil)))
+
+  (define-elwise-node (log1p #'(lambda (x) (log (1+ x))))
+      (t nil)
+    ((self dout x out)
+     (declare (ignore out))
+     (values
+      (!mul dout (!div 1 (!add 1 x)))
       nil))))
 
 ;; ==============================================================
@@ -266,15 +274,25 @@ OUT_{copy}\\gets{~(~a~)(X)}
 	  :documentation "The node ExptNode applies (expt X N) into each element, writing the result into out."))
 
 (defun !expt (x n &key (-> nil))
-  "The function !expt applies (expt X N) into each element, writing the result into out.
+  "
+## [function] !expt
 
-Inputs:
-    N - ScalarTensor
-    X - AbstractTensor
-    Out - AbstractTensor or nil
+```lisp
+(!expt x n &key (-> nil))
+```
 
-Output:
-   out - AbstractTensor"
+The function !expt applies (expt X N) into each element, writing the result into out.
+
+### Inputs
+
+- N ScalarTensor
+- X AbstractTensor
+- Out AbstractTensor or nil
+
+### Output
+
+- out AbstractTensor
+"
   (declare (type AbstractTensor x))
   (let ((n (if (numberp n)
 	       (make-tensor n)
@@ -283,8 +301,5 @@ Output:
 	(forward (ExptNode) x -> n)
 	(forward (ExptNode) x (!copy x :maybe-in-place t) n))))
 
-;; !pow
-
 )
-
 

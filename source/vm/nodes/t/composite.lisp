@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/vm.nodes.test)
 
+(in-suite :test-nodes)
+
 (defun M= (tensor1 tensor2)
   (every #'= (tensor-vec tensor1) (tensor-vec tensor2)))
 

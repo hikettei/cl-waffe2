@@ -126,6 +126,9 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (nodedoc LogENode)
     (nodedoc Scalar-LogENode)
 
+    (nodedoc Log1PNode)
+    (nodedoc Scalar-Log1PNode)
+
     ;; TODO: pow/expt
 
     (nodedoc cl-waffe2/base-impl::LazyTransposeNode)
@@ -220,6 +223,9 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (caller-doc !log2)
     (caller-doc !log10)
     (caller-doc !logE)
+    (caller-doc !log1p)
+
+    (caller-doc !expt)
 
     (caller-doc !sum)
     (caller-doc !mean)

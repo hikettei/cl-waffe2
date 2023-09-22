@@ -23,7 +23,8 @@
 (declaim (ftype (function (AbstractTensor) (or null WFInstruction)) ir->instruction))
 (defun ir->instruction (tensor)
   "Reading a IR of tensor, the function returns a corresponding instruction"
-  (declare (type AbstractTensor tensor))
+  (declare (optimize (speed 3))
+	   (type AbstractTensor tensor))
 
   (when (and (tensor-compiled-instruction-cache-fw tensor)
 	     (equal (wfop-args (tensor-compiled-instruction-cache-fw tensor))
@@ -251,9 +252,15 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
 	    (values forward (or bw backward) leaves dout allocation)))))))
 
+#+sbcl(setf sb-ext:*inline-expansion-limit* 4)
 (defun findout-origin (table tensor &key (limit 10))
+  (declare (type hash-table table)
+	   (type AbstractTensor tensor)
+	   (optimize (speed 3))
+	   (type fixnum limit)
+	   #+sbcl(inline findout-origin))
   (let ((last-ref (tensor-id tensor)))
-    (loop while t for n upfrom 0 do
+    (loop while t for n fixnum upfrom 0 do
       (if (> n limit) (return-from findout-origin last-ref))      
       (if (null (gethash last-ref table))
 	  (return-from findout-origin last-ref)

@@ -492,7 +492,7 @@ Or, your network may be disconnected at a certain position."
 		       :dout dout
 		       :out  out
 		       
-		       :inputs    (map 'list #'replace-new (compiled-inputs model))
+		       :inputs    (compiled-inputs model)
 		       :variables (copy-variable-table (compiled-variables model) allocation))))))
 
 ;; TODO -> (defmethod free-model ((model Compiled-Composite)))

@@ -42,8 +42,7 @@
 						      ,(stride-of x-view 0)
 						      ,(stride-of o-view 0)
 						      ,(size-of x-view 0)))
-						`(,x ,out)
-						:fuse t)
+						`(,x ,out))
 					     ,out))))))))
   ;;===============|NodeName|=|Func|=|Dense?|=== 
   (define-math-impl AbsNode    abs    nil)
@@ -75,4 +74,6 @@
   (define-math-impl Log10Node #'(lambda (x) (log x 10)) t)
 
   (define-math-impl LogENode log t)
+
+  (define-math-impl Log1PNode #'(lambda (x) (log (1+ x))) t)
   )

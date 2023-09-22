@@ -1397,6 +1397,61 @@ See also: `LOGENODE` `!loge`
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] LOG1PNODE
+
+```
+(X[~] OUT[~] -> OUT[~])
+```
+
+### Description
+
+The node `LOG1PNODE` takes X as an argument, applying a log1p function into each element and writes the result into out.
+
+```math
+OUT\gets{log1p(X)}
+```
+
+save-for-backward: (T NIL)
+
+See also: `SCALAR-LOG1PNODE` `!log1p`
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!add 1 x))) nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] SCALAR-LOG1PNODE
+
+```
+(X[~] OUT[~] -> OUT[~])
+```
+
+### Description
+
+The node SCALAR-LOG1PNODE takes scalar X as an argument, applying a log1p function into each element and writes the result into out.
+
+```math
+out\gets{log1p(x)}
+```
+save-for-backward: (T NIL)
+
+See also: `LOG1PNODE` `!log1p`
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout x out) (declare (ignore out))
+ (values (!mul dout (!div 1 (!add 1 x))) nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
 ## [node] LAZYTRANSPOSENODE
 
 ```

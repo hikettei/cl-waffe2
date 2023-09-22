@@ -240,3 +240,10 @@
 	       (tensor-vec (grad a))))))
 
 
+(defun log1p-test (x)
+  (cl-waffe2/vm:compile-forward-and-backward (!loge (!add x 1.0))))
+
+(test log1p-op-fusion-test
+  (is (= (length (log1p-test (randn `(3 3)))) 2)))
+
+

@@ -18,7 +18,9 @@
 
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
-(defparameter *node-reject-case-table* (make-hash-table))
+(defparameter *node-reject-case-table* (make-hash-table)) ;; :test #'eq
+
+(defparameter *device-features* (make-hash-table) "Device Name -> Facet of Nodes")
 
 (defgeneric on-finalizing-compiling
     (current-node variable next-variable compile-me)
@@ -92,12 +94,12 @@ The method on-finished-compiling is once called when the node was reached the en
     (call-next-method)))
 
 (defun node-compatible-p (node-name inputs)
-  (declare (type list inputs))
+  (declare (type list inputs)
+	   (optimize (speed 3)))
   "the node is adopted when:
 reject-when=nil, or (apply reject-when inputs)=t"
   (let ((table (gethash node-name *node-reject-case-table*)))
-    (or (null table)
-	(not (apply (the function table) inputs)))))
+    (or (null table) (not (apply (the function table) inputs)))))
 
 (defun set-node-reject-case (node-name function)
   (when function
@@ -126,8 +128,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (defvar *call-with-view-route* nil)
 
 (defmacro with-tracing-call-with-view (&body body)
-  `(let ((*call-with-view-route*)
-	 (*ranked-loop-result-cacher*))
+  `(let ((*call-with-view-route*))
      ,@body))
 
 (defun replace-tensor->id (body args)
@@ -154,9 +155,8 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :body (replace-tensor->id body args)
    :args args
    :self self
-   :call-with-view *ranked-loop-result-cacher*
    :cache-when-compiled (if cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
-			    NIL ;; This function should not be used as a cache.
+			    nil ;; This function should not be used as a cache.
 			    traceable?)
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)
@@ -224,25 +224,25 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	      (princ device out))
 	    'cl-waffe2/vm.nodes.facets-tmp)))
 
+(declaim (inline determine-facet-of-nodes
+		 node-compatible-p))
 (defun determine-facet-of-nodes (abstract-name devices &rest inputs)
   "Dispathces one of the implementation of AbstractName reading the given devices and inputs"
   (declare (optimize (speed 3))
            (type list devices inputs)
 	   (type symbol abstract-name))
-
+  
   ;; ScalarTensor and T is forcibly added to the last priority
   ;; Reading the device name from higher to lower
-  (loop for device in `(,@devices ScalarTensor t)
-	do (let ((node-name (subnode-name abstract-name device)))
-	     (when (and
-		    (find-class node-name nil)
-		    (subtypep node-name abstract-name)
-		    (node-compatible-p node-name inputs))
-	       (return-from determine-facet-of-nodes node-name))
-
-	     (when *facet-monopoly-mode*
-	       (error 'node-not-found :node abstract-name))))
-  
+  (loop for device in `(,@devices cl-waffe2/vm.generic-tensor:ScalarTensor t)
+	do (let ((features (gethash device *device-features*)))
+	     (when features
+	       (let ((facet (gethash abstract-name features)))
+		 (if (and facet
+			  (node-compatible-p facet inputs))
+		     (return-from determine-facet-of-nodes facet)
+		     (when *facet-monopoly-mode*
+		       (error 'node-not-found :node abstract-name)))))))
   (error 'node-not-found :node abstract-name))
 
 
@@ -419,6 +419,11 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(get-params (cdr constructor-arguments)))
 		   :where-decl ',where
+		   ;;:subscript (make-compiled-subscript
+		;;	       :where ',where
+		;;	       :ignore-shape-error nil
+		;;	       :compiled-f1 (car ,subscript-p)
+		;;	       :compiled-f2 (car ,subscript-p1))
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
 		   :uprank-state   (third ,subscript-p)
@@ -506,14 +511,19 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 		 ',abstract-name
 		 ',device))
        
-       (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
-       
        (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform ',save-for-backward :reader node-save-for-backward2))
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
 				  impl-name
 				  abstract-name
 				  device)))
+
+       (set-node-reject-case (find-class ',impl-name) (the (or null function) ,reject-p))
+       
+       (when (null (gethash ',device *device-features*))
+	 (setf (gethash ',device *device-features*) (make-hash-table)))
+
+       (setf (gethash ',abstract-name (gethash ',device *device-features*)) (find-class ',impl-name))
        
        ;; TODO: Auto generate of documentations
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
@@ -598,7 +608,7 @@ Gives an implementation of `abstract-name` as a function form.
 	     ',abstract-name
 	     ',device))
        
-       (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
+
        
        (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform nil :reader node-save-for-backward2))
@@ -607,6 +617,13 @@ Gives an implementation of `abstract-name` as a function form.
 				  abstract-name
 				  device)))
 
+       ;; Create Hash-Table and reduce the time of find-class ...
+       (when (null (gethash ',device *device-features*))
+	 (setf (gethash ',device *device-features*) (make-hash-table)))
+
+       (set-node-reject-case (find-class ',impl-name) (the (or null function) ,reject-p))
+       (setf (gethash ',abstract-name (gethash ',device *device-features*)) (find-class ',impl-name))
+	      
        
        (defmethod forward ((,forward-self-name ,impl-name) &rest ,inputs)
 	 (declare (type ,impl-name ,forward-self-name))

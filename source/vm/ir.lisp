@@ -10,7 +10,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (fuse-prev nil) (block-iseq nil) (fused-body-cache nil) (call-with-view nil) (grad-adder-p nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil))))
   "
 ## [struct] WfInstruction
 
@@ -58,13 +58,7 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (sv4bw sv4bw :type list)
   (error-check-p nil :type boolean) ;; Indicates the first shape-inspection has done?
   (bw-is-leaf-p nil :type boolean)
-  (call-with-view call-with-view :type (or null cl-waffe2/vm.generic-tensor::Ranked-Loop))
-  (fuse-prev fuse-prev :type (or null list))
-  (fused-body-cache fused-body-cache :type (or null list))
   (grad-adder-p grad-adder-p :type boolean))
-
-;; (defstruct (Composable-Operator <- separate call-with-view from body
-;; (defun .cop (cop1 cop2) ...)
 
 (defparameter *omit-args-n* 5)
 (defparameter *opname-indent-to* 0 "Adds a space for this param times")
