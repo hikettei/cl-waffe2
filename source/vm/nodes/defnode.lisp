@@ -18,7 +18,7 @@
 
 (defparameter *facet-monopoly-mode* nil "This parameter is used to ensure that all the calculations are performed under the same node. If this parameter is t, only use devices with Priority1, otherwise an error will occur.")
 
-(defparameter *node-reject-case-table* (make-hash-table))
+(defparameter *node-reject-case-table* (make-hash-table)) ;; :test #'eq
 
 (defparameter *device-features* (make-hash-table) "Device Name -> Facet of Nodes")
 
@@ -224,6 +224,8 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	      (princ device out))
 	    'cl-waffe2/vm.nodes.facets-tmp)))
 
+(declaim (inline determine-facet-of-nodes
+		 node-compatible-p))
 (defun determine-facet-of-nodes (abstract-name devices &rest inputs)
   "Dispathces one of the implementation of AbstractName reading the given devices and inputs"
   (declare (optimize (speed 3))
@@ -237,7 +239,7 @@ The order of priority would be `(,@backend-priority ScalarTensor t). (t is a spe
 	     (when features
 	       (let ((facet (gethash abstract-name features)))
 		 (if (and facet
-			  (node-compatible-p (class-name facet) inputs))
+			  (node-compatible-p facet inputs))
 		     (return-from determine-facet-of-nodes facet)
 		     (when *facet-monopoly-mode*
 		       (error 'node-not-found :node abstract-name)))))))
@@ -417,11 +419,11 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 		  (make-instance
 		   (determine-facet-of-nodes ',abstract-name *using-backend* ,@(get-params (cdr constructor-arguments)))
 		   :where-decl ',where
-		   :subscript (make-compiled-subscript
-			       :where ',where
-			       :ignore-shape-error nil
-			       :compiled-f1 (car ,subscript-p)
-			       :compiled-f2 (car ,subscript-p1))
+		   ;;:subscript (make-compiled-subscript
+		;;	       :where ',where
+		;;	       :ignore-shape-error nil
+		;;	       :compiled-f1 (car ,subscript-p)
+		;;	       :compiled-f2 (car ,subscript-p1))
 		   :function-node  (car ,subscript-p)
 		   :function-node1 (car ,subscript-p1)
 		   :uprank-state   (third ,subscript-p)
@@ -509,8 +511,6 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 		 ',abstract-name
 		 ',device))
        
-       (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
-       
        (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform ',save-for-backward :reader node-save-for-backward2))
 	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
@@ -518,6 +518,8 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 				  abstract-name
 				  device)))
 
+       (set-node-reject-case (find-class ',impl-name) (the (or null function) ,reject-p))
+       
        (when (null (gethash ',device *device-features*))
 	 (setf (gethash ',device *device-features*) (make-hash-table)))
 
@@ -606,7 +608,7 @@ Gives an implementation of `abstract-name` as a function form.
 	     ',abstract-name
 	     ',device))
        
-       (set-node-reject-case ',impl-name (the (or null function) ,reject-p))
+
        
        (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform nil :reader node-save-for-backward2))
@@ -619,6 +621,7 @@ Gives an implementation of `abstract-name` as a function form.
        (when (null (gethash ',device *device-features*))
 	 (setf (gethash ',device *device-features*) (make-hash-table)))
 
+       (set-node-reject-case (find-class ',impl-name) (the (or null function) ,reject-p))
        (setf (gethash ',abstract-name (gethash ',device *device-features*)) (find-class ',impl-name))
 	      
        

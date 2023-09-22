@@ -34,6 +34,7 @@
 	       :fiveam
 	       :alexandria
 	       :cffi
+	       :trivia
 	       :cl-randist
 	       :lparallel
 	       :bordeaux-threads
@@ -42,18 +43,16 @@
 	       :cl-waffe2/simd-extension)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
-	       (:file "vm/generic-tensor/package")
-	       
+	       (:file "vm/generic-tensor/package")	       
 	       (:file "vm/generic-tensor/conditions")
-	       
 	       (:file "vm/generic-tensor/dtype")
-	       
 	       
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
 
 	       ;; Load package.lisp first. (since scheduling depends on vm/nodes/package, MoveNodeTensor in base-impl/package)
 	       (:file "vm/nodes/package")
+	       (:file "vm/nodes/symbolic")
 	       (:file "base-impl/package")
 
 	       (:file "vm/package")
