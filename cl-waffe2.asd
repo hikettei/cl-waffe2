@@ -154,6 +154,8 @@
 	       (:file "network")
 	       (:file "trainer")
 
+	       (:file "base-impl/sdiff")
+
 	       (:file "base-impl/einsum")
 	       (:file "base-impl/opt-einsum/subscripts")
 	       (:file "base-impl/opt-einsum/einsum-impl")

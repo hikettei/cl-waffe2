@@ -223,6 +223,9 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (caller-doc !log2)
     (caller-doc !log10)
     (caller-doc !logE)
+    (caller-doc !log1p)
+
+    (caller-doc !expt)
 
     (caller-doc !sum)
     (caller-doc !mean)
