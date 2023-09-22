@@ -29,13 +29,13 @@ The name of this framework is cl-waffe**2** because it took over my previous pro
 ## ✨Features
 
 - cl-waffe2 brings **AbstractTensor** to Common Lisp.
-- **Extensible** All operations can be extended/reimplemented with any matrix operation libraries you like! Plus, AbstractNode guarantees that no code rewriting is needed when changing devices.
-- **Inlining**  Anyone can write an optimized loops, for example, `Loop Collapse` and `Loop Fusion`, computing offsets in advance, and scheduling multi-threading by `lparallel`.
-- **Graph-Level Optimization** cl-waffe2 provides an abstract graph optimization tool that can be used on any devices.
+- **Extensible** All operations can be reimplemented with any matrix operation libraries you like! Plus, AbstractNode guarantees that no code rewriting is needed when changing devices.
+- **Inlining**  Anyone can write an optimized loop calling foreign libraries; an order is collapsed and shuffled depending on the ranks and offsets. 
+- **Graph-Level Optimization** cl-waffe2 provides a powerful abstract graph optimization tool that can be used on any devices. For example, it optimizes the locality of memory, and make operations in-place as much as possible.
 - **Visualize** Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
-- **debugging** Shape Errors are detected before the operation is performed. In addition, All objects in cl-waffe2 are nicely rendered in your terminal.
-- **Systematic Nodes**: AbstractNodes and Models are written with minimum codes. Moreover, they're easy to compose and compile.
-- 👏 Its core part and VM are 100% written on **ANSI Common Lisp**.
+- **Debugging** cl-waffe2 is enough clever that not only detecting all Shaping-Error before the execution but also suggests alternatives! In addition, All objects in cl-waffe2 are nicely rendered on your REPL.
+- **Systematic Nodes**: AbstractNodes and Models are written with small codes. Moreover, they're easy to compose and compile.
+- **Symbolic Differentiation** In the first place, cl-waffe2 do not create nodes that are later modified. Rewrites with compiler macro.
 
 ## 🍃 Quicklook
 
