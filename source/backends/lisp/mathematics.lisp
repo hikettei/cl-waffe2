@@ -74,4 +74,6 @@
   (define-math-impl Log10Node #'(lambda (x) (log x 10)) t)
 
   (define-math-impl LogENode log t)
+
+  (define-math-impl Log1PNode #'(lambda (x) (log (1+ x))) t)
   )

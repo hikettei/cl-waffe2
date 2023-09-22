@@ -1,10 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes)
 
-;; [TODO] cl-waffe2.asd (OK)
-;; [TODO] Docstring
-;; [TODO] Test
-
 (defparameter *enable-symbolic-path* T "
 ## [parameter] `*enable-symbolic-path*`
 
@@ -23,7 +19,7 @@ Set T to enable symbolic diff. In default: `T`.
 
 Defines a compiler-macro so-called **Symbolic Differentiation** which fuses several nodes into one, or replaces with another nodes. Sometimes, can combine cl-waffe2 functions to compose bad a computation node in tern of speed and safety; nodes (e.g: `(log (1+ x))`, `(log (exp x))`) should be represented as `(log1p x)` or `x` in the first place for reverse mode autodiff, and some nodes like `(!div X X)` should be deleted before compiling. This macro, however, enables that detecting such combinations and replacing them with another node before compiling.
 
-First, describe `subject` the function name to be replaced (e.g.:`!log` `!sum` `!sin` etc...). And then, each `caluses` receive an argument of corresponding position, and determine if the form can be replaced or transformed. Plus, currently using devices can be included to the condition: Only after a car of `*using-backend*` is a subtype of specified `device`, symbolic path is replaced. At the last, each result of `clauses` will be binded to `form-binds`, and return the improved code at the `replacement` in a manner of `defmacro.` If needed, `&environment` is binded to the `env`.
+First, describe `subject` the function name to be replaced (e.g.:`!log` `!sum` `!sin` etc...). And then, each `caluses` receive an argument of corresponding position, and determine if the form can be replaced or transformed. Plus, currently using devices can be included to the condition: Only after one of `*using-backend*` includes `device`, symbolic path is replaced. At the last, each result of `clauses` will be binded to `form-binds`, and return the improved code at the `replacement` in a manner of `defmacro.` If needed, `&environment` is binded to the `env`.
 
 ### Inputs
 
@@ -99,7 +95,7 @@ Since the macro defines a compile-macro, this optimizing feature can be added on
 		 `(progn;;load-time-value
 		    (locally (declare (notinline ,',subject))
 		      (if (and *enable-symbolic-path*
-			       (subtypep (car *using-backend*) ',',device))
+			       (find ',',device *using-backend*))
 			  (progn
 			    ,,@replacement)
 			  ,,form))))
@@ -113,7 +109,7 @@ Since the macro defines a compile-macro, this optimizing feature can be added on
   (replacement nil :type symbol))
 
 (defun find-from-feature-table (device list)
-  (find device list :test #'(lambda (x y) (subtypep y x)) :key #'features-table-key))
+  (find device list :test #'(lambda (x y) (eql y x)) :key #'features-table-key))
 
 (defmacro define-bypass (device name replacement)
   "
@@ -125,7 +121,7 @@ Since the macro defines a compile-macro, this optimizing feature can be added on
 
 Defines a compiler-macro called **bypass**, which replaces an existing function call with another one. If you want to fuse nodes created by functions which creates computation node (e.g.: !relu !softmax !gelu), declare an alternative route with this function, and they can be replaced with like: ReLUNode, SoftmaxNode, GeLUNode.
 
-The replacing is done when the car of `*using-backend*` is a subtype of specified `name[symbol]`, the funcall of `name[symbol]` will be replaced with `replacement[symbol]`. Note that before and after the replacement, they both should take the same arguments, same keywords. Unlike `define-symbolic-path`, there is no restriction of numbers that can be registered as a bypass to the single function; A single `!relu` can be replaced with: `!relu-cpu-fuse`, `!relu-cuda-fuse` for example.
+The replacing is done when one of `*using-backend*` is the equivalent to `name[symbol]`, the funcall of `name[symbol]` will be replaced with `replacement[symbol]`. Note that before and after the replacement, they both should take the same arguments, same keywords. Unlike `define-symbolic-path`, there is no restriction of numbers that can be registered as a bypass to the single function; A single `!relu` can be replaced with: `!relu-cpu-fuse`, `!relu-cuda-fuse` for example.
 
 ### Example
 

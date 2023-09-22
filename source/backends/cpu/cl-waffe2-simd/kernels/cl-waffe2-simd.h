@@ -194,10 +194,13 @@ _define_math_func(sacosh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scosh, acos
 _define_math_func(datanh, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dtanh, atanh);
 _define_math_func(satanh, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_stanh, atanh);
 
-// loge log2 log10
+// loge log(1+x) log2 log10
 
 _define_math_func(dlog, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog, log);
 _define_math_func(slog, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog, log);
+
+_define_math_func(dlog1p, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog1p, log1p);
+_define_math_func(slog1p, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog1p, log1p);
 
 _define_math_func(dlog2, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dlog2, log2);
 _define_math_func(slog2, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_slog2, log2);

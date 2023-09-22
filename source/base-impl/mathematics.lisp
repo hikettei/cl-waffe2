@@ -245,6 +245,14 @@ OUT_{copy}\\gets{~(~a~)(X)}
      (declare (ignore out))
      (values
       (!mul dout (!div 1 x))
+      nil)))
+
+  (define-elwise-node (log1p #'(lambda (x) (log (1+ x))))
+      (t nil)
+    ((self dout x out)
+     (declare (ignore out))
+     (values
+      (!mul dout (!div 1 (!add 1 x)))
       nil))))
 
 ;; ==============================================================

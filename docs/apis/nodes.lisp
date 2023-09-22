@@ -372,6 +372,12 @@ Example: (TODO)
     (with-doc 'defmodel    'macro)
     (with-doc 'defmodel-as 'macro)
 
+    (with-section "Symbolic Diff")
+
+    (insert "~a" (documentation '*enable-symbolic-path* 'variable))
+    (with-doc 'define-symbolic-path 'macro)
+    (with-doc 'define-bypass 'macro)
+
     (with-section "Events for Embedding JIT-Generated Code in runtime")
     
     (insert "~a"

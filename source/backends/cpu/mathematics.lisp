@@ -48,6 +48,7 @@
   (define-math-impl LogE)
   (define-math-impl Log2)
   (define-math-impl Log10)
+  (define-math-impl Log1p)
 
   (define-math-impl Sqrt))
 
