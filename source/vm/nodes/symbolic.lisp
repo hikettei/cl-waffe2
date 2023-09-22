@@ -8,7 +8,7 @@
 (defparameter *enable-symbolic-path* T "
 ## [parameter] `*enable-symbolic-path*`
 
-Indicates function calls replaced with `define-symbolic-path` effects on the result.
+Indicates function calls replaced with `define-symbolic-path` and `define-bypass` effects on the result.
 
 Set T to enable symbolic diff. In default: `T`.
 ")
@@ -81,7 +81,7 @@ Considering composing `(!!log (!!+ x 1))`
 ;; 0.52658904
 ```
 
-Since the macro defines a compile-macro, this optimizing feature can be added one per one function.
+Since the macro defines a compile-macro, this optimizing feature can be added one per one function. For example, If the purpose is to replace the standard implementation of `cl-waffe2/nn:!relu` with another fused and device-specific implementation, use the `define-bypass` macro.
 "
 
   (with-gensyms (args form result)
@@ -105,7 +105,71 @@ Since the macro defines a compile-macro, this optimizing feature can be added on
 			  ,,form))))
 	       ,form))))))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *bypass-table* (make-hash-table)))
 
-;; defpath ... !reluなどの関数名だけで指定できる
-;; こっちは一つのpathにつき複数のデバイスで登録できる
-(defmacro define-symbolic-op-replace ())
+(defstruct Features-Table
+  (key nil :type symbol)
+  (replacement nil :type symbol))
+
+(defun find-from-feature-table (device list)
+  (find device list :test #'(lambda (x y) (subtypep y x)) :key #'features-table-key))
+
+(defmacro define-bypass (device name replacement)
+  "
+## [macro] define-bypass
+
+```lisp
+(define-bypass device name replacement)
+```
+
+Defines a compiler-macro called **bypass**, which replaces an existing function call with another one. If you want to fuse nodes created by functions which creates computation node (e.g.: !relu !softmax !gelu), declare an alternative route with this function, and they can be replaced with like: ReLUNode, SoftmaxNode, GeLUNode.
+
+The replacing is done when the car of `*using-backend*` is a subtype of specified `name[symbol]`, the funcall of `name[symbol]` will be replaced with `replacement[symbol]`. Note that before and after the replacement, they both should take the same arguments, same keywords. Unlike `define-symbolic-path`, there is no restriction of numbers that can be registered as a bypass to the single function; A single `!relu` can be replaced with: `!relu-cpu-fuse`, `!relu-cuda-fuse` for example.
+
+### Example
+
+```lisp
+(defun !!relu (x)
+  (print \"RELU\")
+  x)
+
+(defun !!relu-fuse (x)
+  (print \"RELU_FUSE\")
+  x)
+
+(defun op (x)
+  (!!relu x))
+
+(define-bypass cl-waffe2/backends.cpu:CPUTensor !!relu !!relu-fuse)
+
+(op 3)
+;; RELU_FUSE
+;; 3
+
+(setf *enable-symbolic-path* nil)
+
+(op 3)
+;; RELU
+;; 1
+```
+
+"  
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (let ((first-one (null (gethash name *bypass-table*))))
+      (with-gensyms (form args result)
+	(if first-one
+	    (progn
+	      (setf (gethash name *bypass-table*) (make-hash-table))
+	      (setf (gethash device (gethash name *bypass-table*)) (make-features-table :key device :replacement replacement))
+	      `(define-compiler-macro ,name (&whole ,form &rest ,args)
+		 `(let ((,',result (and *enable-symbolic-path*
+					(find-from-feature-table (car *using-backend*) (hash-table-values (gethash ',',name *bypass-table*))))))
+		    (progn;load-time-value
+		      (locally (declare (notinline ,',name))
+			(if ,',result
+			    (funcall (features-table-replacement ,',result) ,@,args)
+			    ,,form))))))
+	    (progn
+	      (setf (gethash device (gethash name *bypass-table*)) (make-features-table :key device :replacement replacement))
+	      T))))))

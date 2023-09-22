@@ -46,6 +46,7 @@
   ;; Symbolic Diff
   (:export
    #:define-symbolic-path
+   #:define-bypass
    #:*enable-symbolic-path*)
   
   (:export
