@@ -38,6 +38,7 @@
 		#:*no-grad*
 		#:tensor-flexible-p
 		#:with-no-grad
+		#:get-input
 		#:make-compiled-kernel
 		#:system-lazy-set-save-for-backward
 		#:system-lazy-read-save-for-backward

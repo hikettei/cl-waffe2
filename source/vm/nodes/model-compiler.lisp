@@ -242,8 +242,8 @@ And manages its allocation not to cause conflicts in the threads."))
 				    ;; Composing Gradients
 				    (apply #'values
 					   (loop for argument in (cl-waffe2/vm.generic-tensor::compiled-inputs (read-compiled-model ,self))
-						 if (cl-waffe2/vm.generic-tensor:grad argument)
-						   collect (cl-waffe2/vm.generic-tensor:grad argument)
+						 if (cl-waffe2/vm.generic-tensor:grad (get-input (read-compiled-model ,self) argument))
+						   collect (cl-waffe2/vm.generic-tensor:grad (get-input (read-compiled-model ,self) argument))
 						 else
 						   collect nil)))))
 	     (setf (read-compiled-model ,self) (cl-waffe2/vm.generic-tensor::copy-compiled-model (,(symb named '-model) ,@in-names))

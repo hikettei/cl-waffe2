@@ -25,7 +25,7 @@ In default, set to 2.
 This parameter is useful for printing how all instructions are performed. If set to T, all results and arguments produced by executing `cl-waffe2 IR` is displayed into the terminal. In default, set to nil.
 ")
 
-(declaim (inline maybe-read-result write-result apply-instruction apply-inst-sv4bw))
+(declaim (inline maybe-read-result write-result apply-instructions apply-inst-sv4bw))
 
 (defmodel (SV4BW-Copier (self)
 	   :on-call-> ((self x y)
@@ -125,7 +125,7 @@ Instruction: ~a
 		    (dolist (arg (map 'list #'maybe-read-result (wfop-args instruction)))
 		      (format out " ~a" (cl-waffe2/vm.nodes::describe-tensor arg))))
 		  (map 'list #'maybe-read-result (wfop-args instruction))))))
-  
+
   (let ((outs (multiple-value-list
 	       (apply
 		(the function (wfop-op instruction))

@@ -151,7 +151,7 @@ If the re-allocation is performed, frees the old one.
 		     :device (class-of tensor)))))
 	  (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use)))))
     (setf (vmalloc-allocated-p allocation) T)))
-
+ 
 (defun copy-allocate (allocation)
   "Makes a copy of given allocation and its storage vec is also copied so no thread-conflicts would happen."
   (declare (type VMAllocation allocation))
@@ -161,9 +161,8 @@ If the re-allocation is performed, frees the old one.
     (loop for key being the hash-keys      in (vmalloc-id2pool allocation)
 	  for tensor being the hash-values in (vmalloc-id2pool allocation) do
 	    (let ((use (if (scalar-p tensor)
-			   (if (scalar-p tensor)
-			       (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
-			       (make-clone tensor (tensor-name tensor))))))
+			   (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
+			   (make-clone tensor nil))))
 	      (setf (slot-value use 'cl-waffe2/vm.generic-tensor::input-shape)
 		    (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
 	      (setf (tensor-id use) (tensor-id tensor))
