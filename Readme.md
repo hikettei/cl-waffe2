@@ -35,7 +35,7 @@ The name of this framework is cl-waffe**2** because it took over my previous pro
 - **Visualize** Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
 - **Debugging** cl-waffe2 is enough clever that not only detecting all Shaping-Error before the execution but also suggests alternatives! In addition, All objects in cl-waffe2 are nicely rendered on your REPL.
 - **Systematic Nodes**: AbstractNodes and Models are written with small codes. Moreover, they're easy to compose and compile.
-- **Symbolic Differentiation** In the first place, cl-waffe2 do not create nodes that are later modified. Rewrites with compiler macro.
+- **Symbolic Differentiation** In the first place, cl-waffe2 do not create nodes that are later modified. Compiler macros eliminate functions producing such nodes.
 
 ## 🍃 Quicklook
 
