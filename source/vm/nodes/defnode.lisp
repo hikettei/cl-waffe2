@@ -126,8 +126,7 @@ reject-when=nil, or (apply reject-when inputs)=t"
 (defvar *call-with-view-route* nil)
 
 (defmacro with-tracing-call-with-view (&body body)
-  `(let ((*call-with-view-route*)
-	 (*ranked-loop-result-cacher*))
+  `(let ((*call-with-view-route*))
      ,@body))
 
 (defun replace-tensor->id (body args)
@@ -154,9 +153,8 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :body (replace-tensor->id body args)
    :args args
    :self self
-   :call-with-view *ranked-loop-result-cacher*
    :cache-when-compiled (if cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
-			    NIL ;; This function should not be used as a cache.
+			    nil ;; This function should not be used as a cache.
 			    traceable?)
    :cache-p (when (and traceable? *call-with-view-route*) t)
    :view-route (if (and traceable? *call-with-view-route*)

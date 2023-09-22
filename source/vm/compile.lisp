@@ -252,7 +252,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
 	    (values forward (or bw backward) leaves dout allocation)))))))
 
-#+sbcl(setf sb-ext:*inline-expansion-limit* 4)m
+#+sbcl(setf sb-ext:*inline-expansion-limit* 4)
 (defun findout-origin (table tensor &key (limit 10))
   (declare (type hash-table table)
 	   (type AbstractTensor tensor)

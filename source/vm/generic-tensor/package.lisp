@@ -95,10 +95,6 @@
    #:viewinstruction-size
    #:viewinstruction-by
    #:call-with-view
-   #:it.
-   #:it.-able-p
-   #:*ranked-loop-result-cacher*
-   #:fuse-generated-iteration
    #:with-ranked-loop
    #:stride-of
    #:size-of

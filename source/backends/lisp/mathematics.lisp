@@ -42,8 +42,7 @@
 						      ,(stride-of x-view 0)
 						      ,(stride-of o-view 0)
 						      ,(size-of x-view 0)))
-						`(,x ,out)
-						:fuse t)
+						`(,x ,out))
 					     ,out))))))))
   ;;===============|NodeName|=|Func|=|Dense?|=== 
   (define-math-impl AbsNode    abs    nil)

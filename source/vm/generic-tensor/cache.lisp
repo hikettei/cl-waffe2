@@ -72,7 +72,7 @@
   (body nil :type list)              ;; (named-lambda ... () ...)
   (cache-when-compiled nil :type boolean)
   (cache-p nil :type boolean)
-  (call-with-view nil :type (or null Ranked-Loop))
+  (call-with-view nil :type (or null))
   (args nil :type list)
   (view-route nil :type list)
   (self nil)) ;; 2D 3D Flatten ...

@@ -29,7 +29,6 @@
 		#:movetensor-p
 		#:shaping-error
 		#:tensor-protect-me
-		#:*ranked-loop-result-cacher*
 		#:shape-equal
 		#:order
 		#:dtype

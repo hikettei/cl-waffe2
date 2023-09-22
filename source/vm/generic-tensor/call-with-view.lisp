@@ -304,198 +304,12 @@ Return: (values offsets-place form)"
 	     (equal (reverse k) (tensor-permute-order tensor)))))
     (every #'check tensors)))
 
-(defmacro cl-waffe2-internal-tagbody (tag &body body)
-  "(cl-waffe2-internal-tagbody #:TAG000
-     ... body)
-
-Used to replace/fuse generated call-with-view."
-  (declare (ignore tag))
-  `(progn ,@body))
-
-
-;; Using Ranked-Loop Information at compiling time, and later expand into Fused Operation:
-;; The step seems ugly:
-;; After call-with-view is called, the structure Ranked-Loop is set to *ranked-loop-result-cacher*
-(defparameter *ranked-loop-result-cacher* nil)
-;; define-impl macro binds this parameter, and then reading this variable.
-
-;; So, one define-impl :forward, call-with-view can be used at once.
-
-(defstruct (Ranked-Loop
-	    (:conc-name rloop-))
-  (expanded-body nil :type list)
-  (op-function nil :type function)
-  (tensors nil :type list)
-  (n-tensors 0 :type fixnum)
-  (kernel-size 0 :type fixnum)
-  (force-order nil :type boolean)
-  (view-route nil :type list)
-  (fuse-p     nil :type boolean)
-  (lparallel  nil :type boolean)
-  (tagid      nil :type symbol))
-
-(defun place-inside-of (old-loop old-body new-body)
-  (let ((target-id (rloop-tagID old-loop)))
-    (labels ((fuse-op-helper (fn tree)
-	       ;; "return (values XXX t) to stop exploring"
-	       (multiple-value-bind (tree stop-p) (funcall fn tree)
-		 (if (and (listp tree) (not stop-p))
-		     (mapcar (lambda (subtree)
-			       (fuse-op-helper fn subtree))
-			     tree)
-		     tree))))
-      (fuse-op-helper
-       #'(lambda (tree)
-	   (if (listp tree)
-	       (if (and
-		    (eql (car tree) 'cl-waffe2-internal-tagbody)
-		    (eql (second tree) target-id))
-		   (progn
-		     ;;(print tree)
-		     ;;(print new-body)
-		     (values
-		      (append
-		       new-body
-		       (cdddr tree))
-		      nil))
-		   tree)
-	       tree))
-       old-body))))
-
-(defun fuse-generated-iteration (out old-ranked-loop new-ranked-loop old-body &key (merge-body nil) (merge-loop nil))
-  "Replaces the body of (c-waffe2-internal-tagbody ...) with new, fused body
-
-Based on the information from old-ranked-loop and new-ranked-loop, this funciton replaces the old-ranked-loop.tagID body in old-body with the body of new-ranked-loop"
-
-  (let ((target-id (rloop-tagID old-ranked-loop)))
-    (labels ((fuse-op-helper (fn tree)
-	       ;; "return (values XXX t) to stop exploring"
-	       (multiple-value-bind (tree stop-p) (funcall fn tree)
-		 (if (and (listp tree) (not stop-p))
-		     (mapcar (lambda (subtree)
-			       (fuse-op-helper fn subtree))
-			     tree)
-		     tree))))
-      (fuse-op-helper
-       #'(lambda (tree)
-	   ;; Finds out this part: (cl-waffe2-internal-tagbody tag &body ...)
-	   (if (listp tree)
-	       (if (and
-		    (eql (car tree) 'cl-waffe2-internal-tagbody)
-		    (eql (second tree) target-id))
-		   (values
-		    ;; (cl-waffe2-internal-tagbody ID ...)
-		    (append		  
-		     (if merge-loop
-			 (place-inside-of
-			  merge-loop
-			  merge-body
-			  (rloop-expanded-body new-ranked-loop))
-			 (rloop-expanded-body new-ranked-loop))
-		     (cdddr tree))
-		    t)
-		   tree)
-	       tree))
-       old-body))))
-
-;; The function it. composes the given two ranked-loop if possible, otherwise return nil
-(defun it.-able-p (ranked-loop1 ranked-loop2)
-  "
-## [function] it.-able-p
-
-```lisp
-(it.-able-p ranked-loop1 ranked-loop2)
-```
-
-Returns t If the two given Ranked-Loops are composable otherwise nil.
-
-Composable Ranked-Loop is defined as:
-
-1. the value of `lparallel`, `view-route`, `force-order`, and `kernel-size` corresponds with.
-
-2. Both of `fuse-p` is t
-
-3. The number of `tensors` do match.
-
-"
-  (declare (type (or null Ranked-Loop) ranked-loop1 ranked-loop2))
-  (and
-
-   ;; define-impl is for Tensors?
-   (not (null ranked-loop1))
-   (not (null ranked-loop2))
-
-   (rloop-fuse-p ranked-loop1)
-   (rloop-fuse-p ranked-loop2)
-
-   (eql (rloop-lparallel ranked-loop1)
-	(rloop-lparallel ranked-loop2))
-
-   (eql (rloop-kernel-size ranked-loop1)
-	(rloop-kernel-size ranked-loop2))
-
-   (eql (rloop-force-order ranked-loop1)
-	(rloop-force-order ranked-loop2))
-
-   ;; Applies to the same size?
-   (let ((rep (shape (car (rloop-tensors ranked-loop1)))))
-     (and (every #'(lambda (s) (equal (shape s) rep))
-		 (rloop-tensors ranked-loop1))
-	  (every #'(lambda (s) (equal (shape s) rep))
-		 (rloop-tensors ranked-loop2))
-	  ))
-   
-   ;; Sort by Ranks, instead of view-route? to fuse sum
-   ;; (equal (rloop-view-route ranked-loop1)
-   ;;	    (rloop-view-route ranked-loop2))
-   ))
-
-;; TODO: Shuffling Views to compose more operators
-;; TODO: how do we handle with with-tensor-ptr?
-;; We should embedding codes at a cetrain position
-;; Gensym: a-ptr etc..
-(defun it. (ranked-loop1 ranked-loop2 &key (embedding nil))
-  "
-## [function] it.
-
-`it.` is the operator to compose ranked-loop1 and ranked-loop2 if possible.
-
-Return: brand new composed Ranked-Loop
-"
-  (declare (type (or null Ranked-Loop) ranked-loop1 ranked-loop2))
-
-  (assert (it.-able-p ranked-loop1 ranked-loop2)
-	  nil
-	  "it.: Assertion Failed because the given two Iterations aren't composable.")
-
-  (let ((*ranked-loop-result-cacher*)
-	(tensors `(,@(rloop-tensors ranked-loop1)
-		   ,@(rloop-tensors ranked-loop2))))
-    (call-with-view
-     #'(lambda (&rest views)
-	 (let* ((argn1  (- (length views) (rloop-n-tensors ranked-loop1)))
-		(views1 (butlast views argn1))
-		(views2 (last    views argn1)))
-	   `(progn
-	      ,(apply (rloop-op-function ranked-loop1) views1)
-	      ,embedding
-	      ,(apply (rloop-op-function ranked-loop2) views2))))
-     tensors
-     :at-least-dim (rloop-kernel-size ranked-loop1)
-     :force-order  (or (rloop-force-order ranked-loop1) (rloop-force-order ranked-loop2))
-     :lparallel    (rloop-lparallel   ranked-loop1)
-     :fuse t)
-    *ranked-loop-result-cacher*))
-
-;; TODO: Ranked-Loop . Ranked-Loop -> New-Ranked-Loop
-
 (defun call-with-view (function
 		       tensors
 		       &key
 			 (at-least-dim 1)
 			 (force-order nil)
 			 (lparallel nil)
-			 (fuse nil)
 		       &aux
 			 (shape (shape (car tensors)))
 			 (dims  (length shape))
@@ -509,7 +323,7 @@ Return: brand new composed Ranked-Loop
 A principle operator to extend your functions to higher arrays.
 
 ```lisp
-(call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil) (fuse nil))
+(call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil))
 ```
 
 The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
@@ -661,34 +475,16 @@ butgot ~a."
 		      (explore
 		       (1- rest-dim)
 		       offsets-place))))))))
-
-    (let* ((tag (gensym "INTERNAL-TAG"))
-	   (result
-	     (with-expand-init-tmp-form offset-place tensors
-	       (explore dims offset-place)))
-	   (result `(cl-waffe2-internal-tagbody ,tag ,result)))
-
-      (setf *ranked-loop-result-cacher*
-	    (make-ranked-loop
-	     :expanded-body result
-	     :op-function function
-	     :tensors tensors
-	     :n-tensors (length tensors)
-	     :force-order force-order
-	     :kernel-size at-least-dim
-	     ;;:view-route (copy-list cl-waffe2/vm.nodes::*call-with-view-route*)
-	     :fuse-p fuse
-	     :lparallel lparallel
-	     :tagID tag))
-      result)))
+    
+    (with-expand-init-tmp-form offset-place tensors
+      (explore dims offset-place))))
 
 
 (defmacro with-ranked-loop (((op-function &rest variables)
 			     &key
 			       (kernel-size 1)
 			       (shuffle-rank t)
-			       (lparallel nil)
-			       (fuse nil))
+			       (lparallel nil))
 			    &body
 			      body)
   "
@@ -700,8 +496,7 @@ butgot ~a."
                     &key
                        (kernel-size 1)
                        (shuffle-rank t)
-                       (lparallel nil)
-                       (fuse nil))
+                       (lparallel nil))
                     &body body))
 ```
 
@@ -712,7 +507,7 @@ Just an alias of `call-with-view` with this form:
   ,@body)
 ```
 "
-  `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
+  `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel)
     ,@body))
 
 (defun expand-call-with-view* (function tensors at-least-dim)
