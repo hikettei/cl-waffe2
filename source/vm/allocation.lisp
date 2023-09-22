@@ -34,6 +34,7 @@
 ;;     - compiler-macroでcall/forwardをインライン化
 ;;     - VMの最適化
 ;;     - (100 100) > の大きいスケールならVMの最適化はこれ以上必要ない ノードの構築が重たい
+;;  2. ノードの割り当て。。。作成時じゃなくてcallしたとき？
 
 ;;  2. モデル gc-reachable
 ;;  3. Fusion Path ... compiler-macro based symbolic diff
@@ -46,6 +47,7 @@
 ;;  6. adjustable shapeのsolver
 ;;  7. define-impl cacheできないやつ削除
 ;;  ...
+;;  8. defmodel-as :node Fix
 
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"

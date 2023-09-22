@@ -8,6 +8,7 @@
 ;; AbstractNode is all about cl-waffe2 -
 (defclass AbstractNode ()
   ((where-decl :initarg :where-decl :initform nil :accessor read-where)
+   (subscript  :initarg :subscript  :initform nil :accessor subscript-of)
    
    ;; Shape Transmission States
    ;; Broadcastable Version
