@@ -42,6 +42,12 @@
 		#:system-lazy-set-save-for-backward
 		#:system-lazy-read-save-for-backward
 		#:scalar-p)
+
+  ;; Symbolic Diff
+  (:export
+   #:define-symbolic-path
+   #:*enable-symbolic-path*)
+  
   (:export
    ;; External JIT
    #:make-backward
