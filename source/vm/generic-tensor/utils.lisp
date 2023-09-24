@@ -86,7 +86,7 @@
 
 
 ;; [TODO] Extend devices
-(defun make-clone (tensor &optional name ignore-create-from) 
+(defun make-clone (tensor &optional name ignore-create-from)
   (let* ((shape (actual-shape tensor))
 	 (out (make-input shape (or name nil)
 			  :create-from (if ignore-create-from
@@ -248,3 +248,22 @@ Usage:
   (declare (type AbstractTensor tensor))
   (adjustable-shape-compatible (tensor-alloc-state tensor)))
 
+(defun range (from to)
+  (loop for i fixnum upfrom from below to collect i))
+
+(define-compiler-macro range (from to)
+  `(loop for i fixnum upfrom ,from below ,to collect i))
+
+(defun sync (list order) (loop for o in order collect (nth o list)))
+
+(define-compiler-macro sync (list order) `(loop for o in ,order collect (nth o ,list)))
+
+(defun find-size (wtensors rank)
+  (nth rank
+       (wtensor-shape
+	(or
+	 (find t wtensors
+	       :test #'(lambda (_ wtensor)
+			 (declare (ignore _))
+			 (numberp (nth rank (wtensor-shape wtensor)))))
+	 (car wtensors)))))

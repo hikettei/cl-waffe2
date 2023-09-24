@@ -95,6 +95,7 @@
    #:viewinstruction-size
    #:viewinstruction-by
    #:call-with-view
+   #:do-compiled-loop
    #:with-ranked-loop
    #:stride-of
    #:size-of
