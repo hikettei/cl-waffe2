@@ -6,7 +6,7 @@
 (define-with-typevar (where-kernel u) (x y
 				       cond true-then false-then
 				       size offsetx offsety incx incy)
-  (declare (optimize (speed 3) (safety 0))
+  (declare (optimize (speed 3) (safety 1))
 	   (type (simple-array u (*)) x y)
 	   (type fixnum offsetx offsety incx incy size)
 	   (type function cond))
@@ -24,7 +24,7 @@
 					 size
 					 offsetx offsety offseto
 					 incx incy inco)
-  (declare (optimize (speed 3) (safety 0))
+  (declare (optimize (speed 3) (safety 1))
 	   (type (simple-array u (*)) x y out)
 	   (type fixnum offsetx offsety offseto incx incy inco size)
 	   (type function cond))
@@ -58,12 +58,12 @@
 (define-impl-op (Compare-Operation-Node :device LispTensor)
 		:forward ((self tensor1 tensor2 out)
 			  (let ((kernel (compare-kernel (dtype tensor1))))
-			    (do-compiled-loop (list tensor1 tensor1 out) ()
+			    (do-compiled-loop (list tensor1 tensor2 out) ()
 				(x-view y-view o-view)
 			      (funcall kernel
 				       (tensor-vec tensor1)
 				       (tensor-vec tensor2)
-				       (tensor-vec out)				       
+				       (tensor-vec out)
 				       (logical-condition self)
 				       (logical-true-then self)
 				       (logical-false-then self)
@@ -74,4 +74,5 @@
 				       (stride-of x-view 0)
 				       (stride-of y-view 0)
 				       (stride-of o-view 0)))
+			    (print out)
 			    out)))
