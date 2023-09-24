@@ -613,6 +613,8 @@ Gives an implementation of `abstract-name` as a function form.
 ```lisp
 (define-impl-op ((abstract-name &key (device t) (extends nil) (reject-p nil)) &key forward backward))
 ```
+
+In order to place ranked matrix operations here, you MUST use `do-compiled-loop` macro instead of writing iterations manually.
 "
   
   (let* ((forward-self-name  (caar forward))

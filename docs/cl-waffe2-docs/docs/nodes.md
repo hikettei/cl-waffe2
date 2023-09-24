@@ -426,11 +426,12 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 ## [macro] define-impl
 
 ```lisp
-(define-impl (abstract-name &key (device t) (extends nil) (cache-when-compiled t) (reject-p nil))
+(define-impl (abstract-name &key (device t) (extends nil) (cache-when-compiled t) (reject-p nil) (cache-id nil))
         &key (save-for-backward nil) (forward nil) (backward nil))
 ```
 
-Defines an implementation of `abstract-name` which is already declared by `defnode` macro, with :forward=macro and later compiled.
+Defines a one of implementation of `abstract-name` which is defined by `defnode` macro. The implementation is given as the same manner of defmacro. Returned S-expression is later compiled by the `(compile nil body)` function and cached as long as cache-when-compiled is set to T. Compiled functions are dispatched depending on `RANK` `DTYPE` `STRIDE` and `SHAPE`, if you want to add another factors this, specify this at :cache-id.
+
 
 ### Effects
 
@@ -452,6 +453,8 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 
 `reject-p`[nil or function] Set a lambda function returning nil or T. The function is called with arguments: `(function constructor-args1 constructor-args2 ...)`. In the case the function returned T, the method dispatching is ignored. You can use this method to ignore a certain dtype as a :forward arguments for example.
 
+`cache-id[nil or function]` Adds an additional keys of searching LUT. this form should be given as: `#'(lambda (&rest self inputs) (list keys...))` where inputs are the arguments called with forward. For example: `#'(lambda (self &rest inputs) (map 'list #'order inputs))` if the orders matter.
+
 ## [macro] define-impl-op
 
 Gives an implementation of `abstract-name` as a function form.
@@ -459,6 +462,8 @@ Gives an implementation of `abstract-name` as a function form.
 ```lisp
 (define-impl-op ((abstract-name &key (device t) (extends nil) (reject-p nil)) &key forward backward))
 ```
+
+In order to place ranked matrix operations here, you MUST use `do-compiled-loop` macro instead of writing iterations manually.
 
 ## [macro] define-op
 

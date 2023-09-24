@@ -51,10 +51,10 @@
 	    (documentation (car (c2mop:generic-function-methods #'get-input)) 't))
 
 
-    (with-section "Creating a ranked function with computing views")
+    (with-section "Optimized and Ranked Tensor Iterators")
 
     (with-doc 'call-with-view 'function)
+    (with-doc 'do-compiled-loop 'macro)))
 
-    (with-doc 'with-ranked-loop 'macro)))
 
 

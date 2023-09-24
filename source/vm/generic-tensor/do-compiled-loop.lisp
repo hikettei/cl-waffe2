@@ -80,8 +80,9 @@ If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory),
        (every #'(lambda (x) (eql (car strides) x)) strides)))))
 
 (defun solve-loop-order (tensors kernel-size force-order &key (mode :heuristic))
-  "Creates an optimized route of AbstractLoop.
-mode = :heuristic or :runtime (Set :heuristic for all case)
+  "
+Creates an optimized route of AbstractLoop.
+ mode = :heuristic or :runtime (Set :heuristic for all case)
 
 Examples:
  kernel-size=1 ... element-wise
@@ -302,7 +303,42 @@ Examples:
 (do-compiled-loop tensor-list (&key (kernel-size 1) (collapse t) (mode :runtime)) (&rest views-bind) &body body)
 ```
 
-(TODO)
+Iterates the given tensors in optimized order. The behavior is the same as the `call-with-view` function in that both is intended to call a ranked matrix function with considering multidimensional offsets. This macro, however, directly placed within functions. 
+
+### Inputs
+
+`tensor-list[list]` an list of tensors. all of them must have the same rank and shape[> kernel-size]. Must not include adjustable shape.
+
+`kernel-size[(unsigned-byte 32)]` Indicates the rank of operation, that is, indicates the same as `:at-least-dim` in the call-with-view function.
+
+`collapse[boolean]` Set T to enable `Loop Collapse`. (= (not :force-order) in call-with-view)
+
+`mode[:runtime or :heuristic]` indicates the algorithm of optimizing. `:heuristic` mode is still under experimental and not tested well. So set :runtime.
+
+### Example
+
+```lisp
+(define-impl-op (Compare-Operation-Node :device LispTensor)
+		:forward ((self tensor1 tensor2 out)
+			  (let ((kernel (compare-kernel (dtype tensor1))))
+			    (do-compiled-loop (list tensor1 tensor1 out) ()
+				(x-view y-view o-view)
+			      (funcall kernel
+				       (tensor-vec tensor1)
+				       (tensor-vec tensor2)
+				       (tensor-vec out)				       
+				       (logical-condition self)
+				       (logical-true-then self)
+				       (logical-false-then self)
+				       (size-of x-view 0)
+				       (offset-of x-view 0)
+				       (offset-of y-view 0)
+				       (offset-of o-view 0)
+				       (stride-of x-view 0)
+				       (stride-of y-view 0)
+				       (stride-of o-view 0)))
+			    out)))
+```
 "
 
   
