@@ -28,27 +28,6 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;;
-;; [TODO]
-;;  1. コンパイル時間の削減
-;;     - compiler-macroでcall/forwardをインライン化
-;;     - VMの最適化
-;;     - (100 100) > の大きいスケールならVMの最適化はこれ以上必要ない ノードの構築が重たい
-;;  2. ノードの割り当て。。。作成時じゃなくてcallしたとき？
-
-;;  2. モデル gc-reachable
-;;  3. Fusion Path ... compiler-macro based symbolic diff
-;;  4. Package構造のリファクタリング
-;;     cl-waffe2/vm, cl-waffe2/vm.generic-tensor, cl-waffe2/vm.nodes
-;;     -> cl-waffe2/core (= cl-waffe2 cl-waffe2/vm.ad cl-waffe2/vm.abstract-tensor cl-waffe2/vm.nodes cl-waffe2/vm.distributions)
-
-;;  5. Refactor Loop Fusion関連のコードを消す
-;; define-symbolic-diff (:device (t) (!add (!+ 1.0 x)))
-;;  6. adjustable shapeのsolver
-;;  7. define-impl cacheできないやつ削除
-;;  ...
-;;  8. defmodel-as :node Fix
-
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
