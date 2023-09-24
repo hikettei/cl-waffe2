@@ -77,8 +77,8 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
   (let ((*no-grad* (not need-backward)))
     ;; *freeze-call-with-view*=t and forcibly set force-order=t
     ;; i.e.: Compiled codes are compatible with ND-array
-    (let* ((cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
-	     (some #'tensor-projected-p args))	     
+    (let* (;;(cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
+	   ;;  (some #'tensor-projected-p args))	     
 	   ;;(tensor-names  (map 'list #'(lambda (x) (intern (symbol-name x) "KEYWORD")) names))
 	   (batch-lengths (map 'list
 			       #'(lambda (x y)
@@ -161,7 +161,8 @@ excepted: AbstractTensor"
 			  (map 'list #'(lambda (tensor)
 					 (list (dtype tensor)
 					       (class-of tensor)
-					       (tensor-projected-p tensor)
+					       (map 'list #'cl-waffe2/vm.generic-tensor::force-list (tensor-view tensor))
+					       (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 					       ;; [FIXME] Reusing gcompiled composite could be the main reason for SegFault!!
 					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
 					       ;; Even when the node is cached

@@ -2,72 +2,14 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; cl-waffe2 has two mode depending on the situation
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; [TODO] Integrate do-compiled-loop.lisp and call-with-view.lisp
+;;        call-with-view perform by far the fastset performance while do-compiled-loop could be potentially optimized for permuted tensors.
 
-;;
-;; build:   Supports FuseOps/Fully Inlining (Memo: cl-waffe2 defnode corresponds with IR, conditions, iterations are expressed/implemented as AbstractNode)
-;;
-;; proceed: No supports of FuseOps but working enough fast.
-;;
 
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; In cl-waffe2, call-with-view is a function used to express an iteration on an AbstractTensor.
-;; And, it is intended to be used for each single operation unit (exp/sin/matmul ...)
-;;
-;; Taking the case of the element-wise function `exp`, the body of :forward can be expressed like:
-;;
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; ====================================================
-;; (loop for i <- (Index considered views)              }
-;;      [Repeating for the rank of tensors]             } <- Expanded by call-with-view
-;;      ...                                             }
-;;      (element-wise-exp tensor stride offset size)    <- Kernel (user-defined)
-;; ====================================================
-
-;;
-;; In addition, cl-waffe2 can apply these optimization methods to the coming tensors:
-;;
-;; 1. Loop Fusion
-;;
-;; A(x) = (loop for i ...
-;;          (element-wise-sin ...))
-;;
-;; B(x) = (loop for i ...
-;;          (element-wise-cos ...))
-;;
-;; Composing A and B (i.e.: A(B(x))), the expanded form would be like:
-;;
-;; (loop for i ...
-;;          (element-wise-sin ...)
-;;          (element-wise-cos ...))
-;;
-;; Here's more, `aref` is still remained to be optimized:
-;;
-;; -> Since loop Fusion is still hard to implement across multiple devices, and I decide to implement it as an extended device, JITLispTensor.
-;;
-;;
-
-;; 2. Inlining
-;;    If the ranks/dimensions are enough small and (LOOP COST) >> (Computation_Time), they're inlined:
-;;
-;; 3. Disregarding Views
-;;
-;;    (10 10) Tensor with view = (T T) -> (100) Tensor as long as kernel-size = 1
-;;
-;;
-;; 4. Parallelize (TODO)
-;;
-;;
-;;
-
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-;;
-;; call-with-view is able to generate:
-;;   1. Inlined/Optimized/Parallelized Orders with coming tensors ( *freeze-call-with-view*=nil )
-;;   2. Flexible Loop Iterations for NDArray.                     ( *freeze-call-with-view*=t   )
-;;
-
+;; Force-Order=T Anywhere
 (defparameter *freeze-call-with-view* nil "Set this parameter T to make force-order=t everywhere. default: nil")
 
 ;; ===============================================
@@ -145,13 +87,11 @@ Set 2 if the operation is matmul for example.
 			      (views
 			       (nthcdr dim-start-from (tensor-view tensor))))
 	   (or
-	    ;; T :broadcast is invaild for example;
-	    ;; Possible cases are: T T T... or broadcast broadcast ...
-	    ;(not
-	     ;(every #'(lambda (v)
-	;		(eql (force-list v)
-	;		     (force-list (car views))))
-	;	    views))
+	    ;;(not
+	    ;;(every #'(lambda (v)
+	    ;;		(eql (force-list v)
+	    ;;		     (force-list (car views))))
+	    ;;	    views))
 	    (some #'(lambda (v)
 		      (not (or (eql (force-list v) t)
 			       (eql (force-list v) :broadcast))))
@@ -419,10 +359,12 @@ butgot ~a."
 		      (type list offsets-place))
 	     ;; Exploring ND .. 3D 2D 1D
 
-	     ;; When The Rest Form Can be flatten
+	     ;; Contiguous Layouts are flattened
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
 			(not force-order)
-			(no-permute-p tensors)
+			(every #'(lambda (x)
+				   (equal (tensor-permute-order x) (tensor-permute-order (car tensors))))
+			       tensors)
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
 	       
