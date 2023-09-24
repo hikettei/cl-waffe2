@@ -106,7 +106,7 @@
        (cl-waffe2/base-impl:mv-lazy-sv4bw node)))
 
 
-(defun expand-gradient-adder (tensor grad &key (setq nil))
+(defun expand-gradient-adder (tensor grad)
   ;; Tensor += Grad
   (setf (detach-p grad) t)
   (let ((out
@@ -120,31 +120,17 @@
 			 (cl-waffe2/base-impl::ScalarAndScalarAdd)
 			 (grad tensor)
 			 grad)))
-		     (if (= (tensor-grad-count tensor) 0)
-			 (if setq ;; Setq=T optimization isn't working (so currently disabled)
-			     (progn
-			       (init-state-container! tensor)
-			       (list
-				(make-wfop
-				 #'(lambda (x y)
-				     (declare (type AbstractTensor x y))
-				     ;; Setf Grad
-				     (setf (slot-value x 'cl-waffe2/vm.generic-tensor::grad) y)
-				     x)
-				 tensor
-				 #'(lambda () "SETQ_GRAD{INTERNAL}")
-				 `(,tensor ,grad)
-				 :out-to `(,tensor))))
-			     (progn
-			       (incf (tensor-grad-count tensor) 1)
-			       (node-compile-into-vm
-				(forward
-				 (cl-waffe2/base-impl:MoveTensorNode
-				  (dtype tensor)
-				  :save-for-backward
-				  t)
-				 (grad tensor)
-				 grad))))			 
+		     (if (= (tensor-grad-count tensor) 0)			 
+			 (progn
+			   (incf (tensor-grad-count tensor) 1)
+			   (node-compile-into-vm
+			    (forward
+			     (cl-waffe2/base-impl:MoveTensorNode
+			      (dtype tensor)
+			      :save-for-backward
+			      t)
+			     (grad tensor)
+			     grad)))			 
 			 (progn
 			   (node-compile-into-vm
 			    (forward
@@ -152,6 +138,6 @@
 			     (grad tensor)
 			     grad)))))))
 	    (setf (detach-p grad) nil))))
-    (setf (wfop-grad-adder-p (car out)) T)
+    (setf (wfop-grad-adder-p (car out)) t)
     out))
 

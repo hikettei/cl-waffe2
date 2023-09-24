@@ -255,6 +255,18 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 ;; 8. Tada~ Completed!
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+(defun reference-count-up! (iseq)
+  "iseq[0] , iseq[1] , ... iseq[last]
+Reading from the last iseq, the function attributes T at each last reference"
+  (let ((known (make-hash-table)))
+    (loop for inst in (reverse iseq) do
+      (let ((result (map 'list #'(lambda (arg)
+				   (prog1
+				       (not (gethash (tensor-id arg) known))
+				     (setf (gethash (tensor-id arg) known) T)))
+			 (wfop-args inst))))
+	(setf (wfop-args-last-count-p inst) result)))))
+	
 (defun inst-set-p (inst) (and (movetensor-p (wfop-node inst)) (movetensor-ignore-me (wfop-node inst))))
 
 (defun eliminate-setq-node (iseq) ;; iseq[0] -> iseq[n]
@@ -368,6 +380,8 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	     (setf (gethash (tensor-id tensor) id2pool-table) tensor)))
        (wfop-sv4bw inst)))
 
+    (%optimize-numerical-optimizing-locality! iseq-bw-flat)
+    
     (values
      iseq-bw-flat
      (make-vmallocation
@@ -463,5 +477,32 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 		    (when state
 		      (set-as-free tensor)))
 		args args-last-p))))))
+
+
+;; iseq = EndofNode EndofNode[-1] EndOfNode[-2] ... FirstInstruction
+(defun %optimize-numerical-optimizing-locality! (iseq)
+  "Deletes {GRAD}MOVETENSORNODE with explicting this node is for accumlating gradients."
+  ;; [TODO]
+  ;; reference-count-up! should be moved to the first step of compiling
+  ;; Memory-Locality Optimization costs O(nlogn) as of this writing
+  ;; but with this function, we count last references of args in advance
+  ;; So it would be approximated as O(N).
+  (reference-count-up! iseq)
+  (loop for inst in iseq
+	if (and (wfop-grad-adder-p inst)
+		(movetensor-p (wfop-node inst))
+		(second (wfop-args-last-count-p inst))
+
+		;; If the gradients are permuted, they moved into contiguous memory anywhere; optimizers, (M V params of Adam)
+		;; So contiguous tensors are only the subject to this opt
+		(not
+		 (tensor-projected-p (second (wfop-args inst))))
+		(not
+		 (cl-waffe2/vm.generic-tensor::permuted-p (second (wfop-args inst)))))
+	  do (setf (wfop-op inst) #'(lambda (grad-place grad)
+				      (setf (tensor-vec grad-place) (tensor-vec grad))
+				      grad)
+		   (wfop-node inst) #'(lambda () "SETQ{INTERNAL}"))))
+
 
 
