@@ -457,38 +457,3 @@ Just an alias of `call-with-view` with this form:
   `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel)
     ,@body))
 
-(defun expand-call-with-view* (function tensors at-least-dim)
-  (let* ((offsets (loop for tensor in tensors collect (gensym "offset")))
-	 (strides (loop for tensor in tensors
-			collect (loop for rank upfrom 0 below at-least-dim
-				      collect (gensym "strides"))))
-	 (sizes   (loop for tensor in tensors
-			collect (loop for rank upfrom 0 below at-least-dim
-				      collect (gensym "size"))))
-
-	 (views   (loop for tensor in tensors
-			for offset in offsets
-			for stride in strides
-			for size   in sizes
-			collect
-			(loop for rank upfrom 0 below at-least-dim
-			      collect
-			      (make-viewinstruction offset (nth rank size) (nth rank stride)))))
-	 (strides (alexandria:flatten strides))
-	 (sizes   (alexandria:flatten sizes))
-	 
-	 (kernel-function (apply function views))
-	 (kernel-applier  `(lambda (,@offsets ,@strides ,@sizes)
-			     (declare (ignorable ,@offsets ,@strides ,@sizes)
-				      (type fixnum ,@offsets ,@strides ,@sizes))
-			     ,kernel-function)))
-    ;; kernel-function ... (blas-sadd ... tensor1 tensor2 offsetXXX sizeXXX ...)
-    
-    `(with-bind-shape
-       #'original-shape
-       #'shape
-       (call-with-view-function*
-	(list ,@tensors)
-	,at-least-dim
-	,kernel-applier))))
-

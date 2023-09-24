@@ -1,6 +1,12 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
+;;
+;; do-compiled-loop.lisp explores all possible routes when expanding ranked matrix operations
+;; and minimize the costs and maximize the use of SIMD register
+;; This computation will be done in runtime << 1e-5 sec and cached.
+;; In the future release, integrate this file into call-with-view for simplicity
+
 (defstruct (AbstractLoop
 	    (:conc-name aloop-)
 	    (:constructor make-aloop (rank by element-n size mode)))
@@ -32,7 +38,8 @@
       (let ((out (apply #'gcd (nthcdr rank (wtensor-stride wtensor)))))
 	(if (= out 1)
 	    nil
-	    out))))
+	    out ;; out [TODO] it should return out but set as nil for now. With enough test cases, we can set as 1
+	    ))))
 
 ;; Making this function T under more various situations are the rational way to optimize;
 (defun rest-contiguous-p (rank &rest tensors &aux (layout (nthcdr rank (wtensor-stride (car tensors)))))
@@ -48,11 +55,11 @@ If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory),
 	   (or
 	    ;; T :broadcast is invaild for example;
 	    ;; Possible cases are: T T T... or broadcast broadcast ...
-	    (not
-	     (every #'(lambda (v)
-			(eql (force-list v)
-			     (force-list (car views))))
-		    views))
+	    ;;(not
+	    ;; (every #'(lambda (v)
+	;;		(eql (force-list v)
+	;;		     (force-list (car views))))
+	;;	    views))
 	    (some #'(lambda (v)
 		      (not (or (eql (force-list v) t)
 			       (eql (force-list v) :broadcast))))
@@ -74,7 +81,7 @@ If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory),
 
 (defun solve-loop-order (tensors kernel-size force-order &key (mode :heuristic))
   "Creates an optimized route of AbstractLoop.
-mode = :heuristic or :runtime
+mode = :heuristic or :runtime (Set :heuristic for all case)
 
 Examples:
  kernel-size=1 ... element-wise
@@ -88,6 +95,10 @@ Examples:
 	   (type (member :heuristic :runtime) mode)
 	   (optimize (speed 3)))
 
+  (dolist (tensor tensors)
+    (when (some #'symbolp (shape tensor))
+      (setf (slot-value tensor 'visible-shape) (translate-adjustable-shape (shape tensor)))))
+  
   ;;(setq mode :runtime)
   (assert (every #'(lambda (x)
 		     (and
@@ -282,13 +293,15 @@ Examples:
 	  (set-compiled-loop cache-id solved tensors)
 	  solved))))
 
-(defmacro do-compiled-loop (tensor-list (&key (kernel-size 1) (collapse t) (mode :heuristic)) (&rest views-bind) &body body &aux (cache-id (gensym "LOOP_CACHE")))
+;; :mode=:heuristic is still under experimental
+(defmacro do-compiled-loop (tensor-list (&key (kernel-size 1) (collapse t) (mode :runtime)) (&rest views-bind) &body body &aux (cache-id (gensym "LOOP_CACHE")))
   "
 ## [macro] do-compiled-loop
 
 ```lisp
-(do-compiled-loop tensor-list (&key (kernel-size 1) (collapse t) (mode :heuristic)) (&rest views-bind) &body body)
+(do-compiled-loop tensor-list (&key (kernel-size 1) (collapse t) (mode :runtime)) (&rest views-bind) &body body)
 ```
+
 (TODO)
 "
 
