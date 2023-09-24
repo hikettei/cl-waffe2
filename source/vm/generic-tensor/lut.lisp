@@ -52,7 +52,7 @@
 
 ;;(declaim (inline lut-search-function))
 (defun lut-search-function (table function-name tensors &key (setme nil))
-  (declare (type symbol function-name)
+  (declare ;;(type symbol function-name)
 	   (type list tensors)
 	   (type (or function null) setme)
 	   (type hash-table table)

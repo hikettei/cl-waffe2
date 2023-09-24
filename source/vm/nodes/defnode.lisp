@@ -20,6 +20,7 @@
 
 (defparameter *node-reject-case-table* (make-hash-table)) ;; :test #'eq
 
+;; [FIXME] Reloading cl-waffe2 -> Features are destructed...
 (defparameter *device-features* (make-hash-table) "Device Name -> Facet of Nodes")
 
 (defgeneric on-finalizing-compiling
@@ -145,7 +146,9 @@ reject-when=nil, or (apply reject-when inputs)=t"
 	  obj)))
    body))
 
-(defun vm-kernel-lambda (traceable? name args self body)
+(defun vm-kernel-lambda (dispatch-id traceable? name args self body)
+  "Creates A Compiled-Kernel Structure"
+  
   ;; [TODO]
   ;; (call node TID1 TID1)
   ;;   ^ should return error
@@ -155,12 +158,16 @@ reject-when=nil, or (apply reject-when inputs)=t"
    :body (replace-tensor->id body args)
    :args args
    :self self
-   :cache-when-compiled (if cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
-			    nil ;; This function should not be used as a cache.
-			    traceable?)
-   :cache-p (when (and traceable? *call-with-view-route*) t)
-   :view-route (if (and traceable? *call-with-view-route*)
-		   *call-with-view-route*)))
+   :cache-additional-id dispatch-id
+   :cache-when-compiled
+   (if cl-waffe2/vm.generic-tensor::*freeze-call-with-view*
+       nil ;; This function should not be used as a cache.
+       traceable?)
+   :cache-p
+   (when (and traceable? *call-with-view-route*) t)
+   :view-route
+   (if (and traceable? *call-with-view-route*)
+       *call-with-view-route*)))
 
 ;; [TODO] Display Warnings when backend-priority aren't all compatible
 (defmacro with-devices ((&rest backend-priority) &body body)
@@ -444,7 +451,8 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 			  (device t)
 			  (extends nil)
 			  (cache-when-compiled t)
-			  (reject-p nil))
+			  (reject-p nil)
+			  (cache-id nil))
 		       &key
 			 save-for-backward
 			 forward
@@ -455,11 +463,12 @@ You can invoke the forward/backward by using the method forward/backward. `(forw
 ## [macro] define-impl
 
 ```lisp
-(define-impl (abstract-name &key (device t) (extends nil) (cache-when-compiled t) (reject-p nil))
+(define-impl (abstract-name &key (device t) (extends nil) (cache-when-compiled t) (reject-p nil) (cache-id nil))
         &key (save-for-backward nil) (forward nil) (backward nil))
 ```
 
-Defines an implementation of `abstract-name` which is already declared by `defnode` macro, with :forward=macro and later compiled.
+Defines a one of implementation of `abstract-name` which is defined by `defnode` macro. The implementation is given as the same manner of defmacro. Returned S-expression is later compiled by the `(compile nil body)` function and cached as long as cache-when-compiled is set to T. Compiled functions are dispatched depending on `RANK` `DTYPE` `STRIDE` and `SHAPE`, if you want to add another factors this, specify this at :cache-id.
+
 
 ### Effects
 
@@ -480,7 +489,31 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 `backward`[body] Follows this format: `((self prev-gradient arg1 arg2 ...) (values arg1.grad arg2.grad))` Note that the form is given by a function, and computation nodes are continuous. Not a macro.
 
 `reject-p`[nil or function] Set a lambda function returning nil or T. The function is called with arguments: `(function constructor-args1 constructor-args2 ...)`. In the case the function returned T, the method dispatching is ignored. You can use this method to ignore a certain dtype as a :forward arguments for example.
+
+`cache-id[nil or function]` Adds an additional keys of searching LUT. this form should be given as: `#'(lambda (&rest self inputs) (list keys...))` where inputs are the arguments called with forward. For example: `#'(lambda (self &rest inputs) (map 'list #'order inputs))` if the orders matter.
 "
+
+  (when (null cache-when-compiled)
+    (warn "
+(define-impl (~a :device ~a ...
+                 :cache-when-compiled ~a
+                                       L___  Set to NIL is deprecated.
+    ....)
+
+The node definitely works, but each time you compile it the function `(compile nil body)` also runs and leads to a reduction in a compilation speed because we fails to cache the compiled function being dispatched by these factors: ranks, views, strides, and dtype of tensors. So, such nodes should be basically implemented as one of these ways:
+
+1. [define-impl + :cache-id]
+        :cache-when-compiled T
+        :cache-id #'(lambda (self &rest inputs) ...)
+     - Specify an lambda function which returns a list of additional search key at :cache-id.
+       And cl-waffe2 can find the compiled functions considering the returned value of :cache-id.
+2. [define-impl-op + do-compiled-loop]
+     - Use define-impl-op instead of define-impl
+     - Call ranked matrix operation with do-compiled-loop instead of call-with-view.
+"
+	  abstract-name
+	  device
+	  cache-when-compiled))
   
   (let* ((forward-self-name (caar forward))
 	 (backward-self-name (caar backward))
@@ -497,7 +530,7 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
       (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
 	      nil
-	      "define-op: The number of arguments do not match: ~a At ~a.
+	      "define-impl: The number of arguments do not match: ~a At ~a.
     :forward  should be -> (self arg1 arg2 ...)
     :backward should be -> (self prev-grad arg1 arg2 ...)"
 	      backward-args
@@ -535,6 +568,9 @@ Defines a CLOS class named `abstract-name-device` extends `abstract-name`
 		      ,@(second forward-body)
 		      (with-tracing-call-with-view
 			(vm-kernel-lambda
+			 ,(if cache-id
+			      `(apply ,cache-id ,forward-self-name ,inputs)
+			      nil)
 			 ,cache-when-compiled ',fw-name-vm ,inputs ,forward-self-name
 			 `(lambda ,(map 'list #'tensor-id ,inputs)
 			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs))

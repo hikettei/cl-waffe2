@@ -208,10 +208,13 @@ Please consider using another backends." dtype)))))
      `(,a ,b ,c)
      :at-least-dim 2)))
 
+(defun matmul-dispatch-id (self x y out)
+  `(,(trans-a? self) ,(trans-b? self) ,(order x) ,(order y) ,(order out)))
 
-(define-impl (MatMulNode :device CPUTensor
-	                 :cache-when-compiled nil ;; TODO: Make it T.
-			 :reject-p (supported-dtypes-are 0 :float :double))
+(define-impl (MatMulNode
+	      :device CPUTensor
+	      :cache-id #'matmul-dispatch-id
+	      :reject-p (supported-dtypes-are 0 :float :double))
 	     :save-for-backward (t t nil)
 	     :forward
 	     ((self a b out)
