@@ -144,14 +144,19 @@ Set 2 if the operation is matmul for example.
 			    &aux
 			      (views
 			       (nthcdr dim-start-from (tensor-view tensor))))
-	   (or (scalar-p tensor) ;; tensor is scalar
-	       ;; at least one of (nthcdr dim-start-from (tensor-view tensor)) isn't T
-	       (some #'(lambda (v)
-			 ;; non-reductable dim is: NOT(T) or NOT (:BROADCAST)
-			 (or (not (eql (force-list v) t))
-			     ;;(not (eql (force-list v) :broadcast))
-			     ))
-		     views))))
+	   (or
+	    ;; T :broadcast is invaild for example;
+	    ;; Possible cases are: T T T... or broadcast broadcast ...
+	    ;(not
+	     ;(every #'(lambda (v)
+	;		(eql (force-list v)
+	;		     (force-list (car views))))
+	;	    views))
+	    (some #'(lambda (v)
+		      (not (or (eql (force-list v) t)
+			       (eql (force-list v) :broadcast))))
+		  views))))
+    ;; Remaining strides are reg
     ;; If tensors are consisted of non-projected-tensor...?
     (not (some #'not-reductable-p tensors))))
 
