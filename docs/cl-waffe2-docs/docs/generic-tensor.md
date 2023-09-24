@@ -420,7 +420,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1830 
+{CPUTENSOR[float] :shape (A 10) :id TID1389 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
@@ -463,7 +463,7 @@ Embodies an `InputTensor` in the model. All unembodied tensors in the model can 
 
 Reading all variables in the computation node, the method get-input returns an corresponding `InputTensor` of model.
 
-## Creating a ranked function with computing views
+## Optimized and Ranked Tensor Iterators
 
 ## [function] call-with-view
 
@@ -530,21 +530,45 @@ Note that `call-with-view` should be used at once or zero in the one `define-imp
 
 See also: `with-ranked-loop` to the more elegant wrapping macro.
 
-## [macro] with-ranked-loop
-
+## [macro] do-compiled-loop
 
 ```lisp
-(with-ranked-loop (((op-function &rest variables)
-                    &key
-                       (kernel-size 1)
-                       (shuffle-rank t)
-                       (lparallel nil))
-                    &body body))
+(do-compiled-loop tensor-list (&key (kernel-size 1) (collapse t) (mode :runtime)) (&rest views-bind) &body body)
 ```
 
-Just an alias of `call-with-view` with this form:
+Iterates the given tensors in optimized order. The behavior is the same as the `call-with-view` function in that both is intended to call a ranked matrix function with considering multidimensional offsets. This macro, however, directly placed within functions. 
+
+### Inputs
+
+`tensor-list[list]` an list of tensors. all of them must have the same rank and shape[> kernel-size]. Must not include adjustable shape.
+
+`kernel-size[(unsigned-byte 32)]` Indicates the rank of operation, that is, indicates the same as `:at-least-dim` in the call-with-view function.
+
+`collapse[boolean]` Set T to enable `Loop Collapse`. (= (not :force-order) in call-with-view)
+
+`mode[:runtime or :heuristic]` indicates the algorithm of optimizing. `:heuristic` mode is still under experimental and not tested well. So set :runtime.
+
+### Example
 
 ```lisp
-`(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
-  ,@body)
+(define-impl-op (Compare-Operation-Node :device LispTensor)
+		:forward ((self tensor1 tensor2 out)
+			  (let ((kernel (compare-kernel (dtype tensor1))))
+			    (do-compiled-loop (list tensor1 tensor1 out) ()
+				(x-view y-view o-view)
+			      (funcall kernel
+				       (tensor-vec tensor1)
+				       (tensor-vec tensor2)
+				       (tensor-vec out)				       
+				       (logical-condition self)
+				       (logical-true-then self)
+				       (logical-false-then self)
+				       (size-of x-view 0)
+				       (offset-of x-view 0)
+				       (offset-of y-view 0)
+				       (offset-of o-view 0)
+				       (stride-of x-view 0)
+				       (stride-of y-view 0)
+				       (stride-of o-view 0)))
+			    out)))
 ```

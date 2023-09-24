@@ -171,6 +171,8 @@ The replacing is done when one of `*using-backend*` is the equivalent to `name[s
 			    (funcall (features-table-replacement ,',result) ,@,args)
 			    ,,form))))))
 	    (progn
+	      (when (null (gethash name *bypass-table*))
+		(setf (gethash name *bypass-table*) (make-hash-table)))
 	      (setf (gethash device (gethash name *bypass-table*)) (make-features-table :key device :replacement replacement))
 	      T))))))
 

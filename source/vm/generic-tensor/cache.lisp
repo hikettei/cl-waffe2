@@ -54,14 +54,14 @@
 ;; TODO: build/proceed must use the same algorithm to cache compiled functions
 
 
-(defparameter *compiled-function-cache* (make-hash-table))
+(defparameter *compiled-function-cache* (make-hash-table :test #'equal))
 (defparameter *compiled-jit-function-cache* (make-hash-table))
 
 (defun reset-compiled-function-cache! ()
   "
 ## [function] reset-compiled-function-cache!
 "
-  (setf *compiled-function-cache* (make-hash-table))
+  (setf *compiled-function-cache* (make-hash-table :test #'equal))
   (setf *compiled-jit-function-cache* (make-hash-table))
   t)
 
@@ -75,7 +75,8 @@
   (call-with-view nil :type (or null))
   (args nil :type list)
   (view-route nil :type list)
-  (self nil)) ;; 2D 3D Flatten ...
+  (self nil)
+  (cache-additional-id nil :type list)) ;; 2D 3D Flatten ...
 
 (defun make-funcallable-kernel (compiled-function compile-option)
   (declare (type Compiled-Kernel compiled-function))
@@ -97,11 +98,9 @@
   (declare (type Compiled-Kernel kernel-function))
 
   (let* ((function-name (compiled-kernel-name kernel-function))
-	 ;; MoveTensor is a special node that cl-waffe2 will dynamically ignore/use depending on the situation.
-	 ;; So, we dont wanna use :cache-when-compiled option.
-	 (movep (movetensor-p (compiled-kernel-self kernel-function)))
-	 (function-name (if movep
-			    (symb function-name '- (cl-waffe2/base-impl:movetensor-ignore-me (compiled-kernel-self kernel-function)))
+	 (more-ids (compiled-kernel-cache-additional-id kernel-function))
+	 (function-name (if more-ids
+			    `(,function-name ,more-ids)
 			    function-name))
 	 (target (lut-search-function
 		  *compiled-function-cache*
@@ -122,11 +121,9 @@
   (declare (type Compiled-Kernel kernel-function))
 
   (let* ((function-name (compiled-kernel-name kernel-function))
-	 ;; MoveTensor is a special node that cl-waffe2 will dynamically ignore/use depending on the situation.
-	 ;; So, we dont wanna use :cache-when-compiled option.
-	 (movep (movetensor-p (compiled-kernel-self kernel-function)))
-	 (function-name (if movep
-			    (symb function-name '- (cl-waffe2/base-impl:movetensor-ignore-me (compiled-kernel-self kernel-function)))
+	 (more-ids (compiled-kernel-cache-additional-id kernel-function))
+	 (function-name (if more-ids
+			    `(,function-name ,more-ids)
 			    function-name))
 	 (target (lut-search-function
 		  *compiled-function-cache*

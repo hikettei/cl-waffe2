@@ -94,8 +94,14 @@
    #:viewinstruction-offset
    #:viewinstruction-size
    #:viewinstruction-by
+   
    #:call-with-view
    #:with-ranked-loop
+   
+   #:do-compiled-loop
+   ;;#:do-compiled-loop*
+   #:solve-loop-order
+   
    #:stride-of
    #:size-of
    #:offset-of

@@ -28,27 +28,6 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;;
-;; [TODO]
-;;  1. コンパイル時間の削減
-;;     - compiler-macroでcall/forwardをインライン化
-;;     - VMの最適化
-;;     - (100 100) > の大きいスケールならVMの最適化はこれ以上必要ない ノードの構築が重たい
-;;  2. ノードの割り当て。。。作成時じゃなくてcallしたとき？
-
-;;  2. モデル gc-reachable
-;;  3. Fusion Path ... compiler-macro based symbolic diff
-;;  4. Package構造のリファクタリング
-;;     cl-waffe2/vm, cl-waffe2/vm.generic-tensor, cl-waffe2/vm.nodes
-;;     -> cl-waffe2/core (= cl-waffe2 cl-waffe2/vm.ad cl-waffe2/vm.abstract-tensor cl-waffe2/vm.nodes cl-waffe2/vm.distributions)
-
-;;  5. Refactor Loop Fusion関連のコードを消す
-;; define-symbolic-diff (:device (t) (!add (!+ 1.0 x)))
-;;  6. adjustable shapeのsolver
-;;  7. define-impl cacheできないやつ削除
-;;  ...
-;;  8. defmodel-as :node Fix
-
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
@@ -255,6 +234,18 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 ;; 8. Tada~ Completed!
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+(defun reference-count-up! (iseq)
+  "iseq[0] , iseq[1] , ... iseq[last]
+Reading from the last iseq, the function attributes T at each last reference"
+  (let ((known (make-hash-table)))
+    (loop for inst in (reverse iseq) do
+      (let ((result (map 'list #'(lambda (arg)
+				   (prog1
+				       (not (gethash (tensor-id arg) known))
+				     (setf (gethash (tensor-id arg) known) T)))
+			 (wfop-args inst))))
+	(setf (wfop-args-last-count-p inst) result)))))
+	
 (defun inst-set-p (inst) (and (movetensor-p (wfop-node inst)) (movetensor-ignore-me (wfop-node inst))))
 
 (defun eliminate-setq-node (iseq) ;; iseq[0] -> iseq[n]
@@ -368,6 +359,8 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 	     (setf (gethash (tensor-id tensor) id2pool-table) tensor)))
        (wfop-sv4bw inst)))
 
+    (%optimize-numerical-optimizing-locality! iseq-bw-flat)
+    
     (values
      iseq-bw-flat
      (make-vmallocation
@@ -463,5 +456,32 @@ Please explict the allocation state with: (with-static-allocation (allocation) .
 		    (when state
 		      (set-as-free tensor)))
 		args args-last-p))))))
+
+
+;; iseq = EndofNode EndofNode[-1] EndOfNode[-2] ... FirstInstruction
+(defun %optimize-numerical-optimizing-locality! (iseq)
+  "Deletes {GRAD}MOVETENSORNODE with explicting this node is for accumlating gradients."
+  ;; [TODO]
+  ;; reference-count-up! should be moved to the first step of compiling
+  ;; Memory-Locality Optimization costs O(nlogn) as of this writing
+  ;; but with this function, we count last references of args in advance
+  ;; So it would be approximated as O(N).
+  (reference-count-up! iseq)
+  (loop for inst in iseq
+	if (and (wfop-grad-adder-p inst)
+		(movetensor-p (wfop-node inst))
+		(second (wfop-args-last-count-p inst))
+
+		;; If the gradients are permuted, they moved into contiguous memory anywhere; optimizers, (M V params of Adam)
+		;; So contiguous tensors are only the subject to this opt
+		(not
+		 (tensor-projected-p (second (wfop-args inst))))
+		(not
+		 (cl-waffe2/vm.generic-tensor::permuted-p (second (wfop-args inst)))))
+	  do (setf (wfop-op inst) #'(lambda (grad-place grad)
+				      (setf (tensor-vec grad-place) (tensor-vec grad))
+				      grad)
+		   (wfop-node inst) #'(lambda () "SETQ{INTERNAL}"))))
+
 
 

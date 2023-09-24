@@ -455,3 +455,6 @@
 (test grad-decay-cached-test
   (is (grad-decay-test)))
 
+(test row-major-grad-decay-test
+  (is (cl-waffe2::with-row-major (grad-decay-test))))
+

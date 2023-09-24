@@ -62,6 +62,7 @@
 	       (:file "vm/generic-tensor/utils")
 	       (:file "vm/generic-tensor/view")
 	       (:file "vm/generic-tensor/call-with-view")
+	       (:file "vm/generic-tensor/do-compiled-loop")
 	       (:file "vm/generic-tensor/memory-pool")
 	       
 	       (:file "optimizers/package")

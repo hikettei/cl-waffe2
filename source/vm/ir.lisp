@@ -55,6 +55,7 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (self self :type AbstractTensor)
   (block-iseq nil :type list)
   (args args :type list)
+  (args-last-count-p nil :type list)
   (sv4bw sv4bw :type list)
   (error-check-p nil :type boolean) ;; Indicates the first shape-inspection has done?
   (bw-is-leaf-p nil :type boolean)

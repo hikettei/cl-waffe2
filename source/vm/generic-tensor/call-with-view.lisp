@@ -2,72 +2,14 @@
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
-;; cl-waffe2 has two mode depending on the situation
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; [TODO] Integrate do-compiled-loop.lisp and call-with-view.lisp
+;;        call-with-view perform by far the fastset performance while do-compiled-loop could be potentially optimized for permuted tensors.
 
-;;
-;; build:   Supports FuseOps/Fully Inlining (Memo: cl-waffe2 defnode corresponds with IR, conditions, iterations are expressed/implemented as AbstractNode)
-;;
-;; proceed: No supports of FuseOps but working enough fast.
-;;
 
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; In cl-waffe2, call-with-view is a function used to express an iteration on an AbstractTensor.
-;; And, it is intended to be used for each single operation unit (exp/sin/matmul ...)
-;;
-;; Taking the case of the element-wise function `exp`, the body of :forward can be expressed like:
-;;
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-;; ====================================================
-;; (loop for i <- (Index considered views)              }
-;;      [Repeating for the rank of tensors]             } <- Expanded by call-with-view
-;;      ...                                             }
-;;      (element-wise-exp tensor stride offset size)    <- Kernel (user-defined)
-;; ====================================================
-
-;;
-;; In addition, cl-waffe2 can apply these optimization methods to the coming tensors:
-;;
-;; 1. Loop Fusion
-;;
-;; A(x) = (loop for i ...
-;;          (element-wise-sin ...))
-;;
-;; B(x) = (loop for i ...
-;;          (element-wise-cos ...))
-;;
-;; Composing A and B (i.e.: A(B(x))), the expanded form would be like:
-;;
-;; (loop for i ...
-;;          (element-wise-sin ...)
-;;          (element-wise-cos ...))
-;;
-;; Here's more, `aref` is still remained to be optimized:
-;;
-;; -> Since loop Fusion is still hard to implement across multiple devices, and I decide to implement it as an extended device, JITLispTensor.
-;;
-;;
-
-;; 2. Inlining
-;;    If the ranks/dimensions are enough small and (LOOP COST) >> (Computation_Time), they're inlined:
-;;
-;; 3. Disregarding Views
-;;
-;;    (10 10) Tensor with view = (T T) -> (100) Tensor as long as kernel-size = 1
-;;
-;;
-;; 4. Parallelize (TODO)
-;;
-;;
-;;
-
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-;;
-;; call-with-view is able to generate:
-;;   1. Inlined/Optimized/Parallelized Orders with coming tensors ( *freeze-call-with-view*=nil )
-;;   2. Flexible Loop Iterations for NDArray.                     ( *freeze-call-with-view*=t   )
-;;
-
+;; Force-Order=T Anywhere
 (defparameter *freeze-call-with-view* nil "Set this parameter T to make force-order=t everywhere. default: nil")
 
 ;; ===============================================
@@ -144,14 +86,17 @@ Set 2 if the operation is matmul for example.
 			    &aux
 			      (views
 			       (nthcdr dim-start-from (tensor-view tensor))))
-	   (or (scalar-p tensor) ;; tensor is scalar
-	       ;; at least one of (nthcdr dim-start-from (tensor-view tensor)) isn't T
-	       (some #'(lambda (v)
-			 ;; non-reductable dim is: NOT(T) or NOT (:BROADCAST)
-			 (or (not (eql (force-list v) t))
-			     ;;(not (eql (force-list v) :broadcast))
-			     ))
-		     views))))
+	   (or
+	    ;;(not
+	    ;;(every #'(lambda (v)
+	    ;;		(eql (force-list v)
+	    ;;		     (force-list (car views))))
+	    ;;	    views))
+	    (some #'(lambda (v)
+		      (not (or (eql (force-list v) t)
+			       (eql (force-list v) :broadcast))))
+		  views))))
+    ;; Remaining strides are reg
     ;; If tensors are consisted of non-projected-tensor...?
     (not (some #'not-reductable-p tensors))))
 
@@ -414,10 +359,12 @@ butgot ~a."
 		      (type list offsets-place))
 	     ;; Exploring ND .. 3D 2D 1D
 
-	     ;; When The Rest Form Can be flatten
+	     ;; Contiguous Layouts are flattened
 	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
 			(not force-order)
-			(no-permute-p tensors)
+			(every #'(lambda (x)
+				   (equal (tensor-permute-order x) (tensor-permute-order (car tensors))))
+			       tensors)
 			(apply #'order-reductable-p target-dim tensors) ;; check views
 			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
 	       
@@ -509,117 +456,4 @@ Just an alias of `call-with-view` with this form:
 "
   `(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel)
     ,@body))
-
-(defun expand-call-with-view* (function tensors at-least-dim)
-  (let* ((offsets (loop for tensor in tensors collect (gensym "offset")))
-	 (strides (loop for tensor in tensors
-			collect (loop for rank upfrom 0 below at-least-dim
-				      collect (gensym "strides"))))
-	 (sizes   (loop for tensor in tensors
-			collect (loop for rank upfrom 0 below at-least-dim
-				      collect (gensym "size"))))
-
-	 (views   (loop for tensor in tensors
-			for offset in offsets
-			for stride in strides
-			for size   in sizes
-			collect
-			(loop for rank upfrom 0 below at-least-dim
-			      collect
-			      (make-viewinstruction offset (nth rank size) (nth rank stride)))))
-	 (strides (alexandria:flatten strides))
-	 (sizes   (alexandria:flatten sizes))
-	 
-	 (kernel-function (apply function views))
-	 (kernel-applier  `(lambda (,@offsets ,@strides ,@sizes)
-			     (declare (ignorable ,@offsets ,@strides ,@sizes)
-				      (type fixnum ,@offsets ,@strides ,@sizes))
-			     ,kernel-function)))
-    ;; kernel-function ... (blas-sadd ... tensor1 tensor2 offsetXXX sizeXXX ...)
-    
-    `(with-bind-shape
-       #'original-shape
-       #'shape
-       (call-with-view-function*
-	(list ,@tensors)
-	,at-least-dim
-	,kernel-applier))))
-
-;; [TODO]
-;; 下の関数を最適化+正しく動かす
-;; define-opベースのAbstractNodeでViewを正しく使うためには以下の関数が鍵になる
-;; argmax/argminや!matmulなど、cache-when-compiled=nilになる関数は、define-opを使うことで、実行時にcompile nil
-;; を走らせる場合を0にする方針であるから、これは大事
-(declaim (inline call-with-view-function*))
-(defun call-with-view-function* (tensors at-least-dim kernel-applier)
-  (declare (type list tensors)
-	   (type fixnum at-least-dim)
-	   (type function kernel-applier)
-	   (optimize (speed 3)))
-
-  (let* ((total-offsets (loop for tensor in tensors
-			      collect (tensor-initial-offset tensor)))
-	 (apply-strides (loop for tensor in tensors
-			      collect (loop for axis upfrom 0 below at-least-dim
-					    collect (nth axis (tensor-stride tensor)))))
-	 (apply-sizes   (loop for tensor in tensors
-			      collect (loop for axis upfrom 0 below at-least-dim
-					    collect (nth at-least-dim (shape tensor)))))
-	 (rank (the fixnum (dims (car tensors))))
-	 (all-iternums
-	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
-		 collect
-		 (loop for tensor in tensors
-		       collect (nth axis (shape tensor)))))
-	 (all-strides
-	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
-		 collect
-		 (loop for tensor in tensors
-		       collect (nth axis (tensor-stride tensor)))))
-	 (start-points 
-	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
-		 collect
-		 (loop for tensor in tensors
-		       collect (the fixnum (compute-visible-start-idx (force-list (nth axis (tensor-view tensor))))))))
-	 (end-points nil))
-;;	   (loop for axis fixnum downfrom (1- rank) to at-least-dim
-;;		 collect (loop for tensor in tensors
-;;			       collect (compute-visible-end-idx (nth axis (tensor-view tensor)) (nth axis (shape tensor)))))))
-    
-    (labels ((expand-helper (rest-dim more-iternums more-strides more-start-offsets more-end-offsets)
-	       (declare (type fixnum rest-dim)
-			(type list more-iternums more-strides more-start-offsets more-end-offsets))
-	       (cond
-		 ((<= rest-dim at-least-dim)
-		  ;; call the operation
-		  (apply kernel-applier
-			 ;; ,@offsets ,@strides ,@sizes
-			 `(,@total-offsets
-			   ,@(alexandria:flatten apply-strides)
-			   ,@(alexandria:flatten apply-sizes))))
-		 (T
-
-		  ;; Adding first offsets
-		  (loop for stride        fixnum in (car more-strides)
-			for start-offsets fixnum in (car more-start-offsets)
-			for nth           fixnum    upfrom 0
-			do (incf (the fixnum (nth nth total-offsets))
-				 (the fixnum (* start-offsets stride))))
-		  
-		  (loop with last-idx fixnum = (1- (the fixnum (caar more-iternums)))
-			for N fixnum upfrom 0 below (caar more-iternums) do
-			  (expand-helper (1- rest-dim) (cdr more-iternums) (cdr more-strides) (cdr more-start-offsets) (cdr more-end-offsets))
-			unless (= N last-idx)
-			  do (loop for stride fixnum in (car more-strides)
-				   for nth    fixnum upfrom 0
-				   do (incf (the fixnum (nth nth total-offsets)) stride)))))))
-      
-      
-      (assert (every #'(lambda (x) (equal (dims x) (dims (car tensors)))) tensors)
-	  nil
-	  "call-with-view-function*: Assertion Failed because all tensors should have the same rank but they don't.
-~a" (map 'list #'shape tensors))
-
-      (expand-helper rank all-iternums all-strides start-points end-points)
-      nil)))
 
