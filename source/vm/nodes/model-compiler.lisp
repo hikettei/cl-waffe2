@@ -160,6 +160,7 @@ excepted: AbstractTensor"
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
 			  (map 'list #'(lambda (tensor)
 					 (list (dtype tensor)
+					       (order tensor)
 					       (class-of tensor)
 					       (map 'list #'cl-waffe2/vm.generic-tensor::force-list (tensor-view tensor))
 					       (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)

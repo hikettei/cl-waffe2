@@ -9,22 +9,12 @@
       #.(char-code #\C)
       #.(char-code #\N)))
 
-;; Fix: Batched matmul
-;; Fix: Matmul with parameter? !t with save-for-backward is working???
-;;
-
-;; TODO: 1D Gemm -> Dot Product
-;; TODO: Fix it.
-;; TODO: Transpose Tensor.
-;; FixME: view isn't working at 1d/2d
-;; FixME: support row-major with gemm
-
-(defun expand-gemm-form (a1 b1 c
-			 a-ptr b-ptr o-ptr
-			 &key
-			   trans-a?
-			   trans-b?)
-  "[M N] @ [N K] -> [M K]"
+(defun expand-gemm-form-column (a1 b1 c
+				a-ptr b-ptr o-ptr
+				&key
+				  trans-a?
+				  trans-b?)
+  "[M N] @ [N K] -> [M K]"      
   (let ((dtype (dtype c))
 	(a (if trans-a?
 	       (read-untransposed a1)
@@ -52,10 +42,6 @@
 
     ;; a1, b1 ... tensor with vec, declared in arguments
     
-    (assert (eql (order a) :column)
-	    nil
-	    "Assertion Failed with (order a) = :column (TODO: Support)")
-
     (call-with-view
      #'(lambda (a-view b-view c-view)
 	 (let* ((m (size-of c-view 0))
@@ -125,24 +111,126 @@ Please consider using another backends." dtype)))))
      `(,a ,b ,c)
      :at-least-dim 2)))
 
+(defun expand-gemm-form-row (a1 b1 c
+			     a-ptr b-ptr o-ptr
+			     &key
+			       trans-a?
+			       trans-b?)
+  "[M N] @ [N K] -> [M K]"      
+  (let ((dtype (dtype c))
+	(a (if trans-a?
+	       (read-untransposed a1)
+	       a1))
+	(b (if trans-b?
+	       (read-untransposed b1)
+	       b1)))
+
+    (when trans-a?
+      (assert (equal (reverse (last (shape a) 2))
+		     (last (shape a1) 2))
+	      nil
+	      "expand-gemm-form: Assertion Failed 1: ~a ~a."
+	      (shape a) (shape a1)))
+
+    (when trans-b?
+      (assert (equal (reverse (last (shape b) 2))
+		     (last (shape b1) 2))
+	      nil
+	      "expand-gemm-form: Assertion Failed 2: ~a ~a."
+	      (shape b) (shape b1)))
+
+    ;; a, b ... untranspsoed tensor
+    ;; they're just used to compute strides
+
+    ;; a1, b1 ... tensor with vec, declared in arguments
+    
+    (call-with-view
+     #'(lambda (a-view b-view c-view)
+	 (let* ((m (size-of c-view 0))
+		(n (size-of c-view 1))
+		(k (second (last (shape a1) 2)))
+		(k (if (symbolp k)
+		       `(cl-waffe2/vm.generic-tensor::read-symbol ',k)
+		       k))
+		(lda (size-of a-view 0))
+		(ldb (size-of b-view 0))
+		(ldc (size-of c-view 0)))
+	   (case dtype
+	     (:float
+	      `(blas-sgemm
+		,(trans->c trans-a?)
+		,(trans->c trans-b?)
+		,m
+		,n
+		,k
+		1.0		
+	        (incf-tensor-ptr ,a1 ,a-ptr :offset ,(offset-of a-view 0))
+		,lda
+		(incf-tensor-ptr ,b1 ,b-ptr :offset ,(offset-of b-view 0))
+		,ldb
+		0.0
+		(incf-tensor-ptr
+		 ,c
+		 ,o-ptr
+		 :offset ,(offset-of c-view 0))
+		,ldc))
+	     (:double
+	      `(blas-dgemm
+		,(trans->c trans-a?)
+		,(trans->c trans-b?)
+		,m
+		,n
+		,k
+		1.0d0
+		;; If compile-when-cache = T,
+		;; variables that didn't appear in arguments
+		;; Is ignored, so (read-untransposed b) is needed to be lazily evaluated.
+		
+		(incf-tensor-ptr
+		 ,a1
+		 ,a-ptr
+		 :offset ,(offset-of a-view 0)) ;; no matter which dim=0, dim=1, offsets are common.
+		,lda
+		(incf-tensor-ptr
+		 ,b1
+		 ,b-ptr
+		 :offset ,(offset-of b-view 0))
+		,ldb
+		0.0d0
+		(incf-tensor-ptr
+		 ,c
+		 ,o-ptr
+		 :offset ,(offset-of c-view 0))
+		,ldc))
+	     (T
+	      (error "cl-waffe2/backends.cpu: Matmul with OpenBLAS is dedicated to :float or :double, ~a isn't available.
+Please consider using another backends." dtype)))))
+     `(,a ,b ,c)
+     :at-least-dim 2)))
+
+
 (define-impl (MatMulNode :device CPUTensor
 	                 :cache-when-compiled nil ;; TODO: Make it T.
 			 :reject-p (supported-dtypes-are 0 :float :double))
 	     :save-for-backward (t t nil)
 	     :forward
 	     ((self a b out)
-	      (let ((trans-a (trans-a? self))
-		    (trans-b (trans-b? self))
+	      (let ((trans-a (trans-a? self))			 
+		    (trans-b (trans-b? self))			     
 		    (a-ptr   (gensym "PTR"))
 		    (b-ptr   (gensym "B"))
 		    (o-ptr   (gensym "OUT")))
+
+		;; Swaps Row/Column Major
+		;; Since it calls cblas_sgemm(Column_Major)
+		
 		`(locally (declare (optimize (speed 1)))
 		   (with-tensor-ptrs ((,a-ptr ,a)
 				      (,b-ptr ,b)
 				      (,o-ptr ,out))
-		     ,(expand-gemm-form a b out a-ptr b-ptr o-ptr :trans-a? trans-a :trans-b? trans-b)
-		     ;; Sometime matmul fails due to wrong arguments
-		     ;; But proceeds with no errors...
+		     ,(if (eql (order out) :column)
+			  (expand-gemm-form-column a b out a-ptr b-ptr o-ptr :trans-a? trans-a :trans-b? trans-b)
+			  (expand-gemm-form-row    a b out a-ptr b-ptr o-ptr :trans-a? trans-a :trans-b? trans-b))
 		     ,out)))))
 
 ;; [TODO] Optimize to get more speed!
