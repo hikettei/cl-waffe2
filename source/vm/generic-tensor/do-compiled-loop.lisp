@@ -321,7 +321,7 @@ Iterates the given tensors in optimized order. The behavior is the same as the `
 (define-impl-op (Compare-Operation-Node :device LispTensor)
 		:forward ((self tensor1 tensor2 out)
 			  (let ((kernel (compare-kernel (dtype tensor1))))
-			    (do-compiled-loop (list tensor1 tensor1 out) ()
+			    (do-compiled-loop (list tensor1 tensor2 out) ()
 				(x-view y-view o-view)
 			      (funcall kernel
 				       (tensor-vec tensor1)

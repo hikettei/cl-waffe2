@@ -74,5 +74,4 @@
 				       (stride-of x-view 0)
 				       (stride-of y-view 0)
 				       (stride-of o-view 0)))
-			    (print out)
 			    out)))
