@@ -609,10 +609,10 @@ C &lt;- GEMM(1.0 A B 0.0 C)
 </code></pre>
 <p>You can invoke the forward/backward by using the method forward/backward. <code>(forward node arg1 arg2...)</code> <code>(backward node dout1 arg1 arg2...)</code>.</p>
 <h2 id="macro-define-impl">[macro] define-impl</h2>
-<pre><code class="language-lisp">(define-impl (abstract-name &amp;key (device t) (extends nil) (cache-when-compiled t) (reject-p nil))
+<pre><code class="language-lisp">(define-impl (abstract-name &amp;key (device t) (extends nil) (cache-when-compiled t) (reject-p nil) (cache-id nil))
         &amp;key (save-for-backward nil) (forward nil) (backward nil))
 </code></pre>
-<p>Defines an implementation of <code>abstract-name</code> which is already declared by <code>defnode</code> macro, with :forward=macro and later compiled.</p>
+<p>Defines a one of implementation of <code>abstract-name</code> which is defined by <code>defnode</code> macro. The implementation is given as the same manner of defmacro. Returned S-expression is later compiled by the <code>(compile nil body)</code> function and cached as long as cache-when-compiled is set to T. Compiled functions are dispatched depending on <code>RANK</code> <code>DTYPE</code> <code>STRIDE</code> and <code>SHAPE</code>, if you want to add another factors this, specify this at :cache-id.</p>
 <h3 id="effects_1">Effects</h3>
 <p>Defines a CLOS class named <code>abstract-name-device</code> extends <code>abstract-name</code></p>
 <h3 id="inputs_1">Inputs</h3>
@@ -623,10 +623,12 @@ C &lt;- GEMM(1.0 A B 0.0 C)
 <p><code>forward</code>[body] Follows this format: <code>((self arg1 arg2 ...) &lt;&lt;macro-body&gt;&gt;)</code> and the form must return S-expression later compiled by `(compile nil ...)</p>
 <p><code>backward</code>[body] Follows this format: <code>((self prev-gradient arg1 arg2 ...) (values arg1.grad arg2.grad))</code> Note that the form is given by a function, and computation nodes are continuous. Not a macro.</p>
 <p><code>reject-p</code>[nil or function] Set a lambda function returning nil or T. The function is called with arguments: <code>(function constructor-args1 constructor-args2 ...)</code>. In the case the function returned T, the method dispatching is ignored. You can use this method to ignore a certain dtype as a :forward arguments for example.</p>
+<p><code>cache-id[nil or function]</code> Adds an additional keys of searching LUT. this form should be given as: <code>#'(lambda (&amp;rest self inputs) (list keys...))</code> where inputs are the arguments called with forward. For example: <code>#'(lambda (self &amp;rest inputs) (map 'list #'order inputs))</code> if the orders matter.</p>
 <h2 id="macro-define-impl-op">[macro] define-impl-op</h2>
 <p>Gives an implementation of <code>abstract-name</code> as a function form.</p>
 <pre><code class="language-lisp">(define-impl-op ((abstract-name &amp;key (device t) (extends nil) (reject-p nil)) &amp;key forward backward))
 </code></pre>
+<p>In order to place ranked matrix operations here, you MUST use <code>do-compiled-loop</code> macro instead of writing iterations manually.</p>
 <h2 id="macro-define-op">[macro] define-op</h2>
 <p><code>define-op</code> = <code>defnode</code> + <code>define-impl-op</code></p>
 <p>Defines a differentiable AbstractNode which its definition is given by a function.</p>

@@ -171,11 +171,17 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#method-get-input">[method] get-input</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#creating-a-ranked-function-with-computing-views">Creating a ranked function with computing views</a>
+    <li class="toctree-l2"><a class="reference internal" href="#optimized-and-ranked-tensor-iterators">Optimized and Ranked Tensor Iterators</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-call-with-view">[function] call-with-view</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#macro-with-ranked-loop">[macro] with-ranked-loop</a>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-do-compiled-loop">[macro] do-compiled-loop</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_4">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
+    </li>
+        </ul>
     </li>
     </ul>
                 </li>
@@ -522,7 +528,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1830 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1389 
   :vec-state [maybe-not-computed]
     &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
@@ -552,7 +558,7 @@
 <pre><code>(get-input (model Compiled-Composite) input-name)
 </code></pre>
 <p>Reading all variables in the computation node, the method get-input returns an corresponding <code>InputTensor</code> of model.</p>
-<h2 id="creating-a-ranked-function-with-computing-views">Creating a ranked function with computing views</h2>
+<h2 id="optimized-and-ranked-tensor-iterators">Optimized and Ranked Tensor Iterators</h2>
 <h2 id="function-call-with-view">[function] call-with-view</h2>
 <p>A principle operator to extend your functions to higher arrays.</p>
 <pre><code class="language-lisp">(call-with-view function tensors &amp;key (at-least-dim 1) (force-order nil) (lparallel nil))
@@ -601,17 +607,36 @@
 <p>Return: <code>Expanded Lisp Codes</code></p>
 <p>Note that <code>call-with-view</code> should be used at once or zero in the one <code>define-impl</code> forward. If you need twice times to call it, the general definition of <code>AbstractNode</code> should be split.</p>
 <p>See also: <code>with-ranked-loop</code> to the more elegant wrapping macro.</p>
-<h2 id="macro-with-ranked-loop">[macro] with-ranked-loop</h2>
-<pre><code class="language-lisp">(with-ranked-loop (((op-function &amp;rest variables)
-                    &amp;key
-                       (kernel-size 1)
-                       (shuffle-rank t)
-                       (lparallel nil))
-                    &amp;body body))
+<h2 id="macro-do-compiled-loop">[macro] do-compiled-loop</h2>
+<pre><code class="language-lisp">(do-compiled-loop tensor-list (&amp;key (kernel-size 1) (collapse t) (mode :runtime)) (&amp;rest views-bind) &amp;body body)
 </code></pre>
-<p>Just an alias of <code>call-with-view</code> with this form:</p>
-<pre><code class="language-lisp">`(,@(call-with-view op-function variables :at-least-dim kernel-size :force-order (not shuffle-rank) :lparallel lparallel :fuse fuse)
-  ,@body)
+<p>Iterates the given tensors in optimized order. The behavior is the same as the <code>call-with-view</code> function in that both is intended to call a ranked matrix function with considering multidimensional offsets. This macro, however, directly placed within functions. </p>
+<h3 id="inputs_4">Inputs</h3>
+<p><code>tensor-list[list]</code> an list of tensors. all of them must have the same rank and shape[&gt; kernel-size]. Must not include adjustable shape.</p>
+<p><code>kernel-size[(unsigned-byte 32)]</code> Indicates the rank of operation, that is, indicates the same as <code>:at-least-dim</code> in the call-with-view function.</p>
+<p><code>collapse[boolean]</code> Set T to enable <code>Loop Collapse</code>. (= (not :force-order) in call-with-view)</p>
+<p><code>mode[:runtime or :heuristic]</code> indicates the algorithm of optimizing. <code>:heuristic</code> mode is still under experimental and not tested well. So set :runtime.</p>
+<h3 id="example_4">Example</h3>
+<pre><code class="language-lisp">(define-impl-op (Compare-Operation-Node :device LispTensor)
+        :forward ((self tensor1 tensor2 out)
+              (let ((kernel (compare-kernel (dtype tensor1))))
+                (do-compiled-loop (list tensor1 tensor1 out) ()
+                (x-view y-view o-view)
+                  (funcall kernel
+                       (tensor-vec tensor1)
+                       (tensor-vec tensor2)
+                       (tensor-vec out)                    
+                       (logical-condition self)
+                       (logical-true-then self)
+                       (logical-false-then self)
+                       (size-of x-view 0)
+                       (offset-of x-view 0)
+                       (offset-of y-view 0)
+                       (offset-of o-view 0)
+                       (stride-of x-view 0)
+                       (stride-of y-view 0)
+                       (stride-of o-view 0)))
+                out)))
 </code></pre>
               
             </div>
