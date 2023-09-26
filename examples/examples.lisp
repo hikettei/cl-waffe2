@@ -23,6 +23,7 @@
 (in-package :examples)
 
 ;; For List Meetup
+;; TO ADD: Symbolic Diff
 
 ;; 1. Basic Developling Cycle
 ;;  - `Call` creates computation nodes lazily.
@@ -414,3 +415,7 @@
 ;; That's all
 
 
+(node->defun ReLURevisit (A[~] -> B[~])
+  (!relu (!t a)))
+
+(print (ReLURevisit (ax+b `(3 3) 1 0)))

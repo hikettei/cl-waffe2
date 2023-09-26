@@ -218,6 +218,19 @@ Examples:
 	   (type list tensors)
 	   (type (simple-array (unsigned-byte 32) (*)) offsets)
 	   (optimize (speed 3)))
+
+  ;; ~~ [FixMe] Runtime Recomputation of strides cause reductin in performance; Delete this line: ~~~~~
+
+  ;; All lazy strides should be compiled once adjust-allocation! is called.
+  ;; See also: render.lisp render-tensor
+  (dolist (tensor tensors)
+    (when (some #'listp (tensor-stride tensor))
+      (setf
+       (tensor-stride tensor)
+       (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
+       (tensor-stride tensor)
+       (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor))))))
+    
   
   (labels ((expand-helper (&optional (c 0) (offsets offsets))
 	     (declare (type fixnum c)

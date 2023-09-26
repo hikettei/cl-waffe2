@@ -177,6 +177,16 @@ The result sequence MUST not over max-length.
 	(dotimes (i indent) (princ " " str))
 	(format str "~a" (tensor-vec tensor)))))
 
+  ;; [FIXME] Delete this line:
+  ;; ALL LAZY STRIDES SHOULD BE COMPUTED WHEN ADJUST_ALLOCATION! WAS CALLED
+  ;; See also: do-compiled-loop* in do-compiled-loop.lisp
+  (when (some #'listp (tensor-stride tensor))
+    (setf
+     (tensor-stride tensor)
+     (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
+     (tensor-stride tensor)
+     (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))
+  
   
   (with-output-to-string (out)
     (let ((*matrix-element-displaying-size*
