@@ -1,11 +1,11 @@
 ;;;; © 2023-2023 hikettei
 
+
 ;; Memo: English version is coming soon! :)
 ;; I want to write this document as neatly as possible, so please let me write it once in my first language, Japanese. T_T
 ;; But other documents are available on English: https://hikettei.github.io/cl-waffe2/
 
 (in-package :cl-user)
-
 
 
 
@@ -154,7 +154,7 @@
 (proceed-time (!matmul (randn `(1 1)) (randn `(1 1))))
 
 ;; 複数の計算を組み合わせてノードを構築していき、答えが欲しくなったタイミングでProceedを呼び出してください。
-;; ~ Examples ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; ~ Examples~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (print
  (proceed (!add (!mul 3 2) 1)))
