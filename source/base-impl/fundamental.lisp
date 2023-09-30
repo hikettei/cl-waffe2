@@ -274,12 +274,20 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 	  :documentation "")
   (setf (ignore-shape-error self) t))
 
-(define-impl (ReshapeTensorNode :device t)
-	     :save-for-backward (t) ;; =T is necessary not to delete MoveTensorNode.
-	     :forward ((self x y)
-		       `(progn
-			  (setf (tensor-vec ,y) (tensor-vec ,x))
-			  ,y)))
+(define-impl-op (ReshapeTensorNode :device t)
+		:forward ((self x y)
+			  ;; Reshaping is the operation where:
+			  ;;  The order of storage vec is the same.
+			  ;;  But other factors (e.g.: Shaping, Strides)
+			  ;;  Has Changed.
+
+			  ;; [TODO] Detect This Error Before Execution.
+			  (assert (= (total x) (total y))
+				  nil
+				  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering dynamically shape do not match:
+~a and ~a" x y)
+			  (setf (tensor-vec y) (tensor-vec x))
+			  y))
 
 ;; ===============================================================
 ;; Reshaping APIs
@@ -344,7 +352,7 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
   (declare (type AbstractTensor tensor))
   
   (let* ((shapes (if (functionp (car shapes))
-		     (funcall (car shapes) tensor)
+		     (funcall   (car shapes) tensor)
 		     shapes))
 	 (shapes (parse-reshape-args (shape tensor) shapes))
 	 (result (make-input shapes nil
@@ -356,10 +364,12 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
       (assert (= (apply #'* (shape tensor))
 		 (apply #'* shapes))
 	      nil
-	      "Reshaping failed because the total size do not match."))
+	      "Reshaping failed because the total sizes do not match."))
     ;; (!view tensor `(2 4) `(2 4)) -> Copy
     ;; (!view tensor  0 t t t)
-    (let ((out (forward (ReshapeTensorNode (shape tensor) shapes) (->contiguous tensor) result)))
+    (let ((out (forward (ReshapeTensorNode (shape tensor) shapes)
+			(->contiguous tensor)
+			result)))
       out)))
 
 ;; !squeeze/!unsqueeze
@@ -383,6 +393,7 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
 equivalent to the `(!reshape tensor t)`
 "
     (!reshape tensor t)))
+
 (declaim (ftype (function (AbstractTensor fixnum &key (:at fixnum)) AbstractTensor) !rankup))
 (defun !rankup (tensor ntimes &key (at 0))
   "
