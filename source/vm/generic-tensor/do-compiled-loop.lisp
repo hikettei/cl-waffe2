@@ -6,6 +6,21 @@
 ;; and minimize the costs and maximize the use of SIMD register
 ;; This computation will be done in runtime << 1e-5 sec and cached.
 ;; In the future release, integrate this file into call-with-view for simplicity
+;; Reading List:
+;;  Ref: https://inria.hal.science/inria-00551077/document
+;;       https://atrg.jp/ja/index.php?plugin=attach&pcmd=open&file=20171007_ATOS17_Sato.pdf&refer=ATOS17
+;;       https://arxiv.org/pdf/2005.04091.pdf
+;;       http://perso.ens-lyon.fr/christian.perez/_media/180308/cash_cohen.pdf
+;;       Polyhedral Compiler
+;;       https://ucbrise.github.io/cs294-ai-sys-sp19/assets/lectures/lec12/dl-compilers.pdf
+;;       https://arxiv.org/pdf/2005.04091.pdf
+;;
+
+;; As of this writing, features on iterations works enough as for element-wise operations
+;; but as for permuted tensors, it signifcantly reduces the performance.
+;; We can easily tackle this problem by using foreign DL Frameworks like oneDNN; but it restricts the flexibility of cl-waffe2
+;; Loop Oriented Optimization should not be limited to call foreign libraries; implement kernel-size=0 and
+;; JIT Compiling to Vectorized C++/CUDA Kernel?
 
 (defstruct (AbstractLoop
 	    (:conc-name aloop-)
@@ -57,9 +72,9 @@ If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory),
 	    ;; Possible cases are: T T T... or broadcast broadcast ...
 	    ;;(not
 	    ;; (every #'(lambda (v)
-	;;		(eql (force-list v)
-	;;		     (force-list (car views))))
-	;;	    views))
+	    ;;		(eql (force-list v)
+	    ;;		     (force-list (car views))))
+	    ;;	    views))
 	    (some #'(lambda (v)
 		      (not (or (eql (force-list v) t)
 			       (eql (force-list v) :broadcast))))
@@ -107,7 +122,7 @@ Examples:
 		      (equal (butlast (shape (car tensors)) kernel-size) (butlast (shape x) kernel-size))))
 		 tensors)
 	  nil
-	  "Assertion Failed: solve-loop-order, Tensors must be the shape size, and not include symbols.")
+	  "Assertion Failed: solve-loop-order, Tensors must be the same shape size, and not include symbols.")
 
   (assert (every #'(lambda (x)
 		     (>= (the fixnum (dims x)) kernel-size))
@@ -230,7 +245,7 @@ Examples:
        (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
        (tensor-stride tensor)
        (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor))))))
-    
+  
   
   (labels ((expand-helper (&optional (c 0) (offsets offsets))
 	     (declare (type fixnum c)
@@ -359,8 +374,8 @@ Iterates the given tensors in optimized order. The behavior is the same as the `
      (when (null (gethash ',cache-id *compiled-loop-table*))
        (setf (gethash ',cache-id *compiled-loop-table*) (make-hash-table :test #'equal)))
      (do-compiled-loop*
-       (maybe-solve-loop ',cache-id ,tensor-list ,kernel-size ,(not collapse) ,mode)
-     #'(lambda (,@views-bind)
-	 ,@body)
+	 (maybe-solve-loop ',cache-id ,tensor-list ,kernel-size ,(not collapse) ,mode)
+       #'(lambda (,@views-bind)
+	   ,@body)
        ,tensor-list)))
 
