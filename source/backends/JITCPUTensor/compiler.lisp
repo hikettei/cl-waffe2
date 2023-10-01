@@ -81,7 +81,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 		  if (typep arg 'JITCPUTensor)
 		    do (cStride arg :comma (not (= n (1- (length arguments))))))
 	    (write-buff ")"))))
-    (format nil "void ~a~a~%" function-name arguments-form)))
+    (format nil "void ~a~a" function-name arguments-form)))
 
 (defun insert-loop-for ()
   (let ((back-indent-size (max 0 (- *indent-width* 4))))
@@ -91,7 +91,17 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	(write-c-line "#pragma omp parallel for~%"))
       (write-c-line "for(int i=0; i<size; i++) {~%"))))
 
-;; [TODO] Printing JIT Compiler Report
+(defun iterator-symbols (rank)
+  (loop for r upfrom 0 below rank
+	collect
+	(format nil "~a~a" (gensym "L") (code-char (+ 65 r)))))
+
+;; [TODO] element-wise op fusion
+;; [TODO] Use SLEEF Backend For Mathematical Kernel
+;; [TODO] AVXnnn Intrinsics?
+;; [TODO] Adjustable Shape Support
+;; [TODO] Runtime Mode ... able to include adjustable shape
+;; AbstractLoop To C Compiler
 (defun invoke-compiler! (function-name toplevel)
   "
 Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
@@ -100,43 +110,62 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 "
   (declare (type JITAbleTensors toplevel))
 
-  (let* ((*compiled-tensors* `())
-	 (envolved-nodes (confirm-compiling-area toplevel))
-	 (function-form  (apply #'cFunction function-name *compiled-tensors*))
-	 (tensors (loop for tensor in *compiled-tensors*
-			if (typep tensor 'JITCPUTensor)
-			  collect tensor))
-	 (scalars (loop for tensor in *compiled-tensors*
-			if (typep tensor 'JITCPUScalarTensor)
-			  collect tensor)))
-    (values
-     *compiled-tensors*
-     ;; Used for expanding call-with-view
-     tensors
-     scalars
-     (with-compiling-mode
-       (place-toplevel-form function-name *compiled-tensors*)
+  ;; solve-loop-order:
+  ;;  Creates an blueprint of optimized loop order
+  ;;  This compiler basically follows its instruction, generating corresponding loops in C.
+  (let* ((abstract-loop (solve-loop-order (tensor-variables toplevel) 1 nil :mode :runtime))
+	 (adjustable-shape (loop for loop in abstract-loop
+				 if (symbolp (aloop-size loop))
+				   collect (aloop-size loop))))
+    (print adjustable-shape)
 
-       
-       (write-buff "~%// [~a Tensors]~%" (length tensors))
-       (dolist (tensor tensors)
-	 (write-buff "// ~a: ~a ~a~%"
-		     (tensor-id tensor)
-		     (shape tensor)
-		     (tensor-attribute tensor)))
-       (write-buff "~%// [~a Scalars]~%" (length scalars))
-       (dolist (tensor scalars)
-	 (write-buff "// ~a: ~a ~a~%" (tensor-id tensor) (shape tensor) (tensor-attribute tensor)))
-       
-       ;; void function-name (...) { ...
-       (write-buff "~a { ~%" function-form)
-       (if (null tensors)
-	   (with-indent 4
-	     (ir->C envolved-nodes))
-	   (with-indent 4
-	     (write-c-line "for(int i=0; i<size; i++) {~%")
-	     (with-indent 8
-	       (ir->C envolved-nodes))
-	     (write-c-line "}~%")))
-       (write-c-line "}~%")))))
+    (with-compiling-mode
+      ;; [TODO]
+      ;; 引数 ... Tensorのポインタ + Adjustable Shape (IF ANY)
+      (place-toplevel-form function-name (tensor-variables toplevel))
 
+      (write-c-line "~a { ~%" (cFunction function-name toplevel))
+      (with-indent 4
+	(loop with indices list = (iterator-symbols (length abstract-loop))
+	      for *indent-width* upfrom 4 by 4
+	      for index-char in indices
+	      for loop        in abstract-loop do
+		(print loop)
+		(case (aloop-mode loop)
+		  (:batch
+		   ;; If *use-open-mp* is set to T and the currently processing loop is the first one
+		   ;; Inserts the pragma:
+		   (when (and (= *indent-width* 4)
+			      *use-open-mp*)
+		     (write-c-line "#pragma omp parallel for~%"))
+		   (write-c-line
+		    "for (int ~a=0;~a<~a;~a++) {~%"
+		    index-char
+		    index-char
+		    (aloop-size loop)
+		    index-char))
+		  (T
+		   ;; Excepted one of: :apply :apply-flatten
+		   (when (and (= *indent-width* 4)
+			      *use-open-mp*)
+		     (write-c-line "#pragma omp parallel for ~%"))
+		   
+		   (write-c-line
+		    "for (int ~a=0;~a<~a;~a++) {~%"
+		    index-char
+		    index-char
+		    (aloop-element-n loop)
+		    index-char)
+
+		   (let ((*indent-width* (+ 4 *indent-width*)))
+		     ;; [TODO]
+		     (print (aloop-by loop))
+		     (write-c-line
+		      "~a[XXX] = ~a[XXX];~%"
+		      (tensor-id toplevel)
+			(tensor-id toplevel))))))
+
+
+	;; Closing Brackets
+	(loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
+	  (write-c-line "}~%"))))))

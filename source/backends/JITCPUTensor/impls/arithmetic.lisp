@@ -11,6 +11,11 @@
 
 ;; Arithmetic operation family is originally declared as:
 ;; X <- op(X, Y)
+
+;; First, Try Solving the loop order
+;; If the order is complicated, set reject-p=nil
+;; And solve-loop-order ...
+
 (macrolet ((define-arith-impl (name lisp-op op-name)
 	     `(progn
 		(define-impl (,name

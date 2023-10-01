@@ -21,13 +21,15 @@
 ;; We can easily tackle this problem by using foreign DL Frameworks like oneDNN; but it restricts the flexibility of cl-waffe2
 ;; Loop Oriented Optimization should not be limited to call foreign libraries; implement kernel-size=0 and
 ;; JIT Compiling to Vectorized C++/CUDA Kernel?
+;;
+
 
 (defstruct (AbstractLoop
 	    (:conc-name aloop-)
 	    (:constructor make-aloop (rank by element-n size mode)))
   (rank rank :type fixnum)
-  (by   by   :type fixnum)
-  (size size :type (or fixnum list)) ;; (loop for i ...
+  (by   by   :type (or symbol fixnum))
+  (size size :type (or fixnum list symbol)) ;; (loop for i ...
   (element-n element-n :type (or null fixnum)) ;; (axpy n...
   (mode mode :type (and keyword (member :batch :apply :apply-flatten))))
 
@@ -115,20 +117,20 @@ Examples:
     (when (some #'symbolp (shape tensor))
       (setf (slot-value tensor 'visible-shape) (translate-adjustable-shape (shape tensor)))))
   
-  ;;(setq mode :runtime)
-  (assert (every #'(lambda (x)
-		     (and
-		      (not (some #'symbolp (shape x)))
-		      (equal (butlast (shape (car tensors)) kernel-size) (butlast (shape x) kernel-size))))
-		 tensors)
-	  nil
-	  "Assertion Failed: solve-loop-order, Tensors must be the same shape size, and not include symbols.")
+  (when (not (eql mode :runtime))
+    (assert (every #'(lambda (x)
+		       (and
+			(not (some #'symbolp (shape x)))
+			(equal (butlast (shape (car tensors)) kernel-size) (butlast (shape x) kernel-size))))
+		   tensors)
+	    nil
+	    "Assertion Failed: solve-loop-order, Tensors must be the same shape size, and not include symbols.")
 
-  (assert (every #'(lambda (x)
-		     (>= (the fixnum (dims x)) kernel-size))
-		 tensors)
-	  nil
-	  "Assertion Failed: Ranks are too low compared to declare: ~a" kernel-size)
+    (assert (every #'(lambda (x)
+		       (>= (the fixnum (dims x)) kernel-size))
+		   tensors)
+	    nil
+	    "Assertion Failed: Ranks are too low compared to declare: ~a" kernel-size))
 
   (when *freeze-call-with-view*
     (setq force-order t))
@@ -156,7 +158,7 @@ Examples:
 	     (compute-loop (wtensors &optional (rank 0))
 	       (declare (type fixnum rank))
 	       (when (and (not force-order)
-			  (= kernel-size 0)			  
+			  (= kernel-size 0)		  
 			  (apply #'rest-contiguous-p rank wtensors))
 		 (return-from
 		  compute-loop

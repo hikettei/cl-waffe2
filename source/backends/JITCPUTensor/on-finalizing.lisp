@@ -1,64 +1,11 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~
-;;
-;; optimize computation nodes
-;; compose and fuse several operations
-;; pruning unused computation nodes
-;; the behaviour sometime wrong without with-no-grad
-;; restrict option, disassemble it.
-
-
-
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; Generating a C Code from cl-waffe2.
-;; The scope of JIT: Whether the generated code can be expressed with only one `for`.
-;; Most of SIMD part relies on pragma simd.
-;;
-
-;; ===============================================================================
-;;  Event Handlers
-;; ===============================================================================
-
-
-;; apply-compile-p:
-;;
-;; A(3, 3)   ----------\
-;;                     | --- out
-;; B(3, 1*3) --[COPY] -/      ^apply-compile-p=t
-;;               ^apply-compile-p=t
-;;
-;; detected one of: end of nodes, the argument is broadcasted, the change of devices
-
-;;
-;; variable \
-;;           next-variable 
-;; variable /
-;;
-
-(defun tensor-broadcasted-p (tensor)
-  (let ((view (tensor-view tensor)))
-    (some #'(lambda (x) (eql (viewtype (force-list x)) :broadcast)) view)))
-
-(defun apply-compile-p (variable next-variable)
-  "Following the defition of 3., return t if there's a need to run compiling."
-
-  ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
-  ;;       ^ :device=t
-  (or
-   ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
-   (null next-variable)
-   ;;(not (typep next-variable 'JITAbleTensors))
-   (not (typep (tensor-backward next-variable) 'CPUJIT-Blueprint))
-   ;;(not (eql (tensor-projected-p variable) (tensor-projected-p next-variable)))
-   
-   ;; Composing element-wise operations with the same iteration.
-   ;; Split iteraton:
-   (detach-p variable)
-   ;; [TODO] tensor-projected-p -> tensor-broadcasted-p for Conv2D
-   (some #'tensor-broadcasted-p (tensor-variables next-variable))
-   ))
+;; This is a JIT Compiler from cl-waffe2 to C which is aimed to optimize operations whose call-with-view can't optimize:
+;;  Subjects to be optimized: MoveTensorNode
+;;   - 1. 与えられた引数でsolve-loop-orderする->遅いならreject-p nil
+;;   - 2. solve-loop-orderの結果をもとにしてhogehoge
+;;   - 3. JIT Compile and cache the result (<- Cache dekiru youni suru)
 
 (defparameter *compiling-ntime-count* 0)
 (defvar *in-place-routes* nil)
@@ -90,11 +37,18 @@
 				    next-variable
 				    compile-me)
   "If the node is needed to be compiled, compile."
+  (declare (ignore next-variable))
+
+  (when compile-me
+    (incf *compiling-ntime-count* 1)
+    (let ((jit-fname (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
+      (invoke-compiler! jit-fname variable)
+      )))
   
   (if (apply-compile-p variable next-variable)
       (let ((*in-place-routes*)
 	    (jit-function-name (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
-	(incf *compiling-ntime-count* 1)
+	
 	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
 	;; Pass these informations to invoke-compiler! function
         (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)

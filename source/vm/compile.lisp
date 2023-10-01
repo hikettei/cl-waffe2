@@ -106,9 +106,11 @@
 		     (push
 		      ;; Embedding Lisp Code generated from JITxxxTensor.
 		      (make-wfop
-		       (compile
-			nil
-			`(lambda () ,result))
+		       (if (functionp result)
+			   result
+			   (compile
+			    nil
+			    `(lambda () ,result)))
 		       tensor
 		       #'(lambda ()
 			   ;; Displaying the information
