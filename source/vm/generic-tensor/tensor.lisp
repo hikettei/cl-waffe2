@@ -332,7 +332,7 @@ The generic function current-backend-state is used to rendering (show-backends) 
 
 (defun total (tensor)
   (declare (type AbstractTensor tensor))
-  (apply #'lazy-mulup (shape tensor)))
+  (apply #'* (translate-adjustable-shape (shape tensor))))
 
 (defun dims (tensor)
   (declare (type AbstractTensor tensor))

@@ -319,6 +319,11 @@ Reading from the last iseq, the function attributes T at each last reference"
     ;; [TODO] Share memory-pools between forward and backward
     
     (%in-place-vm-ops! iseq)
+    ;; Simulate Memory Pool optimization (a.k.a buffer sharing)
+    ;; cl-waffe2 do not allow tensor creation during runtime, that is;
+    ;;  Once the node was declared as : X Y Z -> Z
+    ;; tensors appeared in out-from also must be appeared in in-form.
+    ;; we use this info and reconnects all `InputTensor` to reduce the number of temporary values
     (simulate-memory-pool! iseq)
     (%in-place-vm-ops! iseq-bw-flat)
 
