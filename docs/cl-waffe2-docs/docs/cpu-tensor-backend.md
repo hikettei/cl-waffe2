@@ -1,8 +1,14 @@
 
-# [package] :cl-waffe2/backends.cpu
-The package `:cl-waffe2/backends.cpu` provides an AbstractTensor `CPUTensor` where most of its implementation relies on foreign libraries (e.g.: OpenBLAS, oneDNN in the coming future).
+# [backend] :cl-waffe2/backends.cpu
+The package `:cl-waffe2/backends.cpu` provides a `CPUTensor` backend which relies most of kernel implementations on foreign libraries invoked via CFFI. (e.g.: OpenBLAS, oneDNN in the coming future).
 ## Enabling the SIMD Extension
 
-For some instructions (e.g.: `!max` `!min`, sparse matrix supports, `SLEEF`, etc...), packages that provide SIMD-enabled CPUTensor implementations are not enabled by default as a design. To enable it, run `make build_simd_extension` in the same directory as cl-waffe2.asd. You can check that it is loaded properly with the `(show-backends)` function.
+```sh
+$ make build_simd_extension
+```
+
+See also: [cl-waffe2-simd](https://github.com/hikettei/cl-waffe2/tree/master/source/backends/cpu/cl-waffe2-simd)
+
+To get further performance on CPU, SIMD Extension must be installed on your device. This extension provides further SIMD-enabled CPUTensor operations (e.g.: !max/!min, Sparse Matrix Supports, vectorized mathematical functions of SLEEF, etc...). To use it, run `make build_simd_extension` in the same directory as cl-waffe2.asd. You can confirm that it works properly with the `(cl-waffe2:show-backends)` function.
 
 ## [AbstractTensor] CPUTensor

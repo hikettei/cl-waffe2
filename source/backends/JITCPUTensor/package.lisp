@@ -15,7 +15,6 @@
    #:*compiler-flags*
    #:*viz-compiled-code*
    #:JITCPUTensor
-   #:JITCPUScalarTensor
    #:cpujit-set-config
    #:with-cpu-jit))
 

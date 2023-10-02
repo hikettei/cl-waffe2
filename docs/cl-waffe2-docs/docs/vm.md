@@ -13,9 +13,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
 - Analyzing compiled codes
     - [disassemble](#function-disassemble-waffe2-ir)
     - [profiling](#function-benchmark-accept-instructions)
-- Adding Symbolic Diff and Device-Specific Optimization
-    - [FusionPathQuery](./#struct-fusionpathquery)
-    - [defpath](./#macro-defpath)
+
 ## [parameter] `*opt-level*`
 
 This parameter indicates the degree of runtime error detection. Whichever you choose, cl-waffe2 never apply something unsafe code transformation. It takes the fixnum from 1 to 3, and the larger, the faster.
@@ -113,29 +111,29 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 
 disassemble-waffe2-ir:
  [Forward]: 
-<WfInst[op=ALLOC{INTERNAL}]     : TID322 <= op(TID322{float, (3 3)} <Param>TID317{float, (3 3)})>
-<WfInst[op=EXPNODE-CPUTENSOR]   : TID322 <= op(<Param>SV4BW(TID317{float, (3 3)}) TID322{float, (3 3)})>
-<WfInst[op=SCALARMUL-CPUTENSOR] : TID352 <= op(TID352{float, (3 1)} <Input>TID344{float, (1)})>
-<WfInst[op=VIEWTENSORNODE-T]    : TID352 <= op(TID352{float, (3 3)} TID352{float, (3 1)})>
-<WfInst[op=ADDNODE-CPUTENSOR]   : TID352 <= op(TID352{float, (3 3)} TID322{float, (3 3)})>
-<WfInst[op=DIVNODE-CPUTENSOR]   : TID322 <= op(SV4BW(TID322{float, (3 3)}) SV4BW(TID352{float, (3 3)}))>
+<WfInst[op=ALLOC{INTERNAL}]     : TID520 <= op(TID520{float, (3 3)} <Param>TID515{float, (3 3)})>
+<WfInst[op=EXPNODE-CPUTENSOR]   : TID520 <= op(<Param>SV4BW(TID515{float, (3 3)}) TID520{float, (3 3)})>
+<WfInst[op=SCALARMUL-CPUTENSOR] : TID550 <= op(TID550{float, (3 1)} <Input>TID542{float, (1)})>
+<WfInst[op=VIEWTENSORNODE-T]    : TID550 <= op(TID550{float, (3 3)} TID550{float, (3 1)})>
+<WfInst[op=ADDNODE-CPUTENSOR]   : TID550 <= op(TID550{float, (3 3)} TID520{float, (3 3)})>
+<WfInst[op=DIVNODE-CPUTENSOR]   : TID520 <= op(SV4BW(TID520{float, (3 3)}) SV4BW(TID550{float, (3 3)}))>
 
 6 Instructions | 3 Tensors | 1 Scalars
 
 
  [Pullback]: 
-<WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID411 <= op(TID411{float, (3 3)} <Input>TID408{float, (3 3)})>
-<WfInst[op=DIVNODE-CPUTENSOR]        : TID411 <= op(TID411{float, (3 3)} TID389{float, (3 3)})>
-<WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID439 <= op(TID439{float, (3 3)} <Input>TID408{float, (3 3)})>
-<WfInst[op=SCALARMUL-CPUTENSOR]      : TID439 <= op(TID439{float, (3 3)} <Input>TID436{float, (1)})>
-<WfInst[op=MULNODE-CPUTENSOR]        : TID384 <= op(TID384{float, (3 3)} TID439{float, (3 3)})>
-<WfInst[op=VIEWTENSORNODE-T]         : TID389 <= op(TID389{float, (3 3)} TID389{float, (3 1)})>
-<WfInst[op=MULNODE-CPUTENSOR]        : TID389 <= op(TID389{float, (3 3)} TID389{float, (3 3)})>
-<WfInst[op=DIVNODE-CPUTENSOR]        : TID384 <= op(TID384{float, (3 3)} TID389{float, (3 3)})>
-<WfInst[op=SYSTEM-LAZY-CONS-T]       : TID411 TID384 <= op(TID411{float, (3 3)} TID384{float, (3 3)})>
-<WfInst[op=EXPNODE-CPUTENSOR]        : TID332 <= op(TID332{float, (3 3)} TID332{float, (3 3)})>
-<WfInst[op=MULNODE-CPUTENSOR]        : TID411 <= op(TID411{float, (3 3)} TID332{float, (3 3)})>
-<WfInst[op={GRAD}SETQ{INTERNAL}]     : <Input>TID319 <= op(<Input>TID319{float, (3 3)} TID411{float, (3 3)})>
+<WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID608 <= op(TID608{float, (3 3)} <Input>TID605{float, (3 3)})>
+<WfInst[op=DIVNODE-CPUTENSOR]        : TID608 <= op(TID608{float, (3 3)} TID587{float, (3 3)})>
+<WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID636 <= op(TID636{float, (3 3)} <Input>TID605{float, (3 3)})>
+<WfInst[op=SCALARMUL-CPUTENSOR]      : TID636 <= op(TID636{float, (3 3)} <Input>TID633{float, (1)})>
+<WfInst[op=MULNODE-CPUTENSOR]        : TID582 <= op(TID582{float, (3 3)} TID636{float, (3 3)})>
+<WfInst[op=VIEWTENSORNODE-T]         : TID587 <= op(TID587{float, (3 3)} TID587{float, (3 1)})>
+<WfInst[op=MULNODE-CPUTENSOR]        : TID587 <= op(TID587{float, (3 3)} TID587{float, (3 3)})>
+<WfInst[op=DIVNODE-CPUTENSOR]        : TID582 <= op(TID582{float, (3 3)} TID587{float, (3 3)})>
+<WfInst[op=SYSTEM-LAZY-CONS-T]       : TID608 TID582 <= op(TID608{float, (3 3)} TID582{float, (3 3)})>
+<WfInst[op=EXPNODE-CPUTENSOR]        : TID530 <= op(TID530{float, (3 3)} TID530{float, (3 3)})>
+<WfInst[op=MULNODE-CPUTENSOR]        : TID608 <= op(TID608{float, (3 3)} TID530{float, (3 3)})>
+<WfInst[op={GRAD}SETQ{INTERNAL}]     : <Input>TID517 <= op(<Input>TID517{float, (3 3)} TID608{float, (3 3)})>
 
 12 Instructions | 7 Tensors | 1 Scalars
 
@@ -174,131 +172,34 @@ See also: `proceed-bench`
 
 [Sorted by Instructions]
  Time(s)   |   Instruction ( * - Beyonds the average execution time)
-7.48e-4    | <WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID674 <= op(TID674{float, (100 100)} <Input>TID590{float, (100 100)})>
-2.53e-4    | <WfInst[op=VIEWTENSORNODE-T]         : TID668 <= op(TID668{float, (100 1)} TID668{float, (100 1)})>
-3.58e-4    | <WfInst[op=SCALARMUL-CPUTENSOR]      : TID668 <= op(TID668{float, (100 1)} <Input>TID599{float, (1)})>
-1.29e-4    | <WfInst[op=VIEWTENSORNODE-T]         : TID668 <= op(TID668{float, (100 100)} TID668{float, (100 1)})>
-0.009711*  | <WfInst[op=ADDNODE-CPUTENSOR]        : TID668 <= op(TID668{float, (100 100)} <Input>TID590{float, (100 100)})>
-1.53e-4    | <WfInst[op=VIEWTENSORNODE-T]         : TID668 <= op(TID668{float, (100 1)} TID668{float, (100 100)})>
-0.004299*  | <WfInst[op=SCALARDIV-CPUTENSOR]      : TID668 <= op(TID668{float, (100 1)} <Input>TID594{float, (1)})>
-1.66e-4    | <WfInst[op=VIEWTENSORNODE-T]         : TID668 <= op(TID668{float, (100 100)} TID668{float, (100 1)})>
-0.008184*  | <WfInst[op=SUBNODE-CPUTENSOR]        : TID674 <= op(TID674{float, (100 100)} TID668{float, (100 100)})>
-0.001539   | <WfInst[op=EXPNODE-CPUTENSOR]        : TID674 <= op(TID674{float, (100 100)} TID674{float, (100 100)})>
-2.7e-4     | <WfInst[op=SCALARMUL-CPUTENSOR]      : TID668 <= op(TID668{float, (100 1)} <Input>TID719{float, (1)})>
-1.27e-4    | <WfInst[op=VIEWTENSORNODE-T]         : TID668 <= op(TID668{float, (100 100)} TID668{float, (100 1)})>
-0.009383*  | <WfInst[op=ADDNODE-CPUTENSOR]        : TID668 <= op(TID668{float, (100 100)} TID674{float, (100 100)})>
-0.012125*  | <WfInst[op=DIVNODE-CPUTENSOR]        : TID674 <= op(TID674{float, (100 100)} TID668{float, (100 100)})>
+3.45e-4    | <WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID885 <= op(TID885{float, (100 100)} <Input>TID801{float, (100 100)})>
+9.2e-5     | <WfInst[op=VIEWTENSORNODE-T]         : TID879 <= op(TID879{float, (100 1)} TID879{float, (100 1)})>
+1.37e-4    | <WfInst[op=SCALARMUL-CPUTENSOR]      : TID879 <= op(TID879{float, (100 1)} <Input>TID810{float, (1)})>
+9.6e-5     | <WfInst[op=VIEWTENSORNODE-T]         : TID879 <= op(TID879{float, (100 100)} TID879{float, (100 1)})>
+0.006066*  | <WfInst[op=ADDNODE-CPUTENSOR]        : TID879 <= op(TID879{float, (100 100)} <Input>TID801{float, (100 100)})>
+9.4e-5     | <WfInst[op=VIEWTENSORNODE-T]         : TID879 <= op(TID879{float, (100 1)} TID879{float, (100 100)})>
+0.001993*  | <WfInst[op=SCALARDIV-CPUTENSOR]      : TID879 <= op(TID879{float, (100 1)} <Input>TID805{float, (1)})>
+9.4e-5     | <WfInst[op=VIEWTENSORNODE-T]         : TID879 <= op(TID879{float, (100 100)} TID879{float, (100 1)})>
+0.004204*  | <WfInst[op=SUBNODE-CPUTENSOR]        : TID885 <= op(TID885{float, (100 100)} TID879{float, (100 100)})>
+9.67e-4    | <WfInst[op=EXPNODE-CPUTENSOR]        : TID885 <= op(TID885{float, (100 100)} TID885{float, (100 100)})>
+1.47e-4    | <WfInst[op=SCALARMUL-CPUTENSOR]      : TID879 <= op(TID879{float, (100 1)} <Input>TID930{float, (1)})>
+1.01e-4    | <WfInst[op=VIEWTENSORNODE-T]         : TID879 <= op(TID879{float, (100 100)} TID879{float, (100 1)})>
+0.005937*  | <WfInst[op=ADDNODE-CPUTENSOR]        : TID879 <= op(TID879{float, (100 100)} TID885{float, (100 100)})>
+0.003947*  | <WfInst[op=DIVNODE-CPUTENSOR]        : TID885 <= op(TID885{float, (100 100)} TID879{float, (100 100)})>
 
-14 Instructions | 6 Tensors | Overheads due to SV4BW(...) -> 1.036e-5(s) 
+14 Instructions | 6 Tensors | Overheads due to SV4BW(...) -> 4.95e-6(s) 
 
- Total Time: 0.047445003 sec
+ Total Time: 0.024220001 sec
 
 [Sorted by topK]
  Instruction                         | Total time (s) | Time/Total (n-sample=100)
-<WfInst[op=ADDNODE-CPUTENSOR]        | 0.019094002    | 40.24449%
-<WfInst[op=DIVNODE-CPUTENSOR]        | 0.012125       | 25.555906%
-<WfInst[op=SUBNODE-CPUTENSOR]        | 0.008184       | 17.249445%
-<WfInst[op=SCALARDIV-CPUTENSOR]      | 0.004299       | 9.061017%
-<WfInst[op=EXPNODE-CPUTENSOR]        | 0.001539       | 3.2437556%
-<WfInst[op=VIEWTENSORNODE-T]         | 8.28e-4        | 1.7451786%
-<WfInst[op=MOVETENSORNODE-CPUTENSOR] | 7.48e-4        | 1.5765622%
-<WfInst[op=SCALARMUL-CPUTENSOR]      | 6.28e-4        | 1.3236378%
+<WfInst[op=ADDNODE-CPUTENSOR]        | 0.012003       | 49.558212%
+<WfInst[op=SUBNODE-CPUTENSOR]        | 0.004204       | 17.357555%
+<WfInst[op=DIVNODE-CPUTENSOR]        | 0.003947       | 16.29645%
+<WfInst[op=SCALARDIV-CPUTENSOR]      | 0.001993       | 8.228736%
+<WfInst[op=EXPNODE-CPUTENSOR]        | 9.67e-4        | 3.992568%
+<WfInst[op=VIEWTENSORNODE-T]         | 4.7700002e-4   | 1.9694468%
+<WfInst[op=MOVETENSORNODE-CPUTENSOR] | 3.45e-4        | 1.4244426%
+<WfInst[op=SCALARMUL-CPUTENSOR]      | 2.84e-4        | 1.1725847%
 
 ```
-
-## [struct] FusionPathQuery
-
-```lisp
-(make-query abstract-node &key (device t) (dtype t) (pred #'(lambda (node) t)))
-```
-
-`(make-query ...)` and create a new query.
-
-A single `FusionPathQuery` becomes t only when satisfies all of following conditions:
-
-`abstract-node[symbol]` become t when the node is a subtype of `abstract-node`
-
-`device[t or symbol]`   become t when the node is working under the device or `subtype` of it.
-
-`dtype[t or list]`      become t when the `dtype` is set to t, or the list of dtype in arguments are corresponds with the list. (e.g.: `(list :float :float)`)
-
-`pred[function]`        specifies an additional predicator, the function receives `(node)` as arguments and return t to accept it. (`arguments-tensor` is an list of tensors, which `forward` or `call` used.)
-
-This structure is excepted to be combined with `defpath`.
-
-## [macro] defpath
-
-```lisp
-(defpath (fusion-name &rest query-list) &key (reject-p #'(lambda ())) (replaced-with nil))
-```
-
-⚠️ This API is still in the conceptial stage, tests are not enough. DO NOT USE THIS.
-
-The macro defpath introduces to cl-waffe2 **Symbolic Differentiation**. Users can define a `FusionQueryPath` to relocate compiled instructions with reference to the search. Composing the sequence of generated IRs to suit the device or model is the easiest way to speed up your model, cl-waffe2 searches for compiled nodes and replaces those matching the conditions specified in `query-list` with the computed nodes specified in `replaced-with`, if `:fuse-p` is set to t (default: `t`). In the simplest case, `defpath` can detect `[AddNode-CPUTensor] [MulNode-CPUTensor]` sequence and replace it with `[AddMulNode-CPUTensor]` node to reduce the number of instructions.
-
-```lisp
-[When adding a new device to cl-waffe2...]
- 1. Declare the new device (e.g.: CPUTensor, CUDATensor ...)
- 2. Prepare allocator and accessors (e.g.: initialize-instance method, vref and (setf vref))
- 3. Implement existing operations with define-impl macro
- 4. Blush up the generated IR with defpath macro to fuse more operations in a small cycle. <- defpath, here!
-```
-
-The created and registered path, will be reset with the `(reset-all-path!)` function. All registered paths are stored in `*user-defined-path-list*` parameter.
-
-### Rules
-
-cl-waffe2 replaces the existing operations with following the rules:
-
-1. The search is performed ignoring SaveForBackwardNode. If it is contained in the area to be replaced, it is moved to the last sequence of replaced one.
-
-
-```lisp
-;; Example
-Rule: [A] [B] -> [C]
-```
-
-```lisp
-Before Fusion:
-
-[A]
-[SAVE_FOR_BACKWARD]
-[B]
-[M]
-[N]
-```
-
-```lisp
-Searching will be done ignoring [SAVE_FOR_BACKWARD]
-
-^ [A]
-| [B]
-| [M]
-| [N]
-reading in this direction.
-```
-
-```lisp
-After fusion:
-
-[C]  ;; [A] [B] -> [C]
-[SAVE_FOR_BACKWARD] ;; placed after the operation
-[M]
-[N]
-```
-
-2. `defpath` priority is given to those registered first.
-
-Repeat the search until no more targets are found to replace it.
-
-3. query-list
-
-Not replaced until the `query-list` matches everything, including the order.
-
-### Example
-
-(TODO: For the case of ReLU)
-
-### make-query
-
-

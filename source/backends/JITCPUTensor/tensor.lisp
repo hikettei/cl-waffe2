@@ -55,7 +55,18 @@ Declares configurations about JITCPUTensor.
   "
 ## [macro] with-cpu-jit
 
+```lisp
+(with-cpu-jit (&rest more-devices) &body body)
+```
+
 Under this macro, two backends (`JITCPUTensor` and `JITCPUScalarTensor`) are installed at the top of the priority list.
+
+That is:
+
+```lisp
+`(with-devices (JITCPUTensor ,@more-devices)
+     ,@body)
+```
 "
   `(with-devices (JITCPUTensor ,@more-devices)
      ,@body))

@@ -195,6 +195,34 @@ The macro `cl-waffe2/vm.nodes:defmodel-as` is able to define new functions/nodes
 
 On a side note: `Encapsulated-Node` itself doesn't provide for `:where` declaration, but you can it with the keyword `:where`.
 
+## [macro] RepeatN
+
+Creates an encapsulated node which repeats the given nodes for N times.
+
+### Example
+
+```lisp
+(defsequence NCompose (N)
+    (RepeatN N
+        (asnode #'!sin)
+        (asnode #'!cos)))
+
+(cl-waffe2:dprint (call (NCompose 2) (randn `(3 10))))
+Op:COSNODE{CPUTENSOR}
+ |Op:SINNODE{CPUTENSOR}
+   |Op:COSNODE{CPUTENSOR}
+     |Op:SINNODE{CPUTENSOR}
+       |<TMP:CPUTENSOR>TID398579(3 10)
+       |Op:MOVETENSORNODE{CPUTENSOR}
+         |<Input:CPUTENSOR>TID398582(3 10)
+     |Op:MOVETENSORNODE{CPUTENSOR}
+       |<Input:CPUTENSOR>TID398599(3 10)
+   |Op:MOVETENSORNODE{CPUTENSOR}
+     |<Input:CPUTENSOR>TID398620(3 10)
+ |Op:MOVETENSORNODE{CPUTENSOR}
+   |<Input:CPUTENSOR>TID398637(3 10)
+```
+
 ## [function] call->
 
 ```lisp
