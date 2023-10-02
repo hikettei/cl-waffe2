@@ -65,10 +65,7 @@ type:
     (expand-helper (nth axis (tensor-stride tensor)))))
 
 (defun cOffset (tensor rank)
-  (symb (tensor-id tensor) '-offset rank))
-
-(defun cPointer (tensor)
-  (symb (tensor-id tensor) '-ptr))
+  (symb (tensor-id tensor) '_offset rank))
 
 (defun cAref (tensor indices)
   "Reading a id of the given tensor, places a form reading an arbitary position of elements."
@@ -85,12 +82,11 @@ type:
 		       (map 'list #'index-of
 			    (range 0 (dims tensor)) indices strides))))))))
 
-(defun cFunction (function-name adjustable-shape &rest arguments)
+(defun cFunction (function-name adjustable-shape arguments)
   "Header:
 void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)
 
   Returns the definition form of given function."
-
   (let ((arguments-form
 	  (with-compiling-mode
 	    (write-buff "(")

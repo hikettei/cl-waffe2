@@ -40,7 +40,7 @@
   `("immintrin.h" "stdbool.h" "stdlib.h" "math.h" "stdio.h" "stdint.h")
   "A list of header files envolved in compiling.")
 
-(defun place-toplevel-form (cffi-call-name tensors)
+(defun place-toplevel-form (cffi-call-name shapes tensors)
   "Places headers, function definition and macros."
 
   ;; Ensures that this call is the first time.
@@ -54,8 +54,8 @@
 
     (when *use-open-mp*
       (write-buff "#include <omp.h>~%"))
-
-    (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))))
+    
+    (write-buff "~%~a;~%~%" (cFunction cffi-call-name shapes tensors))))
 
 (defun iterator-symbols (rank)
   (loop for r upfrom 0 below rank
@@ -71,15 +71,18 @@
   (caller-form #'(lambda ()) :type function))
 
 (defmethod print-object ((obj JIT-Compiled-Kernel) stream)
-  (format stream "<JITCompiledKernel:~a~a ~a>"
+  (format stream "<JITCompiledKernel:~a~a ~a{
+~a
+}>"
 	  (jit-name obj)
 	  (or (jit-dynamic-symbols obj) "")
 	  (apply #'concatenate 'string
 		 (butlast
 		  (loop for arg in (jit-args obj)
 			append
-			(list (tensor-id arg) " "))))))
-	    
+			(list (format nil "~a" (tensor-id arg)) " "))))
+	  (jit-body obj)))
+
 ;; [TODO] element-wise op fusion
 ;; [TODO] Use SLEEF Backend For Mathematical Kernel
 ;; [TODO] AVXnnn Intrinsics?
@@ -88,16 +91,17 @@
 ;; AbstractLoop To C Compiler
 ;; defpath関連削除
 
-(defun generate-c-kernel (function-name variables abstract-loop instructions)
+(defun generate-c-kernel (function-name shapes variables abstract-loop instructions)
   (with-compiling-mode
     ;; place-toplevel-form appends these forms:
     ;;  - includes
     ;;  - header
     ;;  - macros
-    (place-toplevel-form function-name variables)
-    (write-c-line "~a { ~%" (cFunction function-name variables))
+    (place-toplevel-form function-name shapes variables)
+    (write-c-line "~a { ~%" (cFunction function-name shapes variables))
+    
     (with-indent 4
-      (loop with indices list = (iterator-symbols (length abstract-loop))
+      (loop with indices = (iterator-symbols (length abstract-loop))
 	    for *indent-width* upfrom 4 by 4
 	    for index-char in indices
 	    for loop        in abstract-loop do
@@ -135,6 +139,7 @@
     (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
       (write-c-line "}~%"))))
 
+;; A B
 (defun invoke-compiler! (function-name instructions)
   "Compiles to C Kernel.
 
@@ -152,13 +157,25 @@ Return:
   ;;  Creates an blueprint of optimized loop order
   ;;  This compiler basically follows its instruction, generating corresponding loops in C.
   (let* ((variables (collect-variables instructions))
-	 (abstract-loop (solve-loop-order variables 1 nil :mode :runtime))
-	 (adjustable-shape (loop for loop in abstract-loop
-				 if (symbolp (aloop-size loop))
-				   collect (aloop-size loop))))
-    (make-jit-compiled-kernel
-     :name             function-name
-     :args             variables
-     :dynamic-symbols  adjustable-shape
-     :body             (generate-c-kernel function-name variables abstract-loop instructions))))
+	 (no-collapse (every
+		       #'(lambda (var)
+			   (every #'symbolp (shape var)))
+		       variables))		      
+	 (abstract-loop (solve-loop-order variables 1 no-collapse :mode :runtime))
+	 (adjustable-shape))
+
+    (dolist (tensor variables)
+      (dolist (shape (shape tensor))
+	(when (and (symbolp shape)
+		   (not (find shape adjustable-shape)))
+	  (push shape adjustable-shape))))
+    
+    (let ((out
+	    (make-jit-compiled-kernel
+	     :name             function-name
+	     :args             variables
+	     :dynamic-symbols  adjustable-shape
+	     :body             (generate-c-kernel function-name adjustable-shape variables abstract-loop instructions))))
+      (jit-form-init! out)
+      out)))
 

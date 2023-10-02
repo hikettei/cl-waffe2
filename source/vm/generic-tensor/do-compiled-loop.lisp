@@ -30,7 +30,7 @@
   (rank rank :type fixnum)
   (by   by   :type (or symbol fixnum))
   (size size :type (or fixnum list symbol)) ;; (loop for i ...
-  (element-n element-n :type (or null fixnum)) ;; (axpy n...
+  (element-n element-n :type (or null symbol fixnum)) ;; (axpy n...
   (mode mode :type (and keyword (member :batch :apply :apply-flatten))))
 
 (defstruct (WTensor
@@ -166,7 +166,7 @@ Examples:
 		    (make-aloop
 		     rank
 		     (the fixnum (compute-last-stride (the fixnum rank) (car wtensors)))
-		     (apply #'* (map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank)))
+		     (apply #'l* (map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank)))
 		     1
 		     :apply-flatten))))
 
@@ -176,7 +176,7 @@ Examples:
 			  rank
 			  1
 			  (let ((out (map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank))))
-			    (apply #'* (loop for o in out if o collect o)))
+			    (apply #'l* (loop for o in out if o collect o)))
 			  1;;(find-size wtensors rank)
 			  :apply))
 		   (cons
