@@ -225,8 +225,11 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
 	    (let ((iseq-fw forward)
 		  (iseq-bw (or bw backward)))
-	      (dolist (device-name *using-backend*)
-		(multiple-value-setq (iseq-fw iseq-bw) (on-finalizing-compiling device-name iseq-fw iseq-bw)))
+
+	      (when optimize-locality
+		(dolist (device-name *using-backend*)
+		  (multiple-value-setq (iseq-fw iseq-bw) (on-finalizing-compiling device-name iseq-fw iseq-bw))))
+	      
 	      (values iseq-fw iseq-bw leaves dout allocation))))))))
 
 #+sbcl(setf sb-ext:*inline-expansion-limit* 4)

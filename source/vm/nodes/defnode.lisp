@@ -51,7 +51,7 @@ If you want to add an additional optimizing, the method can be used like:
 `iseq-fw iseq-bw[list]` InstructionSeq. an list of `WfInstruction(See the section of cl-waffe2/vm)`.
 "))
 
-(defmethod on-finalizing-compiling ((device-name T) iseq-fw iseq-bw)
+(defmethod on-finalizing-compiling ((device-name t) iseq-fw iseq-bw)
   (if (next-method-p)
       (call-next-method)
       (values iseq-fw iseq-bw)))

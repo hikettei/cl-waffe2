@@ -328,7 +328,7 @@ For some instructions (e.g.: `!max` `!min`, sparse matrix supports, `SLEEF`, etc
     (with-op-doc (find-class 'JITCPUTensor) 't)
     (with-op-doc (find-class 'JITCPUScalarTensor) 't)
 
-    (with-op-doc #'enable-cpu-jit-toplevel 'function)
+    (with-op-doc #'cpujit-set-config 'function)
     (with-op-doc (macro-function 'with-cpu-jit) 'function)
     
     ))

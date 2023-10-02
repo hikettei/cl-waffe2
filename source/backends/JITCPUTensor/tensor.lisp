@@ -16,42 +16,31 @@
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
   `(or JITCPUTensor))
 
-;; TODO
-;; (with-backends ((JITCPUTensor :compiler "gcc")))
-
-(defun enable-cpu-jit-toplevel (&key
-				  (more-devices)
-				  (compiler "gcc")
-				  (viz-compiled-code nil)
-				  (openmp nil)
-				  (flags '("-fPIC" "-O3" "-march=native")))
+(defun cpujit-set-config (&key
+			    (compiler "gcc")
+			    (viz-compiled-code nil)
+			    (openmp nil)
+			    (flags '("-fPIC" "-O3" "-march=native")))
   "
-## [function] enable-cpu-jit-toplevel
+## [function] cpujit-set-config
 
 ```lisp
-(enable-cpu-jit-toplevel (&key
-			  (more-devices)
+(cpujit-set-config (&key
 			  (compiler \"gcc\")
 			  (viz-compiled-code nil)
                           (openmp nil)
 			  (flags '(\"-fPIC\" \"-O3\" \"-march=native\"))))
 ```
 
-Sets `JITCPUTensor` and `JITCPUScalarTensor` to the top priority of backends. Place this function at the top of your code where JIT Compiling is needed. Of course, `JITCPUTensor` is developed as a one of `external backends` in cl-waffe2, therefore Local JIT compilation with the `with-devices` macro is another valid option.
-
+(TODO cuz 腱鞘炎なった)
+ 
 ### Inputs
 
-`more-devices[List]` specify the list of device names. they have lower priority than `JITCPUTensor`
-
-`viz-compiled-code[boolean]` Set t to display the compiled c codes.
-
-`openMP[boolean]` set T to use OpenMP.
 "
   (setf *default-c-compiler* compiler
 	*viz-compiled-code* viz-compiled-code
 	*use-open-mp* openMP
 	*compiler-flags* flags)
-  (apply #'cl-waffe2:set-devices-toplevel 'JITCPUTensor more-devices)
   t)
 
 (defmacro with-cpu-jit ((&rest more-devices) &body body)
@@ -63,14 +52,19 @@ Under this macro, two backends (`JITCPUTensor` and `JITCPUScalarTensor`) are ins
   `(with-devices (JITCPUTensor ,@more-devices)
      ,@body))
 
-;; Memo: https://groups.google.com/g/comp.lang.lisp/c/4aDbcVUBraQ
-;; Pinning Arrays?
-;; TODO: Do it outside call-with-view
-(declaim (inline tensor-ptr))
-(defun tensor-ptr (tensor)
-  (declare (type JITCPUTensor tensor))
-  #+sbcl
-  (sb-sys:vector-sap (sb-ext:array-storage-vector (the (simple-array * (*)) (tensor-vec tensor))))
-  #-(or sbcl)
-  (error "JITCPUTensor requires SBCL to access the storage vector!"))
+(defmacro with-tensor-ptr ((bind tensor) &body body)
+  `(progn
+     ;; Ensure that tensor storage vector has allocated.
+     (tensor-vec ,tensor)
+     (cffi:with-pointer-to-vector-data (,bind (cl-waffe2/vm.generic-tensor::vec ,tensor))
+       (declare (type cffi-sys:foreign-pointer ,bind))
+       ,@body)))
+
+(defmacro with-tensor-ptrs ((&rest input-forms) &body body)
+  (labels ((expand (rest-forms)
+	     (if rest-forms
+		 `(with-tensor-ptr (,(caar rest-forms) ,(second (car rest-forms)))
+		    ,(expand (cdr rest-forms)))
+		 `(progn ,@body))))
+    (expand input-forms)))
 

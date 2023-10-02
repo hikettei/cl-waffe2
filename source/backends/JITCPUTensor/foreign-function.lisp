@@ -55,33 +55,30 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
     (cffi:load-foreign-library sharedlib)))
 
 (defun jit-form-init! (jitf)
-  (setf (jit-caller-form jitf) (jit-funcall-form jitf)))
+  (setf (jit-caller-form jitf) (compile nil (jit-funcall-form jitf))))
 
 (defun jit-funcall (jitf &rest args)
   (apply (the function (jit-caller-form jitf)) args))
 
 (defun jit-funcall-form (jit-compiled-kernel)
   (with-slots ((name name) (dynamic-symbols dynamic-symbols) (args args)) jit-compiled-kernel
-
-    ;; delete
-    (load-foreign-function (jit-body jit-compiled-kernel))
-    (compile
-     nil
-     `(lambda (,@(map 'list #'tensor-id args))
-	(cffi:foreign-funcall
-	 ,name
-	 ,@(loop for symbol in dynamic-symbols
-		 append
-		 `(:uint32 (cl-waffe2/vm.generic-tensor::read-symbol ',symbol)))
-	 ,@(loop for arg in args
-		 append
-		 (append
-		  `(:pointer (tensor-ptr ,(tensor-id arg)))
-		  (loop for rank upfrom 0 below (dims arg)
-			append
-			`(:uint32
-			  (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-			   (force-list
-			    (nth ,rank (tensor-view ,(tensor-id arg)))))))))
-	 :void)))))
+    `(lambda (,@(map 'list #'tensor-id args))
+       (with-tensor-ptrs (,@(loop for arg in args
+				  collect `(,(cPointer arg) ,arg)))
+	 (cffi:foreign-funcall
+	  ,name
+	  ,@(loop for symbol in dynamic-symbols
+		  append
+		  `(:uint32 (cl-waffe2/vm.generic-tensor::read-symbol ',symbol)))
+	  ,@(loop for arg in args
+		  append
+		  (append
+		   `(:pointer ,(cPointer arg))
+		   (loop for rank upfrom 0 below (dims arg)
+			 append
+			 `(:uint32
+			   (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+			    (force-list
+			     (nth ,rank (tensor-view ,(tensor-id arg)))))))))
+	  :void)))))
 

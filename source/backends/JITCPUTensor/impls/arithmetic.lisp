@@ -43,12 +43,16 @@
   (define-arith-impl AddNode + "+=")
   (define-arith-impl SubNode - "-=")
   (define-arith-impl MulNode * "*=")
-  (define-arith-impl DivNode / "/="))
+(define-arith-impl DivNode / "/="))
 |#
 
 (define-impl (MoveTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self out target)
-		       ;; MoveTensorNode: out <- target
-		       (setf (blueprint-use-var self) `(,out ,target)
-			     (blueprint-opecode self) 'move)
-		       `(progn ,out)))
+		       `(progn
+			  ,(jit-funcall-form
+			    (invoke-compiler
+			     (symbol-name (gensym "MoveTensorNode"))
+			     (list
+			      (make-inst :modify "=" target (list out)))))
+			  ,target)))
+

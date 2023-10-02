@@ -15,7 +15,7 @@
    #:*viz-compiled-code*
    #:JITCPUTensor
    #:JITCPUScalarTensor
-   #:enable-cpu-jit-toplevel
+   #:cpujit-set-config
    #:with-cpu-jit))
 
 (in-package :cl-waffe2/backends.jit.cpu)

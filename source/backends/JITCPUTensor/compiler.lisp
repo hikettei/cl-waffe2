@@ -45,7 +45,7 @@
 
   ;; Ensures that this call is the first time.
   ;; Since only required once when compiling.
-  (when (null *caching-c-source*) 
+  (when (string= *lazy-c-source* "")
     (write-buff "~%#pragma SIMD~%")
     (write-buff "#pragma GCC optimize (\"O3\")~%")
     
@@ -167,13 +167,12 @@ Return:
 	(when (and (symbolp shape)
 		   (not (find shape adjustable-shape)))
 	  (push shape adjustable-shape))))
-    
-    (let ((out
-	    (make-jit-compiled-kernel
-	     :name             function-name
-	     :args             variables
-	     :dynamic-symbols  adjustable-shape
-	     :body             (generate-c-kernel function-name adjustable-shape variables abstract-loop instructions))))
-      (jit-form-init! out)
-      out)))
+
+    (let ((source (generate-c-kernel function-name adjustable-shape variables abstract-loop instructions)))
+      (setf *lazy-c-source* (format nil "~a~%~a" *lazy-c-source* source))
+      (make-jit-compiled-kernel
+       :name             function-name
+       :args             variables
+       :dynamic-symbols  adjustable-shape
+       :body             source))))
 

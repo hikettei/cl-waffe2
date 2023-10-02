@@ -33,6 +33,9 @@ type:
 	  (push tensor result))))
     result))
 
+(defun cPointer (tensor)
+  (symb (tensor-id tensor) '-ptr))
+
 (defun cVar (tensor &key (restrict nil) (comma nil))
   (declare (type AbstractTensor tensor))
   (cType tensor :restrict restrict)
