@@ -127,9 +127,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="package-cl-waffe2backendslisp">[package] :cl-waffe2/backends.lisp</h1>
-<p>The package <code>:cl-waffe2/backends.lisp</code> provides an AbstractTensor <code>LispTensor</code> as an external backend, and designed with the aim of portalibity, not performance. Therefore, most implementations of this follow ANSI Common Lisp, so it will work in any environment but concerns remain about speed.</p>
-<p>It is recommended that <code>LispTensor</code> are installed in the lowest priority of <code>*using-backend*</code>, and <code>Couldnt find any implementation for ...</code> error will never occurs.</p>
+                <h1 id="backend-cl-waffe2backendslisp">[backend] :cl-waffe2/backends.lisp</h1>
+<p>The package <code>:cl-waffe2/backends.lisp</code> provides a <code>LispTensor</code> backend which is designed with the aim of portalibity, not performance. All matrix operations are performed via kernels written in ANSI Common Lisp.</p>
+<p>In order to use this backend, add this line:</p>
+<pre><code class="language-lisp">(with-devices (LispTensor)
+   ;; body
+   )
+</code></pre>
 <h2 id="abstracttensor-lisptensor">[AbstractTensor] LispTensor</h2>
               
             </div>

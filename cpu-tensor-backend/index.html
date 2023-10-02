@@ -129,10 +129,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="package-cl-waffe2backendscpu">[package] :cl-waffe2/backends.cpu</h1>
-<p>The package <code>:cl-waffe2/backends.cpu</code> provides an AbstractTensor <code>CPUTensor</code> where most of its implementation relies on foreign libraries (e.g.: OpenBLAS, oneDNN in the coming future).</p>
+                <h1 id="backend-cl-waffe2backendscpu">[backend] :cl-waffe2/backends.cpu</h1>
+<p>The package <code>:cl-waffe2/backends.cpu</code> provides a <code>CPUTensor</code> backend which relies most of kernel implementations on foreign libraries invoked via CFFI. (e.g.: OpenBLAS, oneDNN in the coming future).</p>
 <h2 id="enabling-the-simd-extension">Enabling the SIMD Extension</h2>
-<p>For some instructions (e.g.: <code>!max</code> <code>!min</code>, sparse matrix supports, <code>SLEEF</code>, etc...), packages that provide SIMD-enabled CPUTensor implementations are not enabled by default as a design. To enable it, run <code>make build_simd_extension</code> in the same directory as cl-waffe2.asd. You can check that it is loaded properly with the <code>(show-backends)</code> function.</p>
+<pre><code class="language-sh">$ make build_simd_extension
+</code></pre>
+<p>See also: <a href="https://github.com/hikettei/cl-waffe2/tree/master/source/backends/cpu/cl-waffe2-simd">cl-waffe2-simd</a></p>
+<p>To get further performance on CPU, SIMD Extension must be installed on your device. This extension provides further SIMD-enabled CPUTensor operations (e.g.: !max/!min, Sparse Matrix Supports, vectorized mathematical functions of SLEEF, etc...). To use it, run <code>make build_simd_extension</code> in the same directory as cl-waffe2.asd. You can confirm that it works properly with the <code>(cl-waffe2:show-backends)</code> function.</p>
 <h2 id="abstracttensor-cputensor">[AbstractTensor] CPUTensor</h2>
               
             </div>

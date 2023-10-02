@@ -107,9 +107,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#abstracttensor-jitcputensor">[AbstractTensor] JITCPUTensor</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#abstracttensor-jitcpuscalartensor">[AbstractTensor] JITCPUScalarTensor</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-enable-cpu-jit-toplevel">[function] enable-cpu-jit-toplevel</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-cpujit-set-config">[function] cpujit-set-config</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a>
     </li>
@@ -143,8 +141,15 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="package-cl-waffe2backendsjitcpu">[package] :cl-waffe2/backends.jit.cpu</h1>
-<p>[Unstable] The package <code>:cl-waffe2/backends.jit.cpu</code> provides an AbstractTensor <code>JITCPUTensor</code> which accelerated by JIT Compiling to C code dynamically, (so this backend will require <code>gcc</code> as an additional requirement.)</p>
+                <h1 id="backend-cl-waffe2backendsjitcpu">[backend] :cl-waffe2/backends.jit.cpu</h1>
+<p>Those backends without JIT, relies on <code>do-compiled-loop</code> or <code>call-with-view</code> to calculate only part of matrices: complicated offsets and permution (i.e: <code>!view</code> and <code>!permute</code>). However, under certain circumstances this can be difficult to parallelise by simply calling a CFFI function; and this backend is intended to solve the problem.</p>
+<p>This package provides a <code>JITCPUTensor</code> backend which works by jit-compiling whole code to vectorized C, and is only for the purpose of optimising memory layout, so currently only four arithmetic operations and copying are implemented. (OpFusion is remained to be implemented; but it is definitely possible to fuse several ops)</p>
+<p>Optimise the memory layout by enclosing the code you want to optimise the layout in:</p>
+<pre><code class="language-lisp">(with-cpu-jit (CPUTensor LispTensor)
+    ;; body
+    )
+</code></pre>
+<p>Tips: Use the <code>proceed-bench</code> function to know the bottleneck; if <code>MoveTensorNode</code> combined with <code>PermuteNode</code> is slow compared to other nodes, the memory layout is remained to be optimized for example.</p>
 <h2 id="parameter-default-c-compiler">[parameter] <code>*default-c-compiler*</code></h2>
 <p>Specify the command to compile the generated c codes. In default, "gcc".</p>
 <h2 id="parameter-compiler-flags">[parameter] <code>*compiler-flags*</code></h2>
@@ -152,22 +157,27 @@
 <h2 id="parameter-viz-compiled-code">[parameter] <code>*viz-compiled-code*</code></h2>
 <p>Set t to display the compiled c code to terminal. In default, <code>nil</code></p>
 <h2 id="abstracttensor-jitcputensor">[AbstractTensor] JITCPUTensor</h2>
-<h2 id="abstracttensor-jitcpuscalartensor">[AbstractTensor] JITCPUScalarTensor</h2>
-<h2 id="function-enable-cpu-jit-toplevel">[function] enable-cpu-jit-toplevel</h2>
-<pre><code class="language-lisp">(enable-cpu-jit-toplevel (&amp;key
-              (more-devices)
-              (compiler &quot;gcc&quot;)
+<h2 id="function-cpujit-set-config">[function] cpujit-set-config</h2>
+<pre><code class="language-lisp">(cpujit-set-config (&amp;key
+                      (compiler &quot;gcc&quot;)
               (viz-compiled-code nil)
-                          (openmp nil)
-              (flags '(&quot;-fPIC&quot; &quot;-O3&quot; &quot;-march=native&quot;))))
+                      (openmp nil)
+                  (flags '(&quot;-fPIC&quot; &quot;-O3&quot; &quot;-march=native&quot;))))
 </code></pre>
-<p>Sets <code>JITCPUTensor</code> and <code>JITCPUScalarTensor</code> to the top priority of backends. Place this function at the top of your code where JIT Compiling is needed. Of course, <code>JITCPUTensor</code> is developed as a one of <code>external backends</code> in cl-waffe2, therefore Local JIT compilation with the <code>with-devices</code> macro is another valid option.</p>
+<p>Declares configurations about JITCPUTensor. </p>
 <h3 id="inputs">Inputs</h3>
-<p><code>more-devices[List]</code> specify the list of device names. they have lower priority than <code>JITCPUTensor</code></p>
-<p><code>viz-compiled-code[boolean]</code> Set t to display the compiled c codes.</p>
-<p><code>openMP[boolean]</code> set T to use OpenMP.</p>
+<p><code>compiler[string]</code> a compiler to use. in default set to gcc</p>
+<p><code>viz-compiled-code[boolean]</code> set t to display generated C codes.</p>
+<p><code>openmp[boolean]</code> set to use OpenMP</p>
+<p><code>flags[list]</code> additional compiler flags.</p>
 <h2 id="macro-with-cpu-jit">[macro] with-cpu-jit</h2>
+<pre><code class="language-lisp">(with-cpu-jit (&amp;rest more-devices) &amp;body body)
+</code></pre>
 <p>Under this macro, two backends (<code>JITCPUTensor</code> and <code>JITCPUScalarTensor</code>) are installed at the top of the priority list.</p>
+<p>That is:</p>
+<pre><code class="language-lisp">`(with-devices (JITCPUTensor ,@more-devices)
+     ,@body)
+</code></pre>
               
             </div>
           </div><footer>

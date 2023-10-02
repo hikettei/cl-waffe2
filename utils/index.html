@@ -97,19 +97,25 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-repeatn">[macro] RepeatN</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-call-">[function] call-&gt;</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-defsequence">[macro] defsequence</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_1">Inputs</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example_3">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#macro-hooker">[macro] hooker</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_4">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
     </li>
         </ul>
     </li>
@@ -117,7 +123,7 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_2">Inputs</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#note">Note</a>
     </li>
@@ -127,13 +133,13 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_3">Inputs</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#example_6">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-show-backends">[function] show-backends</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_7">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_8">Example</a>
     </li>
         </ul>
     </li>
@@ -345,6 +351,29 @@
 (matrix-sin (ax+b `(10 10) 0 1)) ;; &lt;- No compiling overhead. Just works like Numpy
 </code></pre>
 <p>On a side note: <code>Encapsulated-Node</code> itself doesn't provide for <code>:where</code> declaration, but you can it with the keyword <code>:where</code>.</p>
+<h2 id="macro-repeatn">[macro] RepeatN</h2>
+<p>Creates an encapsulated node which repeats the given nodes for N times.</p>
+<h3 id="example_3">Example</h3>
+<pre><code class="language-lisp">(defsequence NCompose (N)
+    (RepeatN N
+        (asnode #'!sin)
+        (asnode #'!cos)))
+
+(cl-waffe2:dprint (call (NCompose 2) (randn `(3 10))))
+Op:COSNODE{CPUTENSOR}
+ |Op:SINNODE{CPUTENSOR}
+   |Op:COSNODE{CPUTENSOR}
+     |Op:SINNODE{CPUTENSOR}
+       |&lt;TMP:CPUTENSOR&gt;TID398579(3 10)
+       |Op:MOVETENSORNODE{CPUTENSOR}
+         |&lt;Input:CPUTENSOR&gt;TID398582(3 10)
+     |Op:MOVETENSORNODE{CPUTENSOR}
+       |&lt;Input:CPUTENSOR&gt;TID398599(3 10)
+   |Op:MOVETENSORNODE{CPUTENSOR}
+     |&lt;Input:CPUTENSOR&gt;TID398620(3 10)
+ |Op:MOVETENSORNODE{CPUTENSOR}
+   |&lt;Input:CPUTENSOR&gt;TID398637(3 10)
+</code></pre>
 <h2 id="function-call-">[function] call-&gt;</h2>
 <pre><code class="language-lisp">(call-&gt; input &amp;rest nodes)
 </code></pre>
@@ -363,7 +392,7 @@
 <p><code>name[symbol]</code> defines the new Composite after <code>name</code></p>
 <p><code>args[list]</code> a list of arguments that used to initialize nodes. Not for <code>call</code>.</p>
 <p><code>docstring[string]</code> docstring</p>
-<h3 id="example_3">Example</h3>
+<h3 id="example_4">Example</h3>
 <pre><code class="language-lisp">(defsequence MLP (in-features)
     &quot;Docstring (optional)&quot;
     (LinearLayer in-features 512)
@@ -385,7 +414,7 @@
 </code></pre>
 <p>where <code>bind</code> is excepted to be AbstractTensor, optimizer is a creation form of <code>AbstractOptimizer</code>, and the function <code>hook-optimizer!</code> hooks the given optimizer into bind.</p>
 <p>In cl-waffe2, one independent Optimizer must be initialised per parameter. This macro can be used to concisely describe the process of initialising the same Optimiser for many parameters.</p>
-<h3 id="example_4">Example</h3>
+<h3 id="example_5">Example</h3>
 <pre><code class="language-lisp">;; (model-parameters compiled-composite) to read the list of all parameters in the network
 
 (let ((model (build (!matmul 
@@ -406,7 +435,7 @@
 <h3 id="inputs_2">Inputs</h3>
 <p><code>where</code> declares the shape transforms. the tensor names used here are the same as those used in body. (i.e.: everything is AbstractTensor)</p>
 <p><code>body</code> Describe the construction of the computation node here.</p>
-<h3 id="example_5">Example</h3>
+<h3 id="example_6">Example</h3>
 <pre><code class="language-lisp">(node-&gt;lambda (A[~] -&gt; B[~])
     (!sin (!cos a)))
 
@@ -422,7 +451,7 @@
 <p><code>name[symbol]</code> the function is defined after it</p>
 <p><code>where</code> declares the shape transforms. the tensor names used here are the same as those used in body.</p>
 <p><code>body</code> Describe the construction of the computation node here.</p>
-<h3 id="example_6">Example</h3>
+<h3 id="example_7">Example</h3>
 <pre><code class="language-lisp">(node-&gt;defun log-softmax (A[~] -&gt; OUT[~])
     (!softmax (!loge a) :axis 1))
 
@@ -440,7 +469,7 @@
 <pre><code class="language-lisp">(show-backends &amp;key (stream t))
 </code></pre>
 <p>collects and displays the current state of devices to the given <code>stream</code></p>
-<h3 id="example_7">Example</h3>
+<h3 id="example_8">Example</h3>
 <pre><code class="language-lisp">(show-backends)
 
 ─────[All Backends Tree]──────────────────────────────────────────────────

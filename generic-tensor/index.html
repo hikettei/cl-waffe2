@@ -528,7 +528,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1389 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1996 
   :vec-state [maybe-not-computed]
     &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
@@ -563,7 +563,7 @@
 <p>A principle operator to extend your functions to higher arrays.</p>
 <pre><code class="language-lisp">(call-with-view function tensors &amp;key (at-least-dim 1) (force-order nil) (lparallel nil))
 </code></pre>
-<p>The function <code>call-with-view</code> generates a lisp code of <code>(loop for ...)</code> iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal <code>for(int i=0;i&lt;size;i++){...}</code> route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of <code>define-impl</code> macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.</p>
+<p>The function <code>call-with-view</code> generates a lisp code of <code>(loop for ...)</code> iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal <code>for(int i=0;i&lt;size;i++){...}</code> route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framexwork, this function is usually combined with the forward definition of <code>define-impl</code> macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.</p>
 <p>In the simplest case, <code>call-with-view</code> first deploys <code>(loop for...)</code> until the rank of given tensors reaches the given <code>at-least-dim</code>. After reaching <code>at-least-dim</code>, the function places the result of calling the given <code>function</code>.</p>
 <pre><code class="language-lisp">(call-with-view
       #'(lambda (x-view)
@@ -620,7 +620,7 @@
 <pre><code class="language-lisp">(define-impl-op (Compare-Operation-Node :device LispTensor)
         :forward ((self tensor1 tensor2 out)
               (let ((kernel (compare-kernel (dtype tensor1))))
-                (do-compiled-loop (list tensor1 tensor1 out) ()
+                (do-compiled-loop (list tensor1 tensor2 out) ()
                 (x-view y-view o-view)
                   (funcall kernel
                        (tensor-vec tensor1)
