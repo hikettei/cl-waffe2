@@ -10,8 +10,26 @@
 	   :initargs (:node-func node-func)
 	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (excepted to construct networks) with no `:where` dependency"))
 
+(defmodel (RepeatN-Node (self node-func)
+	   :slots ((node-func :initarg :node-func)
+		   (N :initform nil)
+		   (iseq :initarg :iseq :initform nil))
+	   :initargs (:node-func node-func)))
+
 (defmethod call ((model Encapsulated-Node) &rest inputs)
   (apply (slot-value model 'node-func) inputs))
+
+(defmethod call ((model RepeatN-Node) &rest inputs)
+  (apply (slot-value model 'node-func) model inputs))
+
+(defmethod on-print-object ((model RepeatN-Node) stream)
+  (format stream "
+    <<Repeating x ~a>> {
+~a}~%"
+	  (slot-value model 'N)
+	  (with-output-to-string (out)
+	    (dolist (i (slot-value model 'iseq))
+	      (format out "~a~%" i)))))
 
 (defmethod on-print-object ((model Encapsulated-Node) stream)
   (format stream "
@@ -79,6 +97,48 @@ On a side note: `Encapsulated-Node` itself doesn't provide for `:where` declarat
   (if arguments
       (Encapsulated-Node #'(lambda (x) (apply function x arguments)))
       (Encapsulated-Node function)))
+
+(defmacro RepeatN (N &rest nodes &aux (x (gensym)) (i (gensym)))
+  "
+## [macro] RepeatN
+
+Creates an encapsulated node which repeats the given nodes for N times.
+
+### Example
+
+```lisp
+(defsequence NCompose (N)
+    (RepeatN N
+        (asnode #'!sin)
+        (asnode #'!cos)))
+
+(cl-waffe2:dprint (call (NCompose 2) (randn `(3 10))))
+Op:COSNODE{CPUTENSOR}
+ |Op:SINNODE{CPUTENSOR}
+   |Op:COSNODE{CPUTENSOR}
+     |Op:SINNODE{CPUTENSOR}
+       |<TMP:CPUTENSOR>TID398579(3 10)
+       |Op:MOVETENSORNODE{CPUTENSOR}
+         |<Input:CPUTENSOR>TID398582(3 10)
+     |Op:MOVETENSORNODE{CPUTENSOR}
+       |<Input:CPUTENSOR>TID398599(3 10)
+   |Op:MOVETENSORNODE{CPUTENSOR}
+     |<Input:CPUTENSOR>TID398620(3 10)
+ |Op:MOVETENSORNODE{CPUTENSOR}
+   |<Input:CPUTENSOR>TID398637(3 10)
+```
+"
+  `(let ((,i (RepeatN-Node
+	      #'(lambda (,i ,x)
+		  (when (slot-value ,i 'iseq)
+		    (setq ,x (apply #'call-> ,x (slot-value ,i 'iseq))))
+		  (dotimes (,i (max 0 (1- ,N)))
+		    (setq ,x (call-> ,x ,@nodes)))
+		  ,x))))
+     (setf (slot-value ,i 'N) ,N)
+     (when (>= ,N 1)
+       (setf (slot-value ,i 'iseq) (list ,@nodes)))
+     ,i))
 
 (defun call-> (input &rest nodes)
   "
