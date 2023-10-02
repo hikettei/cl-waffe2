@@ -6,22 +6,15 @@
 ## [AbstractTensor] JITCPUTensor
 "))
 
-(defclass JITCPUScalarTensor (cl-waffe2/vm.generic-tensor:ScalarTensor) nil
-  (:documentation "## [AbstractTensor] JITCPUScalarTensor
-"))
-
 (defmethod current-backend-state ((backend-name (eql 'JITCPUTensor)))
   (format nil "compiler=~a flags=~a viz=~a"
 	  *default-c-compiler*
 	  *compiler-flags*
 	  *viz-compiled-code*))
 
-(defmethod current-backend-state ((backend-name (eql 'JITCPUScalarTensor)))
-  "Use with JITCPUTensor")
-
 (deftype JITAbleTensors ()
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
-  `(or JITCPUTensor JITCPUScalarTensor))
+  `(or JITCPUTensor))
 
 (defun enable-cpu-jit-toplevel (&key
 				  (more-devices)
@@ -55,7 +48,7 @@ Sets `JITCPUTensor` and `JITCPUScalarTensor` to the top priority of backends. Pl
 	*viz-compiled-code* viz-compiled-code
 	*use-open-mp* openMP
 	*compiler-flags* flags)
-  (apply #'cl-waffe2:set-devices-toplevel 'JITCPUTensor 'JITCPUScalarTensor more-devices)
+  (apply #'cl-waffe2:set-devices-toplevel 'JITCPUTensor more-devices)
   t)
 
 (defmacro with-cpu-jit ((&rest more-devices) &body body)
@@ -64,7 +57,7 @@ Sets `JITCPUTensor` and `JITCPUScalarTensor` to the top priority of backends. Pl
 
 Under this macro, two backends (`JITCPUTensor` and `JITCPUScalarTensor`) are installed at the top of the priority list.
 "
-  `(with-devices (JITCPUTensor JITCPUScalarTensor ,@more-devices)
+  `(with-devices (JITCPUTensor ,@more-devices)
      ,@body))
 
 ;; Memo: https://groups.google.com/g/comp.lang.lisp/c/4aDbcVUBraQ

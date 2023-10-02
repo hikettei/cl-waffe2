@@ -19,7 +19,7 @@
     (T (error "dtype->ctype: Attempted to generate C codes
 but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
 
-(defun cType (tensor &key (restrict nil) (pointer nil))
+(defun cType (tensor &key (restrict nil))
   (declare (type AbstractTensor tensor)
 	   (type boolean restrict))
   (typecase tensor
@@ -27,14 +27,8 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
      (write-buff "~a~a"
 		 (dtype->ctype (dtype tensor))
 		 (if restrict
-		     (progn nil "* ");;" restrict * "
+		     " * restrict "
 		     "* ")))
-    (JITCPUScalarTensor
-     (write-buff "~a~a"
-		 (dtype->ctype (dtype tensor))
-		 (if pointer
-		     " *"
-		     "")))
     (T
      (error "cType: the given tensor isn't JITAble.
 ~a" tensor))))

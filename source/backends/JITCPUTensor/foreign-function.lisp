@@ -54,6 +54,10 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
 		 (dolist (c cmd) (princ c out) (princ " " out))))))
     (cffi:load-foreign-library sharedlib)))
 
+(defun jit-funcall (jit-compiled-kernel &rest args)
+  ) 
+
+;; delete
 (defun expand-funcall-form (function-name args views)
   (declare (type string function-name)
 	   (type list args views))

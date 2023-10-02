@@ -18,6 +18,7 @@
 
 ;; 1. Keyの追加
 ;; 2. Permutionが複雑じゃなかったら: -> JITCPUTensor以外のForwardにRedirectする？
+;; Specialized on complicated permution of tensor
 
 (macrolet ((define-arith-impl (name lisp-op op-name)
 	     `(progn
@@ -46,15 +47,7 @@
 
 (define-impl (MoveTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self out target)
-		       (progn
-			 (setf (blueprint-use-var self) `(,out ,target))
-			 (setf (blueprint-opecode self) 'move)
-			 nil)
+		       ;; MoveTensorNode: out <- target
+		       (setf (blueprint-use-var self) `(,out ,target)
+			     (blueprint-opecode self) 'move)
 		       `(progn ,out)))
-
-(defmethod translate-op ((opcode (eql 'move)) opAST &rest args)
-  ;; A <- B
-  (let ((self (tensor-backward (opAST-car opAST))))
-    (if (movetensor-ignore-me self)
-	(make-inst :set     "="   (car args) (cdr args))
-	(make-inst :modify  "="   (car args) (cdr args)))))

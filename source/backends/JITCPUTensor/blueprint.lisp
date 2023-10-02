@@ -14,23 +14,34 @@ Stores information related to JIT Compiling.
 A method returning corresponding instruction given opcode
 "))
 
-
 (defstruct (Instruction
 	    (:constructor make-inst (inst-type function-name displace-to function-arguments)))
   "
  displace-to
    A[...]     = function-name(function-arguments)
- "
-  (type inst-type :type (and keyword (member :modify :apply :set :ignore)))
+
+type:
+ - modify  A fname B
+ - apply   A = fname(B)
+"
+  (type inst-type :type (and keyword (member :modify :apply)))
   (fname function-name :type string)
   (displace-to displace-to :type AbstractTensor)
   (args function-arguments :type list))
 
+(defun collect-variables (instructions)
+  (let ((result))
+    (dolist (inst instructions)
+      (dolist (tensor `(,@(instruction-args inst) ,(instruction-displace-to inst)))
+	(when (not (find (tensor-id tensor) result :key #'tensor-id))
+	  (push tensor result))))
+    result))
 
-(defun cVar (tensor &key (restrict nil) (comma nil) (pointer nil))
+(defun cVar (tensor &key (restrict nil) (comma nil))
   (declare (type AbstractTensor tensor))
-  (cType tensor :restrict restrict :pointer pointer)
-  (write-buff "~a~a" (tensor-id tensor)
+  (cType tensor :restrict restrict)
+  (write-buff "~a~a"
+	      (tensor-id tensor)
 	      (if comma ", " "")))
 
 (defun cStride (tensor axis)
@@ -53,8 +64,50 @@ A method returning corresponding instruction given opcode
 		(error "cStride: Encountered Unknown Stride Syntax ~a" stride)))))
     (expand-helper (nth axis (tensor-stride tensor)))))
 
+(defun cOffset (tensor rank)
+  (symb (tensor-id tensor) '-offset rank))
+
 (defun cPointer (tensor)
   (symb (tensor-id tensor) '-ptr))
 
+(defun cAref (tensor indices)
+  "Reading a id of the given tensor, places a form reading an arbitary position of elements."
+  (declare (type AbstractTensor tensor))
+  (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) (range 0 (dims tensor)))))
+    (flet ((index-of (rank index stride)
+	     (list (format nil "(~a+~a)*~a" (cOffset tensor rank) index stride)
+		   "+")))
+      (format nil "~a[~a]"
+	      (tensor-id tensor)
+	      (apply #'concatenate 'string
+		     (butlast
+		      (flatten
+		       (map 'list #'index-of
+			    (range 0 (dims tensor)) indices strides))))))))
 
+(defun cFunction (function-name adjustable-shape &rest arguments)
+  "Header:
+void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)
+
+  Returns the definition form of given function."
+
+  (let ((arguments-form
+	  (with-compiling-mode
+	    (write-buff "(")
+	    (dolist (shape adjustable-shape)
+	      (write-buff "uint32_t ~a, " shape))
+	    (loop for arg in arguments
+		  for nth upfrom 0
+		  ;; TENSOR_PTR OFFSET3 OFFSET2 OFFSET1
+		  do (cVar arg :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id)) :comma t)
+		     (dotimes (rank (dims arg))
+		       (write-buff "uint32_t ~a~a"
+				   (cOffset arg rank)
+				   ;; Judge if the last or not
+				   (if (and (= rank (1- (dims arg)))
+					    (= nth  (1- (length arguments))))
+				       ""
+				       ", "))))
+	    (write-buff ")"))))
+    (format nil "void ~a~a" function-name arguments-form)))
 
