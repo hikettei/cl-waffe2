@@ -381,7 +381,6 @@ Example: (TODO)
     (with-section "Events for Embedding JIT-Generated Code in runtime")
     
     (insert "~a"
-	    (documentation (car (c2mop:generic-function-methods #'on-finalizing-compiling)) 't))
-    (insert "~a"
-	    (documentation (car (c2mop:generic-function-methods #'on-finished-compiling)) 't))
+	    (documentation #'on-finalizing-compiling 't))
+    
     ))

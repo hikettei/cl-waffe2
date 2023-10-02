@@ -39,22 +39,3 @@ but failed because cl-waffe2 encountered an unsupported dtype: ~a" dtype))))
      (error "cType: the given tensor isn't JITAble.
 ~a" tensor))))
 
-(defun cVar (tensor &key (restrict nil) (comma nil) (pointer nil))
-  (declare (type AbstractTensor tensor))
-  (cType tensor :restrict restrict :pointer pointer)
-  (write-buff "~a~a" (tensor-id tensor)
-	      (if comma ", " "")))
-
-(defun cStride (tensor &key (comma nil) (typedef t))
-  (declare (type JITCPUTensor))
-  (write-buff "~a~a_STRIDE~a"
-	      (if typedef
-		  "int32_t "
-		  "")
-	      (tensor-id tensor)
-	      (if comma ", " "")))
-
-(defun cPointer (tensor)
-  (symb (tensor-id tensor) '-ptr))
-
-

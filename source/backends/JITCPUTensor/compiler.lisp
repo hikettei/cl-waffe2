@@ -1,6 +1,12 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+;; ~~~~~~~~~~~~~~~~
+;;
+;;
+;;
+
+
 (defvar *compiled-code-buffer* nil "The variable collects generated C codes.")
 (defparameter *indent-width* 0)
 
@@ -16,7 +22,7 @@
      ,@body))
 
 (defun write-buff (control-string &rest args)
-  "Appends the given characters to *compiled-code-buffer*."
+  "Appends the given characters to *compiled-code-buffer* without indentations"
   (apply #'format *compiled-code-buffer* control-string args))
 
 (defun write-c-line (control-string &rest args)
@@ -33,9 +39,7 @@
 
   (when (null *caching-c-source*) 
     (write-buff "~%#pragma SIMD~%")
-    ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
-    ;;(write-buff "#pragma GCC target \"avx2\"")
-    ;; #pragma GCC target "avx2" avx512 ...
+    (write-buff "#pragma GCC optimize (\"O3\")~%")
     
     (loop for include in *includes*
 	  do (write-buff "#include <~a>~%" include))
@@ -43,23 +47,19 @@
     (when *use-open-mp*
       (write-buff "#include <omp.h>~%"))
 
-    (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+    (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))))
 
-    ;; Utils
-    (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
-    (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
-    ))
-
-(defun cAref (tensor &key (pointer nil))
-  "Reading the given tensor's id, the function returns a string which corresponds to aref in C"
+(defun cAref (tensor indices)
+  "Reading a id of the given tensor, places a form reading an arbitary position of elements."
   (declare (type AbstractTensor tensor))
-  (if (typep tensor 'JITCPUTensor)
-      (format nil "~a[i * ~a_STRIDE]"
+  (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) (range 0 (dims tensor)))))
+    (flet ((index-of (index stride)
+	     (list (format nil "~a*~a" index stride)
+		   "+")))
+      (format nil "~a[~a]"
 	      (tensor-id tensor)
-	      (tensor-id tensor))
-      (if pointer
-	  (format nil "*~a" (tensor-id tensor))
-	  (format nil "~a"    (tensor-id tensor)))))
+	      (apply #'concatenate 'string (butlast (flatten (map 'list #'index-of indices strides))))))))
+  
 
 (defun cFunction (function-name &rest arguments)
   "Header:
@@ -78,8 +78,9 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 				   (typep arg 'JITCPUTensor)
 				   (not (= n (1- (length arguments)))))
 			   :pointer t)
-		  if (typep arg 'JITCPUTensor)
-		    do (cStride arg :comma (not (= n (1- (length arguments))))))
+		  ;;if (typep arg 'JITCPUTensor)
+		  ;;  do (cStride arg :comma (not (= n (1- (length arguments)))))
+		  )
 	    (write-buff ")"))))
     (format nil "void ~a~a" function-name arguments-form)))
 
@@ -96,12 +97,20 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	collect
 	(format nil "~a~a" (gensym "L") (code-char (+ 65 r)))))
 
+;; (defstruct (Compiled-Kernel)) source :shape args
+
 ;; [TODO] element-wise op fusion
 ;; [TODO] Use SLEEF Backend For Mathematical Kernel
 ;; [TODO] AVXnnn Intrinsics?
 ;; [TODO] Adjustable Shape Support
 ;; [TODO] Runtime Mode ... able to include adjustable shape
 ;; AbstractLoop To C Compiler
+
+;; defpath関連削除
+;; on-finalizing-compiling ... iseqを塗り替える
+;; on-finalizing-compiling ...  Compileが終わった後にまとめて呼び出す
+;; View Offsets
+;; toplevel -> IR
 (defun invoke-compiler! (function-name toplevel)
   "
 Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
@@ -122,6 +131,11 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
     (with-compiling-mode
       ;; [TODO]
       ;; 引数 ... Tensorのポインタ + Adjustable Shape (IF ANY)
+
+      ;; place-toplevel-form appends these forms:
+      ;;  - includes
+      ;;  - header
+      ;;  - macros
       (place-toplevel-form function-name (tensor-variables toplevel))
 
       (write-c-line "~a { ~%" (cFunction function-name toplevel))
@@ -159,12 +173,11 @@ Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
 
 		   (let ((*indent-width* (+ 4 *indent-width*)))
 		     ;; [TODO]
-		     (print (aloop-by loop))
 		     (write-c-line
-		      "~a[XXX] = ~a[XXX];~%"
-		      (tensor-id toplevel)
-			(tensor-id toplevel))))))
-
+		      "~a = ~a;~%"
+		      (cAref (first  (tensor-variables toplevel)) indices)
+		      (cAref (second (tensor-variables toplevel)) indices)))))))
+		      
 
 	;; Closing Brackets
 	(loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do

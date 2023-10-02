@@ -36,7 +36,7 @@
 	      nil
 	      "expand-gemm-form: Assertion Failed 2: ~a ~a."
 	      (shape b) (shape b1)))
-
+    
     ;; a, b ... untranspsoed tensor
     ;; they're just used to compute strides
 
