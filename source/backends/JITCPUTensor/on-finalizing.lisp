@@ -7,9 +7,8 @@
 (defparameter *known-functions* (make-hash-table :test #'eq))
 
 ;; [TODO] element-wise op fusion
-;; [TODO] Use SLEEF Backend For Mathematical Kernel
+;; [TODO] Use SLEEF Backend For Mathematical Kernel, simdify
 ;; [TODO] AVXnnn Intrinsics?
-;; [TODO] Adjustable Shape Support View Offsets <- Include in tests
 ;; [TODO] Add: JITLispTensor
 
 (defmethod on-finalizing-compiling ((device-name (eql 'JITCPUTensor)) iseq-fw iseq-bw)
@@ -25,7 +24,10 @@
        #'(lambda (x)
 	   (setf (gethash (wfop-op x) *known-functions*) T))
        jit-nodes)
-      (load-foreign-function *lazy-c-source*))
+
+      (let ((source *lazy-c-source*))
+	(setf *lazy-c-source* "")
+	(load-foreign-function source)))
 
     (setf *lazy-c-source* "")
     (values iseq-fw iseq-bw)))

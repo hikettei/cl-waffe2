@@ -49,7 +49,7 @@ type:
   (labels ((expand-helper (stride)
 	     (trivia:match stride
 	       ((type fixnum)
-		stride)		 
+		stride)
 	       ((list 'the 'fixnum form)
 		(expand-helper form))
 	       ((list '* a b)
@@ -58,10 +58,14 @@ type:
 			(expand-helper b)))
 	       ((list _ b)
 		(let ((res (format nil "~a" b)))
-		  (subseq res 1 (length res))))
+		  (c-name (subseq res 1 (length res)))))
 	       (T
 		(error "cStride: Encountered Unknown Stride Syntax ~a" stride)))))
-    (expand-helper (nth axis (tensor-stride tensor)))))
+    (let ((view (force-list (nth axis (tensor-view tensor)))))
+      (if (and (listp view)
+	       (eql (car view) :broadcast))
+	  "0"
+	  (expand-helper (nth axis (tensor-stride tensor)))))))
 
 (defun cOffset (tensor rank)
   (symb (tensor-id tensor) '_offset rank))
@@ -90,7 +94,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	  (with-compiling-mode
 	    (write-buff "(")
 	    (dolist (shape adjustable-shape)
-	      (write-buff "uint32_t ~a, " shape))
+	      (write-buff "uint32_t ~a, " (c-name (format nil "~a" shape))))
 	    (loop for arg in arguments
 		  for nth upfrom 0
 		  ;; TENSOR_PTR OFFSET3 OFFSET2 OFFSET1

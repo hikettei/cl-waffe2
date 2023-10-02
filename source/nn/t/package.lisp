@@ -8,6 +8,7 @@
 	:cl-waffe2/vm.nodes
 	:cl-waffe2/nn
         :cl-waffe2/backends.cpu
+        :cl-waffe2/backends.jit.cpu
         :cl-waffe2/base-impl
         :fiveam
         :cl-waffe2/distributions))

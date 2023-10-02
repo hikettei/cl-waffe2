@@ -28,6 +28,9 @@
 (defun delete-newlines (string)
   (cl-ppcre:regex-replace-all #\newline string " "))
 
+(defun c-name (string)
+  (cl-ppcre:regex-replace-all "-" string "_"))
+
 (defun range (from to)
   (loop for i fixnum upfrom from below to collect i))
 

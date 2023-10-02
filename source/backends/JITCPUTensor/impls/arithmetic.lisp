@@ -1,32 +1,25 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-#|
-(macrolet ((define-arith-impl (name lisp-op op-name)
+(macrolet ((define-arith-impl (name fname)
 	     `(progn
 		(define-impl (,name
 			      :device JITCPUTensor
 			      :extends (CPUJIT-Blueprint))
 			     :forward ((self x y)
-				       ;; Called at a Toplevel
-				       (progn
-					 (setf (blueprint-use-var self) `(,x ,y))
-					 (setf (blueprint-opecode self) ',lisp-op)
-					 nil)
+				       (let ((f (invoke-compiler
+						 (symbol-name (gensym (symbol-name ',name)))
+						 (list
+						  (make-inst :modify ,fname x (list y))))))
+					 `(progn
+					    (funcall ,(jit-funcall-form f) ,@(jit-args f))
+					    ,x)))))))
+  (define-arith-impl AddNode "+=")
+  (define-arith-impl SubNode "-=")
+  (define-arith-impl MulNode "*=")
+  (define-arith-impl DivNode "/=")
+  )
 
-				       ;; Embedding into JIT
-				       `(progn ,x)))
-
-		(defmethod translate-op ((opcode (eql ',lisp-op)) opAST &rest args)
-		  (make-inst :modify
-			     ,op-name
-			     (car args)
-			     (cdr args))))))
-  (define-arith-impl AddNode + "+=")
-  (define-arith-impl SubNode - "-=")
-(define-arith-impl MulNode * "*=")
-(define-arith-impl DivNode / "/="))
-|#
 
 (define-impl (MoveTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self out target)

@@ -95,7 +95,7 @@
     (with-indent 4
       (loop with indices = (iterator-symbols (length abstract-loop))
 	    for *indent-width* upfrom 4 by 4
-	    for index-char in indices
+	    for index-char  in indices
 	    for loop        in abstract-loop do
 	      (case (aloop-mode loop)
 		(:batch
@@ -108,7 +108,7 @@
 		  "for (int ~a=0;~a<~a;~a++) {~%"
 		  index-char
 		  index-char
-		  (aloop-size loop)
+		  (c-name (format nil "~a" (aloop-size loop)))
 		  index-char))
 		(T
 		 ;; Excepted one of: :apply :apply-flatten
@@ -120,7 +120,7 @@
 		  "for (int ~a=0;~a<~a;~a++) {~%"
 		  index-char
 		  index-char
-		  (aloop-element-n loop)
+		  (c-name (format nil "~a" (aloop-element-n loop)))
 		  index-char)
 
 		 (let ((*indent-width* (+ 4 *indent-width*)))
