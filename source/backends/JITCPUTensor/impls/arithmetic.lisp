@@ -42,7 +42,7 @@
 			     (cdr args))))))
   (define-arith-impl AddNode + "+=")
   (define-arith-impl SubNode - "-=")
-  (define-arith-impl MulNode * "*=")
+(define-arith-impl MulNode * "*=")
 (define-arith-impl DivNode / "/="))
 |#
 

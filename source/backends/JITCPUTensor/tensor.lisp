@@ -7,10 +7,11 @@
 "))
 
 (defmethod current-backend-state ((backend-name (eql 'JITCPUTensor)))
-  (format nil "compiler=~a flags=~a viz=~a"
+  (format nil "compiler=~a flags=~a viz=~a openMP=~a"
 	  *default-c-compiler*
 	  *compiler-flags*
-	  *viz-compiled-code*))
+	  *viz-compiled-code*
+	  *use-open-mp*))
 
 (deftype JITAbleTensors ()
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
@@ -26,16 +27,23 @@
 
 ```lisp
 (cpujit-set-config (&key
-			  (compiler \"gcc\")
-			  (viz-compiled-code nil)
-                          (openmp nil)
-			  (flags '(\"-fPIC\" \"-O3\" \"-march=native\"))))
+                      (compiler \"gcc\")
+		      (viz-compiled-code nil)
+                      (openmp nil)
+	              (flags '(\"-fPIC\" \"-O3\" \"-march=native\"))))
 ```
 
-(TODO cuz 腱鞘炎なった)
+Declares configurations about JITCPUTensor. 
  
 ### Inputs
 
+`compiler[string]` a compiler to use. in default set to gcc
+
+`viz-compiled-code[boolean]` set t to display generated C codes.
+
+`openmp[boolean]` set to use OpenMP
+
+`flags[list]` additional compiler flags.
 "
   (setf *default-c-compiler* compiler
 	*viz-compiled-code* viz-compiled-code

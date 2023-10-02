@@ -6,6 +6,7 @@
   (:use :cl
 	:alexandria
 	:cl-waffe2/distributions
+	:cl-waffe2/vm
         :cl-waffe2/vm.generic-tensor
 	:cl-waffe2/vm.nodes
         :cl-waffe2/base-impl)

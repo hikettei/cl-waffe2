@@ -53,9 +53,9 @@
       (write-buff "#include <~a>~%" include))
 
     (when *use-open-mp*
-      (write-buff "#include <omp.h>~%"))
-    
-    (write-buff "~%~a;~%~%" (cFunction cffi-call-name shapes tensors))))
+      (write-buff "#include <omp.h>~%")))
+  
+  (write-buff "~%~a;~%~%" (cFunction cffi-call-name shapes tensors)))
 
 (defun iterator-symbols (rank)
   (loop for r upfrom 0 below rank
@@ -82,14 +82,6 @@
 			append
 			(list (format nil "~a" (tensor-id arg)) " "))))
 	  (jit-body obj)))
-
-;; [TODO] element-wise op fusion
-;; [TODO] Use SLEEF Backend For Mathematical Kernel
-;; [TODO] AVXnnn Intrinsics?
-;; [TODO] Adjustable Shape Support
-;; [TODO] Runtime Mode ... able to include adjustable shape
-;; AbstractLoop To C Compiler
-;; defpath関連削除
 
 (defun generate-c-kernel (function-name shapes variables abstract-loop instructions)
   (with-compiling-mode
