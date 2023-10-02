@@ -171,8 +171,7 @@ stride-x stride-y"
 	      :cache-when-compiled nil)
 	     :forward ((self dout)
 		       `(with-slots ((N N) (C C) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out) (stride-x stride-x) (stride-y stride-y)) ,self
-			  (values (∂im2col/∂out ,dout (img-out-of ,self) N C k-h k-w h-out w-out stride-x stride-y) nil))))
-
+			  (values (∂im2col/∂out ,dout (img-out-of ,self) N C k-h k-w h-out w-out stride-x stride-y)))))
 
 
 (defun !im2col (padded-x N C k-h k-w h-out w-out stride-x stride-y)

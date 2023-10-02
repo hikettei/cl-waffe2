@@ -267,3 +267,9 @@ Usage:
 			 (declare (ignore _))
 			 (numberp (nth rank (wtensor-shape wtensor)))))
 	 (car wtensors)))))
+
+(defun l* (&rest args)
+  (if (= (length args) 1)
+      (car args)
+      (apply #'* args)))
+

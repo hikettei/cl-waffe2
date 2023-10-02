@@ -21,13 +21,7 @@
    #:wfop-out-to
    #:wfop-node
    #:wfop-sv4bw
-   #:wfop-args)
-  (:export
-   #:defpath
-   #:FusionPathQuery
-   #:make-query
-   #:*user-defined-path-list*
-   #:reset-all-path!))
+   #:wfop-args))
 
 (in-package :cl-waffe2/vm)
 

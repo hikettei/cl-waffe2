@@ -54,7 +54,6 @@
    ;; External JIT
    #:make-backward
    #:on-finalizing-compiling
-   #:on-finished-compiling
 
    #:node-sv4bw
    #:node-output-shape

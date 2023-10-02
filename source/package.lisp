@@ -25,6 +25,7 @@
    #:defsequence
    #:sequencelist-nth
    #:asnode
+   #:RepeatN
    #:call->)
   
   ;; Facet APIs

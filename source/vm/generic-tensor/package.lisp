@@ -15,6 +15,15 @@
    #:*memory-pool*
    #:*static-alloc-state*)
   ;; Tensor classes
+
+  (:export
+   #:AbstractLoop
+   #:aloop-rank
+   #:aloop-size
+   #:aloop-mode
+   #:aloop-element-n
+   #:aloop-by)
+  
   (:export
    #:AbstractTensor
    #:ScalarTensor

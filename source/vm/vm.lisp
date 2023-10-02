@@ -130,6 +130,14 @@ Instruction: ~a
 	       (apply
 		(the function (wfop-op instruction))
 		(map 'list #'maybe-read-result (wfop-args instruction))))))
+
+    (when (or (null outs)
+	      (not (every #'(lambda (x) (typep x 'AbstractTensor)) outs)))
+      (error "cl-waffe2 VM: Runtime Error.
+The instruction ~a returned an invaild typed result.
+All outputs must be AbstractTensor, but returned: ~a"
+	     instruction
+	     outs))
     
     (when (and (< *opt-level* 3)
 	       (wfop-self instruction)

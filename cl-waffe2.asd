@@ -137,11 +137,11 @@
 	       (:file "package")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
-	       (:file "backends/JITCPUTensor/blueprint")
+	       (:file "backends/JITCPUTensor/compiler")
+	       (:file "backends/JITCPUTensor/blueprint")	       
 	       (:file "backends/JITCPUTensor/ir")
 	       (:file "backends/JITCPUTensor/on-finalizing")
 	       (:file "backends/JITCPUTensor/dtype")
-	       (:file "backends/JITCPUTensor/compiler")
 	       (:file "backends/JITCPUTensor/foreign-function")
 	       
 

@@ -54,36 +54,31 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
 		 (dolist (c cmd) (princ c out) (princ " " out))))))
     (cffi:load-foreign-library sharedlib)))
 
-(defun expand-funcall-form (function-name args views)
-  (declare (type string function-name)
-	   (type list args views))
+(defun jit-form-init! (jitf)
+  (setf (jit-caller-form jitf) (compile nil (jit-funcall-form jitf))))
 
-  (let ((view-count 0))
-    (flet ((read-view (nth)
-	     (let ((out (nth nth views)))
-	       (if (null out)
-		   (error "cl-waffe2/backends.cpu.jit:expand-funcall-form view exhausted")
-		   out))))
-      `(cffi:foreign-funcall
-	,function-name
-	,@(if (null views)
-	      `(:uint32 0)
-	      `(:uint32 ,(size-of (car views) 0)))
-	,@(loop for arg in args
-		append
-		(typecase arg
-		  (JITCPUScalarTensor
-		   ;; pass the pointer directly
-		   ;; sb-ext:int-sap
-		   `(:pointer ,(int-sap-id arg)))
-		  (JITCPUTensor
-		   (prog1
-		       ;; tensor_ptr tensor_stride ...
-		       `(:pointer
-			 (incf-tensor-ptr (read-result ,arg) ,(cPointer arg) :offset ,(offset-of (read-view view-count) 0))
-			 :int32
-			 ,(stride-of (read-view view-count) 0))
-		     (incf view-count)))
-		  (T (error "unknown type of arguments: ~a" arg))))
-	:void))))
+(defun jit-funcall (jitf &rest args)
+  (apply (the function (jit-caller-form jitf)) args))
+
+(defun jit-funcall-form (jit-compiled-kernel)
+  (with-slots ((name name) (dynamic-symbols dynamic-symbols) (args args)) jit-compiled-kernel
+    `(lambda (,@(map 'list #'tensor-id args))
+       (with-tensor-ptrs (,@(loop for arg in args
+				  collect `(,(cPointer arg) ,arg)))
+	 (cffi:foreign-funcall
+	  ,name
+	  ,@(loop for symbol in dynamic-symbols
+		  append
+		  `(:uint32 (cl-waffe2/vm.generic-tensor::read-symbol ',symbol)))
+	  ,@(loop for arg in args
+		  append
+		  (append
+		   `(:pointer ,(cPointer arg))
+		   (loop for rank upfrom 0 below (dims arg)
+			 append
+			 `(:uint32
+			   (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+			    (force-list
+			     (nth ,rank (tensor-view ,(tensor-id arg)))))))))
+	  :void)))))
 

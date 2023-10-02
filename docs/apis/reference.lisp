@@ -17,9 +17,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
 - Analyzing compiled codes
     - [disassemble](#function-disassemble-waffe2-ir)
     - [profiling](#function-benchmark-accept-instructions)
-- Adding Symbolic Diff and Device-Specific Optimization
-    - [FusionPathQuery](./#struct-fusionpathquery)
-    - [defpath](./#macro-defpath)")
+")
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
@@ -41,10 +39,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (with-op-doc #'cl-waffe2/vm:benchmark-accept-instructions 'function
       (with-example
 	"(with-output-to-string (out)
-    (proceed-bench (!softmax (randn `(100 100))) :n-sample 100 :stream out))"))
-
-    (with-op-doc 'FusionPathQuery 'structure)
-    (with-op-doc (macro-function 'defpath) 't)))
+    (proceed-bench (!softmax (randn `(100 100))) :n-sample 100 :stream out))"))))
 
 (with-page *base-impl-nodes* "Standard Nodes"
   (macrolet ((nodedoc (name)
@@ -281,6 +276,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (with-section "Advanced Network Construction"
       (insert "Powerful macros in Common Lisp enabled me to provide an advanced APIs for make the construction of nodes more systematic, and elegant. Computational nodes that are lazy evaluated can be treated as pseudo-models, for example, even if they are created via functions. And, APIs in this section will make it easy to compose/compile several nodes.~%")
       (with-op-doc #'asnode 't)
+      (with-op-doc (macro-function 'RepeatN) 't)
       (with-op-doc #'call-> 't)
       (with-op-doc (macro-function 'defsequence) 't)
       (with-op-doc (macro-function 'hooker) 't)
@@ -290,38 +286,65 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (with-op-doc #'show-backends 'function)
     (with-op-doc #'set-devices-toplevel 'function)))
 
-(with-page *lisp-tensor-backend* "[package] :cl-waffe2/backends.lisp"
+(with-page *lisp-tensor-backend* "[backend] :cl-waffe2/backends.lisp"
   (insert
-   "The package `:cl-waffe2/backends.lisp` provides an AbstractTensor `LispTensor` as an external backend, and designed with the aim of portalibity, not performance. Therefore, most implementations of this follow ANSI Common Lisp, so it will work in any environment but concerns remain about speed.
+   "
+The package `:cl-waffe2/backends.lisp` provides a `LispTensor` backend which is designed with the aim of portalibity, not performance. All matrix operations are performed via kernels written in ANSI Common Lisp.
 
-It is recommended that `LispTensor` are installed in the lowest priority of `*using-backend*`, and `Couldnt find any implementation for ...` error will never occurs.")
+In order to use this backend, add this line:
+
+```lisp
+(with-devices (LispTensor)
+   ;; body
+   )
+```
+")
 
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
-    (with-op-doc (find-class 'LispTensor) 't)
-    ))
+    (with-op-doc (find-class 'LispTensor) 't)))
 
-(with-page *cpu-tensor-backend* "[package] :cl-waffe2/backends.cpu"
+(with-page *cpu-tensor-backend* "[backend] :cl-waffe2/backends.cpu"
   (insert
-   "The package `:cl-waffe2/backends.cpu` provides an AbstractTensor `CPUTensor` where most of its implementation relies on foreign libraries (e.g.: OpenBLAS, oneDNN in the coming future).")
+   "The package `:cl-waffe2/backends.cpu` provides a `CPUTensor` backend which relies most of kernel implementations on foreign libraries invoked via CFFI. (e.g.: OpenBLAS, oneDNN in the coming future).")
 
   (insert "
 ## Enabling the SIMD Extension
 
-For some instructions (e.g.: `!max` `!min`, sparse matrix supports, `SLEEF`, etc...), packages that provide SIMD-enabled CPUTensor implementations are not enabled by default as a design. To enable it, run `make build_simd_extension` in the same directory as cl-waffe2.asd. You can check that it is loaded properly with the `(show-backends)` function.
+```sh
+$ make build_simd_extension
+```
+
+See also: [cl-waffe2-simd](https://github.com/hikettei/cl-waffe2/tree/master/source/backends/cpu/cl-waffe2-simd)
+
+To get further performance on CPU, SIMD Extension must be installed on your device. This extension provides further SIMD-enabled CPUTensor operations (e.g.: !max/!min, Sparse Matrix Supports, vectorized mathematical functions of SLEEF, etc...). To use it, run `make build_simd_extension` in the same directory as cl-waffe2.asd. You can confirm that it works properly with the `(cl-waffe2:show-backends)` function.
 ")
   
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
 		  ,@body)))
-    (with-op-doc (find-class 'CPUTensor) 't)
-    ))
+    (with-op-doc (find-class 'CPUTensor) 't)))
 
-(with-page *cpu-jit-tensor-backend* "[package] :cl-waffe2/backends.jit.cpu"
-  (insert "[Unstable] The package `:cl-waffe2/backends.jit.cpu` provides an AbstractTensor `JITCPUTensor` which accelerated by JIT Compiling to C code dynamically, (so this backend will require `gcc` as an additional requirement.)")
+(with-page *cpu-jit-tensor-backend* "[backend] :cl-waffe2/backends.jit.cpu"
+  (insert "
+Those backends without JIT, relies on `do-compiled-loop` or `call-with-view` to calculate only part of matrices: complicated offsets and permution (i.e: `!view` and `!permute`). However, under certain circumstances this can be difficult to parallelise by simply calling a CFFI function; and this backend is intended to solve the problem.
+
+This package provides a `JITCPUTensor` backend which works by jit-compiling whole code to vectorized C, and is only for the purpose of optimising memory layout, so currently only four arithmetic operations and copying are implemented. (OpFusion is remained to be implemented; but it is definitely possible to fuse several ops)
+
+Optimise the memory layout by enclosing the code you want to optimise the layout in:
+
+```lisp
+(with-cpu-jit (CPUTensor LispTensor)
+    ;; body
+    )
+```
+
+Tips: Use the `proceed-bench` function to know the bottleneck; if `MoveTensorNode` combined with `PermuteNode` is slow compared to other nodes, the memory layout is remained to be optimized for example.
+")
+  
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
@@ -331,9 +354,8 @@ For some instructions (e.g.: `!max` `!min`, sparse matrix supports, `SLEEF`, etc
     (with-op-doc '*viz-compiled-code* 'variable)
 
     (with-op-doc (find-class 'JITCPUTensor) 't)
-    (with-op-doc (find-class 'JITCPUScalarTensor) 't)
 
-    (with-op-doc #'enable-cpu-jit-toplevel 'function)
+    (with-op-doc #'cpujit-set-config 'function)
     (with-op-doc (macro-function 'with-cpu-jit) 'function)
     
     ))

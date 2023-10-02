@@ -458,3 +458,10 @@
 (test row-major-grad-decay-test
   (is (cl-waffe2::with-row-major (grad-decay-test))))
 
+(defun jit-test ()
+  (with-devices (JITCPUTensor CPUTEnsor cl-waffe2/backends.lisp:LispTensor)
+    (grad-decay-test)))
+
+(test jit-grad-decay-test
+  (is (jit-test)))
+

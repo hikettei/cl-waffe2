@@ -1,10 +1,17 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-(defvar *compiled-code-buffer* nil "The variable collects generated C codes.")
-(defparameter *indent-width* 0)
 
-(defparameter *use-open-mp* nil)
+;; ~~ Params ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+(defvar *compiled-code-buffer* nil
+  "A parameter temporary storing the result of generated C code, being initialized with (with-compiling-mode ...) macro.")
+
+(defparameter *indent-width* 0
+  "A parameter indicating the width of indentation, effecting on write-c-line function")
+
+(defparameter *use-open-mp* nil
+  "A parameter indicating whether using OpenMP or not. In default set to T.
+   This parameter is modified via enable-jit-cpu function.")
 
 (defmacro with-indent (indent &body body)
   "Add indentations to generated C code with write-c-line"
@@ -14,129 +21,150 @@
   "Initializes *compiled-code-buffer*"
   `(with-output-to-string (*compiled-code-buffer*)
      ,@body))
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; ~~ IO ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (defun write-buff (control-string &rest args)
-  "Appends the given characters to *compiled-code-buffer*."
+  "Appends the given characters to *compiled-code-buffer* without indentations"
   (apply #'format *compiled-code-buffer* control-string args))
 
 (defun write-c-line (control-string &rest args)
   "Appends the given characters to *compiled-code-buffer*."
   (dotimes (i *indent-width*) (princ " " *compiled-code-buffer*))
   (apply #'format *compiled-code-buffer* control-string args))
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; Node -> Compiling Parts:
 
 (defparameter *includes*
   `("immintrin.h" "stdbool.h" "stdlib.h" "math.h" "stdio.h" "stdint.h")
-  "An list of headers that generated code loads first.")
+  "A list of header files envolved in compiling.")
 
-(defun place-toplevel-form (cffi-call-name tensors)
+(defun place-toplevel-form (cffi-call-name shapes tensors)
   "Places headers, function definition and macros."
 
-  (when (null *caching-c-source*) 
-    (write-buff "~%#pragma SIMD~%")
+  ;; Ensures that this call is the first time.
+  ;; Since only required once when compiling.
+  (when (string= *lazy-c-source* "")
+    (write-buff "~%#pragma simd~%")
     ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
-    ;;(write-buff "#pragma GCC target \"avx2\"")
-    ;; #pragma GCC target "avx2" avx512 ...
     
-    (loop for include in *includes*
-	  do (write-buff "#include <~a>~%" include))
+    (loop for include in *includes* do
+      (write-buff "#include <~a>~%" include))
 
     (when *use-open-mp*
-      (write-buff "#include <omp.h>~%"))
+      (write-buff "#include <omp.h>~%")))
+  
+  (write-buff "~%~a;~%~%" (cFunction cffi-call-name shapes tensors)))
 
-    (write-buff "~%~a;~%~%" (apply #'cFunction cffi-call-name tensors))
+(defun iterator-symbols (rank)
+  (loop for r upfrom 0 below rank
+	collect
+	(format nil "~a~a" (gensym "L") (code-char (+ 65 r)))))
 
-    ;; Utils
-    (write-buff "#define INV_SCALAR(scal) 1 / scal;~%~%")
-    (write-buff "#define SQUARE_SCALAR(scal) scal * scal;~%~%")
-    ))
+(defstruct (JIT-Compiled-Kernel
+	    (:conc-name jit-))
+  (name "" :type string)
+  (args nil :type list)
+  (dynamic-symbols nil :type list)
+  (body "" :type string)
+  (caller-form #'(lambda ()) :type function))
 
-(defun cAref (tensor &key (pointer nil))
-  "Reading the given tensor's id, the function returns a string which corresponds to aref in C"
-  (declare (type AbstractTensor tensor))
-  (if (typep tensor 'JITCPUTensor)
-      (format nil "~a[i * ~a_STRIDE]"
-	      (tensor-id tensor)
-	      (tensor-id tensor))
-      (if pointer
-	  (format nil "*~a" (tensor-id tensor))
-	  (format nil "~a"    (tensor-id tensor)))))
+(defmethod print-object ((obj JIT-Compiled-Kernel) stream)
+  (format stream "<JITCompiledKernel:~a~a ~a{
+~a
+}>"
+	  (jit-name obj)
+	  (or (jit-dynamic-symbols obj) "")
+	  (apply #'concatenate 'string
+		 (butlast
+		  (loop for arg in (jit-args obj)
+			append
+			(list (format nil "~a" (tensor-id arg)) " "))))
+	  (jit-body obj)))
 
-(defun cFunction (function-name &rest arguments)
-  "Header:
-void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)
+(defun generate-c-kernel (function-name shapes variables abstract-loop instructions)
+  (with-compiling-mode
+    ;; place-toplevel-form appends these forms:
+    ;;  - includes
+    ;;  - header
+    ;;  - macros
+    (place-toplevel-form function-name shapes variables)
+    (write-c-line "~a { ~%" (cFunction function-name shapes variables))
+    
+    (with-indent 4
+      (loop with indices = (iterator-symbols (length abstract-loop))
+	    for *indent-width* upfrom 4 by 4
+	    for index-char  in indices
+	    for loop        in abstract-loop do
+	      (case (aloop-mode loop)
+		(:batch
+		 ;; If *use-open-mp* is set to T and the currently processing loop is the first one
+		 ;; Inserts the pragma:
+		 (when (and (= *indent-width* 4)
+			    *use-open-mp*)
+		   (write-c-line "#pragma omp parallel for~%"))
+		 (write-c-line
+		  "for (int ~a=0;~a<~a;~a++) {~%"
+		  index-char
+		  index-char
+		  (c-name (format nil "~a" (aloop-size loop)))
+		  index-char))
+		(T
+		 ;; Excepted one of: :apply :apply-flatten
+		 (when (and (= *indent-width* 4)
+			    *use-open-mp*)
+		   (write-c-line "#pragma omp parallel for ~%"))
+		 
+		 (write-c-line
+		  "for (int ~a=0;~a<~a;~a++) {~%"
+		  index-char
+		  index-char
+		  (c-name (format nil "~a" (aloop-element-n loop)))
+		  index-char)
 
-  Returns the definition form of given function."
+		 (let ((*indent-width* (+ 4 *indent-width*)))
+		   (dolist (inst instructions)
+		     (render-instruction inst indices)))))))
 
-  (let ((arguments-form
-	  (with-compiling-mode
-	    (write-buff "(uint32_t size, ")
-	    (loop for arg in arguments
-		  for n upfrom 0
-		  do (cVar arg
-			   :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id))
-			   :comma (or
-				   (typep arg 'JITCPUTensor)
-				   (not (= n (1- (length arguments)))))
-			   :pointer t)
-		  if (typep arg 'JITCPUTensor)
-		    do (cStride arg :comma (not (= n (1- (length arguments))))))
-	    (write-buff ")"))))
-    (format nil "void ~a~a~%" function-name arguments-form)))
+    ;; Closing Brackets
+    (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
+      (write-c-line "}~%"))))
 
-(defun insert-loop-for ()
-  (let ((back-indent-size (max 0 (- *indent-width* 4))))
-    (with-indent back-indent-size
-      (write-c-line "}~%~%")
-      (when *use-open-mp*
-	(write-c-line "#pragma omp parallel for~%"))
-      (write-c-line "for(int i=0; i<size; i++) {~%"))))
+(defun invoke-compiler (function-name instructions)
+  "Compiles to C Kernel.
 
-;; [TODO] Printing JIT Compiler Report
-(defun invoke-compiler! (function-name toplevel)
-  "
-Recursively exploring the computation node staring from toplevel, the function invoke-compiler! appends C codes depending on translate-op method to the current buffer.
+kernel = instructions[last](... instructions[1](instructions[0](Arguments)))
 
-Return: (values arguments envolved-tensors(but ScalarTensor) scalars toplevel)
-"
-  (declare (type JITAbleTensors toplevel))
+Inputs:
+ - function-name[symbol]
+ - instructions a list of Instruction
 
-  (let* ((*compiled-tensors* `())
-	 (envolved-nodes (confirm-compiling-area toplevel))
-	 (function-form  (apply #'cFunction function-name *compiled-tensors*))
-	 (tensors (loop for tensor in *compiled-tensors*
-			if (typep tensor 'JITCPUTensor)
-			  collect tensor))
-	 (scalars (loop for tensor in *compiled-tensors*
-			if (typep tensor 'JITCPUScalarTensor)
-			  collect tensor)))
-    (values
-     *compiled-tensors*
-     ;; Used for expanding call-with-view
-     tensors
-     scalars
-     (with-compiling-mode
-       (place-toplevel-form function-name *compiled-tensors*)
+Return:
+ JIT-Compiled-Kernel"
+  (declare (type list instructions))
 
-       
-       (write-buff "~%// [~a Tensors]~%" (length tensors))
-       (dolist (tensor tensors)
-	 (write-buff "// ~a: ~a ~a~%"
-		     (tensor-id tensor)
-		     (shape tensor)
-		     (tensor-attribute tensor)))
-       (write-buff "~%// [~a Scalars]~%" (length scalars))
-       (dolist (tensor scalars)
-	 (write-buff "// ~a: ~a ~a~%" (tensor-id tensor) (shape tensor) (tensor-attribute tensor)))
-       
-       ;; void function-name (...) { ...
-       (write-buff "~a { ~%" function-form)
-       (if (null tensors)
-	   (with-indent 4
-	     (ir->C envolved-nodes))
-	   (with-indent 4
-	     (write-c-line "for(int i=0; i<size; i++) {~%")
-	     (with-indent 8
-	       (ir->C envolved-nodes))
-	     (write-c-line "}~%")))
-       (write-c-line "}~%")))))
+  ;; solve-loop-order:
+  ;;  Creates an blueprint of optimized loop order
+  ;;  This compiler basically follows its instruction, generating corresponding loops in C.
+  (let* ((variables (collect-variables instructions))
+	 ;; Keep Orders
+	 ;; No Loop Collapse;
+	 ;; [TODO] set :mode=:polyhedral
+	 (abstract-loop (solve-loop-order variables 1 T :mode :runtime))
+	 (adjustable-shape))
+
+    (dolist (tensor variables)
+      (dolist (shape (shape tensor))
+	(when (and (symbolp shape)
+		   (not (find shape adjustable-shape)))
+	  (push shape adjustable-shape))))
+
+    (let ((source (generate-c-kernel function-name adjustable-shape variables abstract-loop instructions)))
+      (setf *lazy-c-source* (format nil "~a~%~a" *lazy-c-source* source))
+      (make-jit-compiled-kernel
+       :name             function-name
+       :args             variables
+       :dynamic-symbols  adjustable-shape
+       :body             source))))
 

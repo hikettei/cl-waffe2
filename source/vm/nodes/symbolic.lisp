@@ -156,6 +156,8 @@ The replacing is done when one of `*using-backend*` is the equivalent to `name[s
 
 "  
   (eval-when (:compile-toplevel :load-toplevel :execute)
+    (when (null *bypass-table*)
+      (setf *bypass-table* (make-hash-table)))
     (let ((first-one (null (gethash name *bypass-table*))))
       (with-gensyms (form args result)
 	(if first-one

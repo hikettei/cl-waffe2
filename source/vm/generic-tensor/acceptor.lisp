@@ -463,16 +463,14 @@ Or, your network may be disconnected at a certain position."
 			input-names)))
 	   inputs)))
 
-      (prog1
-	  (make-instance 'Compiled-Composite
-			 :allocation allocation
-			 :compiled-forward  forward-f
-			 :compiled-backward backward-f
-			 :out               toplevel
-			 :dout              dout
-			 :inputs            inputs
-			 :variables         table)
-	(mapc #'cl-waffe2/vm.nodes:on-finished-compiling *using-backend*)))))
+      (make-instance 'Compiled-Composite
+		     :allocation allocation
+		     :compiled-forward  forward-f
+		     :compiled-backward backward-f
+		     :out               toplevel
+		     :dout              dout
+		     :inputs            inputs
+		     :variables         table))))
 
 (defmethod copy-compiled-model ((model Compiled-Composite))
   (let* ((allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model)))

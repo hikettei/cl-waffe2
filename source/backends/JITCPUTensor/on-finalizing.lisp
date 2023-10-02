@@ -1,156 +1,34 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-;; ~~ TODO ~~~~~~~~~~~~~~~~~~~~~~
-;;
-;; optimize computation nodes
-;; compose and fuse several operations
-;; pruning unused computation nodes
-;; the behaviour sometime wrong without with-no-grad
-;; restrict option, disassemble it.
-
-
-
-;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; Generating a C Code from cl-waffe2.
-;; The scope of JIT: Whether the generated code can be expressed with only one `for`.
-;; Most of SIMD part relies on pragma simd.
-;;
-
-;; ===============================================================================
-;;  Event Handlers
-;; ===============================================================================
-
-
-;; apply-compile-p:
-;;
-;; A(3, 3)   ----------\
-;;                     | --- out
-;; B(3, 1*3) --[COPY] -/      ^apply-compile-p=t
-;;               ^apply-compile-p=t
-;;
-;; detected one of: end of nodes, the argument is broadcasted, the change of devices
-
-;;
-;; variable \
-;;           next-variable 
-;; variable /
-;;
-
-(defun tensor-broadcasted-p (tensor)
-  (let ((view (tensor-view tensor)))
-    (some #'(lambda (x) (eql (viewtype (force-list x)) :broadcast)) view)))
-
-(defun apply-compile-p (variable next-variable)
-  "Following the defition of 3., return t if there's a need to run compiling."
-
-  ;; ViewTensorNode, PermuteTensorNode -> Compile -> ...
-  ;;       ^ :device=t
-  (or
-   ;; If One of next variables are performed in different devices, or didn't exist in the first place (i.e.: is the end of nodes):
-   (null next-variable)
-   ;;(not (typep next-variable 'JITAbleTensors))
-   (not (typep (tensor-backward next-variable) 'CPUJIT-Blueprint))
-   ;;(not (eql (tensor-projected-p variable) (tensor-projected-p next-variable)))
-   
-   ;; Composing element-wise operations with the same iteration.
-   ;; Split iteraton:
-   (detach-p variable)
-   ;; [TODO] tensor-projected-p -> tensor-broadcasted-p for Conv2D
-   (some #'tensor-broadcasted-p (tensor-variables next-variable))
-   ))
-
+(defparameter *lazy-c-source* "")
 (defparameter *compiling-ntime-count* 0)
-(defvar *in-place-routes* nil)
 
-;; place <- actual-tensor
-(defun register-in-place-mutation (place actual-tensor)
-  (push (cons place actual-tensor) *in-place-routes*))
+(defparameter *known-functions* (make-hash-table :test #'eq))
 
-(defun int-sap-id (tensor)
-  (symb (tensor-id tensor) '-sap))
+;; [TODO] element-wise op fusion
+;; [TODO] Use SLEEF Backend For Mathematical Kernel, simdify
+;; [TODO] AVXnnn Intrinsics?
+;; [TODO] Add: JITLispTensor
 
+(defmethod on-finalizing-compiling ((device-name (eql 'JITCPUTensor)) iseq-fw iseq-bw)
+  (let* ((jit-nodes (loop for inst in `(,@iseq-fw ,@iseq-bw)
+			  if (typep (wfop-self inst) 'JITCPUTensor)
+			    collect inst)))
+    (when (and (not (string= *lazy-c-source* ""))
+	       ;; wfop-op is created by doing (compile nil) or search from LUT
+	       ;; This method records all functions of (wfop-op x)
+	       ;; If this method encounter an unknown method, it indicates the function isn't also compiled by gcc.
+	       (some #'(lambda (x) (null (gethash (wfop-op x) *known-functions*))) jit-nodes))
+      (mapc
+       #'(lambda (x)
+	   (setf (gethash (wfop-op x) *known-functions*) T))
+       jit-nodes)
 
-(defparameter *caching-c-source* nil)
-(defun maybe-load-foreign-function (source end-of-node-p)
-  (when source
-    (setf *caching-c-source* (concatenate 'string
-					  (or *caching-c-source* "")
-					  (format nil "~%")
-					  source)))
-  
-  (when (and end-of-node-p *caching-c-source*)
-    (load-foreign-function *caching-c-source*)
-    (setf *seen* nil)
-    (setf *caching-c-source* nil)))
+      (let ((source *lazy-c-source*))
+	(setf *lazy-c-source* "")
+	(load-foreign-function source)))
 
-;; Note: eval it when called with vm-build?
-(defmethod on-finalizing-compiling ((current-node CPUJIT-Blueprint)
-				    variable
-				    next-variable
-				    compile-me)
-  "If the node is needed to be compiled, compile."
-  
-  (if (apply-compile-p variable next-variable)
-      (let ((*in-place-routes*)
-	    (jit-function-name (symbol-name (gensym "CL_WAFFE2_C_KERNEL"))))
-	(incf *compiling-ntime-count* 1)
-	;;(format t "[INFO] Compiling nodes from ~a...~%" current-node)
-	;; Pass these informations to invoke-compiler! function
-        (multiple-value-bind (arguments tensors scalars source) (invoke-compiler! jit-function-name variable)
-
-	  ;; Cache it
-	  (maybe-load-foreign-function source compile-me)
-	  (when *viz-compiled-code*
-	    (format t "== [Log: JITCPUTensor] ===============~%~a~%" source))
-	  
-	  (let ((call-form
-		  (if (null tensors)
-		      ;; -> arguments = Scalar
-		      (expand-funcall-form
-		       jit-function-name
-		       arguments
-		       nil)
-		      ;; -> arguments = Scalar + Matrix or Matrix
-		      (call-with-view
-		       #'(lambda (&rest views)
-			   (expand-funcall-form jit-function-name arguments views))
-		       tensors
-		       :at-least-dim 1))))
-	    `(cffi:with-foreign-objects
-		 (,@(loop for scal in scalars
-			  collect `(,(int-sap-id scal) ,(dtype scal))))
-	       (with-tensor-ptrs (,@(loop for tensor in arguments
-					  if (typep tensor 'JITCPUTensor)
-					    collect `(,(cPointer tensor) (read-result ,tensor))))
-		 (locally (declare (optimize (speed 1)))
-		   (setf ,@(loop for scal in scalars
-				 append `((cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)) (tensor-vec (read-result ,scal)))))
-		   ,call-form
-		   ;; Synchronize ScalarTensors
-		   (setf ,@(loop for scal in scalars
-				 append `((tensor-vec (read-result ,scal)) (cffi:mem-ref ,(int-sap-id scal) ,(dtype scal)))))
-		   
-		   ;; Synchronize In-place
-		   (let* (,@(loop for case in (reverse *in-place-routes*)
-				  ;; Sort by tensor-id
-				  collect `(,(tensor-id (car case)) (read-result ,(car case)))))
-		     (setf ,@(loop for case in (reverse *in-place-routes*)
-				   append `((tensor-vec ,(tensor-id (car case)))
-					    (tensor-vec (read-result ,(cdr case)))))))
-		   
-		   ;; [Bug] (proceed (!sin x)) isn't working while (proceed (!copy (!sin x))) is ok.
-		   ;; Synchronize output if the last node is in-place
-		   ,(let* ((all-tensors `(,@scalars ,@tensors))
-			   (latest-result (find (tensor-id variable) all-tensors :test #'eql :key #'tensor-id)))
-		      (when latest-result
-			`(setf (tensor-vec (read-result ,variable)) (tensor-vec (read-result ,latest-result)))))
-		   (read-result ,variable)))))))
-      nil))
-
-(defmethod on-finished-compiling ((current-node (eql 'JITCPUTensor)))
-  (maybe-load-foreign-function nil t))
-
-(defmethod on-finished-compiling ((current-node (eql 'JITCPUScalarTensor)))
-  (maybe-load-foreign-function nil t))
+    (setf *lazy-c-source* "")
+    (values iseq-fw iseq-bw)))
 

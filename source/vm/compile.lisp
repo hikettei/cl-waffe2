@@ -70,6 +70,7 @@
 (defun node-compile-into-vm (toplevel &key (fuse-p nil))
   "Set fuse-p=t to apply view-reordering and fuse operations"
   (declare (type AbstractTensor toplevel)
+	   (ignore fuse-p)
 	   (optimize (speed 3)))
   (let ((instruction-seq)
 	(variable-leaves)
@@ -87,50 +88,22 @@
 	    do (push tensor variable-leaves) ;; Register as a variable
 	  else
 	    do (when (not (detach-p tensor))
-
 		 (when (null (find (the symbol (tensor-iid tensor)) seen :test #'eql))
 		   (push (ir->instruction tensor) instruction-seq)
 		   ;; Add to seen
 		   (let ((bw (tensor-backward tensor)))
 		     (when bw
 		       (dolist (v (node-out-to bw))
-			 (push (tensor-iid v) seen)))))
-
-		 ;; Ask each devices if applying JIT?
-		 (let ((result (cl-waffe2/vm.nodes::on-finalizing-compiling
-				(tensor-backward tensor)
-				tensor
-				(nth (1+ time) sorted-node)
-				nil)))
-		   (when result
-		     (push
-		      ;; Embedding Lisp Code generated from JITxxxTensor.
-		      (make-wfop
-		       (compile
-			nil
-			`(lambda () ,result))
-		       tensor
-		       #'(lambda ()
-			   ;; Displaying the information
-			   (format nil "Foreign Function {~a}" (class-name (class-of tensor))))
-		       nil)
-		      instruction-seq)))))
+			 (push (tensor-iid v) seen)))))))
     ;; Forward Mode ... (reverse instruction-seq)
     ;; Reverse Mode ... Trace tensors in instruction-seq order.
     
     ;; When no instructions is provided for toplevel
-    ;; Just Return toplevel tensor.
-    
+    ;; Just Return toplevel tensors
     (when (null instruction-seq)
       (setq instruction-seq (list (%vm-wrap-tensor toplevel))))
     
-    (if fuse-p
-	(values
-	 (reverse
-	  (apply-path-fusion
-	   (reverse instruction-seq)))
-	 variable-leaves)
-	(values instruction-seq variable-leaves))))
+    (values instruction-seq variable-leaves)))
 
 (defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table :test #'eql)))
   (declare (type list iseq)
@@ -185,6 +158,7 @@
 
 (defvar *compile-option* nil)
 ;; When doing forward: reverse it in advance
+;; [Note] Naming convention of optimize-locality is not obvious; Setting optimize-locality as t indicates that this is the toplevel of compiling
 (defun compile-forward-and-backward (toplevel &key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t) (add1 t))
   "
 
@@ -203,6 +177,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 `(values forward-iseq backward-iseq leaves[an list of AbstractTensor that appeared in the node] dout alloc-state)`
 "
   (declare (type AbstractTensor toplevel))
+  
   ;; fuse-p is intentionally disabled forcibly for a while
   ;; because it cause unexcepted behaviours
   (let ((*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
@@ -248,7 +223,14 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			    backward-iseq)))
 	  
 	  (multiple-value-bind (bw allocation) (when optimize-locality (optimize-memory-locality! forward backward))
-	    (values forward (or bw backward) leaves dout allocation)))))))
+	    (let ((iseq-fw forward)
+		  (iseq-bw (or bw backward)))
+
+	      (when optimize-locality
+		(dolist (device-name *using-backend*)
+		  (multiple-value-setq (iseq-fw iseq-bw) (on-finalizing-compiling device-name iseq-fw iseq-bw))))
+	      
+	      (values iseq-fw iseq-bw leaves dout allocation))))))))
 
 #+sbcl(setf sb-ext:*inline-expansion-limit* 4)
 (defun findout-origin (table tensor &key (limit 10))

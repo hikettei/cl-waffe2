@@ -420,7 +420,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1389 
+{CPUTENSOR[float] :shape (A 10) :id TID1996 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
@@ -473,7 +473,7 @@ A principle operator to extend your functions to higher arrays.
 (call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil))
 ```
 
-The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framework, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
+The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framexwork, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
 
 In the simplest case, `call-with-view` first deploys `(loop for...)` until the rank of given tensors reaches the given `at-least-dim`. After reaching `at-least-dim`, the function places the result of calling the given `function`.
 
@@ -554,7 +554,7 @@ Iterates the given tensors in optimized order. The behavior is the same as the `
 (define-impl-op (Compare-Operation-Node :device LispTensor)
 		:forward ((self tensor1 tensor2 out)
 			  (let ((kernel (compare-kernel (dtype tensor1))))
-			    (do-compiled-loop (list tensor1 tensor1 out) ()
+			    (do-compiled-loop (list tensor1 tensor2 out) ()
 				(x-view y-view o-view)
 			      (funcall kernel
 				       (tensor-vec tensor1)
