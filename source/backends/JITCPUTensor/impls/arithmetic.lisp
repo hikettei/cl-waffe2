@@ -1,24 +1,6 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-
-;; ~~ List of arithmetic operations in cl-waffe2 ~~~~~~~~~~~~
-;; Matrix and Matrix Operations:
-
-;; AddNode/SubNode/MulNode/DivNode + InverseNode/MoveTensorNode
-
-
-
-;; Arithmetic operation family is originally declared as:
-;; X <- op(X, Y)
-
-;; First, Try Solving the loop order
-;; If the order is complicated, set reject-p=nil
-;; And solve-loop-order ...
-
-;; 1. Keyの追加
-;; 2. Permutionが複雑じゃなかったら: -> JITCPUTensor以外のForwardにRedirectする？
-;; Specialized on complicated permution of tensor
 #|
 (macrolet ((define-arith-impl (name lisp-op op-name)
 	     `(progn
@@ -48,11 +30,12 @@
 
 (define-impl (MoveTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self out target)
-		       `(progn
-			  ,(jit-funcall-form
-			    (invoke-compiler
-			     (symbol-name (gensym "MoveTensorNode"))
-			     (list
-			      (make-inst :modify "=" target (list out)))))
-			  ,target)))
+		       ;; Move: out <- target
+		       (let ((f (invoke-compiler
+				 (symbol-name (gensym "M"))
+				 (list
+				  (make-inst :modify "=" out (list target))))))
+			 `(progn
+			    (funcall ,(jit-funcall-form f) ,@(jit-args f))
+			    ,out))))
 

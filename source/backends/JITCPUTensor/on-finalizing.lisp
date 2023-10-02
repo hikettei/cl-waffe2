@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-(defparameter *lazy-c-source* nil)
+(defparameter *lazy-c-source* "")
 (defparameter *compiling-ntime-count* 0)
 
 (defparameter *known-functions* (make-hash-table :test #'eq))
@@ -14,7 +14,7 @@
 
 (defmethod on-finalizing-compiling ((device-name (eql 'JITCPUTensor)) iseq-fw iseq-bw)
   (let* ((jit-nodes (loop for inst in `(,@iseq-fw ,@iseq-bw)
-			  if (typep (wfop-self inst) 'CPUJIT-Blueprint)
+			  if (typep (wfop-self inst) 'JITCPUTensor)
 			    collect inst)))
     (when (and (not (string= *lazy-c-source* ""))
 	       ;; wfop-op is created by doing (compile nil) or search from LUT

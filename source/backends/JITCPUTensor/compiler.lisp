@@ -46,8 +46,8 @@
   ;; Ensures that this call is the first time.
   ;; Since only required once when compiling.
   (when (string= *lazy-c-source* "")
-    (write-buff "~%#pragma SIMD~%")
-    (write-buff "#pragma GCC optimize (\"O3\")~%")
+    (write-buff "~%#pragma simd~%")
+    ;;(write-buff "#pragma GCC optimize (\"O3\")~%")
     
     (loop for include in *includes* do
       (write-buff "#include <~a>~%" include))
