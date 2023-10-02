@@ -70,6 +70,7 @@
 (defun node-compile-into-vm (toplevel &key (fuse-p nil))
   "Set fuse-p=t to apply view-reordering and fuse operations"
   (declare (type AbstractTensor toplevel)
+	   (ignore fuse-p)
 	   (optimize (speed 3)))
   (let ((instruction-seq)
 	(variable-leaves)
@@ -102,13 +103,7 @@
     (when (null instruction-seq)
       (setq instruction-seq (list (%vm-wrap-tensor toplevel))))
     
-    (if fuse-p
-	(values
-	 (reverse
-	  (apply-path-fusion
-	   (reverse instruction-seq)))
-	 variable-leaves)
-	(values instruction-seq variable-leaves))))
+    (values instruction-seq variable-leaves)))
 
 (defun forward->reverse-mode (iseq dout-toplevel &aux (dout-table (make-hash-table :test #'eql)))
   (declare (type list iseq)

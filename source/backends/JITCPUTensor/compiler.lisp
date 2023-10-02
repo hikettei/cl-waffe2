@@ -139,7 +139,7 @@
     (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
       (write-c-line "}~%"))))
 
-(defun invoke-compiler! (function-name instructions)
+(defun invoke-compiler (function-name instructions)
   "Compiles to C Kernel.
 
 kernel = instructions[last](... instructions[1](instructions[0](Arguments)))
@@ -155,8 +155,11 @@ Return:
   ;; solve-loop-order:
   ;;  Creates an blueprint of optimized loop order
   ;;  This compiler basically follows its instruction, generating corresponding loops in C.
-  (let* ((variables (collect-variables instructions))	      
-	 (abstract-loop (solve-loop-order variables 1 t :mode :runtime))
+  (let* ((variables (collect-variables instructions))
+	 ;; Keep Orders
+	 ;; No Loop Collapse;
+	 ;; [TODO] set :mode=:polyhedral
+	 (abstract-loop (solve-loop-order variables 1 T :mode :runtime))
 	 (adjustable-shape))
 
     (dolist (tensor variables)
@@ -171,7 +174,6 @@ Return:
 	     :args             variables
 	     :dynamic-symbols  adjustable-shape
 	     :body             (generate-c-kernel function-name adjustable-shape variables abstract-loop instructions))))
-      ;;[TODO] 一番最後に持っていく + Cacheする + on-finalizing-compiling
       (jit-form-init! out)
       out)))
 

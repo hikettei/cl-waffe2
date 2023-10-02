@@ -16,6 +16,9 @@
   "JITAbleTensor is tensors which are subject to be compiled: JITCPUTensor and ScalarTensor."
   `(or JITCPUTensor))
 
+;; TODO
+;; (with-backends ((JITCPUTensor :compiler "gcc")))
+
 (defun enable-cpu-jit-toplevel (&key
 				  (more-devices)
 				  (compiler "gcc")

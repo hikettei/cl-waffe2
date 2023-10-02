@@ -2,16 +2,12 @@
 (in-package :cl-waffe2/backends.jit.cpu)
 
 (defclass CPUJIT-Blueprint ()
-  ((opecode :initform nil :type symbol :accessor blueprint-opecode)
+  ((foreign-kernel)
+   (opecode :initform nil :type symbol :accessor blueprint-opecode)
    (use-vars :initform nil :type list :accessor  blueprint-use-var))
   (:documentation "
 ## [class] CPUJIT-Blueprint
 Stores information related to JIT Compiling.
-"))
-
-(defgeneric translate-op (opcode opast &rest args) (:documentation "
-## [generic] translate-op
-A method returning corresponding instruction given opcode
 "))
 
 (defstruct (Instruction

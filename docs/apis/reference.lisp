@@ -17,9 +17,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
 - Analyzing compiled codes
     - [disassemble](#function-disassemble-waffe2-ir)
     - [profiling](#function-benchmark-accept-instructions)
-- Adding Symbolic Diff and Device-Specific Optimization
-    - [FusionPathQuery](./#struct-fusionpathquery)
-    - [defpath](./#macro-defpath)")
+")
   (macrolet ((with-op-doc (name type &body body)
 	       `(progn
 		  (placedoc ,name ,type)
@@ -41,10 +39,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (with-op-doc #'cl-waffe2/vm:benchmark-accept-instructions 'function
       (with-example
 	"(with-output-to-string (out)
-    (proceed-bench (!softmax (randn `(100 100))) :n-sample 100 :stream out))"))
-
-    (with-op-doc 'FusionPathQuery 'structure)
-    (with-op-doc (macro-function 'defpath) 't)))
+    (proceed-bench (!softmax (randn `(100 100))) :n-sample 100 :stream out))"))))
 
 (with-page *base-impl-nodes* "Standard Nodes"
   (macrolet ((nodedoc (name)

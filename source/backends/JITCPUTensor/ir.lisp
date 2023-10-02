@@ -32,5 +32,5 @@
 			     append
 			     (list (cAref arg indices) ", "))))))
       (T
-       (error "Unknown instruction type: ~a" instruction))))))
+       (error "Unknown instruction type: ~a" instruction)))))
 
