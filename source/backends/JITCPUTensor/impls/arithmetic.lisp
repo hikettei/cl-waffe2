@@ -19,7 +19,7 @@
 ;; 1. Keyの追加
 ;; 2. Permutionが複雑じゃなかったら: -> JITCPUTensor以外のForwardにRedirectする？
 ;; Specialized on complicated permution of tensor
-
+#|
 (macrolet ((define-arith-impl (name lisp-op op-name)
 	     `(progn
 		(define-impl (,name
@@ -44,6 +44,7 @@
   (define-arith-impl SubNode - "-=")
   (define-arith-impl MulNode * "*=")
   (define-arith-impl DivNode / "/="))
+|#
 
 (define-impl (MoveTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self out target)
