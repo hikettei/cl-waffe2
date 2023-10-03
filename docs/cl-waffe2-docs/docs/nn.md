@@ -19,13 +19,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2114 
+{CPUTENSOR[float] :shape (10 10) :id TID2075 
   :vec-state [computed]
-  ((-0.0        -0.0        -0.0        ~ -0.0        -0.0        0.0758239)                   
-   (0.33081433  0.7033231   -0.0        ~ 0.44851843  -0.0        -0.0)   
+  ((-0.0        0.99525183  -0.0        ~ 0.03254504  1.1655586   1.293396)                   
+   (-0.0        -0.0        -0.0        ~ 0.12466652  0.2705505   -0.0)   
                 ...
-   (0.9859774   0.34466082  0.09621465  ~ 0.9216246   1.4845713   0.34032807)
-   (0.48264125  -0.0        -0.0        ~ 0.032608878 0.72863156  1.6821892))
+   (0.78753096  0.10287541  1.0347279   ~ 0.5497315   1.0518545   0.5751236)
+   (0.5249704   0.03094567  2.107657    ~ 1.8177543   0.39457574  -0.0))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -50,13 +50,13 @@ GeLU(x) = 0.5\times{x}\times{(1 + Tanh(\sqrt{\frac{2}{π}}\times{(x + 0.44715\ti
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2205 
+{CPUTENSOR[float] :shape (10 10) :id TID2166 
   :vec-state [computed]
-  ((0.36130282  -0.0        0.87504226  ~ -0.0        0.9028499   -0.0)                   
-   (-0.0        -0.0        -0.0        ~ 0.77838975  -0.0        -0.0)   
+  ((0.16071448  -0.0        0.97729045  ~ -0.0        0.4751874   1.2899321)                   
+   (1.2699922   -0.0        -0.0        ~ 0.3343071   0.16991097  -0.0)   
                 ...
-   (0.5963682   0.55514115  -0.0        ~ 1.9969639   0.041267265 -0.0)
-   (-0.0        0.7646121   -0.0        ~ 1.2720133   -0.0        0.9884213))
+   (0.76737607  -0.0        -0.0        ~ -0.0        -0.0        2.2673395)
+   (-0.0        -0.0        0.121423334 ~ 0.20510498  -0.0        1.1865982))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -80,13 +80,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2292 
+{CPUTENSOR[float] :shape (10 10) :id TID2253 
   :vec-state [computed]
-  ((0.48958635 0.8158429  0.49715242 ~ 0.3462106  0.33601856 0.77342373)                  
-   (0.3317039  0.5787033  0.28749508 ~ 0.37375876 0.5790652  0.46743193)   
+  ((0.80199754 0.40615046 0.571633   ~ 0.27047047 0.4991317  0.7153258)                  
+   (0.44781345 0.3880153  0.8394016  ~ 0.7563945  0.5380041  0.37973723)   
                ...
-   (0.34892797 0.37644443 0.6041932  ~ 0.75265163 0.5227069  0.29443073)
-   (0.5836293  0.5905903  0.86408615 ~ 0.6017747  0.4341943  0.25450796))
+   (0.42055935 0.5348928  0.62540334 ~ 0.61547023 0.5792195  0.38193497)
+   (0.24820435 0.46835825 0.2848132  ~ 0.46433806 0.6471651  0.762412))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -116,13 +116,13 @@ LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2448 
+{CPUTENSOR[float] :shape (10 10) :id TID2409 
   :vec-state [computed]
-  ((1.2495973     0.745614      1.6715057     ~ -0.009638567  0.18777691    1.1906472)                     
-   (0.03819821    -0.011125428  1.8616861     ~ -0.007410889  1.113944      -0.0023454204)   
+  ((-0.0024188054 0.28661168    -0.015332591  ~ 0.28472435    0.12365582    0.9525306)                     
+   (0.2494425     -0.0036886313 -0.0025330153 ~ -0.014749502  -0.00806824   0.26301512)   
                   ...
-   (-3.1367975e-4 0.060880393   0.4047371     ~ 0.54067177    -0.015001696  0.2813693)
-   (-0.0017047632 -0.0036414461 0.78715545    ~ -0.011978014  -0.006375469  0.5117078))
+   (-0.02770405   0.59393775    0.49283808    ~ -0.0011476747 -0.0070601534 1.0203125)
+   (2.3065634     1.1646757     0.5146315     ~ 0.64402       0.25997666    -0.0012870618))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -152,13 +152,13 @@ Applies the Expotential Linear Units Function (ELUs) element-wise as described i
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2539 
+{CPUTENSOR[float] :shape (10 10) :id TID2500 
   :vec-state [computed]
-  ((0.10139906    0.22480665    -0.008864752  ~ -0.012594044  -0.0240032    0.42575783)                     
-   (2.48219       0.042828444   -0.002884126  ~ 0.055956405   -7.984822e-4  -0.016727848)   
+  ((0.008027558   -2.1824382e-4 -6.6580845e-4 ~ 0.45391056    1.4279875     -0.0057911277)                     
+   (0.2409328     -6.1130885e-4 1.4046197     ~ -0.0046708696 -0.010976263  -0.0027201648)   
                   ...
-   (0.71814036    -0.0044727987 -0.007339712  ~ 0.09223112    -0.011809034  -0.004170165)
-   (1.1420414     0.45225763    1.2949203     ~ 1.7421316     0.06016421    0.35411915))
+   (0.22395898    1.4551989     -0.0034736458 ~ -0.011780907  -0.014673531  0.64088166)
+   (0.75582784    0.4189211     -0.005367441  ~ -0.0054881466 -0.0031045368 -0.00688607))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -194,11 +194,11 @@ x_i = x_i - mean(x)
 ```lisp
 (proceed (!softmax (randn `(3 3))))
 
-{CPUTENSOR[float] :shape (3 3) :id TID2705 
+{CPUTENSOR[float] :shape (3 3) :id TID2666 
   :vec-state [computed]
-  ((0.07293469  0.021375284 0.9056901)
-   (0.41610932  0.20799257  0.37589812)
-   (0.2532427   0.3773796   0.36937764))
+  ((0.35254386 0.40809578 0.23936033)
+   (0.15599205 0.33206308 0.51194483)
+   (0.19293311 0.54487264 0.26219422))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -206,10 +206,44 @@ x_i = x_i - mean(x)
 ```
 ## [Normalization Layers]
 
-## [model] LAYERNORM
+## [model] BATCHNORM2D
 
 ```
-(layernorm NORMALIZED-SHAPE &KEY (EPS 1.0e-5) (AFFINE T))
+(batchnorm2d IN-FEATURES &KEY (AFFINE T) (EPS 1.0e-5))
+```
+
+
+which transformation of shapes are defined as:
+```
+(X[N IN-FEATURES H W] -> OUT[N IN-FEATURES H W])
+```
+### Description
+
+Applies Batch Normalization over a 4D input (N C H W) as described in the paper [Batch Normalization](https://arxiv.org/abs/1502.03167).
+
+```math
+BatchNorm(x) = \frac{x - E[x]}{\sqrt{Var[x] + ε}}\times{γ}+β
+```
+
+### Inputs
+
+`in-features[fixnum]` - C from an excepted input size (N C H W)
+
+`affine[bool]` Set T to apply affine transofmration to the output. In default, set to t.
+
+`eps[single-float]` a value added to the denominator for numerical stability. Default: 1e-5.
+
+### Parameters
+
+`alpha` (in-features) is a trainable tensor filled with `1.0`. accessor: `alpha-of`
+
+`beta`  (in-features) is a trainable tensor filled with `0.0`. accessor: `beta-of`
+
+
+## [model] LAYERNORM2D
+
+```
+(layernorm2d NORMALIZED-SHAPE &KEY (EPS 1.0e-5) (AFFINE T))
 ```
 
 
@@ -281,13 +315,13 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2844 
+{CPUTENSOR[float] :shape (10 10) :id TID2805 
   :vec-state [computed]
-  ((1.0957334   0.29280537  2.9622393   ~ 0.28167194  1.5302484   0.42985225)                   
-   (5.3477087   0.24026111  1.5600696   ~ 1.7525486   0.13064909  0.7810056)   
+  ((1.1776998   1.5038658   2.5449793   ~ 0.5941694   2.2806404   0.08711177)                   
+   (0.48231566  1.3320472   0.06845546  ~ 3.004023    0.1486851   1.135155)   
                 ...
-   (0.22767365  0.34116882  0.7626      ~ 0.12396826  1.473518    0.5603208)
-   (2.091651    1.7196728   0.21944374  ~ 2.1875224   0.19380003  1.7210886))
+   (1.8803136   0.8212929   0.38042745  ~ 0.6330358   0.3380822   0.55278665)
+   (1.6317685   1.9104457   1.0400681   ~ 0.40715086  0.35511273  0.36866352))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -314,13 +348,13 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2946 
+{CPUTENSOR[float] :shape (10 10) :id TID2907 
   :vec-state [computed]
-  ((0.363951     0.76453817   1.810197     ~ 4.112536     1.9115908    1.8925937)                    
-   (8.511698     0.23303813   0.5016798    ~ 0.34629875   6.308238e-4  0.36503315)   
+  ((1.1742454    0.11002164   0.26525262   ~ 2.7933347    0.0029415141 1.1674103)                    
+   (0.8411449    0.58088213   0.16601071   ~ 1.910844     0.40484095   0.14785925)   
                  ...
-   (0.8050398    0.68807644   0.3245708    ~ 0.44783399   1.598077     3.2607603)
-   (3.2294188    2.1321013    18.540094    ~ 0.20728952   0.9719871    10.227004))
+   (2.6465602    0.0014556918 2.3077343    ~ 0.20146786   0.402512     0.056699865)
+   (6.0658503    0.4049626    0.036340326  ~ 0.6130799    10.96344     3.112103))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -416,7 +450,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W3043}(
+<Composite: LINEARLAYER{W3004}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -508,7 +542,7 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W3053}(
+<Composite: CONV2D{W3014}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
 
     WEIGHT -> (5 3 3 3)

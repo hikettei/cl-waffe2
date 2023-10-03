@@ -14,14 +14,6 @@
 
 ;; [TODO] Enhancement:&rest argument for defnode
 
-;; [TODO]
-;;  - LispTensor Implementation (OK)
-;;  - Docstring (OK)
-;;  - Add: topk (OK)
-;;  - Add: Tests Backward Tests
-;;  - Update: Mkdocs
-;;  - Add: define-elwise-impl Add/Moveあたり、、、こっちの実装でReplace
-
 (deftype lazy-computable-t ()
   "A list of types which can be dynamically compiled and cached"
   `(or symbol function))

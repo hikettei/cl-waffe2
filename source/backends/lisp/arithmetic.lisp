@@ -1,6 +1,7 @@
 
 (in-package :cl-waffe2/backends.lisp)
 
+;; [TODO] Replace them with iterator
 (macrolet ((define-arith-func (name f)
 	     `(define-with-typevar (,name u) (x y offsetx offsety size incx incy)
 		(declare (optimize (speed 3))
@@ -49,6 +50,7 @@
 (define-impl (AddNode :device LispTensor)
 	     :forward ((self x y)
 		       (let ((adder (matrix-add (dtype x))))
+			 ;; iteration.lisp can be by far faster altenative of call-with-view
 			 `(,@(call-with-view
 			      #'(lambda (x-view
 					 y-view)
