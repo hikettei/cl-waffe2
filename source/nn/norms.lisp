@@ -1,28 +1,46 @@
 
 (in-package :cl-waffe2/nn)
 
-;; kiokutigaikamo atode zissou siraberu
 (defmodel (BatchNorm (self in-features &key (affine t) (eps 1e-5))
-	   :documentation ""
+	   :documentation "Applies Batch Normalization over a 4D input (N C H W) as described in the paper [Batch Normalization](https://arxiv.org/abs/1502.03167).
+
+```math
+BatchNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
+```
+
+### Inputs
+
+`in-features[fixnum]` - C from an excepted input size (N C H W)
+
+`affine[bool]` Set T to apply affine transofmration to the output. In default, set to t.
+
+`eps[single-float]` a value added to the denominator for numerical stability. Default: 1e-5.
+
+### Parameters
+
+`alpha` (in-features) is a trainable tensor filled with `1.0`. accessor: `alpha-of`
+
+`beta`  (in-features) is a trainable tensor filled with `0.0`. accessor: `beta-of`
+"
 	   :slots ((alpha :initform nil :accessor alpha-of)
 		   (beta  :initform nil :accessor beta-of)
-		   (shape :initform nil :initarg :in-features :accessor shape-of)
 		   (eps   :initform nil :initarg :eps :accessor eps-of))
+	   :where (X[N in-features H W] -> OUT[N in-features H W])
 	   :on-call-> ((self x)
 		       (with-slots ((alpha alpha) (beta beta)) self
-			 (let* ((dim (1- (length (shape-of self))))
-				(m (!mean x :axis dim))
-				(mp (!sub x m))
-				(d (!mean (!expt mp 2) :axis dim))
-				(r (!div mp (!sqrt (!add d (eps-of self))))))
+			 (let* ((m (->contiguous (!mean x :axis 1 :keepdims t)))
+				(l (!- x m))
+				(d (->contiguous (!mean (!expt l 2) :axis 1 :keepdims t)))
+				(r (!div l (!sqrt (!+ d (eps-of self))))))
 			   (if (and alpha beta)
-			       (!add (!mul r (!flexible alpha)) (!flexible beta))
+			       (call-> r
+				       (asnode #'!mul (%transform alpha[i] -> [~ i]))
+				       (asnode #'!add (%transform beta[i]  -> [~ i])))
 			       r)))))
-  
-   (when affine
-     (setf (alpha-of self) (parameter (ax+b `(,@in-features) 0 1))
-	   (beta-of  self) (parameter (ax+b `(,@in-features) 0 0)))))
-			       
+  (when affine
+    (setf (alpha-of self) (parameter (ax+b `(,in-features) 0 1))
+	  (beta-of  self) (parameter (ax+b `(,in-features) 0 0)))))
+
 (defmodel (LayerNorm (self normalized-shape &key (eps 1.0e-5) (affine T))
 	   :slots ((alpha :initform nil :accessor alpha-of)
 		   (beta  :initform nil :accessor beta-of)
