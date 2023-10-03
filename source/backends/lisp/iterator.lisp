@@ -21,7 +21,7 @@ apply - Set to (apply function array). nil to (dotimes (...) ... )"
   (apply  apply  :type boolean)
   (out-to out-to :type AbstractTensor)
   (args   args   :type list)
-  (opform opform :type (or function symbol list))
+  (opform opform :type (or function symbol))
   (reduced-to reduced-to :type fixnum))
 
 (defun expand-iteration (tensors instructions)
@@ -74,7 +74,7 @@ apply - Set to (apply function array). nil to (dotimes (...) ... )"
 	 (assert (= (length ,results) (the fixnum ,(lli-reduced-to instruction)))
 		 nil
 		 "lazy-reduction: Assertion was failed. the function is excepted to be returning ~a arguments but got ~a"
-		 (lli-reduced-to instruction)
+		 ,(lli-reduced-to instruction)
 		 (length ,results))
 	 (dotimes (,index-symbol ,(lli-reduced-to instruction))
 	   (setf ,(lazy-aref-form (lli-out-to instruction) indices) (nth ,index-symbol ,results))))
