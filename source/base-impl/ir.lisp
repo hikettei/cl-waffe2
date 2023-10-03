@@ -15,9 +15,9 @@
 ;; [TODO] Enhancement:&rest argument for defnode
 
 ;; [TODO]
-;;  - LispTensor Implementation
+;;  - LispTensor Implementation (OK)
 ;;  - Docstring
-;;  - Add: topk
+;;  - Add: topk (OK, standard implはexportしない)
 ;;  - Add: Tests
 ;;  - Update: Mkdocs
 ;;  - Add: define-elwise-impl

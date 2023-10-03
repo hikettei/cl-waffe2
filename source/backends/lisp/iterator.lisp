@@ -58,22 +58,26 @@ apply - Set to (apply function array). nil to (dotimes (...) ... )"
 		       collect
 		       `(the (unsigned-byte 32) (* ,stride ,index)))))))
 
-(defun expand-instruction (aloop instruction index-symbol indices)
+(defun expand-instruction (aloop instruction index-symbol indices &aux (results (gensym)))
   (declare (type LazyLispInstruction instruction))
   (if (lli-apply instruction)
-      `(let ((,index-symbol 0))
-	 (declare (ignorable ,index-symbol)
-		  (type (unsigned-byte 32) ,index-symbol))
-	 ;; [TODO] Support Reduce-To, implement TopK
-	 (setf ,(lazy-aref-form (lli-out-to instruction) indices)
-	       (apply ,(lli-opform instruction)
-		      ,@(loop for tensor in (lli-args instruction)
-			      collect
-			      `(loop for ,index-symbol of-type (unsigned-byte 32)
-				     upfrom 0
+      `(let ((,results
+	       (multiple-value-list
+		(apply ,(lli-opform instruction)
+		       ,@(loop for tensor in (lli-args instruction)
+			       collect
+			       `(loop for ,index-symbol of-type (unsigned-byte 32)
+				      upfrom 0
 				       below ,(lisp-name (car (last (shape tensor))))
 				     collect
-				     (lazy-aref-form tensor indices))))))
+				      ,(lazy-aref-form tensor indices)))))))
+	 (assert (= (length ,results) (the fixnum ,(lli-reduced-to instruction)))
+		 nil
+		 "lazy-reduction: Assertion was failed. the function is excepted to be returning ~a arguments but got ~a"
+		 (lli-reduced-to instruction)
+		 (length ,results))
+	 (dotimes (,index-symbol ,(lli-reduced-to instruction))
+	   (setf ,(lazy-aref-form (lli-out-to instruction) indices) (nth ,index-symbol ,results))))
       `(dotimes (,index-symbol ,(lisp-name (aloop-element-n aloop)))
 	 (setf ,(lazy-aref-form (lli-out-to instruction) indices)
 	       (funcall
