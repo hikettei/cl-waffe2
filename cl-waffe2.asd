@@ -104,6 +104,7 @@
 	       
 
 	       (:file "backends/lisp/package")
+	       (:file "backends/lisp/iterator")
 	       (:file "backends/lisp/tensor")
 	       (:file "backends/lisp/generic")
 	       (:file "backends/lisp/arithmetic")

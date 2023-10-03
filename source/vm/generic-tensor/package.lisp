@@ -41,6 +41,7 @@
    #:tensor-out-n
    #:tensor-vec
    #:tensor-facet
+   #:tensor-actual-stride
    #:tensor-stride
    #:tensor-name
    #:shape-with-broadcastable
