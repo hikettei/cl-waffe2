@@ -15,15 +15,17 @@
 
 (defstruct (LazyLispInstruction
 	    (:conc-name lli-)
-	    (:constructor make-lli (opform out-to args &key (apply nil))))
+	    (:constructor make-lli (opform out-to args &key (apply nil) (reduced-to 1))))
   "LazyLispInstruction, an blueprint for expand-iteration.
-apply - Set to (apply function array). nil to (dolist (...) ... )"
+apply - Set to (apply function array). nil to (dotimes (...) ... )"
   (apply  apply  :type boolean)
   (out-to out-to :type AbstractTensor)
   (args   args   :type list)
-  (opform opform :type (or function symbol list)))
+  (opform opform :type (or function symbol list))
+  (reduced-to reduced-to :type fixnum))
 
 (defun expand-iteration (tensors instructions)
+  (declare (type list tensors instructions))
   (let* ((abstract-loop (solve-loop-order tensors 1 T :mode :runtime))
 	 (indices       (iterator-symbols (dims (car tensors)))))
     (labels ((expand-helper (rank)
@@ -43,7 +45,7 @@ apply - Set to (apply function array). nil to (dolist (...) ... )"
 			       inst
 			       index
 			       indices))
-			  instructions)))))))		    
+			  instructions)))))))
       (expand-helper 0))))
 
 (defun lazy-aref-form (tensor indices)
@@ -62,6 +64,7 @@ apply - Set to (apply function array). nil to (dolist (...) ... )"
       `(let ((,index-symbol 0))
 	 (declare (ignorable ,index-symbol)
 		  (type (unsigned-byte 32) ,index-symbol))
+	 ;; [TODO] Support Reduce-To, implement TopK
 	 (setf ,(lazy-aref-form (lli-out-to instruction) indices)
 	       (apply ,(lli-opform instruction)
 		      ,@(loop for tensor in (lli-args instruction)
@@ -71,7 +74,7 @@ apply - Set to (apply function array). nil to (dolist (...) ... )"
 				       below ,(lisp-name (car (last (shape tensor))))
 				     collect
 				     (lazy-aref-form tensor indices))))))
-      `(dolist (,index-symbol ,(lisp-name (aloop-element-n aloop)))
+      `(dotimes (,index-symbol ,(lisp-name (aloop-element-n aloop)))
 	 (setf ,(lazy-aref-form (lli-out-to instruction) indices)
 	       (funcall
 		,(lli-opform instruction)
@@ -79,10 +82,15 @@ apply - Set to (apply function array). nil to (dolist (...) ... )"
 			collect
 			(lazy-aref-form tensor indices)))))))
 
-(defun lazy-call-form (tensors instructions)
-  `(locally (declare ,@(loop for tensor in tensors
-			     collect
-			     `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-id tensor)))
-		     (optimize (speed 3)))
-     ,(expand-iteration tensors instructions)))
+(defun lazy-call-form (tensors instructions finally-return)
+  `(progn
+     (let* (,@(loop for tensor in tensors
+		    collect
+		    `(,(tensor-id tensor) (tensor-vec ,tensor))))
+       (declare ,@(loop for tensor in tensors
+			collect
+			`(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-id tensor)))
+		(optimize (speed 3)))
+       ,(expand-iteration tensors instructions))
+     ,finally-return))
 

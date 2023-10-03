@@ -111,6 +111,7 @@
 	       (:file "backends/lisp/mathematics")
 	       (:file "backends/lisp/logical")
 	       (:file "backends/lisp/matrix-ops")
+	       (:file "backends/lisp/lazy")
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")

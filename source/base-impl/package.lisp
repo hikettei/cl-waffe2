@@ -6,6 +6,14 @@
         :cl-waffe2/vm.generic-tensor
 	:cl-waffe2/vm.nodes)
   (:export
+   #:Lazy-Function-Node
+   #:Lazy-Reduce-Node
+   #:lazy
+   #:lazy-reduce
+   #:forward-of
+   #:backward-of
+   #:reduced-of)
+  (:export
    #:MoveTensorNode
    #:MoveScalarTensorNode
    #:movetensor-ignore-me
