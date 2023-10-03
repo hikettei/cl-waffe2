@@ -625,75 +625,89 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-dot">[function] !dot</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-where">[function] !where</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-lazy">[function] lazy</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_50">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-where_1">[function] !where</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-lazy-reduce">[function] lazy-reduce</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#input_1">Input</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#examples_1">Examples</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-where">[function] !where</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_51">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ascal">[function] a&gt;scal</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-where_1">[function] !where</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_52">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_1">[function] a&lt;scal</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal">[function] a&gt;scal</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_53">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_2">[function] a&gt;=scal</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_1">[function] a&lt;scal</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_54">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_3">[function] a&lt;=scal</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_2">[function] a&gt;=scal</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_55">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_4">[function] a=scal</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_3">[function] a&lt;=scal</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_56">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ab">[function] a&gt;b</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ascal_4">[function] a=scal</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_57">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ab_1">[function] a&lt;b</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab">[function] a&gt;b</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_58">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ab_2">[function] a&gt;=b</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_1">[function] a&lt;b</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_59">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ab_3">[function] a&lt;=b</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_2">[function] a&gt;=b</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_60">Inputs</a>
     </li>
         </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#function-ab_4">[function] a=b</a>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_3">[function] a&lt;=b</a>
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_61">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-ab_4">[function] a=b</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_62">Inputs</a>
     </li>
         </ul>
     </li>
@@ -701,7 +715,7 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#implementation">Implementation</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#inputs_62">Inputs</a>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_63">Inputs</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#example_8">Example</a>
     </li>
@@ -1811,6 +1825,64 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
   :requires-grad NIL
   :backward &lt;Node: PROCEEDNODE-T (A[~] -&gt; A[~])&gt;}
 </code></pre>
+<h2 id="function-lazy">[function] lazy</h2>
+<pre><code class="language-lisp">(lazy op tensor &amp;key (diff nil))
+</code></pre>
+<p>Invokes AbstractNode <code>Lazy-Function-Node</code> that dynamically compile the given kernel specified by <code>op</code> with a loop, applying it to tensor and store the result to the copied one (this node can be pruned if unnecessary).</p>
+<pre><code class="language-lisp">;; Example:
+(lazy #'sin (randn `(3 3)) :diff #'cos)
+</code></pre>
+<h3 id="inputs_50">Inputs</h3>
+<ul>
+<li>
+<p><code>op[symbol or function]</code> indicates a name of function of forward propagation. the function must receive a single argument of corresponding element.</p>
+</li>
+<li>
+<p><code>tensor[AbstractTensor]</code> a tensor to be applied.</p>
+</li>
+<li>
+<p><code>diff[symbol or function]</code> indicates a name of function of backward propagation. As the backward definition indicates, the gradient of the previous node is automatically combined by Lazy-Function-Node. therefore, #'cos is enough for example. If diff is set to something, <code>save-for-backward</code> automaticaly becomes T.</p>
+</li>
+</ul>
+<h2 id="function-lazy-reduce">[function] lazy-reduce</h2>
+<pre><code class="language-lisp">(lazy-reduce op tensor &amp;key (reduce-to 1) (diff nil))
+</code></pre>
+<p>(See also: Lazy-Reduce-Node)</p>
+<p>As well as <code>lazy</code>, this function dynamically compiles the given kernel specified by <code>op</code> with a loop, applying it to tensor and stores the result to the copied tensor (can be pruned if unnecessary). The only difference is that the last dimension of returned tensor is reduced to <code>reduced</code>. The kernel function <code>op</code> wil receive all elements of the last dimension of <code>X</code>, and selects from it and return <code>reduced</code> values. (Note that the value is returned by <code>(apply #'values list)</code>, NOT A LIST.)</p>
+<h3 id="input_1">Input</h3>
+<ul>
+<li>
+<p><code>op[symbol or function]</code> indicates a name of function of forward propagation. the function will receive all elements of last dimension.</p>
+</li>
+<li>
+<p><code>tensor[AbstractTensor]</code> tensor to be applied.</p>
+</li>
+<li>
+<p><code>reduced-to[fixnum]</code> a fixnum indicating the number of elements reduced.</p>
+</li>
+<li>
+<p><code>diff[symbol or function]</code> (currently ignored)</p>
+</li>
+<li>
+<p><code>sv4bw[bool]</code> (currently ignored)</p>
+</li>
+</ul>
+<h3 id="examples_1">Examples</h3>
+<p><code>my-topk</code> is a function to retrieve the Kth largest value in the last dimension.</p>
+<pre><code class="language-lisp">(defun topk (k)
+  #'(lambda (&amp;rest args)
+      (let ((topN (sort args #'&gt;)))
+    (apply #'values (loop for n upfrom 0 below K collect (nth n topN))))))
+
+(lazy-reduce (topk 3) (ax+b `(10 10) 1 0) :reduce-to 3)
+
+(defun my-topk (tensor k)
+    (lazy-reduce (topk K) tensor :reduce-to k))
+
+(my-topk (ax+b `(10 10) 1 0) 3)
+</code></pre>
+<pre><code class="language-lisp">(lazy-reduce #'max (ax+b `(10 10) 1 0))
+</code></pre>
 <h2 id="function-where">[function] !where</h2>
 <pre><code>(!where tensor condition &amp;key (true-then 1) (false-then 0) (out nil))
 </code></pre>
@@ -1826,7 +1898,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 \end{equation}
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">true-then</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">false-then</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">co</span><span class="mord mathnormal">n</span><span class="mord mathnormal">d</span><span class="mord mathnormal">i</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
 <p>(where X = tensor)</p>
-<h3 id="inputs_50">Inputs</h3>
+<h3 id="inputs_51">Inputs</h3>
 <p><code>out</code> place to set the result
 <code>condition</code> an funcallable function. (e.g.: #'evenp #'oddp etc...)</p>
 <h2 id="function-where_1">[function] !where</h2>
@@ -1844,14 +1916,14 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 \end{equation}
 </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:3em;vertical-align:-1.25em;"></span><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="mord"><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mord"><span class="mtable"><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">true-then</span></span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">false-then</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.69em;"><span style="top:-3.69em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord mathnormal">co</span><span class="mord mathnormal">n</span><span class="mord mathnormal">d</span><span class="mord mathnormal">i</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">Y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-2.25em;"><span class="pstrut" style="height:3.008em;"></span><span class="mord"><span class="mord text"><span class="mord">otherwise</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.19em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span><span class="tag"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.75em;"><span style="top:-3.75em;"><span class="pstrut" style="height:3.75em;"></span><span class="eqn-num"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.25em;"><span></span></span></span></span></span></span></span></span></p>
 <p>(where X = tensor1, Y=tensor2)</p>
-<h3 id="inputs_51">Inputs</h3>
+<h3 id="inputs_52">Inputs</h3>
 <p><code>out</code> place to set the result
 <code>condition</code> an funcallable function. (e.g.: #'&gt; #'&lt; etc...)</p>
 <h2 id="function-ascal">[function] a&gt;scal</h2>
 <pre><code>(a&gt;scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&gt;scal sets <code>true-then</code> if the equation: <code>element &gt; scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_52">Inputs</h3>
+<h3 id="inputs_53">Inputs</h3>
 <p><code>A</code> AbstractTensor
 <code>scal</code> number (not a ScalarTensor)</p>
 <p>(TODO: ScalarTensor as a <code>scal</code> argument)</p>
@@ -1859,7 +1931,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <pre><code>(a&lt;scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&lt;scal sets <code>true-then</code> if the equation: <code>element &lt; scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_53">Inputs</h3>
+<h3 id="inputs_54">Inputs</h3>
 <p><code>A</code> AbstractTensor
 <code>scal</code> number (not a ScalarTensor)</p>
 <p>(TODO: ScalarTensor as a <code>scal</code> argument)</p>
@@ -1867,7 +1939,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <pre><code>(a&gt;=scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&gt;=scal sets <code>true-then</code> if the equation: <code>element &gt;= scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_54">Inputs</h3>
+<h3 id="inputs_55">Inputs</h3>
 <p><code>A</code> AbstractTensor
 <code>scal</code> number (not a ScalarTensor)</p>
 <p>(TODO: ScalarTensor as a <code>scal</code> argument)</p>
@@ -1875,7 +1947,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <pre><code>(a&lt;=scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&lt;=scal sets <code>true-then</code> if the equation: <code>element &lt;= scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_55">Inputs</h3>
+<h3 id="inputs_56">Inputs</h3>
 <p><code>A</code> AbstractTensor
 <code>scal</code> number (not a ScalarTensor)</p>
 <p>(TODO: ScalarTensor as a <code>scal</code> argument)</p>
@@ -1883,7 +1955,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <pre><code>(a=scal A scal &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a=scal sets <code>true-then</code> if the equation: <code>element = scal</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_56">Inputs</h3>
+<h3 id="inputs_57">Inputs</h3>
 <p><code>A</code> AbstractTensor
 <code>scal</code> number (not a ScalarTensor)</p>
 <p>(TODO: ScalarTensor as a <code>scal</code> argument)</p>
@@ -1891,31 +1963,31 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <pre><code>(a&gt;b A B &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&gt;b sets <code>true-then</code> if the equation: <code>A &gt; B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_57">Inputs</h3>
+<h3 id="inputs_58">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
 <h2 id="function-ab_1">[function] a&lt;b</h2>
 <pre><code>(a&lt;b A B &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&lt;b sets <code>true-then</code> if the equation: <code>A &lt; B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_58">Inputs</h3>
+<h3 id="inputs_59">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
 <h2 id="function-ab_2">[function] a&gt;=b</h2>
 <pre><code>(a&gt;=b A B &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&gt;=b sets <code>true-then</code> if the equation: <code>A &gt;= B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_59">Inputs</h3>
+<h3 id="inputs_60">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
 <h2 id="function-ab_3">[function] a&lt;=b</h2>
 <pre><code>(a&lt;=b A B &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a&lt;=b sets <code>true-then</code> if the equation: <code>A &lt;= B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_60">Inputs</h3>
+<h3 id="inputs_61">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
 <h2 id="function-ab_4">[function] a=b</h2>
 <pre><code>(a=b A B &amp;key (out nil) (true-then 1) (false-then 0))
 </code></pre>
 <p>The function a=b sets <code>true-then</code> if the equation: <code>A = B</code> is t, otherwise set <code>false-then</code> at the corresponding positions.</p>
-<h3 id="inputs_61">Inputs</h3>
+<h3 id="inputs_62">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
 <h2 id="function-padding">[function] padding</h2>
 <pre><code class="language-lisp">(padding tensor pad-width &amp;key (pad-maker #'ax+b) (initargs `(0 0)))
@@ -1950,7 +2022,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 - ... hide area by view
 </code></pre>
 <p>Finally, moves all elements in the base tensor into viewed tensor, and later reset the view.</p>
-<h3 id="inputs_62">Inputs</h3>
+<h3 id="inputs_63">Inputs</h3>
 <p><code>tensor[AbstractTensor]</code> tensor to be padded.</p>
 <p><code>pad-width[list]</code> the number of the edges and given as: <code>((before_1 after_1) (before_2 after_2) ...)</code>. the forward is the same as <a href="https://numpy.org/doc/stable/reference/generated/numpy.pad.html">np.pad</a>. Set t instead of <code>(before_n after_n)</code> and ignores the corresponding position of axis.</p>
 <p><code>pad-maker[function]</code> an initializer-function</p>
