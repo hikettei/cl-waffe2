@@ -420,7 +420,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1996 
+{CPUTENSOR[float] :shape (A 10) :id TID1957 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input

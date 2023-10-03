@@ -1631,6 +1631,82 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 ```
 
 No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] LAZY-FUNCTION-NODE
+
+```
+(X[~] OUT[~] -> OUT[~])
+```
+
+### Description
+
+
+An abstract computation node that dynamically compile the given kernel specified by `forward` with a loop, applying it to X and OUT element-wise. A backend `LispTensor` already provides a standard implementation of it and can be used by the `(cl-waffe2/base-impl:lazy ...)` function. This node is useful when calling mathematical functions not provided by cl-waffe2 as standard; (Note that no speed improvement can be expected from SIMD.)
+
+```lisp
+;; Example:
+(lazy #'sin (randn `(3 3)) :diff #'cos :sv4bw t)
+```
+
+### Inputs
+
+- `forward[symbol or function]` indicates a name of function of forward propagation. the function must receive a single argument of corresponding element.
+
+- `backward[symbol or function]` indicates a name of function of backward propagation. As the backward definition indicates, the gradient of the previous node is automatically combined by Lazy-Function-Node. therefore, #'cos is enough for example.
+
+- `sv4bw[boolean]` set T to copy the result of X.
+
+### Workload
+
+- [x] implement
+- [x] make it differentiable
+- [x] compiled kernels are cached in LUT.
+- [ ] parallelize by lparallel
+- [ ] Loop Collapse/Reordering
+
+
+### Backward
+
+✅ Already defined. 
+
+```lisp
+((self dout x out) (declare (ignore out))
+ (when (null (backward-of self))
+   (error
+    lazy: in order to differentiate the lazy operation ~a, specify :backward.
+(lazy op tensor ... :diff nil)
+                           l specify this form.
+    (forward-of self)))
+ (values (!mul dout (lazy (backward-of self) x)) nil))
+```
+
+No need to implement backwards at `define-impl`. (they'd be ignored.)
+## [node] LAZY-REDUCE-NODE
+
+```
+(REDUCED[~ REDUCED] X[~ DIM] -> REDUCED[~ REDUCED])
+```
+
+### Description
+
+
+As well as `Lazy-Function-Node`, this node dynamically compiles the given kernel specified by `forward` with a loop, applying it to X and OUT element-wise. The only difference is that the last dimension of returned tensor is reduced to `reduced`. The kernel function `forward` wil receive all elements of the last dimension of `X`, and selects from it and return `reduced` values. (Note that the value is returned by `(apply #'values list)`, NOT A LIST.)
+
+See the example of `lazy-reduce`.
+
+As of this writing, this node isn't differentiable.
+
+### Workload
+
+- [x] implement
+- [ ] make it differentiable
+- [ ] caching
+- [ ] parallelize by lparallel
+- [ ] loop oriented optimizations
+
+
+### Backward
+
+❌ Undefined. (To make it differentiable, must be defined with `define-impl` macro.)
 ## [node] WHERE-OPERATION-NODE
 
 ```

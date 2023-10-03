@@ -267,3 +267,4 @@ Expands `defnode` and `define-impl` at the same time.
      (define-impl (,abstract-name :device ,device :cache-when-compiled ,cache-when-compiled :reject-p ,reject-p)
 		  :save-for-backward ,save-for-backward
 		  :forward ,forward)))
+

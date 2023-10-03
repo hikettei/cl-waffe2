@@ -17,8 +17,8 @@
    #:Linear-bias)
 
   (:export
-   #:BatchNorm
-   #:LayerNorm)
+   #:BatchNorm2D
+   #:LayerNorm2D)
 
   (:export
    #:Conv2D

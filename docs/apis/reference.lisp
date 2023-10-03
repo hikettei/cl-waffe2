@@ -136,6 +136,9 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
 
     (nodedoc MatmulNode)
 
+    (nodedoc Lazy-Function-Node)
+    (nodedoc Lazy-Reduce-Node)
+
     (nodedoc Where-Operation-Node)
     (nodedoc Compare-Operation-Node)
 
@@ -234,6 +237,9 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (caller-doc !t)
     (caller-doc !matmul)
     (caller-doc !dot)
+
+    (caller-doc lazy)
+    (caller-doc lazy-reduce)
 
     (caller-doc !where)
     (caller-doc !compare)

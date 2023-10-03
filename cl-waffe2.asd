@@ -104,12 +104,14 @@
 	       
 
 	       (:file "backends/lisp/package")
+	       (:file "backends/lisp/iterator")
 	       (:file "backends/lisp/tensor")
 	       (:file "backends/lisp/generic")
 	       (:file "backends/lisp/arithmetic")
 	       (:file "backends/lisp/mathematics")
 	       (:file "backends/lisp/logical")
 	       (:file "backends/lisp/matrix-ops")
+	       (:file "backends/lisp/lazy")
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")

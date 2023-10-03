@@ -121,4 +121,5 @@ If the shapes does not change before/after padding, returns the given tensor as 
 			       :order ,(order tensor)))))
       (multiple-value-bind (new-tensor* reverser) (apply #'!view new-tensor padding-view)
 	(apply #'!view (!move new-tensor* tensor :force t) reverser)))))
-			     
+
+

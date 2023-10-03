@@ -556,6 +556,10 @@ The node definitely works, but each time you compile it the function `(compile n
   (or (node-save-for-backward1 node)
       (node-save-for-backward2 node)))
 
+(defun (setf node-save-for-backward) (new-value node)
+  (setf (slot-value node 'save-for-backward-space1) new-value
+	(slot-value node 'save-for-backward-space2) new-value))
+	
 
 (defmacro define-impl-op ((abstract-name
 			   &key

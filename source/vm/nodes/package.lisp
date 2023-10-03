@@ -105,7 +105,9 @@
    #:define-and-impl-node
 
    #:define-impl-op
-   #:define-op)
+   #:define-op
+
+   #:node-save-for-backward)
   ;; Reject-p-utils
   (:export
    #:supported-dtypes-are)

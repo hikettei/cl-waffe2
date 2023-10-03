@@ -34,7 +34,8 @@
 
     (insert "## [Normalization Layers]~%")
 
-    (with-nn-doc (find-class 'LayerNorm) 't)
+    (with-nn-doc (find-class 'BatchNorm2d) 't)
+    (with-nn-doc (find-class 'LayerNorm2d) 't)
 
     (insert "## [Loss Functions]
 

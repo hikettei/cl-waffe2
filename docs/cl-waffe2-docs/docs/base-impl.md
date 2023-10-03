@@ -1712,6 +1712,72 @@ Finds a dot product of x and y. Unlike `numpy.dot`, `!dot` intentionally only su
   :requires-grad NIL
   :backward <Node: PROCEEDNODE-T (A[~] -> A[~])>}
 ```
+## [function] lazy
+
+```lisp
+(lazy op tensor &key (diff nil))
+```
+
+Invokes AbstractNode `Lazy-Function-Node` that dynamically compile the given kernel specified by `op` with a loop, applying it to tensor and store the result to the copied one (this node can be pruned if unnecessary).
+
+```lisp
+;; Example:
+(lazy #'sin (randn `(3 3)) :diff #'cos)
+```
+### Inputs
+
+- `op[symbol or function]` indicates a name of function of forward propagation. the function must receive a single argument of corresponding element.
+
+- `tensor[AbstractTensor]` a tensor to be applied.
+
+- `diff[symbol or function]` indicates a name of function of backward propagation. As the backward definition indicates, the gradient of the previous node is automatically combined by Lazy-Function-Node. therefore, #'cos is enough for example. If diff is set to something, `save-for-backward` automaticaly becomes T.
+
+## [function] lazy-reduce
+
+```lisp
+(lazy-reduce op tensor &key (reduce-to 1) (diff nil))
+```
+
+(See also: Lazy-Reduce-Node)
+
+As well as `lazy`, this function dynamically compiles the given kernel specified by `op` with a loop, applying it to tensor and stores the result to the copied tensor (can be pruned if unnecessary). The only difference is that the last dimension of returned tensor is reduced to `reduced`. The kernel function `op` wil receive all elements of the last dimension of `X`, and selects from it and return `reduced` values. (Note that the value is returned by `(apply #'values list)`, NOT A LIST.)
+
+### Input
+
+
+- `op[symbol or function]` indicates a name of function of forward propagation. the function will receive all elements of last dimension.
+
+- `tensor[AbstractTensor]` tensor to be applied.
+
+- `reduced-to[fixnum]` a fixnum indicating the number of elements reduced.
+
+- `diff[symbol or function]` (currently ignored)
+
+- `sv4bw[bool]` (currently ignored)
+
+
+### Examples
+
+`my-topk` is a function to retrieve the Kth largest value in the last dimension.
+
+```lisp
+(defun topk (k)
+  #'(lambda (&rest args)
+      (let ((topN (sort args #'>)))
+	(apply #'values (loop for n upfrom 0 below K collect (nth n topN))))))
+
+(lazy-reduce (topk 3) (ax+b `(10 10) 1 0) :reduce-to 3)
+
+(defun my-topk (tensor k)
+    (lazy-reduce (topk K) tensor :reduce-to k))
+
+(my-topk (ax+b `(10 10) 1 0) 3)
+```
+
+```lisp
+(lazy-reduce #'max (ax+b `(10 10) 1 0))
+```
+
 ## [function] !where
 
 ```
