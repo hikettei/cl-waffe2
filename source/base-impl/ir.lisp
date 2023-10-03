@@ -8,5 +8,7 @@
 ;;   MapNode
 ;;   RecurrentNode
 ;;
-
+;; Additionally,
+;;  ElementWiseNode
+;;
 

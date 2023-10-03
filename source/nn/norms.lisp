@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/nn)
 
-(defmodel (BatchNorm (self in-features &key (affine t) (eps 1e-5))
+(defmodel (BatchNorm2D (self in-features &key (affine t) (eps 1e-5))
 	   :documentation "Applies Batch Normalization over a 4D input (N C H W) as described in the paper [Batch Normalization](https://arxiv.org/abs/1502.03167).
 
 ```math
@@ -41,7 +41,7 @@ BatchNorm(x) = \\frac{x - E[x]}{\\sqrt{Var[x] + ε}}\\times{γ}+β
     (setf (alpha-of self) (parameter (ax+b `(,in-features) 0 1))
 	  (beta-of  self) (parameter (ax+b `(,in-features) 0 0)))))
 
-(defmodel (LayerNorm (self normalized-shape &key (eps 1.0e-5) (affine T))
+(defmodel (LayerNorm2D (self normalized-shape &key (eps 1.0e-5) (affine T))
 	   :slots ((alpha :initform nil :accessor alpha-of)
 		   (beta  :initform nil :accessor beta-of)
 		   (shape :initform nil :initarg :normalized-shape :accessor dim-of)
