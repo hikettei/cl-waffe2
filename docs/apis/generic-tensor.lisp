@@ -7,6 +7,18 @@
 		  (placedoc ,name ,type)
 		  ,@body)))
 
+    (insert "
+- AbstractTensor
+    - [AbstractTensor](./#working-with-abstracttensor)
+    - [Gradients](./#manipulating-gradients)
+- Compiled Objects
+    - [Compiled-Composite](./#building-functions-from-abstracttensor)
+- Iterators
+    - [Multiple Dimensional Offsets](./#optimized-and-ranked-tensor-iterators)
+- Save and restore weights
+    - [file format](./#save-and-restore-weights)
+")
+
     (with-section "Working with AbstractTensor")
     
     (insert "~a" (documentation (find-class 'AbstractTensor) 't))
@@ -54,7 +66,20 @@
     (with-section "Optimized and Ranked Tensor Iterators")
 
     (with-doc 'call-with-view 'function)
-    (with-doc 'do-compiled-loop 'macro)))
+    (with-doc 'do-compiled-loop 'macro)
+
+    (with-section "Save and Restore Weights")
+
+    (with-doc 'State-Dict 'structure
+      (with-examples
+	"(make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))"))
+    
+    (insert "~a" (documentation (macro-function 'define-model-format) 'function))
+
+    (with-doc 'save-weights 'function)
+    (with-doc 'load-weights 'function)
+    (with-doc 'load-from-state-dict 'function)
+    ))
 
 
 

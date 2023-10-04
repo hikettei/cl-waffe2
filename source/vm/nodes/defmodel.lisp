@@ -55,6 +55,12 @@ This generic function is used to customize how the model is printed on the displ
 (defmethod call :around ((model Composite) &rest inputs)
   (let ((result (multiple-value-list (call-next-method))))
 
+
+    ;; Finding all parameters belong to model, attribute following information:
+    ;;  1. which models belongs to
+    ;;  2. which slots  belongs to
+    (update-tensor-state-dicts! model)
+    
     ;; Traces the input/output tensor's shape.
     (setf (composite-input-size model)
 	  (map 'list #'(lambda (x)
@@ -440,6 +446,14 @@ An constructor function for ~a."
 			    'cl-waffe2/vm.generic-tensor:AbstractTensor)
 		  (slot-value (slot-value model name) 'cl-waffe2/vm.generic-tensor:requires-grad))
 	    collect (cons name (slot-value model name)))))
+
+(defmethod update-tensor-state-dicts! ((model Composite))
+  (let ((parameters (find-params model)))
+    ;; Parameters ... (cons name parameter)
+    (loop for parameter-pair in parameters do
+      (setf (tensor-state-dict-name (cdr parameter-pair)) (car parameter-pair)
+	    (tensor-param-belongs-to (cdr parameter-pair)) model))
+    T))
 
 (defmethod render-model-content ((model Composite))
   (let* ((parameters (find-params model))

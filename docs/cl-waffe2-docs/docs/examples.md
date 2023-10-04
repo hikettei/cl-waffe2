@@ -155,7 +155,10 @@ We do not impose any constraints on how a training phase is implemented by users
 
 (TODO)
 
-## Save trained weights
+## Save/Load Trained Weights
 
-(TODO)
+```lisp
+(save-weights model "./model.wf2model" :wf2model)
+(load-weights model "./model.wf2model" :wf2model)
+```
 

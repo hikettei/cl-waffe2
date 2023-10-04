@@ -275,6 +275,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
       
       (with-op-doc #'convert-tensor-facet 't)
       (with-op-doc #'change-facet 't)
+      (with-op-doc #'device-as 't)
       (with-op-doc #'->tensor 't)
       (with-op-doc (macro-function 'with-facet) 't)
       (with-op-doc (macro-function 'with-facets) 't))

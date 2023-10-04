@@ -147,4 +147,16 @@ Wrap the tensor with (parameter ...)"
 		  "-> NIL")
 	      "")))
 
+(defmethod cl-waffe2/vm.nodes:find-params ((model AbstractOptimizer))
+  ;; Collects following things:
+  ;;  - AbstractTensor (Ignoring Param Itself)
+  ;;  - number
+  (let ((names (map 'list #'c2mop:slot-definition-name (c2mop:class-slots (class-of model)))))
+    (loop for name in names
+	  if (and (or (subtypep (class-of (slot-value model name)) ;; AbstractTensor of fixnum
+				'cl-waffe2/vm.generic-tensor:AbstractTensor)
+		      (numberp (slot-value model name)))
+		  ;; Not myself alright?
+		  (not (equal (slot-value model name) (read-parameter model))))
+	    collect (cons name (slot-value model name)))))
 

@@ -35,12 +35,16 @@
 	       :alexandria
 	       :cffi
 	       :trivia
+	       :trivia.ppcre
 	       :cl-randist
 	       :lparallel
 	       :bordeaux-threads
 	       :closer-mop
 	       :trivial-garbage
-	       :cl-waffe2/simd-extension)
+	       :cl-waffe2/simd-extension
+
+	       :numpy-file-format
+	       :jonathan)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")	       
@@ -72,7 +76,8 @@
 	       (:file "vm/generic-tensor/lut")
 	       
 	       (:file "vm/generic-tensor/scheduling")
-
+	       (:file "vm/generic-tensor/state-dicts")
+	       
 	       (:file "vm/nodes/shape-error")
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/broadcast")
@@ -137,6 +142,7 @@
 	       (:file "base-impl/utils")
 	       
 	       (:file "package")
+	       (:file "backends/lisp/wf2model")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
 	       (:file "backends/JITCPUTensor/compiler")

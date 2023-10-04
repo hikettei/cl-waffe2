@@ -65,6 +65,20 @@ We provide these symbols as a `direction` in standard.
 
 - `AbstractTensor`: Any Object -> AbstractTensor. If couldn't determine the dtype, dtype of the first element of `array-from` is used instead.
 
+## [function] device-as
+
+```lisp
+(device-as tensor as)
+```
+
+Converts the given AbstractTensor as `as`.
+
+### Example
+
+```lisp
+(device-as (randn `(3 3)) :as 'CPUTensor)
+```
+
 ## [function] ->tensor
 
 Using the `convert-tensor-facet` method, converts the given object into AbstractTensor.

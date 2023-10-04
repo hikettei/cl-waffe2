@@ -1644,7 +1644,7 @@ An abstract computation node that dynamically compile the given kernel specified
 
 ```lisp
 ;; Example:
-(lazy #'sin (randn `(3 3)) :diff #'cos :sv4bw t)
+(lazy #'sin (randn `(3 3)) :diff #'cos)
 ```
 
 ### Inputs

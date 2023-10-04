@@ -3,6 +3,22 @@
 
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl :lparallel :bordeaux-threads :cl-waffe2/threads)
+
+  (:export
+   #:State-Dict
+   #:State-dict-table
+   #:make-state-dict
+   #:from-state-dict
+   #:parse-state-dict-key
+
+   #:define-model-format
+   #:abstract-save-weights
+   #:abstract-load-weights
+   #:format-to-devices
+   
+   #:save-weights
+   #:load-weights
+   #:load-from-state-dict)
   
   (:export
    ;;#:*cache-directory*
@@ -42,6 +58,8 @@
    #:tensor-vec
    #:tensor-facet
    #:tensor-actual-stride
+   #:tensor-state-dict-name
+   #:tensor-param-belongs-to
    #:tensor-stride
    #:tensor-name
    #:shape-with-broadcastable

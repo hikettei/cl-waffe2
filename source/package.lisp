@@ -35,6 +35,7 @@
    #:with-facet
    #:with-facets
 
+   #:device-as
    #:->tensor
    )
   

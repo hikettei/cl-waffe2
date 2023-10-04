@@ -26,3 +26,4 @@
 		 (apply #'* shape)
 		 :element-type dtype
 		 :initial-element initial-element))))))
+

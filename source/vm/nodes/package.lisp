@@ -14,6 +14,8 @@
 		#:tensor-variables
 		#:tensor-state
 		#:tensor-name
+		#:tensor-state-dict-name
+		#:tensor-param-belongs-to
 		#:tensor-out-n
 		#:tensor-vec
 		#:tensor-view
