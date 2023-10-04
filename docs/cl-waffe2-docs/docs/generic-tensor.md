@@ -1,6 +1,16 @@
 
 # AbstractTensor
 
+- AbstractTensor
+    - [AbstractTensor](./#working-with-abstracttensor)
+    - [Gradients](./#manipulating-gradients)
+- Compiled Objects
+    - [Compiled-Composite](./#building-functions-from-abstracttensor)
+- Iterators
+    - [Multiple Dimensional Offsets](./#optimized-and-ranked-tensor-iterators)
+- Save and restore weights
+    - [file format](./#save-and-restore-weights)
+
 ## Working with AbstractTensor
 
 ## [class] AbstractTensor
@@ -423,7 +433,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID2040 
+{CPUTENSOR[float] :shape (A 10) :id TID1860 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
@@ -576,7 +586,7 @@ Iterates the given tensors in optimized order. The behavior is the same as the `
 			    out)))
 ```
 
-## Save/Restore Weights
+## Save and Restore Weights
 
 ## [struct] State-Dict
 
@@ -643,7 +653,7 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
 > (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
 ```
 ```
-#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {1008EF1283}>
+#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {100321D483}>
  table-key-to-value:
     param:linearlayer.0.bias    -> CPUTENSOR{FLOAT}(10)
     param:linearlayer.0.weights -> CPUTENSOR{FLOAT}(10 10)

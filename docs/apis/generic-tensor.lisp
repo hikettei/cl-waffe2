@@ -7,6 +7,18 @@
 		  (placedoc ,name ,type)
 		  ,@body)))
 
+    (insert "
+- AbstractTensor
+    - [AbstractTensor](./#working-with-abstracttensor)
+    - [Gradients](./#manipulating-gradients)
+- Compiled Objects
+    - [Compiled-Composite](./#building-functions-from-abstracttensor)
+- Iterators
+    - [Multiple Dimensional Offsets](./#optimized-and-ranked-tensor-iterators)
+- Save and restore weights
+    - [file format](./#save-and-restore-weights)
+")
+
     (with-section "Working with AbstractTensor")
     
     (insert "~a" (documentation (find-class 'AbstractTensor) 't))
@@ -56,7 +68,7 @@
     (with-doc 'call-with-view 'function)
     (with-doc 'do-compiled-loop 'macro)
 
-    (with-section "Save/Restore Weights")
+    (with-section "Save and Restore Weights")
 
     (with-doc 'State-Dict 'structure
       (with-examples
