@@ -55,7 +55,11 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="overview/">Tutorials</a>
+                <li class="toctree-l1"><a class="reference internal" href="examples/">Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="overview/">Learn More</a>
                 </li>
               </ul>
               <ul>
@@ -152,18 +156,24 @@
 <h2 id="introduction">Introduction</h2>
 <blockquote>
 <p>⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.</p>
+<p>I actually have a repository <a href="https://github.com/hikettei/cl-waffe">cl-waffe(DEPRECATED UNSUPPORTED!)</a> with a similar name. Don't misunderstand that: cl-waffe<strong>2</strong> is the latest one and all features are inherited from the old one.</p>
 </blockquote>
-<p>cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.</p>
+<p>cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations, and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.</p>
+<p>Roughly speaking, this is a framework for the graph and tensor abstraction without overheads. All features provided here can be extended by users without exception. And with the minimal code. cl-waffe2 is designed as the truly easiest framework to write extensions by users. There's no barrier between users and developers. There's no restriction imposed by framework ignoring Common Lisp.</p>
+<p>Its abstraction layers are almost reaching the goals and enough practical, but there is still a serious lack of backend functionality, and documentations. Contributions are welcome and feel free to contact me: <a href="https://github.com/hikettei">hikettei</a> if you've interested in this project.</p>
 <h2 id="whats-the-next">What's the next?</h2>
 <ul>
 <li>
 <p><a href="./install">Setting up cl-waffe2</a></p>
 </li>
 <li>
-<p><a href="./overview">Concepts and tutorials</a></p>
+<p><a href="./examples">Step-by-step examples</a></p>
 </li>
 <li>
-<p><a href="https://github.com/hikettei/cl-waffe2/tree/master/examples">Examples</a></p>
+<p><a href="./overview">Learn more about its abstraction without overhead</a></p>
+</li>
+<li>
+<p><a href="https://github.com/hikettei/cl-waffe2/tree/master/examples">Sample Projects</a></p>
 </li>
 </ul>
               
@@ -213,5 +223,5 @@
 
 <!--
 MkDocs version : 1.4.3
-Build Date UTC : 2023-10-03 09:47:45.554968+00:00
+Build Date UTC : 2023-10-04 04:03:02.354993+00:00
 -->

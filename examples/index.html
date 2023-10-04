@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Examples - cl-waffe2 Documentation</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Examples";
+        var mkdocs_page_input_path = "examples.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> cl-waffe2 Documentation
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Overview</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../install/">Install</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Examples</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#template-project">Template project</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#modeling">Modeling</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mlp">MLP</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cnn">CNN</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#resnet">ResNet</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#criterion">Criterion</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#compiling-models">Compiling Models</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optimizing-models">Optimizing Models</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#training-models-from-actual-data">Training Models from actual data.</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#plotting">Plotting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#save-trained-weights">Save trained weights</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../overview/">Learn More</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../utils/">cl-waffe2</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nodes/">cl-waffe2/vm.nodes</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../generic-tensor/">cl-waffe2/vm.generic-tensor</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../vm/">cl-waffe2/vm</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl/">[Functions] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../base-impl-nodes/">[Nodes] cl-waffe2/base-impl</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../distributions/">cl-waffe2/distributions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../nn/">cl-waffe2/nn</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../optimizer/">cl-waffe2/optimizers</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../lisp-tensor-backend/">cl-waffe2/backends.lisp</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-tensor-backend/">cl-waffe2/backends.cpu</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../cpu-jit-tensor-backend/">cl-waffe2/backends.jit.cpu</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">cl-waffe2 Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a> &raquo;</li>
+      <li>Examples</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="examples">Examples</h1>
+<p>TODO</p>
+<ul>
+<li>[ ] complete all contents</li>
+<li>[ ] provide same contents as a jupyter notebook</li>
+<li>[ ] CIFAR-10 Training</li>
+</ul>
+<h2 id="template-project">Template project</h2>
+<p>Due to its modularity, cl-waffe2 provides separated namespaces for separated features. If you don't care about that, you can follow the package below and all features become available.</p>
+<pre><code class="language-lisp">(in-package :cl-user)
+
+(load &quot;cl-waffe2.asd&quot;)    ;;
+(ql:quickload :cl-waffe2) ;; These two steps should be included in asdf configuration.
+
+(defpackage :your-project-template
+  (:use
+   :cl
+   :cl-waffe2
+   :cl-waffe2/nn
+   :cl-waffe2/distributions
+   :cl-waffe2/base-impl
+   :cl-waffe2/vm.generic-tensor
+   :cl-waffe2/vm.nodes
+   :cl-waffe2/vm
+   :cl-waffe2/optimizers
+
+   :cl-waffe2/backends.cpu
+   :cl-waffe2/backends.lisp
+   :cl-waffe2/backends.jit.cpu))
+
+(in-package :your-project-template)
+</code></pre>
+<h2 id="modeling">Modeling</h2>
+<p>Roughly, there are two steps to perform matrix operations in cl-waffe2.</p>
+<pre><code class="language-lisp">1. Creating a blueprint of computation node.
+2. Compile it and execute (by build/proceed)
+</code></pre>
+<p>Imagine that compiling and running a program written in C. Yes, cl-waffe2 is nothing but DSL, just a programming language dedicated to represent mathematical functions but its AST is represented by Common Lisp Code. </p>
+<p>We use <code>AbstractNode</code> to represent the smallest unit of computation, <code>Composite</code> as a set of AbstractNode, <code>asnode</code> to treat functions as a Composite, and <code>defsequence</code> to compose several callable objects works like a arrow function. (In cl-waffe2, named as <code>call-&gt;</code>).</p>
+<p>In this example, we demonstrate that Common Lisp Coding Style can be used to define Deep Learning Models in this elegant way.</p>
+<h3 id="mlp">MLP</h3>
+<pre><code class="language-lisp">(defsequence MLP-Sequence (in-features hidden-dim out-features
+               &amp;key (activation #'!relu))
+         &quot;Three Layers MLP Model&quot;
+         (LinearLayer in-features hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim hidden-dim)
+         (asnode activation)
+         (LinearLayer hidden-dim out-features))
+</code></pre>
+<h3 id="cnn">CNN</h3>
+<pre><code class="language-lisp">(defsequence CNN ()
+         (Conv2D 1 4 `(3 3))
+         (asnode #'!relu)     
+         (MaxPool2D   `(2 2))
+         (Conv2D 4 16 `(5 5))
+         (asnode #'!relu)
+         (MaxPool2D `(2 2))
+         (asnode #'!reshape t (* 16 4 4)) 
+         (LinearLayer (* 16 4 4) 10))
+</code></pre>
+<h3 id="resnet">ResNet</h3>
+<pre><code class="language-lisp">(Coming soon)
+</code></pre>
+<h2 id="criterion">Criterion</h2>
+<p>Several smaller nodes can be composed to create a larger function. Likewise Arrow function in Clojure, cl-waffe2 uses an util to compose multiple nodes. Once the following utilities have been defined, the code can be concisely written from then on. Note that this coding style is nothing other than what I like and readers do not necessarily have to follow it.</p>
+<pre><code class="language-lisp">(defun criterion (criterion X Y &amp;key (reductions nil))
+  (apply #'call-&gt;
+     (funcall criterion X Y)
+     (map 'list #'asnode reductions)))
+</code></pre>
+<pre><code class="language-lisp">;; Usage
+
+;; MSELoss
+(criterion #'MSE pred excepted :reductions '(#'!sum #'-&gt;scal))
+
+;; SoftmaxCrossEntropyLoss
+(criterion #'softmax-cross-entropy pred excepted :reductions '(#'!sum #'-&gt;scal))
+</code></pre>
+<h2 id="compiling-models">Compiling Models</h2>
+<p>Since the laziness enables cl-waffe2 to optimize the network given futher information, you have to explict when you need to observe the results. The <code>build</code> function compiles given lazily evaluated neural network, returning <code>Compiled-Composite</code> which possess: compiled models(forward, backward), memory-pool, shape information, variable information, parameters.</p>
+<pre><code class="language-lisp">(defun compile-model (model X Y &amp;key (lr 1e-3))
+  (let* ((lazy-loss (criterion #'softmax-cross-entropy X Y                 
+                   :reductions (list #'!sum #'-&gt;scal)))
+     (compiled-model (build lazy-loss :inputs `(:X :Y))))
+    (mapc (hooker x (Adam x :lr lr)) (model-parameters compiled-model))
+    (values compiled-model model)))
+</code></pre>
+<p>A Lazy Tensor needs to be created with <code>make-input</code> to inform the shape. This value can be changed later by giving a name to it and explict a list of names when building.</p>
+<pre><code class="language-lisp">;; Model
+(compile-model (MLP-Sequence (* 28 28) 512 10)
+               (make-input `(batch-size ,(* 28 28)) :X)
+           (make-input `(batch-size 10)         :Y))
+
+;; CNN
+
+;; ResNet
+
+</code></pre>
+<h2 id="optimizing-models">Optimizing Models</h2>
+<p>We do not impose any constraints on how a training phase is implemented by users; You can write in a style that leans towards your favourite library, or you can create your original template! Enjoy the freedom of coding!</p>
+<pre><code class="language-lisp">(defun step-model (model X Y)
+  (let ((act-loss (forward model X Y)))
+    (backward model)
+    (mapc #'call-optimizer! (model-parameters model))
+    (tensor-vec act-loss)))
+
+;; Example:
+(step-model compiled-model (randn `(10 ,(* 28 28))) (randn `(10 10)))
+</code></pre>
+<h2 id="training-models-from-actual-data">Training Models from actual data.</h2>
+<p>(TODO)</p>
+<h2 id="plotting">Plotting</h2>
+<p>(TODO)</p>
+<h2 id="save-trained-weights">Save trained weights</h2>
+<p>(TODO)</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../install/" class="btn btn-neutral float-left" title="Install"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../overview/" class="btn btn-neutral float-right" title="Learn More">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../install/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../overview/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

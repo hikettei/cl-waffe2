@@ -71,7 +71,11 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../overview/">Tutorials</a>
+                <li class="toctree-l1"><a class="reference internal" href="../examples/">Examples</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../overview/">Learn More</a>
                 </li>
               </ul>
               <ul>
@@ -152,7 +156,7 @@
 <p><a href="https://github.com/roswell/roswell">https://github.com/roswell/roswell</a></p>
 <p>See the <code>Readme.md</code> and install Roswell</p>
 <h3 id="2-installing-common-lisp">2. Installing Common Lisp</h3>
-<p>Common Lisp has several implementations, but I personally recommended SBCL for its performance.</p>
+<p>Common Lisp has several implementations on ANSI Common Lisp. The development is ongoing under SBCL for its performance and the good support of arithmetic operations. Differences between different implementations are absorbed by CFFI I guess, so it should work with other processors, but it has not been tested. (Modern Mode probably doesn't work.)</p>
 <p>If you've installed Roswell:</p>
 <pre><code class="language-sh">$ ros install sbcl
 $ ros use &lt;Installed SBCL Version&gt;
@@ -218,7 +222,7 @@ $ (ql:quickload :cl-waffe2)
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href=".." class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../overview/" class="btn btn-neutral float-right" title="Tutorials">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../examples/" class="btn btn-neutral float-right" title="Examples">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -244,7 +248,7 @@ $ (ql:quickload :cl-waffe2)
       <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../overview/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../examples/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
