@@ -1620,7 +1620,7 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 <h3 id="description_58">Description</h3>
 <p>An abstract computation node that dynamically compile the given kernel specified by <code>forward</code> with a loop, applying it to X and OUT element-wise. A backend <code>LispTensor</code> already provides a standard implementation of it and can be used by the <code>(cl-waffe2/base-impl:lazy ...)</code> function. This node is useful when calling mathematical functions not provided by cl-waffe2 as standard; (Note that no speed improvement can be expected from SIMD.)</p>
 <pre><code class="language-lisp">;; Example:
-(lazy #'sin (randn `(3 3)) :diff #'cos :sv4bw t)
+(lazy #'sin (randn `(3 3)) :diff #'cos)
 </code></pre>
 <h3 id="inputs">Inputs</h3>
 <ul>

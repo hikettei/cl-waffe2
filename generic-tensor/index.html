@@ -115,7 +115,9 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#method-mref">[method] mref</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#hooking-optimizers-and-optimizing-parameters">Hooking Optimizers and Optimizing Parameters</a>
+    <li class="toctree-l3"><a class="reference internal" href="#accessor-tensor-state-dict-name">[accessor] tensor-state-dict-name</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#accessor-tensor-param-belongs-to">[accessor] tensor-param-belongs-to</a>
     </li>
         </ul>
     </li>
@@ -187,6 +189,50 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#save-and-restore-weights">Save and Restore Weights</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#struct-state-dict">[struct] State-Dict</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#state-dict-naming-convention">State-dict naming convention</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#parsing-a-state-dict-key">Parsing a state dict key</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slots">Slots</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_5">Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-define-model-format">[macro] define-model-format</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_5">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-save-weights">[function] save-weights</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#examples_1">Examples</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_6">Inputs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-load-weights">[function] load-weights</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#examples_2">Examples</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#function-load-from-state-dict">[function] load-from-state-dict</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_7">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#returns">Returns</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                 </li>
               </ul>
@@ -250,6 +296,25 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="abstracttensor">AbstractTensor</h1>
+<ul>
+<li>AbstractTensor<ul>
+<li><a href="./#working-with-abstracttensor">AbstractTensor</a></li>
+<li><a href="./#manipulating-gradients">Gradients</a></li>
+</ul>
+</li>
+<li>Compiled Objects<ul>
+<li><a href="./#building-functions-from-abstracttensor">Compiled-Composite</a></li>
+</ul>
+</li>
+<li>Iterators<ul>
+<li><a href="./#optimized-and-ranked-tensor-iterators">Multiple Dimensional Offsets</a></li>
+</ul>
+</li>
+<li>Save and restore weights<ul>
+<li><a href="./#save-and-restore-weights">file format</a></li>
+</ul>
+</li>
+</ul>
 <h2 id="working-with-abstracttensor">Working with AbstractTensor</h2>
 <h2 id="class-abstracttensor">[class] AbstractTensor</h2>
 <p>AbstractTensor is a CLOS class that Wraps existing data structures such as matrices in an abstract class in automatic differential programming using cl-waffe2, and further adds information about computation nodes, gradients, etc.</p>
@@ -387,8 +452,10 @@
 <p>:exist to ExitTensor, :input to InputTensor.</p>
 <h3 id="method-mref">[method] mref</h3>
 <p><code>(mref tensor &amp;rest subscripts)</code> will reads a cetrain position of storage vec. This is setfable. In terms of performance, it is much faster way to edit a storage vec that using <code>(change-facet)</code> function and convert into other forms.</p>
-<h3 id="hooking-optimizers-and-optimizing-parameters">Hooking Optimizers and Optimizing Parameters</h3>
-<p>(TODO)</p>
+<h3 id="accessor-tensor-state-dict-name">[accessor] tensor-state-dict-name</h3>
+<p>If the tensor is created as a parameter and placed inside <code>defmodel</code>, it is filled with the name of slot where it is placed. The name is used to create state_dict.</p>
+<h3 id="accessor-tensor-param-belongs-to">[accessor] tensor-param-belongs-to</h3>
+<p>If the tensor is a parameter, this slot is set by a composite which the tensor belongs to.</p>
 <h2 id="function-hook-optimizer">[function] hook-optimizer!</h2>
 <pre><code class="language-lisp">(hook-optimizer! tensor optimizer)
 </code></pre>
@@ -532,7 +599,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1957 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1860 
   :vec-state [maybe-not-computed]
     &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
@@ -642,6 +709,126 @@
                        (stride-of o-view 0)))
                 out)))
 </code></pre>
+<h2 id="save-and-restore-weights">Save and Restore Weights</h2>
+<h2 id="struct-state-dict">[struct] State-Dict</h2>
+<pre><code class="language-lisp">;; 1. Creating from existing hash-table
+(from-state-dict state-dict-hash-table)
+</code></pre>
+<pre><code class="language-lisp">;; 2. Creating from compiled composite
+(make-state-dict compiled-composite &amp;key (weights T) (optimizers nil))
+</code></pre>
+<p>A table structure obtained from tracing all parameters of Compiled-Composite which is used to save/restore all parameters in a compiled-composite.</p>
+<p>To ensure reproducibility, state-dict collects following contents:</p>
+<ul>
+<li>
+<p>If weights=T, AbstractTensor where requires-grad=T (the tensor must belong to any slots of Composite, otherwise cl-waffe2 can't determine the key name)</p>
+</li>
+<li>
+<p>If optimizers=T, reading all slots of <code>AbstractOptimizer</code>, values that satisfies <code>(numberp value)</code> <code>(typep x AbstractTensor)</code> are saved.</p>
+</li>
+</ul>
+<h3 id="state-dict-naming-convention">State-dict naming convention</h3>
+<p>Basically Follows this rule:</p>
+<p><code>STATE_DICT_NAME = {PREFIX}:{COMPOSITE_NAME}.{NTH?}.{SLOT_NAME}</code></p>
+<p>where:</p>
+<ul>
+<li>
+<p><code>PREFIX</code> is one of param, missing_param, optimizer, missing_optimizer. if the prefix has <code>missing</code>, the parameter didn't belong to any composite. the prefix param indicates the corresponding value is a trained weight. optimizer indicates the value is one of slot of AbstractOptimizer.</p>
+</li>
+<li>
+<p><code>COMPOSITE_NAME</code> = the name of model the parameter belongs to (tensor-param-belongs-to ...)</p>
+</li>
+<li>
+<p><code>SLOT_NAME</code> = the name of slot  (tensor-state-dict-name ...)</p>
+</li>
+<li>
+<p><code>NTH</code> As {COMPOSITE_NAME}.{SLOT_NAME} naming conflicts in the dictionary, NTH is increased by 1. First=0.</p>
+</li>
+</ul>
+<p>If the value to save is a slot of AbstractOptimizer, we use following naming in addition to STATE_DICT_NAME.</p>
+<p><code>optimizer:{STATE_DICT_NAME}.{OPTIMIZER_NAME}.{TYPE_SPECIFIER}.{SLOT_NAME}</code></p>
+<p>For example, LinearLayer has two parameters named as: <code>param:linearlayer.0.bias</code> <code>param:linearlayer.0.weights</code>. If adam optimizers are hooked to them, following keys are added: <code>optimizer:linearlayer.0.bias.adam.single-float.lr</code>, <code>optimizer:linearlayer.0.bias.adam.single-float.eps</code>, <code>optimizer:linearlayer.0.bias.adam.single-float.beta1</code>, <code>optimizer:linearlayer.0.bias.adam.single-float.beta2</code>, <code>optimizer:linearlayer.0.bias.adam.bit.n</code>, <code>optimizer:linearlayer.0.bias.adam.cputensor.m</code>, <code>optimizer:linearlayer.0.bias.adam.cputensor.v</code>, <code>param:linearlayer.0.weights</code>, <code>optimizer:linearlayer.0.weights.adam.single-float.lr</code> <code>optimizer:linearlayer.0.weights.adam.single-float.eps</code>, <code>optimizer:linearlayer.0.weights.adam.single-float.beta1</code>, <code>optimizer:linearlayer.0.weights.adam.single-float.beta2</code>, <code>optimizer:linearlayer.0.weights.adam.bit.n</code>, <code>optimizer:linearlayer.0.weights.adam.cputensor.m</code>, and <code>optimizer:linearlayer.0.weights.adam.cputensor.v</code>.</p>
+<p>Note that all keys are stored as a string. all strings are downcased. The package to which the symbol belongs is ignored. (e.g.: cl-waffe2/nn:LinearLayer is saved as just linearlayer).</p>
+<h3 id="parsing-a-state-dict-key">Parsing a state dict key</h3>
+<p>In order to parse the state_dict key, the function <code>parse-state-dict-key</code> is available.</p>
+<pre><code class="language-lisp">(parse-state-dict-key key)
+;; -&gt; (values prefix rest-forms)
+;; e.g.: (values :param &quot;linearlayer&quot; &quot;0&quot;  &quot;bias&quot;)
+</code></pre>
+<h3 id="slots">Slots</h3>
+<p><code>(state-dict-table state-dict)[hash-table]</code> key -&gt; value hash table where :test is #'equal</p>
+<h3 id="example_5">Example</h3>
+<p><strong>REPL:</strong></p>
+<pre><code class="language-lisp">&gt; (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
+</code></pre>
+<pre><code>#S(STATE-DICT :TABLE #&lt;HASH-TABLE :TEST EQUAL :COUNT 2 {100321D483}&gt;
+ table-key-to-value:
+    param:linearlayer.0.bias    -&gt; CPUTENSOR{FLOAT}(10)
+    param:linearlayer.0.weights -&gt; CPUTENSOR{FLOAT}(10 10)
+
+)
+</code></pre>
+<h2 id="macro-define-model-format">[macro] define-model-format</h2>
+<pre><code class="language-lisp">(define-model-format ((format device) &amp;key (save-weights) (load-weights)))
+</code></pre>
+<p>Defines a format in which the compiled-composite is saved.</p>
+<h3 id="inputs_5">Inputs</h3>
+<p><code>format[keyword]</code> a keyword indicating the format. <code>save-weight</code> <code>load-weight</code> can find the format from this keyword.</p>
+<p><code>device[symbol]</code> a symbol indicating a device to use. If parameters aren't given as <code>device</code>, automatically converts to device.</p>
+<p><code>save-weights[form]</code> a form saving <code>state-dict</code> to <code>path</code>. This form must be: <code>((path state-dict) body)</code>.</p>
+<p><code>load-weights[form]</code> a form restoring <code>state-dict</code> from path. This form also must be <code>((path state-dict) body)</code>. The form must return <code>State-dict</code> structure.</p>
+<h3 id="examples">Examples</h3>
+<pre><code class="language-lisp">(define-model-format
+    (:my-format cl-waffe2/backends.lisp:LispTensor)
+    :save-weights
+    ((path state-dict)
+     ;; Use (device-as tensor 'LispTensor) to always make storage-vec simple-array.
+     ;; Writing the values of state-dict into path
+     T)
+    :load-weights
+    ((path)
+     ;; Restores the values of state-dict from path
+     ;; Retuning a hash-table
+     (from-state-dict (make-hash-table))))
+
+(save-weights compiled-model path :my-format)
+(load-weights compiled-model path :my-format)
+</code></pre>
+<h2 id="function-save-weights">[function] save-weights</h2>
+<pre><code class="language-lisp">(save-weights compiled-composite save-dir format &amp;key (weights T) (optimizers NIL))
+</code></pre>
+<p>Saves compiled-composite as a <code>format</code> to <code>save-dir</code>.</p>
+<h3 id="examples_1">Examples</h3>
+<pre><code class="language-lisp">(save-weights model &quot;./model.wf2model&quot; :wf2model)
+</code></pre>
+<h3 id="inputs_6">Inputs</h3>
+<p><code>weights[boolean]</code> Set T to save all trainable parameters in the compiled-composite</p>
+<p><code>optimizers[boolean]</code> Set T to save all parameters of AbstractTensor</p>
+<h2 id="function-load-weights">[function] load-weights</h2>
+<pre><code class="language-lisp">(load-weights compiled-model save-dir format)
+</code></pre>
+<p>Restores all weights and states from <code>save-dir</code> as <code>format</code>.</p>
+<h3 id="examples_2">Examples</h3>
+<pre><code class="language-lisp">(load-weights model &quot;./model.wf2model&quot; :wf2model)
+</code></pre>
+<h2 id="function-load-from-state-dict">[function] load-from-state-dict</h2>
+<pre><code class="language-lisp">(load-from-state-dict compiled-composite state-dict)
+;; -&gt; (list failed-values)
+</code></pre>
+<p>This function restores the training status from state-dict, overwriting compiled-composite values.</p>
+<h3 id="inputs_7">Inputs</h3>
+<ul>
+<li>
+<p><code>compiled-composite[Compiled-Composite]</code></p>
+</li>
+<li>
+<p><code>state-dict[State-Dict]</code></p>
+</li>
+</ul>
+<h3 id="returns">Returns</h3>
+<ul>
+<li><code>failed-values[list]</code> an list of values existing in <code>state-dict</code> that couldn't loaded well.</li>
+</ul>
               
             </div>
           </div><footer>
