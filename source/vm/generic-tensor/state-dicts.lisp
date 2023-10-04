@@ -403,9 +403,9 @@ This function restores the training status from state-dict, overwriting compiled
 			  key (type-of set-to-place) (type-of restore-with))
 		 (ignore-and-unsafely-continue () T)))
 	     
-	     (when (or (not (eql   (dtype set-to-place) (dtype restore-with)))
-		       (not (equal (tensor-stride set-to-place) (tensor-stride restore-with)))
-		       (not (equal (shape set-to-place) (shape restore-with))))
+	     (when (or (not (eql (dtype set-to-place) (dtype restore-with)))
+		       (not (eql (order set-to-place) (order restore-with)))
+		       (not (= (apply #'* (shape set-to-place)) (apply #'* (shape restore-with)))))
 	       (restart-case
 		   (error "load-state-dict: Can't restore the state `~a`
 
@@ -460,7 +460,8 @@ The state `~a` is ignored."
 					   (string-upcase slot-name)
 					   (symbol-package (class-name (class-of (tensor-optimizer from)))))))
 				    (setf (slot-value (tensor-optimizer from) slot) value)))))))))
-		 (progn
+		 (when (or (eql form-type :param)
+			   (eql form-type :missing-param))
 		   (push set-to-place failed-list)
 		   (warn "load-state-dict: Couldn't restore the state ~a because it doesn't exist in the given table." key)))))
        (state-dict-table blueprint))
@@ -492,7 +493,7 @@ The state `~a` is ignored."
   (let ((base-dir (pathname (format nil "~a/" path)))
 	(config-place (pathname (format nil "~a/parameters.json" path))))
     (flet ((make-path (key)
-	     (pathname (format nil "~a/~a.npy" path key))))
+	     (format nil "~a/~a.npy" path key)))
       (ensure-directories-exist base-dir)
       (with-open-file (stream config-place :direction :output :if-exists :supersede :if-does-not-exist :create)
 	(jojo:with-output (stream)
@@ -510,7 +511,7 @@ The state `~a` is ignored."
 		       (jojo:write-key-value key (make-path key)))
 		     (progn
 		       (jojo:write-key-value key value))))
-	     state-dict)))))
+	     (state-dict-table state-dict))))))
     T))
 
 (defun waffe2-format-loadas (path)
@@ -531,6 +532,6 @@ The state `~a` is ignored."
 		    (car *using-backend*)))
 	     (setf (gethash k result) v)))
      state-dict-config)
-    result))
+    (from-state-dict result)))
 
 
