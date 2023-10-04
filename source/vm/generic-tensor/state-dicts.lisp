@@ -40,8 +40,8 @@
 ;;
 ;; - Optimizer Checkpoints
 ;; - Tests
-;;  - APIs Docstrings, sections for it. (with-examples ippai tukau)
-;;  - Exports
+;;  - APIs Docstrings, sections for it. (with-examples ippai tukau) add sections for generic-tensor.
+;;  - Exports (OK)
 ;;  - printings
 ;;  - .tf loader zisaku dekiruyuoni?
 ;; - save-weights
@@ -250,16 +250,121 @@ This parameter can't be restored when loading this table without reconfiguration
        (apply #'values (intern prefix "KEYWORD")
 	      (cl-ppcre:split "\\." content))))))
 
-;; (defmacro define-model-format :numpy
-;; :save :load or defmethod)
+(defgeneric abstract-save-weights (format path state-dict))
+(defgeneric abstract-load-weights (format path))
+(defgeneric format-to-devices (format))
 
-;; (defgeneric abstract-save-weights (format))
-;; (defgeneric abstract-load-weights (format)) => Returning hash-table, to be created as state-dict
+(defmacro define-model-format ((format device)
+			       &key
+				 (save-weights nil)
+				 (load-weights nil)
+				 (format-tmp (gensym)))
+  "
+## [macro] define-model-format
 
-;; These transformations are done via config.json
+```lisp
+(define-model-format ((format device) &key (save-weights) (load-weights)))
+```
 
-(defun save-weights (compiled-model format))
-(defun load-weights (compiled-model format))
+Defines a format in which the compiled-composite is saved.
+
+### Inputs
+
+`format[keyword]` a keyword indicating the format. `save-weight` `load-weight` can find the format from this keyword.
+
+`device[symbol]` a symbol indicating a device to use. If parameters aren't given as `device`, automatically converts to device.
+
+`save-weights[form]` a form saving `state-dict` to `path`. This form must be: `((path state-dict) body)`.
+
+`load-weights[form]` a form restoring `state-dict` from path. This form also must be `((path state-dict) body)`. The form must return `State-dict` structure.
+
+### Examples
+
+```lisp
+(define-model-format
+    (:my-format cl-waffe2/backends.lisp:LispTensor)
+    :save-weights
+    ((path state-dict)
+     ;; Use (device-as tensor 'LispTensor) to always make storage-vec simple-array.
+     ;; Writing the values of state-dict into path
+     T)
+    :load-weights
+    ((path)
+     ;; Restores the values of state-dict from path
+     ;; Retuning a hash-table
+     (from-state-dict (make-hash-table))))
+
+(save-weights compiled-model path :my-format)
+(load-weights compiled-model path :my-format)
+```
+"
+  (declare (type keyword))
+  (when (not (subtypep device 'AbstractTensor))
+    (warn "define-model-format: The device ~a isn't a subtype of AbstractTensor" device))
+  `(progn
+     (defmethod format-to-devices ((format (eql ,format))) ',device)
+     (defmethod abstract-save-weights ((,format-tmp (eql ,format)) ,@(car save-weights))
+       ,@(cdr save-weights))
+     (defmethod abstract-load-weights ((,format-tmp (eql ,format)) ,@(car load-weights))
+       ,@(cdr load-weights))))
+
+(declaim (ftype
+	  (function
+	   (Compiled-Composite string keyword &key (:weights boolean) (:optimizers boolean))
+	   T)
+	  save-weights))
+(defun save-weights (compiled-composite save-dir format &key (weights T) (optimizers NIL))
+  "
+## [function] save-weights
+
+```lisp
+(save-weights compiled-composite save-dir format &key (weights T) (optimizers NIL))
+```
+
+Saves compiled-composite as a `format` to `save-dir`.
+
+### Examples
+
+```lisp
+(save-weights model \"./model.wf2model\" :wf2model)
+```
+
+### Inputs
+
+`weights[boolean]` Set T to save all trainable parameters in the compiled-composite
+
+`optimizers[boolean]` Set T to save all parameters of AbstractTensor
+
+"
+  (declare (type Compiled-Composite compiled-composite)
+	   (type string save-dir)
+	   (type keyword format))
+  (let ((state-dict (make-state-dict compiled-composite :weights weights :optimizers optimizers)))
+    (abstract-save-weights format save-dir state-dict)))
+
+(declaim (ftype (function (Compiled-Composite string keyword) list) load-weights))
+(defun load-weights (compiled-model save-dir format)
+  "
+## [function] load-weights
+
+```lisp
+(load-weights compiled-model save-dir format)
+```
+
+Restores all weights and states from `save-dir` as `format`.
+
+### Examples
+
+```lisp
+(load-weights model \"./model.wf2model\" :wf2model)
+```
+"
+  (let ((state-dict (abstract-load-weights format save-dir)))
+    (when (not (typep state-dict 'State-Dict))
+      (error "load-weights: The abstract-load-weights method of ~a should return State-Dict but got ~a"
+	     format state-dict))
+
+    (load-from-state-dict compiled-model state-dict)))
 
 (declaim (ftype (function (Compiled-Composite State-Dict) list) load-from-state-dict))
 (defun load-from-state-dict (compiled-composite state-dict)
@@ -334,7 +439,8 @@ Shape : ~a <- ~a"
 			  (declare (ignore _1))
 			  (let* ((base-key (format nil "param:~a.~a.~a" _2 _3 _4))
 				 (from     (gethash base-key (state-dict-table blueprint))))
-			    (when (null from) (error "load-state-dict: The state `~a` does not exist while `~a` exists" base-key key))
+			    (when (null from)
+			      (error "load-state-dict: The state `~a` does not exist while `~a` exists" base-key key))
 			    (when (tensor-optimizer from) ;; Already Initialized?
 			      (if (not (string= (format nil "~(~a~)" (class-name (class-of (tensor-optimizer from))))
 						(format nil "~(~a~)" opt-name)))
@@ -349,7 +455,10 @@ The state `~a` is ignored."
 					      (coerce restore-with to))
 					    (ignore-coerce ()
 					      restore-with)))
-					(slot (intern (string-upcase slot-name) (symbol-package (class-name (class-of (tensor-optimizer from)))))))
+					(slot
+					  (intern
+					   (string-upcase slot-name)
+					   (symbol-package (class-name (class-of (tensor-optimizer from)))))))
 				    (setf (slot-value (tensor-optimizer from) slot) value)))))))))
 		 (progn
 		   (push set-to-place failed-list)
@@ -372,4 +481,56 @@ The state `~a` is ignored."
 						   `("        " ,id (#\newline)))))))
       
       failed-list)))
+
+(define-model-format (:wf2model cl-waffe2/backends.lisp:LispTensor)
+		     :save-weights ((path state-dict)
+				    (waffe2-format-saveas path state-dict))
+		     :load-weights ((path)
+				    (waffe2-format-loadas path)))
+
+(defun waffe2-format-saveas (path state-dict)
+  (let ((base-dir (pathname (format nil "~a/" path)))
+	(config-place (pathname (format nil "~a/parameters.json" path))))
+    (flet ((make-path (key)
+	     (pathname (format nil "~a/~a.npy" path key))))
+      (ensure-directories-exist base-dir)
+      (with-open-file (stream config-place :direction :output :if-exists :supersede :if-does-not-exist :create)
+	(jojo:with-output (stream)
+	  (jojo:with-object
+	    (maphash
+	     #'(lambda (key value)
+		 (if (typep value 'AbstractTensor)
+		     (progn
+		       (numpy-file-format:store-array
+			(tensor-vec
+			 (cl-waffe2:device-as
+			  value
+			  'cl-waffe2/backends.lisp:LispTensor))
+			(make-path key))
+		       (jojo:write-key-value key (make-path key)))
+		     (progn
+		       (jojo:write-key-value key value))))
+	     state-dict)))))
+    T))
+
+(defun waffe2-format-loadas (path)
+  (let ((state-dict-config
+	  (jojo:parse
+	   (uiop:read-file-string
+	    (format nil "~a/parameters.json" path))
+	   :as :hash-table))
+	(result (make-hash-table :test #'equal)))
+    (maphash
+     #'(lambda (k v)
+	 (if (stringp v)
+	     (setf (gethash k result)
+		   (cl-waffe2:device-as
+		    (cl-waffe2:change-facet
+		     (numpy-file-format:load-array v)
+		     :direction 'AbstractTensor)
+		    (car *using-backend*)))
+	     (setf (gethash k result) v)))
+     state-dict-config)
+    result))
+
 

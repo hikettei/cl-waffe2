@@ -41,7 +41,10 @@
 	       :bordeaux-threads
 	       :closer-mop
 	       :trivial-garbage
-	       :cl-waffe2/simd-extension)
+	       :cl-waffe2/simd-extension
+
+	       :numpy-file-format
+	       :jonathan)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")	       

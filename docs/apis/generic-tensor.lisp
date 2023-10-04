@@ -54,7 +54,17 @@
     (with-section "Optimized and Ranked Tensor Iterators")
 
     (with-doc 'call-with-view 'function)
-    (with-doc 'do-compiled-loop 'macro)))
+    (with-doc 'do-compiled-loop 'macro)
+
+    (with-section "Save/Restore Weights")
+
+    (with-doc 'State-Dict 'structure)
+    (insert "~a" (documentation (macro-function 'define-model-format) 'function))
+
+    (with-doc 'save-weights 'function)
+    (with-doc 'load-weights 'function)
+    (with-doc 'load-from-state-dict 'function)
+    ))
 
 
 
