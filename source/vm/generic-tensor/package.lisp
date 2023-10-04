@@ -42,6 +42,8 @@
    #:tensor-vec
    #:tensor-facet
    #:tensor-actual-stride
+   #:tensor-state-dict-name
+   #:tensor-param-belongs-to
    #:tensor-stride
    #:tensor-name
    #:shape-with-broadcastable

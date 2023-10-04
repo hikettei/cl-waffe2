@@ -72,7 +72,8 @@
 	       (:file "vm/generic-tensor/lut")
 	       
 	       (:file "vm/generic-tensor/scheduling")
-
+	       (:file "vm/generic-tensor/state-dicts")
+	       
 	       (:file "vm/nodes/shape-error")
 	       (:file "vm/nodes/shape")
 	       (:file "vm/nodes/broadcast")

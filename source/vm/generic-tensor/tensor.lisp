@@ -94,10 +94,20 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (flexible-p :initform nil :accessor tensor-flexible-p :type (or boolean fixnum))
    
    (facet :initarg :facet :initform :exist :type (member :exist :input) :accessor tensor-facet)
+   
    (named :initform :tensor :initarg :named :type keyword :accessor tensor-name)
 
+   ;; For StateDict
+   ;; An symbol indicating the name of slot. Created for parameters
+   (state-dict-name      :initform nil :accessor tensor-state-dict-name)
+   ;; If the tensor is parameter, Composite records which models the parameter belongs to.
+   (parameter-belongs-to :initform nil :accessor tensor-param-belongs-to)
+   
+   (state-dict-nth       :initform nil :accessor tensor-state-dict-nth)
+
+   ;; For MemoryPool
    (allocate-time-state :initform nil :type (or null Adjustable-Shape-State) :accessor tensor-alloc-state)
-   (protect-me :initform nil :accessor tensor-protect-me) ;; If t, cache never ignored.
+   (protect-me :initform nil :accessor tensor-protect-me) ;; Set T, and In-place mutation is ignored.
    (input-shape :initarg :input-shape :initform nil :reader tensor-input-shape))
   (:documentation "
 ## [class] AbstractTensor
@@ -298,10 +308,13 @@ AbstractTensors in cl-waffe2 has a two state: `ExistTensor` and `InputTensor`. `
 
 `(mref tensor &rest subscripts)` will reads a cetrain position of storage vec. This is setfable. In terms of performance, it is much faster way to edit a storage vec that using `(change-facet)` function and convert into other forms.
 
-### Hooking Optimizers and Optimizing Parameters
+### [accessor] tensor-state-dict-name
 
-(TODO)
+If the tensor is created as a parameter and placed inside `defmodel`, it is filled with the name of slot where it is placed. The name is used to create state_dict.
 
+### [accessor] tensor-param-belongs-to
+
+If the tensor is a parameter, this slot is set by a composite which the tensor belongs to.
 
 "))
 
