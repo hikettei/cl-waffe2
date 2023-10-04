@@ -1,6 +1,12 @@
 
 # Examples
 
+TODO
+
+- [ ] complete all contents
+- [ ] provide same contents as a jupyter notebook
+- [ ] CIFAR-10 Training
+
 ## Template project
 
 Due to its modularity, cl-waffe2 provides separated namespaces for separated features. If you don't care about that, you can follow the package below and all features become available.
@@ -31,6 +37,15 @@ Due to its modularity, cl-waffe2 provides separated namespaces for separated fea
 ```
 
 ## Modeling
+
+Roughly, there are two steps to perform matrix operations in cl-waffe2.
+
+```lisp
+1. Creating a blueprint of computation node.
+2. Compile it and execute (by build/proceed)
+```
+
+Imagine that compiling and running a program written in C. Yes, cl-waffe2 is nothing but DSL, just a programming language dedicated to represent mathematical functions but its AST is represented by Common Lisp Code. 
 
 We use `AbstractNode` to represent the smallest unit of computation, `Composite` as a set of AbstractNode, `asnode` to treat functions as a Composite, and `defsequence` to compose several callable objects works like a arrow function. (In cl-waffe2, named as `call->`).
 
@@ -143,3 +158,4 @@ We do not impose any constraints on how a training phase is implemented by users
 ## Save trained weights
 
 (TODO)
+

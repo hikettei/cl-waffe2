@@ -13,7 +13,7 @@ See the `Readme.md` and install Roswell
 
 ### 2. Installing Common Lisp
 
-Common Lisp has several implementations, but I personally recommended SBCL for its performance.
+Common Lisp has several implementations on ANSI Common Lisp. The development is ongoing under SBCL for its performance and the good support of arithmetic operations. Differences between different implementations are absorbed by CFFI I guess, so it should work with other processors, but it has not been tested. (Modern Mode probably doesn't work.)
 
 If you've installed Roswell:
 
