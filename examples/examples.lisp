@@ -419,3 +419,10 @@
   (!relu (!t a)))
 
 (print (ReLURevisit (ax+b `(3 3) 1 0)))
+
+
+;; Lazy
+
+(proceed (lazy #'sin (ax+b `(3 3) 0 1) :diff #'cos))
+(proceed (lazy-reduce #'max (ax+b `(3 3 3) 1 0)))
+
