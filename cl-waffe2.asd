@@ -142,6 +142,7 @@
 	       (:file "base-impl/utils")
 	       
 	       (:file "package")
+	       (:file "backends/lisp/wf2model")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
 	       (:file "backends/JITCPUTensor/compiler")

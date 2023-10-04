@@ -58,7 +58,10 @@
 
     (with-section "Save/Restore Weights")
 
-    (with-doc 'State-Dict 'structure)
+    (with-doc 'State-Dict 'structure
+      (with-examples
+	"(make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))"))
+    
     (insert "~a" (documentation (macro-function 'define-model-format) 'function))
 
     (with-doc 'save-weights 'function)

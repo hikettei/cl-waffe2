@@ -201,10 +201,13 @@ AbstractTensors in cl-waffe2 has a two state: `ExistTensor` and `InputTensor`. `
 
 `(mref tensor &rest subscripts)` will reads a cetrain position of storage vec. This is setfable. In terms of performance, it is much faster way to edit a storage vec that using `(change-facet)` function and convert into other forms.
 
-### Hooking Optimizers and Optimizing Parameters
+### [accessor] tensor-state-dict-name
 
-(TODO)
+If the tensor is created as a parameter and placed inside `defmodel`, it is filled with the name of slot where it is placed. The name is used to create state_dict.
 
+### [accessor] tensor-param-belongs-to
+
+If the tensor is a parameter, this slot is set by a composite which the tensor belongs to.
 
 
 ## [function] hook-optimizer!
@@ -420,7 +423,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1957 
+{CPUTENSOR[float] :shape (A 10) :id TID2040 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
@@ -572,3 +575,171 @@ Iterates the given tensors in optimized order. The behavior is the same as the `
 				       (stride-of o-view 0)))
 			    out)))
 ```
+
+## Save/Restore Weights
+
+## [struct] State-Dict
+
+```lisp
+;; 1. Creating from existing hash-table
+(from-state-dict state-dict-hash-table)
+```
+
+```lisp
+;; 2. Creating from compiled composite
+(make-state-dict compiled-composite &key (weights T) (optimizers nil))
+```
+
+A table structure obtained from tracing all parameters of Compiled-Composite which is used to save/restore all parameters in a compiled-composite.
+
+To ensure reproducibility, state-dict collects following contents:
+
+- If weights=T, AbstractTensor where requires-grad=T (the tensor must belong to any slots of Composite, otherwise cl-waffe2 can't determine the key name)
+
+- If optimizers=T, reading all slots of `AbstractOptimizer`, values that satisfies `(numberp value)` `(typep x AbstractTensor)` are saved.
+
+### State-dict naming convention
+
+Basically Follows this rule:
+
+`STATE_DICT_NAME = {PREFIX}:{COMPOSITE_NAME}.{NTH?}.{SLOT_NAME}`
+
+where:
+
+- `PREFIX` is one of param, missing_param, optimizer, missing_optimizer. if the prefix has `missing`, the parameter didn't belong to any composite. the prefix param indicates the corresponding value is a trained weight. optimizer indicates the value is one of slot of AbstractOptimizer.
+
+- `COMPOSITE_NAME` = the name of model the parameter belongs to (tensor-param-belongs-to ...)
+
+- `SLOT_NAME` = the name of slot  (tensor-state-dict-name ...)
+
+- `NTH` As {COMPOSITE_NAME}.{SLOT_NAME} naming conflicts in the dictionary, NTH is increased by 1. First=0.
+
+If the value to save is a slot of AbstractOptimizer, we use following naming in addition to STATE_DICT_NAME.
+
+`optimizer:{STATE_DICT_NAME}.{OPTIMIZER_NAME}.{TYPE_SPECIFIER}.{SLOT_NAME}`
+
+For example, LinearLayer has two parameters named as: `param:linearlayer.0.bias` `param:linearlayer.0.weights`. If adam optimizers are hooked to them, following keys are added: `optimizer:linearlayer.0.bias.adam.single-float.lr`, `optimizer:linearlayer.0.bias.adam.single-float.eps`, `optimizer:linearlayer.0.bias.adam.single-float.beta1`, `optimizer:linearlayer.0.bias.adam.single-float.beta2`, `optimizer:linearlayer.0.bias.adam.bit.n`, `optimizer:linearlayer.0.bias.adam.cputensor.m`, `optimizer:linearlayer.0.bias.adam.cputensor.v`, `param:linearlayer.0.weights`, `optimizer:linearlayer.0.weights.adam.single-float.lr` `optimizer:linearlayer.0.weights.adam.single-float.eps`, `optimizer:linearlayer.0.weights.adam.single-float.beta1`, `optimizer:linearlayer.0.weights.adam.single-float.beta2`, `optimizer:linearlayer.0.weights.adam.bit.n`, `optimizer:linearlayer.0.weights.adam.cputensor.m`, and `optimizer:linearlayer.0.weights.adam.cputensor.v`.
+
+Note that all keys are stored as a string. all strings are downcased. The package to which the symbol belongs is ignored. (e.g.: cl-waffe2/nn:LinearLayer is saved as just linearlayer).
+
+### Parsing a state dict key
+
+In order to parse the state_dict key, the function `parse-state-dict-key` is available.
+
+```lisp
+(parse-state-dict-key key)
+;; -> (values prefix rest-forms)
+;; e.g.: (values :param "linearlayer" "0"  "bias")
+```
+
+### Slots
+
+`(state-dict-table state-dict)[hash-table]` key -> value hash table where :test is #'equal
+
+
+###Example
+**REPL:**
+```lisp
+> (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
+```
+```
+#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {1008EF1283}>
+ table-key-to-value:
+    param:linearlayer.0.bias    -> CPUTENSOR{FLOAT}(10)
+    param:linearlayer.0.weights -> CPUTENSOR{FLOAT}(10 10)
+
+)
+```
+
+## [macro] define-model-format
+
+```lisp
+(define-model-format ((format device) &key (save-weights) (load-weights)))
+```
+
+Defines a format in which the compiled-composite is saved.
+
+### Inputs
+
+`format[keyword]` a keyword indicating the format. `save-weight` `load-weight` can find the format from this keyword.
+
+`device[symbol]` a symbol indicating a device to use. If parameters aren't given as `device`, automatically converts to device.
+
+`save-weights[form]` a form saving `state-dict` to `path`. This form must be: `((path state-dict) body)`.
+
+`load-weights[form]` a form restoring `state-dict` from path. This form also must be `((path state-dict) body)`. The form must return `State-dict` structure.
+
+### Examples
+
+```lisp
+(define-model-format
+    (:my-format cl-waffe2/backends.lisp:LispTensor)
+    :save-weights
+    ((path state-dict)
+     ;; Use (device-as tensor 'LispTensor) to always make storage-vec simple-array.
+     ;; Writing the values of state-dict into path
+     T)
+    :load-weights
+    ((path)
+     ;; Restores the values of state-dict from path
+     ;; Retuning a hash-table
+     (from-state-dict (make-hash-table))))
+
+(save-weights compiled-model path :my-format)
+(load-weights compiled-model path :my-format)
+```
+
+## [function] save-weights
+
+```lisp
+(save-weights compiled-composite save-dir format &key (weights T) (optimizers NIL))
+```
+
+Saves compiled-composite as a `format` to `save-dir`.
+
+### Examples
+
+```lisp
+(save-weights model "./model.wf2model" :wf2model)
+```
+
+### Inputs
+
+`weights[boolean]` Set T to save all trainable parameters in the compiled-composite
+
+`optimizers[boolean]` Set T to save all parameters of AbstractTensor
+
+
+## [function] load-weights
+
+```lisp
+(load-weights compiled-model save-dir format)
+```
+
+Restores all weights and states from `save-dir` as `format`.
+
+### Examples
+
+```lisp
+(load-weights model "./model.wf2model" :wf2model)
+```
+
+## [function] load-from-state-dict
+
+```lisp
+(load-from-state-dict compiled-composite state-dict)
+;; -> (list failed-values)
+```
+
+This function restores the training status from state-dict, overwriting compiled-composite values.
+
+### Inputs
+
+- `compiled-composite[Compiled-Composite]`
+
+- `state-dict[State-Dict]`
+
+### Returns
+
+- `failed-values[list]` an list of values existing in `state-dict` that couldn't loaded well.
+
