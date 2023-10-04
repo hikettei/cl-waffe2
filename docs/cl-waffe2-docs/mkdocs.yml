@@ -3,7 +3,8 @@ site_name: cl-waffe2 Documentation
 nav:
     - Overview: index.md
     - Install: install.md
-    - Tutorials: overview.md
+    - Examples: examples.md
+    - Learn More: overview.md
     - cl-waffe2: utils.md
     - cl-waffe2/vm.nodes: nodes.md
     - cl-waffe2/vm.generic-tensor: generic-tensor.md

@@ -4,12 +4,19 @@
 # Requirements
 
 ```lisp
-$ pip3.10 instlal mkdocs
-$ pip3.10 install markdown-katex
+$ pip instlal mkdocs
+$ pip install markdown-katex
 ```
+
+# Contents
+
+[Github Pages](https://hikettei.github.io/cl-waffe2/)
+
+[Raw body](https://github.com/hikettei/cl-waffe2/tree/master/docs/cl-waffe2-docs/docs)
 
 # Run
 
 ```lisp
 $ mkdocs serve
 ```
+
