@@ -49,7 +49,7 @@
 
 (defstruct (State-Dict
 	    (:constructor from-state-dict (state-dict-hash-table &aux (compiled-composite nil) (weights nil) (optimizers nil)))
-	    (:constructor make-state-dict (compiled-composite &key (weights T) (optimizers T) &aux (state-dict-hash-table nil))))
+	    (:constructor make-state-dict (compiled-composite &key (weights T) (optimizers nil) &aux (state-dict-hash-table nil))))
   "
 ## [struct] State-Dict
 
@@ -60,7 +60,7 @@
 
 ```lisp
 ;; Creating from compiled composite
-(make-state-dict compiled-composite &key (weights T) (optimizers T))
+(make-state-dict compiled-composite &key (weights T) (optimizers nil))
 ```
 
 A table object obtained from tracing all parameters of Compiled-Composite.
@@ -115,7 +115,28 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
        (error "make-state-dict: specify compiled-composite"))
    :type hash-table))
 
-;; (defmethod print-object
+(defmethod print-object ((obj State-Dict) stream)
+  (format stream "#S(STATE-DICT :TABLE ~a
+contents:
+~a
+)"
+	  (state-dict-table obj)
+	  (let ((longest-key (loop for k being the hash-keys in (state-dict-table obj) maximize (length k))))
+	    (flet ((display-diff (key-of)
+		     (with-output-to-string (o)
+		       (dotimes (i (1+ (- longest-key (length key-of)))) (princ " " o)))))
+	    (with-output-to-string (out)
+	      (maphash
+	       #'(lambda (k v)
+		   (typecase v
+		     (AbstractTensor
+		      (format out "    ~a~a-> ~a~%" k (display-diff k) (cl-waffe2/vm.nodes::describe-tensor v)))
+		     (T
+		      (let ((printed-as (format nil "~a" v)))
+			(if (> (length printed-as) 20)
+			    (format out "    ~a~a-> ~a...~%" k (display-diff k) (subseq printed-as 0 20))
+			    (format out "    ~a~a-> ~a~%" k (display-diff k) printed-as))))))
+	       (state-dict-table obj)))))))
 
 (defun read-tinfo (tensor)
   "Reads state-dict-name and belongs-to"
@@ -195,7 +216,7 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
       (mapc #'add-helper ok-list)
       
       (when missing-info-list
-	(warn "make-state-dict-table: Following tensors are created as requires-grad-p=T but cannot save as state_dict because they do not belongs to any slots of Composites.
+	(warn "make-state-dict-table: Following tensors are created as requires-grad-p=T but cannot save as state_dict because they do not belong to any slots of Composites.
 When reading:
 ~a "
 	      compiled-composite)
@@ -241,10 +262,24 @@ This parameter can't be restored when loading this table without reconfiguration
 ## [function] load-state-dict
 
 ```lisp
-
+(load-state-dict compiled-composite state-dict)
+;; -> (list failed-values)
 ```
+
+This function restores the training status from state-dict, overwriting compiled-composite values.
+
+### Inputs
+
+- `compiled-composite[Compiled-Composite]`
+
+- `state-dict[State-Dict]`
+
+### Returns
+
+- `failed-values[list]` an list of values existing in `state-dict` that couldn't loaded well.
+
 "
-  (let ((blueprint (make-state-dict compiled-composite))
+  (let ((blueprint (make-state-dict compiled-composite :weights T :optimizers T))
 	(copy-from (state-dict-table state-dict))
 	(failed-list))
 
@@ -315,7 +350,21 @@ The state `~a` is ignored."
 		   (push set-to-place failed-list)
 		   (warn "load-state-dict: Couldn't restore the state ~a because it doesn't exist in the given table." key)))))
        (state-dict-table blueprint))
+
+      (let ((failed-list-id))
+	(maphash
+	 #'(lambda (key value)
+	     (declare (ignore value))
+	     (when (null (gethash key (state-dict-table blueprint)))
+	       (push key failed-list-id)))
+	 copy-from)
+
+	(when failed-list-id
+	  (warn "load-state-dict: Following status aren't loaded because doesn't exist in the given composite.
+~a"
+		(apply #'concatenate 'string (loop for id in failed-list-id
+						   append
+						   `("        " ,id (#\newline)))))))
+      
       failed-list)))
-
-
 
