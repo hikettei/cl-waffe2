@@ -40,10 +40,12 @@
 ;;
 ;; - Optimizer Checkpoints
 ;; - Tests
-;;  - APIs Docstrings, sections for it.
+;;  - APIs Docstrings, sections for it. (with-examples ippai tukau)
 ;;  - Exports
 ;;  - printings
 ;;  - .tf loader zisaku dekiruyuoni?
+;; - save-weights
+;; - load-weights
 
 (in-package :cl-waffe2/vm.generic-tensor)
 
@@ -54,16 +56,16 @@
 ## [struct] State-Dict
 
 ```lisp
-;; Creating from loaded state-dict
+;; 1. Creating from existing hash-table
 (from-state-dict state-dict-hash-table)
 ```
 
 ```lisp
-;; Creating from compiled composite
+;; 2. Creating from compiled composite
 (make-state-dict compiled-composite &key (weights T) (optimizers nil))
 ```
 
-A table object obtained from tracing all parameters of Compiled-Composite.
+A table structure obtained from tracing all parameters of Compiled-Composite which is used to save/restore all parameters in a compiled-composite.
 
 To ensure reproducibility, state-dict collects following contents:
 
@@ -101,6 +103,8 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
 
 ```lisp
 (parse-state-dict-key key)
+;; -> (values prefix rest-forms)
+;; e.g.: (values :param \"linearlayer\" \"0\"  \"bias\")
 ```
 
 ### Slots
@@ -117,7 +121,7 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
 
 (defmethod print-object ((obj State-Dict) stream)
   (format stream "#S(STATE-DICT :TABLE ~a
-contents:
+ table-key-to-value:
 ~a
 )"
 	  (state-dict-table obj)
@@ -236,9 +240,8 @@ This parameter can't be restored when loading this table without reconfiguration
 	  (add-helper tensor :prefix "missing_param")))
       state-dict)))
 
+
 (trivia:defpattern state-dict-key (prefix-list content) `(trivia.ppcre:split ":" ,prefix-list ,content))
-		   
-		
 (defun parse-state-dict-key (key)
   (declare (type string key))
   (trivia:ematch key
@@ -247,22 +250,24 @@ This parameter can't be restored when loading this table without reconfiguration
        (apply #'values (intern prefix "KEYWORD")
 	      (cl-ppcre:split "\\." content))))))
 
-;; load-weight
-;; save-weight
+;; (defmacro define-model-format :numpy
+;; :save :load or defmethod)
 
-;; make-state-dict
-;; load-state-dict
-;; functions save-weights/load-weights are only defined for Compiled-Composite!
-(defun save-weights ())
+;; (defgeneric abstract-save-weights (format))
+;; (defgeneric abstract-load-weights (format)) => Returning hash-table, to be created as state-dict
 
-;; translate method
-(declaim (ftype (function (Compiled-Composite State-Dict) list) load-state-dict))
-(defun load-state-dict (compiled-composite state-dict)
+;; These transformations are done via config.json
+
+(defun save-weights (compiled-model format))
+(defun load-weights (compiled-model format))
+
+(declaim (ftype (function (Compiled-Composite State-Dict) list) load-from-state-dict))
+(defun load-from-state-dict (compiled-composite state-dict)
   "
-## [function] load-state-dict
+## [function] load-from-state-dict
 
 ```lisp
-(load-state-dict compiled-composite state-dict)
+(load-from-state-dict compiled-composite state-dict)
 ;; -> (list failed-values)
 ```
 

@@ -123,6 +123,73 @@ We provide these symbols as a `direction` in standard.
      (array-dimensions from) (dtype-of (aref storage-vec 0)) ;; TODO: Fix it. If array-element-type=t, keep doing this, otherwise use it.
      storage-vec)))
 
+;; [SLOW] AbstractTensor <-> AbstractTensor
+(defmethod convert-tensor-facet ((from AbstractTensor) to)
+
+  (when (not (subtypep to 'AbstractTensor))
+    (error "convert-tensor-facet: Can't convert AbstractTensor because the specified direction ~a isn't a type of AbstractTensor.
+You can add the transformation combinations like:
+```
+(defmethod cl-waffe2:convert-tensor-facet ((from AbstractTensor) (to (eql '~a)))
+  ;; <Converting Process>
+
+  ;; Return: ~a
+  )
+```
+" to to to))
+
+  ;;  
+  (cond
+    ((or
+      (subtypep (class-of from) to)
+      (subtypep to (class-of from)))
+     from)
+    (T
+     (let ((result (make-tensor (shape from) :device to :dtype (dtype from) :order (order from))))
+       (if (and (not (tensor-projected-p from))
+		(not (cl-waffe2/base-impl::tensor-permuted-p from)))
+	   ;; can be done element by element
+	   (dotimes (i (total from))
+	     (setf (vref result i) (vref from i)))	   
+	   (labels ((explore (rest-dim subscripts)
+		      (if (= rest-dim (1- (length (shape from))))
+			  (dotimes (i (nth rest-dim (shape from)))
+			    (apply
+			     #'(setf mref)
+			     (apply #'mref from `(,@subscripts ,i))
+			     result
+			     `(,@subscripts ,i)))
+			  (dotimes (i (nth rest-dim (shape from)))
+			    (explore
+			     (1+ rest-dim)
+			     `(,@subscripts ,i))))))
+	     
+	     (warn "convert-tensor-facet: Doing the slowest tensor convertion because it uses mref method, aref wrapped by CLOS.
+    To optimize this, you can add a (convert-tensor-facet (from ~a) (to (eql '~a))) method." (type-of from) to)
+	     (explore 0 nil)))
+       result))))
+
+(declaim (ftype (function (AbstractTensor symbol) AbstractTensor) device-as))
+(defun device-as (tensor as)
+  "
+## [function] device-as
+
+```lisp
+(device-as tensor as)
+```
+
+Converts the given AbstractTensor as `as`.
+
+### Example
+
+```lisp
+(device-as (randn `(3 3)) :as 'CPUTensor)
+```
+"
+  (when (not (subtypep as 'AbstractTensor))
+    (error "device-as: `as` must be a symbol specifying subclass of AbstractTensor, butgot: ~a" as))
+  (convert-tensor-facet tensor as))
+
 (defmacro with-facet ((var (object-from &key (direction 'array) (sync nil))) &body body)
   "
 ## [macro] with-facet
