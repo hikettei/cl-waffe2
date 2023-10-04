@@ -35,6 +35,7 @@
 	       :alexandria
 	       :cffi
 	       :trivia
+	       :trivia.ppcre
 	       :cl-randist
 	       :lparallel
 	       :bordeaux-threads

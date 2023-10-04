@@ -3,6 +3,13 @@
 
 (defpackage :cl-waffe2/vm.generic-tensor
   (:use :cl :lparallel :bordeaux-threads :cl-waffe2/threads)
+
+  (:export
+   #:State-Dict
+   #:State-dict-table
+   #:make-state-dict
+   #:from-state-dict
+   #:parse-state-dict-key)
   
   (:export
    ;;#:*cache-directory*

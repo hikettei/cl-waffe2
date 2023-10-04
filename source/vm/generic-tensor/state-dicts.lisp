@@ -36,25 +36,84 @@
 
 ;; [TODO] Checkpoints, saving the status of optimizers.
 
+;; Workloads
+;;
+;; - Optimizer Checkpoints
+;; - Tests
+;;  - APIs Docstrings, sections for it.
+;;  - Exports
+;;  - printings
+;;  - .tf loader zisaku dekiruyuoni?
+
 (in-package :cl-waffe2/vm.generic-tensor)
 
 (defstruct (State-Dict
-	    (:constructor make-state-dict (compiled-composite &key (params T) (optimizers T))))
+	    (:constructor from-state-dict (state-dict-hash-table &aux (compiled-composite nil) (weights nil) (optimizers nil)))
+	    (:constructor make-state-dict (compiled-composite &key (weights T) (optimizers T) &aux (state-dict-hash-table nil))))
   "
 ## [struct] State-Dict
 
 ```lisp
-(make-state-dict compiled-composite)
+;; Creating from loaded state-dict
+(from-state-dict state-dict-hash-table)
+```
+
+```lisp
+;; Creating from compiled composite
+(make-state-dict compiled-composite &key (weights T) (optimizers T))
 ```
 
 A table object obtained from tracing all parameters of Compiled-Composite.
 
+To ensure reproducibility, state-dict collects following contents:
+
+- If weights=T, AbstractTensor where requires-grad=T (the tensor must belong to any slots of Composite, otherwise cl-waffe2 can't determine the key name)
+
+- If optimizers=T, reading all slots of `AbstractOptimizer`, values that satisfies `(numberp value)` `(typep x AbstractTensor)` are saved.
+
+### State-dict naming convention
+
+Basically Follows this rule:
+
+`STATE_DICT_NAME = {PREFIX}:{COMPOSITE_NAME}.{NTH?}.{SLOT_NAME}`
+
+where:
+
+- `PREFIX` is one of param, missing_param, optimizer, missing_optimizer. if the prefix has `missing`, the parameter didn't belong to any composite. the prefix param indicates the corresponding value is a trained weight. optimizer indicates the value is one of slot of AbstractOptimizer.
+
+- `COMPOSITE_NAME` = the name of model the parameter belongs to (tensor-param-belongs-to ...)
+
+- `SLOT_NAME` = the name of slot  (tensor-state-dict-name ...)
+
+- `NTH` As {COMPOSITE_NAME}.{SLOT_NAME} naming conflicts in the dictionary, NTH is increased by 1. First=0.
+
+If the value to save is a slot of AbstractOptimizer, we use following naming in addition to STATE_DICT_NAME.
+
+`optimizer:{STATE_DICT_NAME}.{OPTIMIZER_NAME}.{TYPE_SPECIFIER}.{SLOT_NAME}`
+
+For example, LinearLayer has two parameters named as: `param:linearlayer.0.bias` `param:linearlayer.0.weights`. If adam optimizers are hooked to them, following keys are added: `optimizer:linearlayer.0.bias.adam.single-float.lr`, `optimizer:linearlayer.0.bias.adam.single-float.eps`, `optimizer:linearlayer.0.bias.adam.single-float.beta1`, `optimizer:linearlayer.0.bias.adam.single-float.beta2`, `optimizer:linearlayer.0.bias.adam.bit.n`, `optimizer:linearlayer.0.bias.adam.cputensor.m`, `optimizer:linearlayer.0.bias.adam.cputensor.v`, `param:linearlayer.0.weights`, `optimizer:linearlayer.0.weights.adam.single-float.lr` `optimizer:linearlayer.0.weights.adam.single-float.eps`, `optimizer:linearlayer.0.weights.adam.single-float.beta1`, `optimizer:linearlayer.0.weights.adam.single-float.beta2`, `optimizer:linearlayer.0.weights.adam.bit.n`, `optimizer:linearlayer.0.weights.adam.cputensor.m`, and `optimizer:linearlayer.0.weights.adam.cputensor.v`.
+
+Note that all keys are stored as a string. all strings are downcased. The package to which the symbol belongs is ignored. (e.g.: cl-waffe2/nn:LinearLayer is saved as just linearlayer).
+
+### Parsing a state dict key
+
+In order to parse the state_dict key, the function `parse-state-dict-key` is available.
+
+```lisp
+(parse-state-dict-key key)
+```
+
 ### Slots
 
+`(state-dict-table state-dict)[hash-table]` key -> value hash table where :test is #'equal
+
 "
-  ;; [TO ADD] config.json
-  (belongs-to compiled-composite :type compiled-composite)
-  (table      (make-state-dict-table compiled-composite) :type hash-table))
+  (table
+   (or state-dict-hash-table
+       (when compiled-composite
+	 (make-state-dict-table compiled-composite :weights weights :optimizers optimizers))
+       (error "make-state-dict: specify compiled-composite"))
+   :type hash-table))
 
 ;; (defmethod print-object
 
@@ -80,8 +139,8 @@ A table object obtained from tracing all parameters of Compiled-Composite.
 				    `(,(format nil "~(~a~)" arg) ".")))))))
 
 
-(declaim (ftype (function (Compiled-Composite &key (:weights boolean) (:optimizer boolean)) hash-table) make-state-dict-table))
-(defun make-state-dict-table (compiled-composite &key (weights T) (optimizer NIL))
+(declaim (ftype (function (Compiled-Composite &key (:weights boolean) (:optimizers boolean)) hash-table) make-state-dict-table))
+(defun make-state-dict-table (compiled-composite &key (weights T) (optimizers NIL))
   "Once this function is called for compiled-composites, all params in the model become save/restore available."
   (let ((params (model-parameters compiled-composite))
 	(naming-count (make-hash-table :test #'equal))
@@ -114,9 +173,24 @@ A table object obtained from tracing all parameters of Compiled-Composite.
 		  (tensor-state-dict-name  tensor))
 		 state-dict)
 		tensor))
-	     (when optimizer
-	       ;; [TODO]
-	       )))
+	     (when (and optimizers
+			(tensor-optimizer tensor))
+	       (let ((params (cl-waffe2/vm.nodes:find-params (tensor-optimizer tensor))))
+		 (dolist (p params)
+		   (setf
+		    (gethash
+		     (make-tensor-saved-name
+		      (if (string= "param" prefix)
+			  "optimizer"
+			  "missing_optimizer")
+		      (tensor-param-belongs-to tensor)
+		      (tensor-state-dict-nth   tensor)
+		      (tensor-state-dict-name  tensor)
+		      (class-name (class-of (tensor-optimizer tensor)))
+		      (type-of (cdr p))
+		      (car p))
+		     state-dict)
+		    (cdr p)))))))
 
       (mapc #'add-helper ok-list)
       
@@ -141,6 +215,16 @@ This parameter can't be restored when loading this table without reconfiguration
 	  (add-helper tensor :prefix "missing_param")))
       state-dict)))
 
+(trivia:defpattern state-dict-key (prefix-list content) `(trivia.ppcre:split ":" ,prefix-list ,content))
+		   
+		
+(defun parse-state-dict-key (key)
+  (declare (type string key))
+  (trivia:ematch key
+    ((state-dict-key (or "param" "missing_param" "optimizer" "missing_optimizer") content)
+     (let ((prefix (string-upcase (cl-ppcre:regex-replace "_" (car (cl-ppcre:split ":" key)) "-"))))
+       (apply #'values (intern prefix "KEYWORD")
+	      (cl-ppcre:split "\\." content))))))
 
 ;; functions save-weights/load-weights are only defined for Compiled-Composite!
 (defun save-weights ())
