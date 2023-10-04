@@ -21,10 +21,14 @@
 # cl-waffe2
 
 > ⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
+> 
+> I actually have a repository [cl-waffe(DEPRECATED UNSUPPORTED!)](https://github.com/hikettei/cl-waffe) with a similar name. Don't misunderstand that: cl-waffe**2** is the latest one and all features are inherited from the old one.
 
 cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations, and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.
 
-The name of this framework is cl-waffe**2** because it took over my previous project: [cl-waffe](https://github.com/hikettei/cl-waffe).
+Roughly speaking, this is a framework for the graph and tensor abstraction without overheads. All features provided here can be extended by users without exception. And with the minimal code. cl-waffe2 is designed as the truly easiest framework to write extensions by users. There's no barrier between users and developers. There's no restriction imposed by framework ignoring Common Lisp.
+
+Its abstraction layers are almost reaching the goals and enough practical, but there is still a serious lack of backend functionality, and documentations. Contributions are welcome and feel free to contact me: [hikettei](https://github.com/hikettei) if you've interested in this project.
 
 ## ✨Features
 
