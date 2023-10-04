@@ -273,3 +273,13 @@ Usage:
       (car args)
       (apply #'* args)))
 
+(defun subtype-equal (t1 t2)
+  (or (subtypep t1 t2)
+      (subtypep t2 t1)))
+
+(defun symbol-eq (x y)
+  (and
+   (symbolp x)
+   (symbolp y)
+   (equal (symbol-name x)
+	  (symbol-name y))))

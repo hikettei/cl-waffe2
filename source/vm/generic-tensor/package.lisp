@@ -9,7 +9,9 @@
    #:State-dict-table
    #:make-state-dict
    #:from-state-dict
-   #:parse-state-dict-key)
+   #:parse-state-dict-key
+
+   #:load-state-dict)
   
   (:export
    ;;#:*cache-directory*

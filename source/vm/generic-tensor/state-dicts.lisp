@@ -226,6 +226,96 @@ This parameter can't be restored when loading this table without reconfiguration
        (apply #'values (intern prefix "KEYWORD")
 	      (cl-ppcre:split "\\." content))))))
 
+;; load-weight
+;; save-weight
+
+;; make-state-dict
+;; load-state-dict
 ;; functions save-weights/load-weights are only defined for Compiled-Composite!
 (defun save-weights ())
-(defun load-weights ())
+
+;; translate method
+(declaim (ftype (function (Compiled-Composite State-Dict) list) load-state-dict))
+(defun load-state-dict (compiled-composite state-dict)
+  "
+## [function] load-state-dict
+
+```lisp
+
+```
+"
+  (let ((blueprint (make-state-dict compiled-composite))
+	(copy-from (state-dict-table state-dict))
+	(failed-list))
+
+    (flet ((restore-tensor (key set-to-place restore-with)
+	     (unless (typep restore-with 'AbstractTensor)
+	       (error "load-state-dict: Can't restore the state `~a` because it should be AbstractTensor but stored ~a"
+		      key restore-with))
+	     (when (not (subtype-equal (type-of set-to-place) (type-of restore-with)))
+	       (restart-case
+		   (error "load-state-dict: Can't restore the state `~a` because types (~a <- ~a) are incompatible."
+			  key (type-of set-to-place) (type-of restore-with))
+		 (ignore-and-unsafely-continue () T)))
+	     
+	     (when (or (not (eql   (dtype set-to-place) (dtype restore-with)))
+		       (not (equal (tensor-stride set-to-place) (tensor-stride restore-with)))
+		       (not (equal (shape set-to-place) (shape restore-with))))
+	       (restart-case
+		   (error "load-state-dict: Can't restore the state `~a`
+
+because following factors must be correspond.
+Stride: ~a <- ~a
+Dtype : ~a <- ~a
+Shape : ~a <- ~a"
+			  key
+			  (tensor-stride set-to-place)
+			  (tensor-stride restore-with)
+			  (dtype set-to-place)
+			  (dtype restore-with)
+			  (shape set-to-place)
+			  (shape restore-with))
+		 (ignore-and-unsafely-continue () T)))
+	     (setf (tensor-vec set-to-place) (vec restore-with))))
+      
+      (maphash
+       #'(lambda (key set-to-place)
+	   (let ((form-type    (parse-state-dict-key key))
+		 (restore-with (gethash key copy-from)))
+	     (if restore-with
+		 (trivia:ematch form-type
+		   ((or :param :missing-param)
+		    (restore-tensor key set-to-place restore-with))
+		   ((or :optimizer :missing-optimizer)
+		    (if (typep set-to-place 'AbstractTensor)
+			(restore-tensor key set-to-place restore-with)
+			;; Numbers
+			(multiple-value-bind (_1 _2 _3 _4 opt-name type-name slot-name) (parse-state-dict-key key)
+			  (declare (ignore _1))
+			  (let* ((base-key (format nil "param:~a.~a.~a" _2 _3 _4))
+				 (from     (gethash base-key (state-dict-table blueprint))))
+			    (when (null from) (error "load-state-dict: The state `~a` does not exist while `~a` exists" base-key key))
+			    (when (tensor-optimizer from) ;; Already Initialized?
+			      (if (not (string= (format nil "~(~a~)" (class-name (class-of (tensor-optimizer from))))
+						(format nil "~(~a~)" opt-name)))
+				  (warn "load-state-dict: The type of optimizers are different `~a` and `~a`.
+The state `~a` is ignored."
+					(class-name (class-of (tensor-optimizer from)))
+					(intern opt-name)
+					key)
+				  (let ((value
+					  (restart-case (coerce restore-with (intern (string-upcase type-name)))
+					    (manually-coerce-to (to)
+					      (coerce restore-with to))
+					    (ignore-coerce ()
+					      restore-with)))
+					(slot (intern (string-upcase slot-name) (symbol-package (class-name (class-of (tensor-optimizer from)))))))
+				    (setf (slot-value (tensor-optimizer from) slot) value)))))))))
+		 (progn
+		   (push set-to-place failed-list)
+		   (warn "load-state-dict: Couldn't restore the state ~a because it doesn't exist in the given table." key)))))
+       (state-dict-table blueprint))
+      failed-list)))
+
+
+
