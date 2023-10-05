@@ -17,15 +17,14 @@
   (define-arith-impl AddNode "+=")
   (define-arith-impl SubNode "-=")
   (define-arith-impl MulNode "*=")
-  (define-arith-impl DivNode "/=")
-  )
+  (define-arith-impl DivNode "/="))
 
 
 (define-impl (MoveTensorNode :device JITCPUTensor :extends (CPUJIT-Blueprint))
 	     :forward ((self out target)
 		       ;; Move: out <- target
 		       (let ((f (invoke-compiler
-				 (symbol-name (gensym "M"))
+				 (symbol-name (gensym "MOVE"))
 				 (list
 				  (make-inst :modify "=" out (list target))))))
 			 `(progn
