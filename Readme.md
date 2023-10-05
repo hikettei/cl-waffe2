@@ -26,19 +26,19 @@
 
 cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations, and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.
 
-Roughly speaking, this is a framework for the graph and tensor abstraction without overheads. All features provided here can be extended by users without exception. And with the minimal code. cl-waffe2 is designed as the truly easiest framework to write extensions by users. There's no barrier between users and developers. There's no restriction imposed by framework ignoring Common Lisp.
+Roughly speaking, this is a framework for the graph and tensor abstraction without overheads. All features provided here can be extended by users without exception. And with the minimal code. In fact, cl-waffe2 is designed as the truly easiest framework to write extensions by users. There's no barrier between users and developers. There's no restriction imposed by framework ignoring the developing language is limited to Common Lisp.
 
-Its abstraction layers are almost reaching the goals and enough practical, but there is still a serious lack of backend functionality, and documentations. Contributions are welcome and feel free to contact me: [hikettei](https://github.com/hikettei) if you've interested in this project.
+Its abstraction layers are almost reaching the goals and working enough, but there is still a serious lack of backend functionality, and documentations. Contributions are welcome and I would appreciate if somebody who is interested in by project contact me: [hikettei](https://github.com/hikettei).
 
 ## ✨Features
 
-- cl-waffe2 brings **AbstractTensor** to Common Lisp.
+- **Abstraction** cl-waffe2 brings **AbstractTensor** (and AbstractNode!) to Common Lisp.
 - **Extensible** All operations can be reimplemented with any matrix operation libraries you like! Plus, AbstractNode guarantees that no code rewriting is needed when changing devices.
 - **Inlining**  Anyone can write an optimized loop calling foreign libraries; an order is collapsed and shuffled depending on the ranks and offsets. 
 - **Graph-Level Optimization** cl-waffe2 provides a powerful abstract graph optimization tool that can be used on any devices. For example, it optimizes the locality of memory, and make operations in-place as much as possible.
 - **Visualize** Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
 - **Debugging** cl-waffe2 is enough clever that not only detecting all Shaping-Error before the execution but also suggests alternatives! In addition, All objects in cl-waffe2 are nicely rendered on your REPL.
-- **Systematic Nodes**: AbstractNodes and Models are written with small codes. Moreover, they're easy to compose and compile.
+- **Systematic Nodes**: AbstractNodes and Models are written with small codes.
 - **Symbolic Differentiation** In the first place, cl-waffe2 do not create nodes that are later modified. Compiler macros eliminate functions producing such nodes.
 
 ## 🍃 Quicklook
@@ -74,7 +74,7 @@ We also provide [example projects](https://github.com/hikettei/cl-waffe2/tree/ma
 
 # 📈 Experiments
 
-(TODO)
+(Coming soon...: Compared the performance of training ResNet/MLP/CNN to TVM, JAX, PyTorch, Keras/Tensorflow)
 
 # 📕 References and Acknowledgments
 
