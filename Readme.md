@@ -72,9 +72,32 @@ In the simplest example, the `build` function traces and compiles the network fr
 
 We also provide [example projects](https://github.com/hikettei/cl-waffe2/tree/master/examples) here!
 
-# 📈 Experiments
+# 📈 Performance
 
-(Coming soon...: Compared the performance of training ResNet/MLP/CNN to TVM, JAX, PyTorch, Keras/Tensorflow)
+## MLP
+
+### optimizers=Adam, hidden_size=256
+
+n_epoch |  cl-waffe2 | Keras | PyTorch | JAX |
+--------|------------|-------|---------|-----|
+1|3.111s|3.662s|3.418|4.039s
+10|32.437s|31.352s|28.403s|30.801s
+100| 304.864s | 274.854s | 338.031s | 275.875s
+
+### optimizers=Adam hidden=512
+
+n_epoch |  cl-waffe2 | Keras | PyTorch | JAX |
+--------|------------|-------|---------|-----|
+1| 6.075s | 7.55s | 7.29s | 6.90s 
+10| 61.703s | 56.283s | 51.140s | 65.682s
+
+## ResNet18
+
+(Coming Soon...)
+
+## Text Generation
+
+(Coming Soon...)
 
 # 📕 References and Acknowledgments
 
