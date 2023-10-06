@@ -119,3 +119,50 @@
 	  (incf offset-col col-stride))))
     nil))
 
+
+(define-impl-op (Im2ColNode :device LispTensor)
+		:forward ((self x col)
+			  (setf (h-of self) (nth 2 (shape x))
+				(w-of self) (nth 3 (shape x)))
+			  (with-slots ((N N) (C C) (H H) (W W)				       
+				       (h-out h-out) (w-out w-out)
+				       (k-h k-h) (k-w k-w)
+				       (padding-h padding-h) (padding-w padding-w)
+				       (dilation-h dilation-h) (dilation-w dilation-w)
+				       (stride-h stride-h) (stride-w stride-w))
+			      self
+			    ;; (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
+			    (funcall (im2col-caller (dtype x))
+				     col
+				     N C H W
+				     h-out w-out
+				     k-h k-w
+				     padding-h padding-w
+				     stride-h stride-w
+				     dilation-h dilation-w
+				     x)
+			    x)))
+
+(define-impl-op (Col2ImNode :device LispTensor)
+		:forward ((self x col)
+			  (setf (h-of self) (nth 2 (shape x))
+				(w-of self) (nth 3 (shape x)))
+			  (with-slots ((N N) (C C) (H H) (W W)				       
+				       (h-out h-out) (w-out w-out)
+				       (k-h k-h) (k-w k-w)
+				       (padding-h padding-h) (padding-w padding-w)
+				       (dilation-h dilation-h) (dilation-w dilation-w)
+				       (stride-h stride-h) (stride-w stride-w))
+			      self
+			    ;; (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
+			    (funcall (col2im-caller (dtype x))
+				     col
+				     N C H W
+				     h-out w-out
+				     k-h k-w
+				     padding-h padding-w
+				     stride-h stride-w
+				     dilation-h dilation-w
+				     x)
+			    (values col))))
+
