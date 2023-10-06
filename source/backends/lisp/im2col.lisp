@@ -1,124 +1,103 @@
 
 (in-package :cl-waffe2/backends.lisp)
 
+;; Mem: https://ieeexplore.ieee.org/document/9342343
 
-(define-with-typevar (im2col-caller u)
-    (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
+(define-with-typevar (im2col-caller u) (data-col strides1 N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-W data-im strides2)
+  ;; Simple-Array
+  ;; Template Sparse
+  ;; lParallel
+  ;; Col2Im
+  ;; Manually Computing Strides
+  ;; Maximizing Inlining
+  ;; Written in C? (atode debug mendoi)
   (declare (optimize (speed 3))
-           (type AbstractTensor data-col data-im)
-	   (type (unsigned-byte 32) N C H W output-h output-w k-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w))
+	   (type (simple-array u (*)) data-im data-col)
+	   (type (unsigned-byte 32) N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-w))
+  ;; do not forget fill data-col with zero
+  ;; lparallel
+  (macrolet ((index (index nth stride-from)
+	       `(the (unsigned-byte 32)
+		     (* (the (unsigned-byte 32) ,index)
+			(the (unsigned-byte 32)
+			     (nth ,nth ,stride-from))))))
+    (dotimes (h-start k-h)
+      (let ((h-end (+
+		    (the (unsigned-byte 32) (* dilation-h h-start))
+		    (* stride-h out-h)
+		    (- pad-H))))
+	(declare (type (unsigned-byte 32) h-end))
+	(dotimes (w-start k-w)
+	  (let ((w-end (+ (the (unsigned-byte 32) (* dilation-w w-start))
+			  (* stride-w out-w)
+			  (- pad-w))))
+	    (declare (type (unsigned-byte 32) w-end))
+	    (loop for h-out-col fixnum upfrom 0
+		  for h-out-im  fixnum upfrom h-start below h-end by stride-H do
+		    (loop for w-out-col fixnum upfrom 0
+			  for w-out-im  fixnum upfrom w-start below w-end by stride-W
+			  do (dotimes (ni N)
+			       (dotimes (ci C)
+				 (setf (aref data-col
+					     (+
+					      (index ni 0 strides1)
+					      (index ci 1 strides1)
+					      (index h-start 2 strides1)
+					      (index w-start 3 strides1)
+					      (index h-out-col 4 strides1)
+					      (index w-out-col 5 strides1)))
+				       (aref data-im
+					     (+
+					      (index ni 0       strides2)
+					      (index ci 1       strides2)
+					      (index h-out-im 2 strides2)
+					      (index w-out-im 3 strides2))))))))))))))
 
-  (with-facets ((data-col* (data-col :direction 'simple-array :sync t))
-		(data-im*  (data-im :direction  'simple-array :sync t)))
-    (declare (type (simple-array u (*)) data-col* data-im*))
-    
-    (macrolet ((%* (a b)
-		 `(the (unsigned-byte 32) (* (the (unsigned-byte 32) ,a) (the (unsigned-byte 32) ,b))))
-	       (%+ (&rest numbers)
-		 `(the (unsigned-byte 32) (+ ,@numbers))))
-      
-      (let* ((zero         (coerce 0 (quote u)))
-	     (channel-cols (%* k-w (%* C k-h)))
-	     (offset-im  0)
-	     (offset-col 0)
-	     (im-stride  (car (tensor-stride data-im)))
-	     (col-stride (car (tensor-stride data-col))))
-	(declare (type (unsigned-byte 32) im-stride col-stride offset-im offset-col channel-cols))
-	  
-	(dotimes (i (array-total-size data-im*))
-	  (setf (aref data-im* i) zero))
-
-	(dotimes (batch N)
-	  (dotimes (c-col channel-cols)
-	    (let ((w-offset (mod c-col K-W))
-		  (h-offset (mod (/ c-col K-W) K-H))
-		  (c-im     (/
-			     (the (unsigned-byte 32)
-				  (/
-				   (the (unsigned-byte 32) c-col) K-H))
-			     K-W)))
-	      (declare (type (unsigned-byte 32) w-offset h-offset c-im))
-
-	      (dotimes (h-col output-h)
-		(let ((h-im (%+ (%* h-col stride-h)
-				(%* h-offset dilation-h)
-				(- pad-h))))
-		  (declare (type (unsigned-byte 32) h-im))
-		  (when (and (>= h-im 0)
-			     (<  h-im H))
-		    (dotimes (w-col output-w)
-		      (let ((w-im (%+ (%* w-col stride-w)
-				      (%* w-offset dilation-w)
-				      (- pad-w))))
-			(declare (type (unsigned-byte 32) w-im))
-			(when (and (>= w-im 0)
-				   (<  w-im W))
-			  (setf
-			   (aref data-col* (%+ w-col (%* output-w (%+ h-col (%* c-col output-h)))))
-			   (aref data-im*  (%+ offset-im w-im (%* W (%+ h-im (%* c-im H))))))))))))))
-	  (incf offset-im im-stride)
-	  (incf offset-col col-stride))))
-    nil))
-
-
-(define-with-typevar (col2im-caller u)
-    (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
+(define-with-typevar (col2im-caller u) (data-col strides1 N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-W data-im strides2)
   (declare (optimize (speed 3))
-           (type AbstractTensor data-col data-im)
-	   (type (unsigned-byte 32) N C H W output-h output-w k-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w))
+	   (type (simple-array u (*)) data-im data-col)
+	   (type (unsigned-byte 32) N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-w))
 
-  (with-facets ((data-col* (data-col :direction 'simple-array :sync t))
-		(data-im*  (data-im :direction  'simple-array :sync t)))
-    (declare (type (simple-array u (*)) data-col* data-im*))
+  (macrolet ((index (index nth stride-from)
+	       `(the (unsigned-byte 32)
+		     (* (the (unsigned-byte 32) ,index)
+			(the (unsigned-byte 32)
+			     (nth ,nth ,stride-from))))))
     
-    (macrolet ((%* (a b)
-		 `(the (unsigned-byte 32) (* (the (unsigned-byte 32) ,a) (the (unsigned-byte 32) ,b))))
-	       (%+ (&rest numbers)
-		 `(the (unsigned-byte 32) (+ ,@numbers))))
-      
-      (let* ((zero         (coerce 0 (quote u)))
-	     (channel-cols (%* k-w (%* C k-h)))
-	     (offset-im  0)
-	     (offset-col 0)
-	     (im-stride  (car (tensor-stride data-im)))
-	     (col-stride (car (tensor-stride data-col))))
-	(declare (type (unsigned-byte 32) im-stride col-stride offset-im offset-col channel-cols))
-	
-	(dotimes (i (array-total-size data-im*))
-	  (setf (aref data-im* i) zero))
-
-	(dotimes (batch N)
-	  (dotimes (c-col channel-cols)
-	    (let ((w-offset (mod c-col K-W))
-		  (h-offset (mod (/ c-col K-W) K-H))
-		  (c-im     (/
-			     (the (unsigned-byte 32)
-				  (/
-				   (the (unsigned-byte 32) c-col) K-H))
-			     K-W)))
-	      (declare (type (unsigned-byte 32) w-offset h-offset c-im))
-
-	      (dotimes (h-col output-h)
-		(let ((h-im (%+ (%* h-col stride-h)
-				(%* h-offset dilation-h)
-				(- pad-h))))
-		  (declare (type (unsigned-byte 32) h-im))
-		  (when (and (>= h-im 0)
-			     (<  h-im H))
-		    (dotimes (w-col output-w)
-		      (let ((w-im (%+ (%* w-col stride-w)
-				      (%* w-offset dilation-w)
-				      (- pad-w))))
-			(declare (type (unsigned-byte 32) w-im))
-			(when (and (>= w-im 0)
-				   (<  w-im W))
-			  (incf
-			   (aref data-im*  (%+ offset-im  w-im (%* W (%+ h-im (%* c-im H)))))
-			   (aref data-col* (%+ offset-col w-col (%* output-w (%+ h-col (%* c-col output-h))))))))))))))
-	  (incf offset-im im-stride)
-	  (incf offset-col col-stride))))
-    nil))
-
+    (let ((zero (coerce 0 (quote u))))
+      (dotimes (i (array-total-size data-im)) (setf (aref data-im i) zero)))
+    
+    (dotimes (h-start k-h)
+      (let ((h-end (+
+		    (the (unsigned-byte 32) (* dilation-h h-start))
+		    (* stride-h out-h)
+		    (- pad-H))))
+	(declare (type (unsigned-byte 32) h-end))
+	(dotimes (w-start k-w)
+	  (let ((w-end (+ (the (unsigned-byte 32) (* dilation-w w-start))
+			  (* stride-w out-w)
+			  (- pad-w))))
+	    (declare (type (unsigned-byte 32) w-end))
+	    (loop for h-out-col fixnum upfrom 0
+		  for h-out-im  fixnum upfrom h-start below h-end by stride-H do
+		    (loop for w-out-col fixnum upfrom 0
+			  for w-out-im  fixnum upfrom w-start below w-end by stride-W
+			  do (dotimes (ni N)
+			       (dotimes (ci C)
+				 (incf  (aref data-im
+					      (+
+					       (index ni 0       strides2)
+					       (index ci 1       strides2)
+					       (index h-out-im 2 strides2)
+					       (index w-out-im 3 strides2)))
+					(aref data-col
+					      (+
+					       (index ni 0 strides1)
+					       (index ci 1 strides1)
+					       (index h-start 2 strides1)
+					       (index w-start 3 strides1)
+					       (index h-out-col 4 strides1)
+					       (index w-out-col 5 strides1))))))))))))))
 
 (define-impl-op (Im2ColNode :device LispTensor)
 		:forward ((self x col)
@@ -131,22 +110,23 @@
 				       (dilation-h dilation-h) (dilation-w dilation-w)
 				       (stride-h stride-h) (stride-w stride-w))
 			      self
-			    ;; (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
-			    (funcall (im2col-caller (dtype x))
-				     col
-				     N C H W
-				     h-out w-out
-				     k-h k-w
-				     padding-h padding-w
-				     stride-h stride-w
-				     dilation-h dilation-w
-				     x)
-			    x)))
+			    (cl-waffe2:with-facets ((x*   (x :direction 'simple-array :sync nil))
+						    (col* (col :direction 'simple-array :sync nil)))
+			      (funcall (im2col-caller (dtype x))
+				       col* (tensor-stride col)
+				       N C
+				       h-out w-out
+				       k-h k-w
+				       padding-h padding-w
+				       stride-h stride-w
+				       dilation-h dilation-w
+				       x* (tensor-stride x)))
+			    col)))
 
 (define-impl-op (Col2ImNode :device LispTensor)
-		:forward ((self x col)
-			  (setf (h-of self) (nth 2 (shape x))
-				(w-of self) (nth 3 (shape x)))
+		:forward ((self col)
+			  (setf (h-of self) (nth 2 (shape col))
+				(w-of self) (nth 3 (shape col)))
 			  (with-slots ((N N) (C C) (H H) (W W)				       
 				       (h-out h-out) (w-out w-out)
 				       (k-h k-h) (k-w k-w)
@@ -155,14 +135,16 @@
 				       (stride-h stride-h) (stride-w stride-w))
 			      self
 			    ;; (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
-			    (funcall (col2im-caller (dtype x))
-				     col
-				     N C H W
-				     h-out w-out
-				     k-h k-w
-				     padding-h padding-w
-				     stride-h stride-w
-				     dilation-h dilation-w
-				     x)
-			    (values col))))
+			    (cl-waffe2:with-facets ((o*   ((img-out-of self) :direction 'simple-array :sync nil))
+						    (col* (col :direction 'simple-array :sync nil)))
+			      (funcall (im2col-caller (dtype col))
+				       col* (tensor-stride col)
+				       N C
+				       h-out w-out
+				       k-h k-w
+				       padding-h padding-w
+				       stride-h stride-w
+				       dilation-h dilation-w
+				       o* (tensor-stride (img-out-of self))))
+			    (img-out-of self))))
 

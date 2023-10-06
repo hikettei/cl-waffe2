@@ -69,17 +69,16 @@ Note that `dilation`, `kernel-size`, `stride`, and `padding` are given in this f
 `padding[list]` implicts the number of zero-padding to be added on both sides of input.
 
 `stride[list]` the number of stride of the sliding blocks.
-
 "
 
   (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
     (let* ((H-out (cl-waffe2/nn::conv-out-size H-in (car padding)    (car dilation) (car kernel-size) (car stride)))
 	   (W-out (cl-waffe2/nn::conv-out-size W-in (second padding) (car dilation) (second kernel-size) (second stride)))
-	   (p-y (mod H-out (second stride)))
-	   (p-x (mod W-out (car stride))))
+	   (p-y (mod H-out (car stride)))
+	   (p-x (mod W-out (second stride))))
 
       (call-> input
-	      (asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
+	      (asnode #'padding `(t t (,(car padding) ,(+ (car padding) p-x)) (,(second padding) ,(+ (second padding) p-y))))
 	      (asnode #'!im2col
 		      N C (second kernel-size) (car kernel-size)
 		      h-out w-out (car stride) (second stride)

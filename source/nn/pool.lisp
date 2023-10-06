@@ -98,25 +98,25 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 
 	(call-> input
 		(asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
+		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride) (car padding) (second padding) 1 1)
 		(asnode #'!reshape    t (apply #'* kernel-size))
 		(asnode #'!max        :axis 1)
 		(asnode #'!reshape    N h-out w-out C)
-		(asnode #'!permute    3 0 1 2))))))
+		(asnode #'!permute    3 0 2 1))))))
 
 (defmethod apply-avgpool2d ((self AvgPool2D) input)
   (with-slots ((stride stride) (kernel-size kernel-size) (padding padding)) self
     (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
       (let* ((H-out (pool-out-size H-in (car padding)    (car kernel-size) (car stride)))
 	     (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride)))
-	     (p-y (mod H-out (second stride)))
-	     (p-x (mod W-out (car stride))))
+	     (pad-h (mod H-out (car stride)))
+	     (pad-w (mod W-out (second stride))))
 
 	(call-> input
-		(asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
+		(asnode #'padding    `(t t (,(car padding) ,(+ (car padding) pad-H)) (,(second padding) ,(+ (second padding) pad-W))))
+		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride) (car padding) (second padding) 1 1)
 		(asnode #'!reshape    t (apply #'* kernel-size))
 		(asnode #'!mean       :axis 1)
 		(asnode #'!reshape    N h-out w-out C)
-		(asnode #'!permute    3 0 1 2))))))
+		(asnode #'!permute    3 0 2 1))))))
 
