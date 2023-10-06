@@ -117,6 +117,7 @@
 	       (:file "backends/lisp/logical")
 	       (:file "backends/lisp/matrix-ops")
 	       (:file "backends/lisp/lazy")
+	       (:file "backends/lisp/im2col")
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")

@@ -118,7 +118,9 @@ stride-x stride-y"
       (with-facets ((∂* (dout     :direction 'simple-array :sync t))
 		    (i* (img-out  :direction 'simple-array :sync t)))
 	(declare (type (simple-array u (*)) ∂* i*))
-	(dotimes (y k-h) ;; [TODO] lparallel
+
+	;; dout[N C k-h k-w h-out w-out] <- img[N C h-out w-out]
+	(dotimes (y k-h)
 	  (let ((y-max (%+ y (%* stride-y h-out))))
 	    (dotimes (x k-w)
 	      (let ((x-max (%+ x (%* stride-x w-out))))
