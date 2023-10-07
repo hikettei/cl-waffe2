@@ -22,9 +22,9 @@ k-h/k-w kernel-size[0], kernel-size[1] respectively.
 h-out w-out
 stride-x stride-y - stride[0], stride[1] respectively.
 "
-  (let* ((col (ax+b `(,N ,C ,k-h ,k-w ,h-out ,w-out) 0 0
-		    :order (order padded-x)
-		    :dtype (dtype padded-x)))
+  (let* ((col (make-input `(,N ,C ,k-h ,k-w ,h-out ,w-out) nil
+			  :order (order padded-x)
+			  :dtype (dtype padded-x)))
 	 ;; img-out is a tensor for future backward computation
 	 (img-out (make-input `(,N ,C
 				   ;; H + 2*pad + stride -1

@@ -3,14 +3,6 @@
 
 ;; Mem: https://ieeexplore.ieee.org/document/9342343
 
-;; [TODO_LIST]
-;; - 1. Paddingの修正(OK)
-;; - 2. LispTensorのUnfoldを動かす im2col -> OK col2im -> ?
-;; - 3. CPUTensorのUnfold(mergeの後で)
-;; - 4. GhActions ... SIMD Extension Build test...
-;; - 5. 
-;; - 6. Dynamic Shaping??
-
 (define-with-typevar (im2col-caller u) (data-col strides1 N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-W data-im strides2)
   (declare (optimize (speed 3))
 	   (type (simple-array u (*)) data-im data-col)
