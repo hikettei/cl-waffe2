@@ -236,4 +236,36 @@
 			     (incy :long)))))))
   (define-math-op1 pow))
 
-;; Unfold
+(macrolet ((define-unfolders (opname dtype-kw dtype order)
+	     ;; waffe2_opname_dtype_order
+	     (let ((name (uformat nil "waffe2-~a-~a-~a" opname dtype order)))
+	       `(progn
+		  (export ',(intern name))
+		  (declaim (inline ,(intern name)))
+		  (defcfun ,(dformat nil "waffe2_~a_~a_~a" opname dtype order) :void		   
+		    (data-col (:pointer ,dtype-kw))
+		    (N :long)
+		    (C :long)
+		    (H :long)
+		    (W :long)
+		    (H-out :long)
+		    (W-out :long)
+		    (K-h :long)
+		    (K-w :long)
+		    (pad-h :long)
+		    (pad-w :long)
+		    (stride-h :long)
+		    (stride-w :long)
+		    (dilation-h :long)
+		    (dilation-w :long)
+		    (data-im (:pointer ,dtype-kw)))))))
+  (define-unfolders im2col :float s "column-major")
+  )
+		    
+			      
+			      
+
+			      
+		    
+		
+	     
