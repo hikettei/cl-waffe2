@@ -30,7 +30,7 @@
 
 ;; MultiThreading configs
 
-(deftype index () `(unsigned-byte 64))
+(deftype index () `(unsigned-byte 32))
 
 (defvar *cl-waffe2-kernel* nil)
 (defparameter *num-cores* 1 "
@@ -76,40 +76,42 @@ Set *num-core*=num-core under the body execution.
 ;; optimize compared to pure dotimes.
 ;; gemm ... (with-num-cores (1) ...) is must.
 
-(defmacro maybe-pdotimes ((var count &key (thread-safe-vars nil) (disable-p nil)) &body body &aux (thread-idx (gensym)))
+(defmacro maybe-pdotimes ((var count &key (thread-safe-vars nil) (disable-p nil) (threshold *multithread-threshold*)) &body body &aux (thread-idx (gensym)))
   "
 ## [macro] maybe-pdotimes
+
 "
   (let ((*under-multi-thread* t))
     (alexandria:with-gensyms (multi-thread-subject count-per-thread multi-thread-part from to)
-      `(flet ((,multi-thread-subject (,from ,to)
-		(declare (type index ,from ,to))
-		(loop with *under-multi-thread* = t
-		      for ,var of-type index upfrom ,from below ,to
-		      do (let (,@(loop for var in thread-safe-vars
-				       collect `(,var ,var)))
-			   ,@body))))
-	 (if (or *under-multi-thread*
-		 (= (the fixnum *num-cores*) 1)
-		 ,(if disable-p
-		      `,disable-p
-		      `(< (the index ,count) *multithread-threshold*))
-		 ;; [todo] benchmark
-		 (< (the index ,count) *num-cores*))
-	     ;; If *num-cores* = 1 or count is enough small. ignore parallelize.
-	     (,multi-thread-subject 0 (the index ,count))
-	     (maybe-with-lparallel
-	       (let* ((,count-per-thread  (floor (the fixnum ,count) (the index *num-cores*)))
-		      (,multi-thread-part (* (the index *num-cores*) ,count-per-thread)))
-		 (declare (type index ,count-per-thread ,multi-thread-part))
-		 (pdotimes (,thread-idx *num-cores*)
-		   (locally (declare (type index ,thread-idx))
-		     (,multi-thread-subject
-		      (the index (* ,thread-idx ,count-per-thread))
-		      (the index (* (1+ ,thread-idx) ,count-per-thread)))))
-		 (,multi-thread-subject
-		  ,multi-thread-part
-		  (the index ,count)))))))))
+      `(let ((*multithread-threshold* ,threshold))
+	 (flet ((,multi-thread-subject (,from ,to)
+		  (declare (type index ,from ,to))
+		  (loop with *under-multi-thread* = t
+			for ,var of-type index upfrom ,from below ,to
+			do (let (,@(loop for var in thread-safe-vars
+					 collect `(,var ,var)))
+			     ,@body))))
+	   (if (or *under-multi-thread*
+		   (= (the fixnum *num-cores*) 1)
+		   ,(if disable-p
+			`,disable-p
+			`(< (the index ,count) *multithread-threshold*))
+		   ;; [todo] benchmark
+		   (< (the index ,count) *num-cores*))
+	       ;; If *num-cores* = 1 or count is enough small. ignore parallelize.
+	       (,multi-thread-subject 0 (the index ,count))
+	       (maybe-with-lparallel
+		 (let* ((,count-per-thread  (the index (floor (the index ,count) (the index *num-cores*))))
+			(,multi-thread-part (* (the index *num-cores*) ,count-per-thread)))
+		   (declare (type index ,count-per-thread ,multi-thread-part))
+		   (pdotimes (,thread-idx *num-cores*)
+		     (locally (declare (type index ,thread-idx))
+		       (,multi-thread-subject
+			(the index (* ,thread-idx ,count-per-thread))
+			(the index (* (1+ ,thread-idx) ,count-per-thread)))))
+		   (,multi-thread-subject
+		    ,multi-thread-part
+		    (the index ,count))))))))))
 
 (defmacro maybe-ploop ((var &key (upfrom 0) (below 0) (by 1)) &body body)
   `(maybe-pdotimes (,var (- (the index ,below) (the index ,upfrom)))

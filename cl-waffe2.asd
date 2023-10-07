@@ -11,7 +11,7 @@
   :author "hikettei"
   :licence "MIT"
   :description "Utils for SIMD-Enabled Extension, CPUTensor."
-  :pathname "source/backends/cpu/cl-waffe2-simd"
+  :pathname "cl-waffe2-simd"
   :serial t
   :depends-on (:cffi)
   :components ((:file "package")

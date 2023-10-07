@@ -122,14 +122,14 @@ build_sleef: ## Builds SLEEF
 	make && make install
 
 .PHONY: build_simd_extension
-build_simd_extension: build_sleef ## Installs SIMD Extension shared library for the CPUTensor backend. (make sure that build_sleef must be done in advance)
+build_simd_extension:  ## Installs SIMD Extension shared library for the CPUTensor backend. (make sure that build_sleef must be done in advance)
 	$(GCC) -O3 -march=native -shared -o \
-		./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so \
-		-fpic ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.c -lm -lsleef \
+		./cl-waffe2-simd/kernels/cl-waffe2-simd.so \
+		-fpic ./cl-waffe2-simd/kernels/cl-waffe2-simd.c -lm -lsleef \
 
 .PHONY: delete_simd_extension
-delete_simd_extension: ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
-	rm -rf ./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so
+delete_simd_extension: ./cl-waffe2-simd/kernels/cl-waffe2-simd.so ## Deletes Compiled SIMD Extension shared library so that CPUTensor works under OpenBLAS
+	rm -rf ./cl-waffe2-simd/kernels/cl-waffe2-simd.so
 
 .PHONY: download_assets
 download_assets: ## Downloads training data sample codes use.

@@ -3,19 +3,13 @@
 
 ;; Mem: https://ieeexplore.ieee.org/document/9342343
 
+;; [TODO] Fix ./im2col.lisp ... Paddingの計算 (5 6) 正方形じゃないとShapError????
+;; [TODO] Unfold in CPUTensor
+
 (define-with-typevar (im2col-caller u) (data-col strides1 N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-W data-im strides2)
-  ;; Simple-Array
-  ;; Template Sparse
-  ;; lParallel
-  ;; Col2Im
-  ;; Manually Computing Strides
-  ;; Maximizing Inlining
-  ;; Written in C? (atode debug mendoi)
   (declare (optimize (speed 3))
 	   (type (simple-array u (*)) data-im data-col)
 	   (type (unsigned-byte 32) N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-w))
-  ;; do not forget fill data-col with zero
-  ;; lparallel
   (macrolet ((index (index nth stride-from)
 	       `(the (unsigned-byte 32)
 		     (* (the (unsigned-byte 32) ,index)
