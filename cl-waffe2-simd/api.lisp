@@ -24,6 +24,42 @@
 		       ""))
 	  :cl-waffe2-simd))
 
+(defun make-im2col (dtype order)
+  (intern (uformat
+	   nil
+	   "waffe2-im2col-~a-~a"
+	   (case dtype
+	     (:double :d)
+	     (:float  :s)
+	     (:int32  :i)
+	     (:int16  :i)
+	     (:int8   :i)
+	     (:uint32 :i)
+	     (:uint16 :i)
+	     (:uint8  :i))
+	   (if (eql order :column)
+	       "column"
+	       "row"))
+	  :cl-waffe2-simd))
+
+(defun make-col2im (dtype order)
+  (intern (uformat
+	   nil
+	   "waffe2-col2im-~a-~a"
+	   (case dtype
+	     (:double :d)
+	     (:float  :s)
+	     (:int32  :i)
+	     (:int16  :i)
+	     (:int8   :i)
+	     (:uint32 :i)
+	     (:uint16 :i)
+	     (:uint8  :i))
+	   (if (eql order :column)
+	       "column"
+	       "row"))
+	  :cl-waffe2-simd))
+
 (macrolet ((define-arith-op (opname)
 	     `(progn
 		;;size xptr incx xptr incy
@@ -259,9 +295,20 @@
 		    (dilation-h :long)
 		    (dilation-w :long)
 		    (data-im (:pointer ,dtype-kw)))))))
-  (define-unfolders im2col :float s "column-major")
-  )
-		    
+  (define-unfolders im2col :float s "column")
+  (define-unfolders im2col :double d "column")
+  (define-unfolders im2col :int i "column")
+  (define-unfolders im2col :float s "row")
+  (define-unfolders im2col :double d "row")
+  (define-unfolders im2col :int i "row")
+
+  (define-unfolders col2im :float s "column")
+  (define-unfolders col2im :double d "column")
+  (define-unfolders col2im :int i "column")
+  (define-unfolders col2im :float s "row")
+  (define-unfolders col2im :double d "row")
+  (define-unfolders col2im :int i "row"))
+
 			      
 			      
 

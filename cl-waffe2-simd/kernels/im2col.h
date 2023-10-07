@@ -17,6 +17,21 @@
 					       const uint64_t dilation_w, \
 					       dtype* data_col);	\
 
-define_im2col(im2col, float, s, column);
+define_im2col(im2col, float,  s, column);
 define_im2col(im2col, double, d, column);
+define_im2col(im2col, int,    i, column);
+
+define_im2col(im2col, float,  s, row);
+define_im2col(im2col, double, d, row);
+define_im2col(im2col, int,    i, row);
+
+
+
+define_im2col(col2im, float,  s, column);
+define_im2col(col2im, double, d, column);
+define_im2col(col2im, int,    i, column);
+
+define_im2col(col2im, float,  s, row);
+define_im2col(col2im, double, d, row);
+define_im2col(col2im, int,    i, row);
 
