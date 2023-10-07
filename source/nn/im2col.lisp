@@ -25,14 +25,22 @@ stride-x stride-y - stride[0], stride[1] respectively.
   (let* ((col (ax+b `(,N ,C ,k-h ,k-w ,h-out ,w-out) 0 0
 		    :order (order padded-x)
 		    :dtype (dtype padded-x)))
-	 (img-out (ax+b `(,N ,C
-			     ;; H + 2*pad + stride -1
-			     ,(nth 2 (shape padded-x))
-			     ,(nth 3 (shape padded-x)))
-			0 0
-			:order (order padded-x)
-			:dtype (dtype padded-x)))
-	 (result (call (Im2ColNode N C k-h k-w h-out w-out stride-h stride-w padding-h padding-w dilation-h dilation-w img-out) padded-x col)))
+	 ;; A tensor for future backwardcomputation
+	 (img-out (make-input `(,N ,C
+				   ;; H + 2*pad + stride -1
+				   ,(nth 2 (shape padded-x))
+				   ,(nth 3 (shape padded-x)))
+			      nil
+			      :order (order padded-x)
+			      :dtype (dtype padded-x)))
+	 (result (call (Im2ColNode
+			N C k-h k-w
+			h-out w-out
+			stride-h stride-w
+			padding-h padding-w
+			dilation-h dilation-w
+			img-out)
+		       padded-x col)))
     
     ;;    [N C k-h k-w h-out w-out]
     ;; -> N C k-h k-w h-out w-out
@@ -74,13 +82,13 @@ Note that `dilation`, `kernel-size`, `stride`, and `padding` are given in this f
   (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
     (let* ((H-out (cl-waffe2/nn::conv-out-size H-in (car padding)    (car dilation) (car kernel-size) (car stride)))
 	   (W-out (cl-waffe2/nn::conv-out-size W-in (second padding) (car dilation) (second kernel-size) (second stride)))
-	   (p-y (mod H-out (car stride)))
-	   (p-x (mod W-out (second stride))))
+	   (pad-h (mod H-out (car    stride)))
+	   (pad-w (mod W-out (second stride))))
 
       (call-> input
-	      (asnode #'padding `(t t (,(car padding) ,(+ (car padding) p-x)) (,(second padding) ,(+ (second padding) p-y))))
+	      (asnode #'padding `(t t (,(car padding) ,(+ (car padding) pad-h)) (,(second padding) ,(+ (second padding) pad-w))))
 	      (asnode #'!im2col
-		      N C (second kernel-size) (car kernel-size)
+		      N C (car kernel-size) (second kernel-size)
 		      h-out w-out (car stride) (second stride)
 		      (car padding) (second padding)
 		      (car dilation) (second dilation))))))

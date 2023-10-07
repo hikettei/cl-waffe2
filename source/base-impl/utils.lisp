@@ -109,9 +109,9 @@ If the shapes does not change before/after padding, returns the given tensor as 
 			    if (eql width t)
 			      collect t
 			    else
-			      collect `(,(car width) ,(1+ (- (+ (car width) shape) (second width)))))))
+			      collect `(,(car width) ,(+ (car width) shape)))))
 
-    ;; If there's no padding, return tensor.
+    ;; If there's no padding, return the tensor as it is.
     (when (equal padded-sizes (shape tensor))
       (return-from padding tensor))
     
