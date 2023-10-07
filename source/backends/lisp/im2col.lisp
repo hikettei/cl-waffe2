@@ -109,8 +109,8 @@
 				       (dilation-h dilation-h) (dilation-w dilation-w)
 				       (stride-h stride-h) (stride-w stride-w))
 			      self
-			    (cl-waffe2:with-facets ((x*   (x :direction 'simple-array :sync nil))
-						    (col* (col :direction 'simple-array :sync nil)))
+			    (cl-waffe2:with-facets ((x*   (x :direction 'simple-array :sync t))
+						    (col* (col :direction 'simple-array :sync t)))
 			      (funcall (im2col-caller (dtype x))
 				       col* (tensor-stride col)
 				       N C
@@ -134,9 +134,9 @@
 				       (stride-h stride-h) (stride-w stride-w))
 			      self
 			    ;; (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
-			    (cl-waffe2:with-facets ((o*   (output-to :direction 'simple-array :sync nil))
-						    (col* (col :direction 'simple-array :sync nil)))
-			      (funcall (im2col-caller (dtype col))
+			    (cl-waffe2:with-facets ((o*   (output-to :direction 'simple-array :sync t))
+						    (col* (col       :direction 'simple-array :sync t)))
+			      (funcall (col2im-caller (dtype col))
 				       col* (tensor-stride col)
 				       N C
 				       h-out w-out
