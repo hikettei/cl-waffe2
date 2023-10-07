@@ -3,8 +3,13 @@
 
 ;; Mem: https://ieeexplore.ieee.org/document/9342343
 
-;; [TODO] Fix ./im2col.lisp ... Paddingの計算 (5 6) 正方形じゃないとShapError????
-;; [TODO] Unfold in CPUTensor
+;; [TODO_LIST]
+;; - 1. Paddingの修正(OK)
+;; - 2. LispTensorのUnfoldを動かす im2col -> OK col2im -> ?
+;; - 3. CPUTensorのUnfold(mergeの後で)
+;; - 4. GhActions ... SIMD Extension Build test...
+;; - 5. 
+;; - 6. Dynamic Shaping??
 
 (define-with-typevar (im2col-caller u) (data-col strides1 N C out-h out-w K-h K-w Pad-H Pad-W Stride-H Stride-W dilation-H dilation-W data-im strides2)
   (declare (optimize (speed 3))
@@ -118,7 +123,7 @@
 			    col)))
 
 (define-impl-op (Col2ImNode :device LispTensor)
-		:forward ((self col)
+		:forward ((self col output-to)
 			  (setf (h-of self) (nth 2 (shape col))
 				(w-of self) (nth 3 (shape col)))
 			  (with-slots ((N N) (C C) (H H) (W W)				       
@@ -129,7 +134,7 @@
 				       (stride-h stride-h) (stride-w stride-w))
 			      self
 			    ;; (data-col N C H W output-h output-w K-H K-W PAD-H PAD-W stride-h stride-w dilation-h dilation-w data-im)
-			    (cl-waffe2:with-facets ((o*   ((img-out-of self) :direction 'simple-array :sync nil))
+			    (cl-waffe2:with-facets ((o*   (output-to :direction 'simple-array :sync nil))
 						    (col* (col :direction 'simple-array :sync nil)))
 			      (funcall (im2col-caller (dtype col))
 				       col* (tensor-stride col)
@@ -139,6 +144,6 @@
 				       padding-h padding-w
 				       stride-h stride-w
 				       dilation-h dilation-w
-				       o* (tensor-stride (img-out-of self))))
-			    (img-out-of self))))
+				       o* (tensor-stride output-to)))
+			    output-to)))
 

@@ -69,7 +69,8 @@ In order to implement device-specific implementation of `Unfold`, do define-impl
 			       (img-out-of self)
 			       :H H
 			       :W W)
-			      dout)
+			      dout
+			      (img-out-of self))
 			nil)))))
 
 (export 'Col2ImNode)
@@ -92,5 +93,5 @@ In order to implement device-specific implementation of `Unfold`, do define-impl
 	  :documentation "Col2ImNode is `AbstractNode` which implements backward propagation of [nn.Unfold](https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html). It has completely the same slots and arguments to `Im2Col`.
 
 See also: `Im2ColNode` documentation for argument descriptions."
-	  :where (Col[N C k-h k-w h-out w-out] -> X[N C H W])))
+	  :where (Col[N C k-h k-w h-out w-out] X[N C H W] -> X[N C H W])))
 
