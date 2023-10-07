@@ -2,7 +2,7 @@
 (in-package :cl-waffe2-simd)
 
 (defun try-loading-simd-extension (&key
-				     (pathname (asdf:system-relative-pathname "cl-waffe2" "./source/backends/cpu/cl-waffe2-simd/kernels/cl-waffe2-simd.so")))
+				     (pathname (asdf:system-relative-pathname "cl-waffe2" "./cl-waffe2-simd/kernels/cl-waffe2-simd.so")))
   (handler-case
       (progn
 	(load-foreign-library pathname)

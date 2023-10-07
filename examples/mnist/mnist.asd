@@ -19,6 +19,7 @@
 	       
 	       (:file "mlp")
 	       (:file "cnn")
+	       (:file "resnet")
 	       ))
 
 

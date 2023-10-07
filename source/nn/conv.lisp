@@ -1,14 +1,6 @@
 
 (in-package :cl-waffe2/nn)
 
-;; Implement them as sample Codes:
-;; TODO: ImageProcessing:       AvgPool/MaxPool/Conv2D
-;; TODO: Sequentially Modeling: RNNCell/RNN LSTMCell/LSTM GRUCell/GRU
-;; TODO: Transformer Models:    MHA, LayerNorm, Dropout ...
-;; TODO: Saving Model Weights
-;; TODO: Optimizers: Adam RAdam
-
-
 (defun maybe-tuple (value name)
   (typecase value
     (number `(,value ,value))
@@ -101,89 +93,19 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 	    ;; Biases are (out-channels) tensor which sampled from U(-sqrt(k), sqrt(k))
 	    (uniform-random `(,out-channels) (- (sqrt k)) (sqrt k) :requires-grad t)))))
 
-
-;; The implementation is messy because we tried so many different ways to implement it.
-;; [TODO] Refactor conv2d for future impls of Conv3D, ConvND.
 (defmethod apply-conv2d ((self Conv2D) input)
   (with-slots ((stride stride) (padding padding) (dilation dilation) (weight weight) (bias bias) (groups groups) (kernel-size kernel-size)) self
-    (multiple-value-bind (in-channels h-in w-in) (apply #'values (last (shape input) 3))
-      (multiple-value-bind (C-out icg k-h k-w) (apply #'values (shape weight))
-	(declare (ignore icg))
-	(let* ((~     (butlast (shape input) 3))
-	       (p-y (mod
-		     (-
-		      (second stride)
-		      (mod
-		       (+ h-in (* 2 (second padding))
-			  (- (* (second dilation) (- k-h 1))))
-		       (second stride)))
-		     (second stride))) ;; (sY - (iH + pY * 2 - (kH - 1) * dY) % sY) % sY
-	       (p-x (mod
-		     (-
-		      (car stride)
-		      (mod
-		       (+ w-in (* 2 (car padding))
-			  (- (* (car dilation) (- k-w 1))))
-		       (car stride)))
-		     (car stride))) ;; (sX - (iW + pX * 2 - (kW - 1) * dX) % sX) % sX
-	       (h-out (floor (+ 1 (/ (+ h-in (* 2 (car padding)) (* (- (car dilation)) (- k-h 1)) -1)
-				     (car stride)))))
-	       (w-out (floor (+ 1 (/ (+ w-in (* 2 (second padding)) (* (- (second dilation)) (- k-w 1)) -1)
-				     (second stride)))))
-	       (input (padding input
-			       (if ~ ;; If batched
-				   `(,@(loop for i in ~ collect t)
-				     t
-				     (,(second padding)
-				      ,(+ (second padding) p-y))
-				     (,(car padding)
-				      ,(+  (car padding)    p-x)))
-				   `(t
-				     (,(second padding)
-				      ,(+ (second padding) p-y))
-				     (,(car padding)
-				      ,(+ (car padding) p-x)))))))
-
-	  ;; out(N_i, C_out_j) = bias + Σcross-correlation(weight(C_out_j, k), input(N_i, k)) where k = 0 ... C_in - 1
-	  ;; Input =  (~ C_in H-in+pY W-in+pX)
-	  ;; Weight = (C_out (/ C_in groups) kernel_size[0] kernel_size[1])
-
-	  ;; Conv2D(Input[0], Weight[0]) (C_in=1 -> C_out=8) (Channel)
-	  ;; Input[1]とWeight[1]
-	  ;;        ..
-	  ;; (8 H-out W-out)
-
-	  ;; Conv(X, W)
-	  ;; X ... (~ 1 H_in W_in)
-	  ;; Y ... (C_out groups=1 kernel_size_x kenel_size_y)
-	  ;;
-
-	  
-	  ;; Input (~ C_in H-in W-in)
-	  ;;
-	  ;;            v kernel_n
-	  ;; -> (~ C_in ~ 1 k-h k-w)  Reshape
-	  ;;
-	  ;;              v broadcast
-	  ;; -> (~ C_in ~ 1 k-h k-w)  |
-	  ;;    (~ C_in ~ 1 k-h k-w)  | broadcast for C_in
-	  ;;            ...           |
-
-	  ;; im2col + gemm
-
-	  ;; weight (C_out (/ C_in groups) kx ky)
-	  
-	  ;; col = im2col(input) ;; (N * h-out w-out, C * kx * ky)
-	  
-	  (let* ((col   (!im2col  input (car ~) in-channels k-h k-w h-out w-out (car stride) (second stride)))
+    (multiple-value-bind (N C-In H-in W-in) (apply #'values (shape input))
+      (declare (ignore C-in))
+      (multiple-value-bind (C-Out Icg K-h K-w) (apply #'values (shape weight))
+	(declare (ignore Icg K-h K-w))
+	(let ((H-out (conv-out-size H-in (car padding) (car dilation) (car kernel-size) (car stride)))
+	      (W-out (conv-out-size W-in (second padding) (second dilation) (second kernel-size) (second stride))))
+	  (let* ((col   (unfold input dilation kernel-size stride padding))
 		 (col-w (!reshape weight c-out t))
 		 (out   (!matmul col (!t col-w)))
 		 (out   (if bias
 			    (!add out (%transform bias[i] -> [~ i]))
 			    out)))
-
-	    ;; 3 2 1 0 N h-out w-out C_out
-	    ;; 3 0 2 1 N C-out h-out w-out
-	    ;; (N h-out w-out c-out) -> (N c-out h-out w-out)
-	    (!permute (!reshape out (car ~) h-out w-out C-out) 3 0 2 1)))))))
+	    (!permute (!reshape out N h-out w-out C-out) 3 0 2 1)))))))
 

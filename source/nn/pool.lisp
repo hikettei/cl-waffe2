@@ -91,32 +91,24 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 (defmethod apply-maxpool2d ((self MaxPool2D) input)
   (with-slots ((stride stride) (kernel-size kernel-size) (padding padding)) self
     (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
-      (let* ((H-out (pool-out-size H-in (car padding)    (car kernel-size) (car stride)))
-	     (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride)))
-	     (p-y (mod H-out (second stride)))
-	     (p-x (mod W-out (car stride))))
-
+      (let ((H-out (pool-out-size H-in (first padding)  (first kernel-size)  (first stride)))
+	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
 	(call-> input
-		(asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
-		(asnode #'!reshape    t (apply #'* kernel-size))
-		(asnode #'!max        :axis 1)
-		(asnode #'!reshape    N h-out w-out C)
-		(asnode #'!permute    3 0 1 2))))))
+		(asnode #'unfold  `(1 1) kernel-size stride padding)
+		(asnode #'!reshape t (apply #'* kernel-size))
+		(asnode #'!max     :axis 1)
+		(asnode #'!reshape N H-out W-out C)
+		(asnode #'!permute 3 0 2 1))))))
 
 (defmethod apply-avgpool2d ((self AvgPool2D) input)
   (with-slots ((stride stride) (kernel-size kernel-size) (padding padding)) self
     (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
-      (let* ((H-out (pool-out-size H-in (car padding)    (car kernel-size) (car stride)))
-	     (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride)))
-	     (p-y (mod H-out (second stride)))
-	     (p-x (mod W-out (car stride))))
-
+      (let ((H-out (pool-out-size H-in (first padding)  (first kernel-size)  (first stride)))
+	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
 	(call-> input
-		(asnode #'padding    `(t t (,(second padding) ,(+ (second padding) p-y)) (,(car padding) ,(+ (car padding) p-x))))
-		(asnode #'!im2col     N C (second kernel-size) (car kernel-size) h-out w-out (car stride) (second stride))
-		(asnode #'!reshape    t (apply #'* kernel-size))
-		(asnode #'!mean       :axis 1)
-		(asnode #'!reshape    N h-out w-out C)
-		(asnode #'!permute    3 0 1 2))))))
+		(asnode #'unfold  `(1 1) kernel-size stride padding)
+		(asnode #'!reshape t (apply #'* kernel-size))
+		(asnode #'!mean     :axis 1)
+		(asnode #'!reshape N H-out W-out C)
+		(asnode #'!permute 3 0 2 1))))))
 

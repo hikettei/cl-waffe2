@@ -11,7 +11,7 @@
   :author "hikettei"
   :licence "MIT"
   :description "Utils for SIMD-Enabled Extension, CPUTensor."
-  :pathname "source/backends/cpu/cl-waffe2-simd"
+  :pathname "cl-waffe2-simd"
   :serial t
   :depends-on (:cffi)
   :components ((:file "package")
@@ -107,7 +107,7 @@
 	       (:file "vm/optimize-ir")
 	       (:file "vm/compile")
 	       
-
+	       
 	       (:file "backends/lisp/package")
 	       (:file "backends/lisp/iterator")
 	       (:file "backends/lisp/tensor")
@@ -117,6 +117,7 @@
 	       (:file "backends/lisp/logical")
 	       (:file "backends/lisp/matrix-ops")
 	       (:file "backends/lisp/lazy")
+	      
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")
@@ -140,8 +141,9 @@
 	       (:file "distributions/weights")
 
 	       (:file "base-impl/utils")
-	       
 	       (:file "package")
+	       
+	       
 	       (:file "backends/lisp/wf2model")
 	       (:file "backends/JITCPUTensor/package")
 	       (:file "backends/JITCPUTensor/tensor")
@@ -159,6 +161,7 @@
 	       (:file "optimizers/defoptimizer")
 	       
 	       (:file "array-converter")
+	       (:file "backends/lisp/im2col")
 	       (:file "utils")
 	       (:file "network")
 	       (:file "trainer")

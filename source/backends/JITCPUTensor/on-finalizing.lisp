@@ -27,6 +27,8 @@
 
       (let ((source *lazy-c-source*))
 	(setf *lazy-c-source* "")
+	(when *viz-compiled-code*
+	  (print source))
 	(load-foreign-function source)))
 
     (setf *lazy-c-source* "")
