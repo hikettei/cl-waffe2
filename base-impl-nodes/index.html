@@ -619,6 +619,8 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#description_62">Description</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#slots">Slots</a>
+    </li>
     <li class="toctree-l3"><a class="reference internal" href="#backward_62">Backward</a>
     </li>
         </ul>
@@ -1707,27 +1709,39 @@ C\gets{gemm(1.0, A, B, 0.0, C)}
 <h3 id="description_62">Description</h3>
 <p>Im2ColNode is <code>AbstractNode</code> which implements forward propagation of <a href="https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html">nn.Unfold</a>.</p>
 <p>The node is only executed through the <code>cl-waffe2/nn:unfold</code> function, so arguments for constructors are dispatched automatically. In addition, the tensor <code>X</code> it receive will be the one after padding has been performed.</p>
-<p><code>N</code> indicates the number of batch-size, <code>C</code> is a channel-size. <code>k-h</code>, <code>k-w</code> represents the size of kernel, height and width respectively. <code>h-out</code> <code>w-out</code> is the size of output. <code>stride-x</code> <code>stride-y</code> is the number of stride, for the most case, specified by the stride argument in <code>Pooling2D</code> or <code>Conv2D</code>. <code>img-out</code> is AbstractTensor with the shape of <code>(N C H-in W-in)</code>, can be read by <code>img-out-of</code>. All symbols are exported from <code>cl-waffe2/base-impl</code> package.</p>
-<p>In order to implement device-specific implementation of <code>Unfold</code>, define-impl <code>Im2ColNode</code> and <code>Col2ImNode</code>.</p>
+<h3 id="slots">Slots</h3>
+<p><code>N</code> indicates the number of batch-size</p>
+<p><code>C</code> indicates a channel-size</p>
+<p><code>k-h</code>, <code>k-w</code> represents the size of kernel. height and width respectively.</p>
+<p><code>h-out</code> <code>w-out</code> is the size of output weight.</p>
+<p><code>stride-w stride-h</code> is the number of strides.</p>
+<p><code>padding-w padding-h dilation-w dilation-h</code> more parameters.</p>
+<p><code>img-out[AbstractTensor]</code> allocated area to set the result, being accessed by <code>(img-out-of self)</code> .</p>
+<p>All symbols are exported from <code>cl-waffe2/base-impl</code> package and <code>with-slots</code> is useful to read all slots.</p>
+<p>In order to implement device-specific implementation of <code>Unfold</code>, do define-impl for both <code>Im2ColNode</code> and <code>Col2ImNode</code>.</p>
 <h3 id="backward_62">Backward</h3>
 <p>✅ Already defined. </p>
-<pre><code class="language-lisp">((self dout x col) (declare (ignore x col))
- (with-slots ((n n) (c c) (k-h k-h) (k-w k-w) (h-out h-out) (w-out w-out)
-              (stride-x stride-x) (stride-y stride-y))
+<pre><code class="language-lisp">((self dout x col) (declare (ignore col))
+ (setf (h-of self) (nth 2 (shape x))
+       (w-of self) (nth 3 (shape x)))
+ (with-slots ((n n) (c c) (h h) (w w) (h-out h-out) (w-out w-out) (k-h k-h)
+              (k-w k-w) (padding-h padding-h) (padding-w padding-w)
+              (dilation-h dilation-h) (dilation-w dilation-w)
+              (stride-h stride-h) (stride-w stride-w))
      self
    (values
     (call
-     (col2imnode n c (h-of self) (w-of self) k-h k-w h-out w-out stride-x
-      stride-y (img-out-of self))
-     dout)
+     (col2imnode n c k-h k-w h-out w-out stride-h stride-w padding-h padding-w
+      dilation-h dilation-w (img-out-of self) h h w w)
+     dout (img-out-of self))
     nil)))
 </code></pre>
 <p>No need to implement backwards at <code>define-impl</code>. (they'd be ignored.)</p>
 <h2 id="node-col2imnode">[node] COL2IMNODE</h2>
-<pre><code>(COL[N C K-H K-W H-OUT W-OUT] -&gt; X[N C H W])
+<pre><code>(COL[N C K-H K-W H-OUT W-OUT] X[N C H W] -&gt; X[N C H W])
 </code></pre>
 <h3 id="description_63">Description</h3>
-<p>Col2ImNode is <code>AbstractNode</code> which implements backward propagation of <a href="https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html">nn.Unfold</a>.</p>
+<p>Col2ImNode is <code>AbstractNode</code> which implements backward propagation of <a href="https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html">nn.Unfold</a>. It has completely the same slots and arguments to <code>Im2Col</code>.</p>
 <p>See also: <code>Im2ColNode</code> documentation for argument descriptions.</p>
 <h3 id="backward_63">Backward</h3>
 <p>❌ Undefined. (To make it differentiable, must be defined with <code>define-impl</code> macro.)</p>
