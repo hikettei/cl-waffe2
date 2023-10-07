@@ -24,6 +24,42 @@
 		       ""))
 	  :cl-waffe2-simd))
 
+(defun make-im2col (dtype order)
+  (intern (uformat
+	   nil
+	   "waffe2-im2col-~a-~a"
+	   (case dtype
+	     (:double :d)
+	     (:float  :s)
+	     (:int32  :i)
+	     (:int16  :i)
+	     (:int8   :i)
+	     (:uint32 :i)
+	     (:uint16 :i)
+	     (:uint8  :i))
+	   (if (eql order :column)
+	       "column"
+	       "row"))
+	  :cl-waffe2-simd))
+
+(defun make-col2im (dtype order)
+  (intern (uformat
+	   nil
+	   "waffe2-col2im-~a-~a"
+	   (case dtype
+	     (:double :d)
+	     (:float  :s)
+	     (:int32  :i)
+	     (:int16  :i)
+	     (:int8   :i)
+	     (:uint32 :i)
+	     (:uint16 :i)
+	     (:uint8  :i))
+	   (if (eql order :column)
+	       "column"
+	       "row"))
+	  :cl-waffe2-simd))
+
 (macrolet ((define-arith-op (opname)
 	     `(progn
 		;;size xptr incx xptr incy
@@ -236,4 +272,41 @@
 			     (incy :long)))))))
   (define-math-op1 pow))
 
-;; Unfold
+(macrolet ((define-unfolders (opname dtype-kw dtype order)
+	     ;; waffe2_opname_dtype_order
+	     (let ((name (uformat nil "waffe2-~a-~a-~a" opname dtype order)))
+	       `(progn
+		  (export ',(intern name))
+		  (declaim (inline ,(intern name)))
+		  (defcfun ,(dformat nil "waffe2_~a_~a_~a" opname dtype order) :void		   
+		    (data-col (:pointer ,dtype-kw))
+		    (N :long)
+		    (C :long)
+		    (H :long)
+		    (W :long)
+		    (H-out :long)
+		    (W-out :long)
+		    (K-h :long)
+		    (K-w :long)
+		    (pad-h :long)
+		    (pad-w :long)
+		    (stride-h :long)
+		    (stride-w :long)
+		    (dilation-h :long)
+		    (dilation-w :long)
+		    (data-im (:pointer ,dtype-kw)))))))
+  (define-unfolders im2col :float s "column")
+  (define-unfolders im2col :double d "column")
+  (define-unfolders im2col :int i "column")
+  (define-unfolders im2col :float s "row")
+  (define-unfolders im2col :double d "row")
+  (define-unfolders im2col :int i "row")
+
+  (define-unfolders col2im :float s "column")
+  (define-unfolders col2im :double d "column")
+  (define-unfolders col2im :int i "column")
+  (define-unfolders col2im :float s "row")
+  (define-unfolders col2im :double d "row")
+  (define-unfolders col2im :int i "row"))
+
+

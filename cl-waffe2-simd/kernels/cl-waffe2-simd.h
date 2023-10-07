@@ -225,3 +225,4 @@ _define_math_func(scbrt, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_scbrt, cbrt)
 
 _define_math_func_pow(dpow, SIMD_DOUBLE_STRIDE, d, double, waffe2_simd_dpow, pow);
 _define_math_func_pow(spow, SIMD_SINGLE_STRIDE, s, float,  waffe2_simd_spow, pow);
+

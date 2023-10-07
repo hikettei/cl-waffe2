@@ -128,6 +128,7 @@
 	       (:file "backends/cpu/matrix-ops")
 	       (:file "backends/cpu/mathematics")
 	       (:file "backends/cpu/logical")
+	       (:file "backends/cpu/im2col")
 	       (:file "backends/cpu/fusion-path")
 	       
 
