@@ -382,7 +382,7 @@ void waffe2_col2im_d_column
 	    for (uint64_t cth=0; cth < C; cth++) {
 	      uint64_t index_col = stride_col1 * batch_n + stride_col2 * cth + stride_col3 * h_start + stride_col4 * w_start + stride_col5 * H_out_col + stride_col6 * W_out_col;
 	      uint64_t index_im = stride_imN * batch_n + stride_imC * cth + stride_imH * H_out_im + stride_imW * W_out_im;	      
-	      data_im[index_im] += data_col[index_col];	      
+	      data_im[index_im] += data_col[index_col]; 
 	    }
 	  }    
 	}

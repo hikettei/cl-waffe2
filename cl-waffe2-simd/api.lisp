@@ -309,10 +309,4 @@
   (define-unfolders col2im :double d "row")
   (define-unfolders col2im :int i "row"))
 
-			      
-			      
 
-			      
-		    
-		
-	     
