@@ -298,10 +298,12 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 shapes can contain t at once, this function also infers t."
 
   (when (some #'(lambda (x) (and (not (eql x t))
-				 (symbolp x)))
+				 (or
+				  (cl-waffe2/vm::lazyaxis-p x)
+				  (symbolp x))))
 	      after-shape)
     (when (some #'(lambda (x) (eql x t)) after-shape)
-      (error "!reshape: Adjustable shapes and `t` cant used in the same time."))
+      (error "!reshape: can't infer the value of t because adjustable shapes and `t` cant used in the same time."))
     (return-from parse-reshape-args after-shape))
   
   (assert (<= (count t after-shape) 1)

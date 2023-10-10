@@ -9,7 +9,8 @@
 	  :where (A[~] -> A[~])
 	  :documentation ""))
 
-(define-impl (InstantKernelNode :device t :cache-when-compiled nil)
+(defun gensym-id (&rest args) (declare (ignore args)) `(,(gensym)))
+(define-impl (InstantKernelNode :device t :cache-id #'gensym-id)
 	     :forward ((self x)
 		       (let ((result (funcall (instant-call-form self))))
 			 (setf (out-scalar-p self) (cl-waffe2/vm.generic-tensor:scalar-p x))

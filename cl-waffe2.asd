@@ -43,6 +43,7 @@
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension
 
+	       :cl-environments
 	       :numpy-file-format
 	       :jonathan)
   ;; TODO: Use components and split dependencies.
@@ -60,6 +61,7 @@
 	       (:file "base-impl/package")
 
 	       (:file "vm/package")
+	       (:file "vm/lazy-subscript")
 	       (:file "vm/allocation")
 	       
 	       (:file "vm/generic-tensor/cache")
@@ -72,6 +74,7 @@
 	       (:file "optimizers/package")
 	       
 	       (:file "vm/generic-tensor/acceptor" :depends-on ("vm/allocation"))
+	       (:file "vm/generic-tensor/dynamic-shape")
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/lut")
 	       

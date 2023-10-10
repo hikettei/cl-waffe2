@@ -55,3 +55,60 @@ Translates the given orders into PyTorch's notation
 	      else
 		collect (- dims o)))))
             
+
+
+(defun map-tree (fn tree)
+  (let ((tree (funcall fn tree)))
+    (if (listp tree)
+        (mapcar (lambda (subtree)
+                  (map-tree fn subtree))
+                tree)
+        tree)))
+
+(defun replace-forms (form table)
+  (map-tree
+   #'(lambda (f)
+       (typecase f
+	 (symbol
+	  (or (gethash f table)
+	      f))
+	 (T
+	  f)))
+   form))
+
+(defmacro ~ (&rest forms &aux (tensor (gensym)) (table (gensym)))
+  "
+## [macro] ~
+
+```lisp
+(~ forms)
+```
+
+(TODO)
+
+```lisp
+(~ N=1 -> N ...)
+```
+
+```lisp
+(!reshape (make-input `(N C H W) nil) (~ N C H W -> (* N C H) W))
+```
+"
+  (let ((midpoint (position '-> forms :test #'cl-waffe2/vm.nodes::symbol-eq)))
+    (if midpoint
+	(let ((from (subseq forms 0 midpoint))
+	      (to   (cdr (subseq forms midpoint))))
+	  `#'(lambda (,tensor)
+	       (let ((,table (make-hash-table)))
+		 ,@(loop for bind in (reverse from)
+			 for lastn upfrom 0
+			 collect
+			 `(setf (gethash ',bind ,table) (nth (- (1- (dims ,tensor)) ,lastN) (shape ,tensor))))
+		 (list
+		  ,@(loop for axis in to
+			  collect
+			  `(cl-waffe2/vm:make-lazyaxis
+			    (replace-forms ',axis ,table)))))))
+	(error "Invaild form: ~a
+AXIS_1 AXIS_2 AXIS_3 ... -> TRANSFORMED_AXIS1 TRANSFORMED_AXIS2 ... " forms))))
+

@@ -30,7 +30,7 @@
   (format nil "~a{~a}~a"
 	  (class-name (class-of tensor))
 	  (dtype      tensor)
-	  (shape tensor)))
+	  (cl-waffe2/vm.generic-tensor:lazy-shape tensor)))
 
 (defun build-shape-error (forward-or-call model
 			  where-decl

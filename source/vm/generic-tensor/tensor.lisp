@@ -37,11 +37,9 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
 ;; visible-shape ... The viewed shape
 ;; actual-shape  ... visible-shape but broadcasting is ignored.
 
-(defclass AbstractTensor ()
-  ((orig-shape :initarg :shape :initform nil :reader original-shape :type list)
-   (stride :initform nil :accessor tensor-stride :type list)
+(defclass AbstractTensor (Dynamic-Shaped-Abstract-Tensor)
+  ((stride :initform nil :accessor tensor-stride :type list)
    (permute-order :initform nil :initarg :permute-order :accessor tensor-permute-order :type list)
-   (visible-shape :initform nil :reader shape :accessor tensor-visible-shape :type list)
    (view :initarg :view :initform nil :accessor tensor-view :type list)
 
    (compiled-instruction-cache-fw :initform nil :accessor tensor-compiled-instruction-cache-fw)
@@ -414,13 +412,15 @@ This function is setfable and inlined.
     ;; orig-shape    = used to compute strides, always synchronized with vec.
     ;; visible-shape = visible size for users, always modified by making a view.
     
-    (setf (slot-value tensor 'orig-shape)      orig-shape)
+    ;; Replaces LazyAxis as Symbol
+    (setq orig-shape (init-dynamic-shape tensor))
     (setf (slot-value tensor 'projected-p)     (getf initargs :projected-p))
     (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor)) ;; Is it worth to call backward?
 
     (when create-from
       (setf (tensor-initial-offset tensor) (tensor-initial-offset create-from)))
-    
+
+
     ;; Updates/Initializes: Strides/Shapes/View/Permution Informations
     (cond
       ((and create-from
@@ -431,9 +431,9 @@ This function is setfable and inlined.
        ;; Never Do this: Recomputing strides, USE create-from
 
        ;; MEMO: copy-list is needed??
-       (setf (tensor-stride tensor) (copy-list (tensor-stride create-from))
+       (setf (tensor-stride tensor)          (copy-list (tensor-stride create-from))
 	     (slot-value tensor 'orig-shape) (copy-list (original-shape create-from))
-	     (tensor-permute-order tensor) (copy-list (tensor-permute-order create-from))
+	     (tensor-permute-order tensor)   (copy-list (tensor-permute-order create-from))
 	     
 	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
 	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
@@ -452,7 +452,6 @@ This function is setfable and inlined.
 	 (setf (tensor-visible-shape tensor)
 	       (compute-visible-shape orig-shape (tensor-view tensor)))
 	 nil)))
-    
     ;; Initial Permution: 5 4 3 2 ... 1 0
     (unless (tensor-permute-order tensor)
       (setf (tensor-permute-order tensor)
@@ -555,6 +554,18 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
 "
   (declare (type list view))
+  (when (null *using-backend*)
+    (error "make-tensor: Can't create AbstractTensor because no devices is registed in *using-backend*."))
+  
+  (if (typep shape-or-scalar 'list)
+      (progn
+	(when (not (every #'numberp shape-or-scalar))
+	  (error "make-tensor: Can't create an ExistTensor of ~a.
+The size of tensor created with make-tensor should be determined.
+  → All of shapes are fixnum, not a LazyAxis or symbol.
+  → make-input to create dynamically shaped tensor.
+" shape-or-scalar))))
+  
   (if (typep shape-or-scalar 'list)
       (make-instance (or device (car *using-backend*))
 		     :dtype dtype
@@ -610,6 +621,10 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
+
+  (when (null *using-backend*)
+    (error "make-input: Can't create AbstractTensor because no devices is registed in *using-backend*."))
+
   (make-instance (if scalar-p
 		     (find-scalar-tensor)
 		     (car *using-backend*))
@@ -981,7 +996,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 (defun render-shape (tensor)
   "Returns a shape"
   (let ((flexible-p (tensor-flexible-p tensor))
-	(shape      (shape tensor)))
+	(shape      (lazy-shape tensor)))
     (with-output-to-string (str)
       (format str "(")
       (loop for i upfrom 0
@@ -1052,7 +1067,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 		""))
 	  (if (and (eql (tensor-facet tensor) :input)
 		   (null (vec tensor)))
-	      (format nil "  <<Not allocated: size=~a>>" (shape tensor))
+	      (format nil "  <<Not allocated: size=~a>>" (lazy-shape tensor))
 	      ;; TODO: View -> View for printing 3d, 4d... tensor.
 	      (render-tensor tensor :indent 2))
 	  (if (and (eql (tensor-facet tensor) :input)
