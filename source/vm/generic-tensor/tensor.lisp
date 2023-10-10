@@ -106,7 +106,7 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    ;; For MemoryPool
    (allocate-time-state :initform nil :type (or null Adjustable-Shape-State) :accessor tensor-alloc-state)
    (protect-me :initform nil :accessor tensor-protect-me) ;; Set T, and In-place mutation is ignored.
-   (input-shape :initarg :input-shape :initform nil :reader tensor-input-shape))
+   (input-shape :initarg :input-shape :initform nil :accessor tensor-input-shape))
   (:documentation "
 ## [class] AbstractTensor
 

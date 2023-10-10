@@ -50,7 +50,7 @@
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")	       
 	       (:file "vm/generic-tensor/conditions")
-	       (:file "vm/generic-tensor/dtype")
+	       
 	       
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
@@ -61,6 +61,7 @@
 	       (:file "base-impl/package")
 
 	       (:file "vm/package")
+	       (:file "vm/generic-tensor/dtype")
 	       (:file "vm/lazy-subscript")
 	       (:file "vm/allocation")
 	       
@@ -216,6 +217,7 @@
   :depends-on (:cl-waffe2 :fiveam)
   :components ((:file "vm/t/package")
 	       (:file "vm/t/lazy-axis")
+	       (:file "vm/t/utils")
 	       (:file "vm/generic-tensor/t/package")
 	       (:file "vm/generic-tensor/t/forward")
 	       (:file "vm/generic-tensor/t/backward")
@@ -247,8 +249,7 @@
 	       (:file "nn/t/conv")
 	       (:file "nn/t/activation")
 	       (:file "nn/t/criterion")
-	       (:file "nn/t/regression")
-	       
+	       (:file "nn/t/regression")	       
 	       )
   :perform (test-op (o s)
 		    (symbol-call :fiveam :run! :vm-test)
