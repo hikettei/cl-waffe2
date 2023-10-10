@@ -97,9 +97,13 @@ e.g.: A is = compared to 2
      (let ((out (lazyir-car lazyir)))
        (if (numberp out)
 	   out
-	   (observe-axis out))))
+	   (progn
+	     (setf (lazyaxis-read-as out) nil)
+	     (observe-axis out)))))
     (:dynamic-shape (observe-variable (cadr (cadr (lazyir-car lazyir)))))
-    (:rest          (observe-axis (second (lazyir-car lazyir))))
+    (:rest          (let ((out (second (lazyir-car lazyir))))
+		      (setf (lazyaxis-read-as out) nil)
+		      (observe-axis out)))
     (:arithmetic (apply (the symbol (lazyir-car lazyir)) (map 'list #'interpret-lazy (lazyir-cdr lazyir))))
     (:function   (apply (the symbol (lazyir-car lazyir)) (map 'list #'interpret-lazy (lazyir-cdr lazyir))))))
 

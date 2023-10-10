@@ -385,7 +385,9 @@ This function is setfable and inlined.
     (if (scalar-p tensor)
 	(if (typep out 'cl-waffe2/vm:LazyAxis)
 	    (if *adjustable-shape-table*
-		(cl-waffe2/vm:observe-axis out)
+		(progn
+		  (setf (cl-waffe2/vm::lazyaxis-read-as out) nil)
+		  (cl-waffe2/vm:observe-axis out))
 		out)
 	    (if (lazy-variable-p out)
 		(read-lazy-var out)

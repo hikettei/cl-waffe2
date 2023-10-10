@@ -28,7 +28,6 @@
   (is (lazy-axis-net-1))
   (is (lazy-axis-net-adjust-later)))
 
-
 (defun conv2d-forward-test ()
   (call (Conv2D 3 6 `(5 5)) (make-input `(N 3 25 25) nil)))
 
@@ -44,5 +43,4 @@
   (is (max-pool2d-forward-test)))
 
 ;; ReshapeTest
-;;(!reshape (randn `(3 3 3 3)) (~ N C H W -> N C H W))
-
+;;(print (!reshape (make-input `(3 3 3 3)) (~ N C H W -> N C H W)))
