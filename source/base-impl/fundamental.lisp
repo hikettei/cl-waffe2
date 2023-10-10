@@ -355,14 +355,19 @@ Note: If the first element of `shapes` is a function, `shapes` are overwritten w
   
   (let* ((shapes (if (functionp (car shapes))
 		     (funcall   (car shapes) tensor)
-		     shapes))
+		     (loop for s in shapes
+			   if (or (eql s t)
+				  (numberp s))
+			     collect s
+			   else
+			     collect (cl-waffe2/vm:make-lazyaxis s))))
 	 (shapes (parse-reshape-args (shape tensor) shapes))
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
 
-    (when (and (not (some #'symbolp (shape result)))
-	       (not (some #'symbolp shapes)))
+    (when (and (every #'numberp (shape result))
+	       (every #'numberp shapes))
       (assert (= (apply #'* (shape tensor))
 		 (apply #'* shapes))
 	      nil

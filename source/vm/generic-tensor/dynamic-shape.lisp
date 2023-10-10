@@ -50,8 +50,14 @@
 		      if (cl-waffe2/vm::LazyAxis-p s)
 			collect (cl-waffe2/vm:lazyaxis-symbol s)
 		      else
-			collect s)))
-    (setf (original-shape self) result)))
+			collect s))
+	(result1 (loop for s in (tensor-input-shape self)
+		       if (cl-waffe2/vm::LazyAxis-p s)
+			 collect (cl-waffe2/vm:lazyaxis-symbol s)
+		       else
+			 collect s)))
+    (setf (original-shape self) result
+	  (tensor-input-shape self) result1)))
 
 (defparameter *print-visible-shape* nil)
 
@@ -62,6 +68,8 @@
 		     (or (cl-waffe2/vm:symbol-lazyaxis x)
 			 x))
 	   (tensor-visible-shape tensor))
-      (tensor-visible-shape tensor)))
+      (if *adjustable-shape-table*
+	  (map 'list #'read-symbol (tensor-visible-shape tensor))
+	  (tensor-visible-shape tensor))))
 
 (defun lazy-shape (tensor) (let ((*print-visible-shape* t)) (shape tensor)))

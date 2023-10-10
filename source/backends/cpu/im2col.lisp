@@ -15,7 +15,7 @@
 			    (with-tensor-ptrs ((x* x) (col* col))
 			      (funcall (make-im2col (dtype x) (order x))
 				       col*
-				       N C H W
+				       (car (shape x)) C H W
 				       h-out w-out
 				       k-h k-w
 				       padding-h padding-w
@@ -38,7 +38,7 @@
 			    (with-tensor-ptrs ((col* col) (out* output-to))
 			      (funcall (make-col2im (dtype col) (order col))
 				       col*
-				       N C H W
+				       (car (shape col)) C H W
 				       h-out w-out
 				       k-h k-w
 				       padding-h  padding-w

@@ -274,10 +274,21 @@ Before calling the forward method, set any value to these InputTensors first.
 (defun set-adjustable-symbols (model)
   (let* ((var-table (compiled-variables model))
 	 (symbols   (nodevariables-symbols var-table))
-	 (allocator (make-hash-table)))
-    (loop for i fixnum upfrom 0 below (length symbols) by 2
-	  do (register-adjustable-shape (nth i symbols) (read-symbol (nth (1+ i) symbols)))
-	     (setf (gethash (nth i symbols) allocator)  (read-symbol (nth (1+ i) symbols))))
+	 (allocator (make-hash-table))
+	 (lazyaxis-list))
+    (loop for i fixnum upfrom 0 below (length symbols) by 2 do
+      (let ((symbol-place (nth i symbols))
+	    (symbol-value (nth (1+ i) symbols))) ;; If symbol is registed at the prior scope? read fixnum as possible
+	(if (cl-waffe2/vm:symbol-lazyaxis symbol-place)
+	    (push symbol-place lazyaxis-list)
+	    (progn
+	      (register-adjustable-shape symbol-place symbol-value)
+	      (setf (gethash symbol-place allocator) symbol-value)))))
+    (dolist (lazyaxis lazyaxis-list)
+      (let* ((axis (cl-waffe2/vm:symbol-lazyaxis lazyaxis))
+	     (val  (cl-waffe2/vm:observe-axis axis)))
+	(register-adjustable-shape lazyaxis val)
+	(setf (gethash lazyaxis allocator) val)))
     allocator))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs)

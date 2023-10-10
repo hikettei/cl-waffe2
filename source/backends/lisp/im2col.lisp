@@ -105,7 +105,7 @@
 						    (col* (col :direction 'simple-array :sync t)))
 			      (funcall (im2col-caller (dtype x))
 				       col* (tensor-stride col)
-				       N C
+				       (car (shape x)) C
 				       h-out w-out
 				       k-h k-w
 				       padding-h padding-w
@@ -130,7 +130,7 @@
 						    (col* (col       :direction 'simple-array :sync t)))
 			      (funcall (col2im-caller (dtype col))
 				       col* (tensor-stride col)
-				       N C
+				       (car (shape col)) C
 				       h-out w-out
 				       k-h k-w
 				       padding-h padding-w

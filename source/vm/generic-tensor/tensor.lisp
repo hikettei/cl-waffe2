@@ -383,9 +383,14 @@ This function is setfable and inlined.
 	     (cl-waffe2/vm::storage-vec-from-memory-pool *static-alloc-state* tensor))
 	    (T (or (vec tensor) (get-from-global-memory-pool tensor))))))
     (if (scalar-p tensor)
-	(if (lazy-variable-p out)
-	    (read-lazy-var out)
-	    out)
+	(if (typep out 'cl-waffe2/vm:LazyAxis)
+	    (let ((out1 (read-symbol (cl-waffe2/vm:lazyaxis-symbol out))))
+	      ;; If cl-waffe2 succeed to observe out1 as a fixnum: returna fixnum
+	      (or (when (symbolp out1) out)
+		  out1))
+	    (if (lazy-variable-p out)
+		(read-lazy-var out)
+		out))
 	out)))
 
 (defun (setf tensor-vec) (new-value tensor)
@@ -413,7 +418,8 @@ This function is setfable and inlined.
     ;; visible-shape = visible size for users, always modified by making a view.
     
     ;; Replaces LazyAxis as Symbol
-    (setq orig-shape (init-dynamic-shape tensor))
+    (init-dynamic-shape tensor)
+    (setq orig-shape (slot-value tensor 'orig-shape))
     (setf (slot-value tensor 'projected-p)     (getf initargs :projected-p))
     (setf (slot-value tensor 'ancestor-param-p) (ancestor-param-p tensor)) ;; Is it worth to call backward?
 

@@ -46,7 +46,7 @@ stride-x stride-y - stride[0], stride[1] respectively.
     ;; -> N C k-h k-w h-out w-out
     (call-> result
 	    (asnode #'!permute (torch-order 0 4 5 1 2 3))
-	    (asnode #'!reshape (* N H-out W-out) t))))
+	    (asnode #'!reshape (~ N H-out W-out C K-h K-w -> (* N H-out W-out) (* C K-h K-w))))))
 
 (defun unfold (input dilation kernel-size stride padding)
   "
@@ -92,5 +92,4 @@ Note that `dilation`, `kernel-size`, `stride`, and `padding` are given in this f
 		      h-out w-out (car stride) (second stride)
 		      (car padding) (second padding)
 		      (car dilation) (second dilation))))))
-
 
