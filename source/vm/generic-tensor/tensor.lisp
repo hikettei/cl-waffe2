@@ -384,10 +384,9 @@ This function is setfable and inlined.
 	    (T (or (vec tensor) (get-from-global-memory-pool tensor))))))
     (if (scalar-p tensor)
 	(if (typep out 'cl-waffe2/vm:LazyAxis)
-	    (let ((out1 (read-symbol (cl-waffe2/vm:lazyaxis-symbol out))))
-	      ;; If cl-waffe2 succeed to observe out1 as a fixnum: returna fixnum
-	      (or (when (symbolp out1) out)
-		  out1))
+	    (if *adjustable-shape-table*
+		(cl-waffe2/vm:observe-axis out)
+		out)
 	    (if (lazy-variable-p out)
 		(read-lazy-var out)
 		out))

@@ -15,7 +15,7 @@
 
 (deftype function-args-t ()
   "Indicates the list of types that can be arguments of functions."
-  `(or AbstractTensor number symbol))
+  `(or AbstractTensor number symbol cl-waffe2/vm:LazyAxis))
 
 ;; Numbers to Tensors
 (defun number->stensor (scalar tensor)
@@ -26,9 +26,9 @@
 				     (if (typep tensor 'AbstractTensor)
 					 (dtype tensor)
 					 (dtype-of scalar))))
-      (if (symbolp scalar) ;; Dynamic Shape
-	  (make-tensor scalar :dtype :uint32)
-	  scalar)))
+      (if (typep scalar 'AbstractTensor)
+	  scalar
+	  (make-tensor scalar :dtype :uint32))))
 
 ;; ===============================================================
 ;; Defnode Parts

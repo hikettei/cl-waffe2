@@ -214,7 +214,9 @@
   :serial t
   :pathname "source"
   :depends-on (:cl-waffe2 :fiveam)
-  :components ((:file "vm/generic-tensor/t/package")
+  :components ((:file "vm/t/package")
+	       (:file "vm/t/lazy-axis")
+	       (:file "vm/generic-tensor/t/package")
 	       (:file "vm/generic-tensor/t/forward")
 	       (:file "vm/generic-tensor/t/backward")
 	       (:file "vm/generic-tensor/t/view")
@@ -249,6 +251,7 @@
 	       
 	       )
   :perform (test-op (o s)
+		    (symbol-call :fiveam :run! :vm-test)
 		    (symbol-call :fiveam :run! :jit-lisp-test)
 		    
 		    (symbol-call :fiveam :run! :test-nodes)

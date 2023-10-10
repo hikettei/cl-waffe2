@@ -71,6 +71,6 @@
       (coerce scalar dtype)
       (if (symbolp scalar)
 	  (make-lazy-variable :variable scalar :dtype dtype)
-	  scalar)))
+	  (cl-waffe2/vm:make-lazyaxis scalar))))
 
 
