@@ -43,13 +43,14 @@
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension
 
+	       :cl-environments
 	       :numpy-file-format
 	       :jonathan)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")	       
 	       (:file "vm/generic-tensor/conditions")
-	       (:file "vm/generic-tensor/dtype")
+	       
 	       
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/generic-tensor/default-impls")
@@ -60,6 +61,8 @@
 	       (:file "base-impl/package")
 
 	       (:file "vm/package")
+	       (:file "vm/generic-tensor/dtype")
+	       (:file "vm/lazy-subscript")
 	       (:file "vm/allocation")
 	       
 	       (:file "vm/generic-tensor/cache")
@@ -72,6 +75,7 @@
 	       (:file "optimizers/package")
 	       
 	       (:file "vm/generic-tensor/acceptor" :depends-on ("vm/allocation"))
+	       (:file "vm/generic-tensor/dynamic-shape")
 	       (:file "vm/generic-tensor/tensor")
 	       (:file "vm/generic-tensor/lut")
 	       
@@ -211,7 +215,10 @@
   :serial t
   :pathname "source"
   :depends-on (:cl-waffe2 :fiveam)
-  :components ((:file "vm/generic-tensor/t/package")
+  :components ((:file "vm/t/package")
+	       (:file "vm/t/lazy-axis")
+	       (:file "vm/t/utils")
+	       (:file "vm/generic-tensor/t/package")
 	       (:file "vm/generic-tensor/t/forward")
 	       (:file "vm/generic-tensor/t/backward")
 	       (:file "vm/generic-tensor/t/view")
@@ -242,10 +249,10 @@
 	       (:file "nn/t/conv")
 	       (:file "nn/t/activation")
 	       (:file "nn/t/criterion")
-	       (:file "nn/t/regression")
-	       
+	       (:file "nn/t/regression")	       
 	       )
   :perform (test-op (o s)
+		    (symbol-call :fiveam :run! :vm-test)
 		    (symbol-call :fiveam :run! :jit-lisp-test)
 		    
 		    (symbol-call :fiveam :run! :test-nodes)

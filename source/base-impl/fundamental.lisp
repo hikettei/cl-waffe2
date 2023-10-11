@@ -230,15 +230,9 @@ Subscripts are following:
 
 2. `fixnum` points out the specified index.
 
-3. `(start end)` slices the area.
+3. `(start end)` slices the area: `[start, end)`
 
-4. `(start end step-by)` slices the area by `step-by`. step-by can be a negative-fixnum. (Not tested)
-
-5. `(:broadcast N-times)` broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.
-
-6. `(:tflist ...)` (TODO)
-
-7. `(:indices ...)` (TODO)
+4. `(:broadcast N-times)` broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.
 
 ### Return
 
@@ -251,7 +245,7 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
   (let* ((subscripts (if (functionp (car subscripts))
 			 (funcall (car subscripts) tensor)
 			 subscripts))
-	 (out (apply #'cl-waffe2/vm.generic-tensor::view tensor subscripts))
+	 (out (apply #'cl-waffe2/vm.generic-tensor:view tensor subscripts))
 	 (broadcast-reverser
 	   (loop for s in (tensor-view out)
 		 if (and (listp (force-list s))
@@ -284,8 +278,9 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 			  ;; [TODO] Detect This Error Before Execution.
 			  (assert (= (total x) (total y))
 				  nil
-				  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering dynamically shape do not match:
+				  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering the dynamic shape do not match:
 ~a and ~a" x y)
+			  ;; Shares the storage:
 			  (setf (tensor-vec y) (tensor-vec x))
 			  y))
 
@@ -293,35 +288,53 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 ;; Reshaping APIs
 ;; ===============================================================
 
-(defun parse-reshape-args (before-shape after-shape)
-  "check after-shape is consisted of positive fixnum.
-shapes can contain t at once, this function also infers t."
+(defun parse-reshape-args (base-shape reshape-to)
+  "check base-shape and reshape-to are compatible
+If any solves T=?
+The role of this function is divided to these two:
+    - Checks if reshape-to is a vaild argument?
+    - Returns a valid shape that make-input can receive
+"
 
-  (when (some #'(lambda (x) (and (not (eql x t))
-				 (symbolp x)))
-	      after-shape)
-    (when (some #'(lambda (x) (eql x t)) after-shape)
-      (error "!reshape: Adjustable shapes and `t` cant used in the same time."))
-    (return-from parse-reshape-args after-shape))
-  
-  (assert (<= (count t after-shape) 1)
-	  nil
-	  "!reshape: Assertion Failed because t only appears at once.")
+  (assert (<= (count t reshape-to) 1)
+	  ()
+	  "!reshape: the symbol `t` can only be used at once.
+When attempting: ~a -> ~a" base-shape reshape-to)
 
   (assert (every #'(lambda (x)
-		     (or (eql x t)
-			 (> x 0)))
-		 after-shape)
-	  nil
-	  "!reshape: Assertion Failed because shapes aren't consisted of positive fixnum.")
+		     (or (typep x 'cl-waffe2/vm:LazyAxis)
+			 (symbolp x)
+			 (and (integerp x)
+			      (>= x 1))))
+		 reshape-to)
+	  ()
+	  "!reshape: invaild operation.
+(!reshape tensor ~a)
+                  L shapes should be consisted of:
+                       - LazyAxis
+                       - Fixnum (>=1)
+                       - Symbol (Registered as a dynamic shape?)
+                       - T (can be used at once)" reshape-to)
+  
+  (let ((include-t-p (position t reshape-to)))
 
-  (let* ((without-t (loop for s in after-shape unless (eql s t) collect s))
-	 (t-inferred (/ (apply #'* before-shape) (apply #'* without-t))))
-    (loop for s in after-shape
-	  if (eql s t)
-	    collect t-inferred
-	  else
-	    collect s)))
+    (when (null include-t-p)
+      ;; Early Return since this function finished its role.
+      (return-from parse-reshape-args reshape-to))
+
+    (let* ((shape-without-t
+	     (loop for s in reshape-to unless (eql s t) collect s))
+	   (total-base-shape
+	     (cl-waffe2/vm:make-lazyaxis `(* ,@base-shape)))
+	   (total-shape-without-t
+	     (cl-waffe2/vm:make-lazyaxis `(* ,@shape-without-t)))
+	   (t-inferred
+	     (cl-waffe2/vm:make-lazyaxis `(/ ,total-base-shape ,total-shape-without-t))))
+      (loop for s in reshape-to
+	    if (eql s t)
+	      collect t-inferred
+	    else
+	      collect s))))
 
 (declaim (ftype (function (AbstractTensor &rest (and (not null) (or function boolean fixnum))) AbstractTensor) !reshape))
 (defun !reshape (tensor &rest shapes)
@@ -332,49 +345,75 @@ shapes can contain t at once, this function also infers t."
 (!reshape tensor &rest shapes)
 ```
 
-Changes the shape of given tensor.
-
-Before and after the operation, the total elements of tensors must correspond.
+Returns a InputTensor with the same number of elements bu with the specified `shapes`.
 
 ### Inputs
 
-`tensor` `AbstractTensor` but must not includes `symbol` in the shape.
+`tensor[AbstractTensor]` Shapes can include: Fixnum, Symbol, and LazyAxis.
 
+`shapes[list]` specify the shape of tensors transformed to. This form can include `t` at once and the value of t is automatically inferred given shapes. This form is consisted of: `Fixnum(>=1)`, `T`, `Symbol` and `LazyAxis`. If the first element of `shapes` is a function, the form `shapes` including rest will be replaced with the returned value. the function form must be: `#'(lambda (tensor) after-shape)`
 
-`shapes` could be one of: fixnum `t`. `t` can be used at one, but the value of t is automatically inferenced.
-
-Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
+### Examples
 
 ```lisp
+(!reshape (randn `(3 3)) 1 9)
+
+(!reshape (randn `(3 3)) t)
+
+;; the ~ macro is useful for transforming lazy shapes
+(!reshape (make-input `(N C H W) :X) (~ N C H W -> (* N C H) W))
+
+;; can compose several higher-order functions
 (!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; => (2 3 5) Tensor
+
+;; (* A B) is regarded as a LazyAxis
+(!reshape (make-input `(A B) nil) `(* A B))
 ```
+
+### Workloads
+
+- [ ] Compiling error for dynamic shapes.
+
 "
   (declare (type AbstractTensor tensor))
-  
-  (let* ((shapes (if (functionp (car shapes))
+
+  (let* (;; Symbols are regarded as a LazyAxis
+	 (shapes (if (functionp (car shapes))
 		     (funcall   (car shapes) tensor)
-		     shapes))
+		     (loop for s in shapes
+			   if (or (eql s t)
+				  (numberp s))
+			     collect s
+			   else
+			     collect
+			     (if (symbolp s)
+				 s
+				 (cl-waffe2/vm:make-lazyaxis s)))))
+	 ;; Solving T=?
 	 (shapes (parse-reshape-args (shape tensor) shapes))
+
+	 ;; Creates a new area (this creation is later optimized by compilers)
 	 (result (make-input shapes nil
 			     :dtype (dtype tensor)
 			     :order (order tensor))))
 
-    (when (and (not (some #'symbolp (shape result)))
-	       (not (some #'symbolp shapes)))
+    (when (and (every #'numberp (shape tensor))
+	       (every #'numberp shapes))
       (assert (= (apply #'* (shape tensor))
 		 (apply #'* shapes))
-	      nil
-	      "Reshaping failed because the total sizes do not match."))
-    ;; (!view tensor `(2 4) `(2 4)) -> Copy
-    ;; (!view tensor  0 t t t)
+	      ()
+	      "!reshape: Assertion Failed because the total elements must correspond with before and after the operation.
+The operation was:
+   FROM:~a -> TO:~a" (shape tensor) shapes))
+
+    ;; [TODO] Adding LazyAssertion
+    
     (let ((out (forward (ReshapeTensorNode (shape tensor) shapes)
 			(->contiguous tensor)
 			result)))
       out)))
 
-;; !squeeze/!unsqueeze
-
-;; TO ADD: (defun !lazy-reshape (tensor &rest shapes) ) reshape but can include symbol as shapes
+;; [TODO] !squeeze/!unsqueeze
 
 ;; Memo:
 ;; The behaviour of ScalarTensor is ugly? because...

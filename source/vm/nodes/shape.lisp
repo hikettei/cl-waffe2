@@ -31,6 +31,34 @@
 		  out-state1)))
 	  out-state))))
 
+(defun expand-lazy-let-binding (bind-to bind-what)
+  "Creates a form that can receive symbols:
+(expand-lazy-let-binding
+   'a
+   `(+ A B))
+`(A (MAKE-HIGHER-ORDER-LAZYAXIS (LIST A B) LazyAxis: f(A B) = (A+B)))
+"
+  (multiple-value-bind (args form function)
+      (cl-waffe2/vm::make-dumpable-lazy-axis bind-what)
+    (declare (ignore form))
+    ;; (observe-axis *) is enough to observe the result as long as
+    ;; remaining symbols are provided as dynamic shape
+    `(,bind-to (cl-waffe2/vm:make-higher-order-lazyaxis
+		(list ,@args)
+		(cl-waffe2/vm::%make-lazyaxis
+		 '(,@args)
+		 '(,@bind-what);; form can't dumped into fasl; in the first place this is not anymore needed print if needed.
+		 ,function)))))
+
+(defun a-and-b-maybe-equal (a b)
+  (let ((a (if (listp a)
+	       (flatten a)
+	       (list a)))
+	(b (if (listp b)
+	       (flatten b)
+	       (list b))))
+    (cl-waffe2/vm.generic-tensor::shape-equal-list a b)))
+
 (defun symbol-eq (x y)
   (and
    (symbolp x)
@@ -349,18 +377,47 @@ Return: (values names subscripts where)
 	  collect l))
 
 (defmacro num-major-setq (var obj)
-  `(setq ,var
+  `(progn
+     (when (typep ,var 'cl-waffe2/vm:LazyAxis)
+       (push
+	(cl-waffe2/vm:make-lazy-assert
+	 :=
+	 ,obj)
+	(cl-waffe2/vm:lazyaxis-constraints ,var)))
+
+     (when (typep ,obj 'cl-waffe2/vm:LazyAxis)
+       (push
+	(cl-waffe2/vm:make-lazy-assert
+	 :=
+	 ,var)
+	(cl-waffe2/vm:lazyaxis-constraints ,obj)))
+
+     (setq ,var
 	 (or (when (or (numberp ,var)
 		       (listp   ,var))
 	       ,var)
-	     ,obj)))
+	     ,obj))))
 
 (defmacro num-major-setf (var obj)
-  `(setf ,var
-	 (or (when (or (numberp ,var)
-		       (listp ,var))
-	       ,var)
-	     ,obj)))
+  `(progn
+     (when (typep ,var 'cl-waffe2/vm:LazyAxis)
+       (push
+	(cl-waffe2/vm:make-lazy-assert
+	 :=
+	 ,obj)
+	(cl-waffe2/vm:lazyaxis-constraints ,var)))
+
+     (when (typep ,obj 'cl-waffe2/vm:LazyAxis)
+       (push
+	(cl-waffe2/vm:make-lazy-assert
+	 :=
+	 ,var)
+	(cl-waffe2/vm:lazyaxis-constraints ,obj)))
+     (setf ,var
+	   (or (when (or (numberp ,var)
+			 (listp ,var))
+		 ,var)
+	       ,obj))))
 
 
 (defun shape-equal-1 (pos list1 list2)
@@ -655,32 +712,35 @@ Example:
 				    shapes
 				    names)))
 			     out)))
+
+		    ;; parsing where var = fixnum | var = list
 		    (let* (,@(loop with tmp = (gensym)
 			           for let in let-binding
 				   collect
-				   `(,(car let) (let* ((,tmp (progn ,@(cdr let)))
-						       (,tmp (if (listp ,(car let))
-								 (flatten (list ,tmp))
-								 ,tmp))
-						       (,(car let) (if (listp ,tmp)
-								       (flatten (list ,(car let)))
-								       ,(car let))))
-						  (if (if (listp ,tmp)
-							  (cl-waffe2/vm.generic-tensor::shape-equal-list ,tmp ,(car let))
-							  (shape-equal ,tmp ,(car let)))
-						      ,tmp
-						      (progn
-							(push
-							 (make-shape-error-message
-							  :place-me-last t
-							  :content
-							  (format nil
-							  "~a should be ~a, but determined as: ~a"
-							  ',(car let)
-							  ,tmp
-							  ,(car let)))
-							 ,all-conditions)
-							,tmp))))))
+				   (let ((form (expand-lazy-let-binding tmp (second let))))
+				     `(,(car let)
+				       (let ((,tmp ,(second form)))
+					 (if (= (length (cl-waffe2/vm:lazyaxis-arguments ,tmp)) 0)
+					     (let ((,tmp (cl-waffe2/vm:observe-axis ,tmp)))
+					       (if (a-and-b-maybe-equal
+						    ,tmp
+						    ,(car let))
+						   ,tmp
+						   (progn
+						     (push
+						      (make-shape-error-message
+						       :place-me-last t
+						       :content
+						       (format nil
+							       "~a should be ~a, but determined as: ~a"
+							       ',(car let)
+							       ,tmp
+							       ,(car let)))
+						      ,all-conditions)
+						     ,tmp)))
+					     (progn
+					       ,tmp)))))))
+		      
 		      (let ((,~symbol (remove '~ ,undetermined-shape-tmp :test #'symbol-eq)))
 			(declare (ignorable ,~symbol))
 			
@@ -713,5 +773,3 @@ Example:
 		       (symbol-eq (car s) '~))
 		   first-state)
 	      (list first-state out-state)))))
-
-

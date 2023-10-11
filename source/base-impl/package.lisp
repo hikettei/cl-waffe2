@@ -14,6 +14,7 @@
    #:backward-of
    #:reduced-of)
   (:export
+   #:~
    #:MoveTensorNode
    #:MoveScalarTensorNode
    #:movetensor-ignore-me

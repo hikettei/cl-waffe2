@@ -29,7 +29,8 @@
    #:make-compiled-kernel
    #:find-cached-function
    #:*memory-pool*
-   #:*static-alloc-state*)
+   #:*static-alloc-state*
+   #:lazy-shape)
   ;; Tensor classes
 
   (:export

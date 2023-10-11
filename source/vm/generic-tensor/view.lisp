@@ -39,7 +39,9 @@
 		       (subscript-view subscript)
 		       (if (typep (subscript-char subscript) 'symbol)
 			   (format nil ">~a∊~a"
-				   (subscript-char subscript)
+				   (or (cl-waffe2/vm:symbol-lazyaxis
+					(subscript-char subscript))
+				       (subscript-char subscript))
 				   (subscript-constraints subscript))
 			   ">")))))
   (constraints nil :type list) ;; x is in (10 30) t ... inf, min=0

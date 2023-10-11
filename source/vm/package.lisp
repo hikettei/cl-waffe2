@@ -8,6 +8,22 @@
    :cl-waffe2/vm.nodes
    :cl-waffe2/base-impl)
   (:export
+   ;; LazyAxis
+   #:LazyAxis
+   #:lazyaxis-arguments
+   #:lazyaxis-constraints
+   #:lazyaxis-id
+   #:lazyaxis-symbol
+   #:symbol-lazyaxis
+   #:make-lazyaxis
+   #:observe-axis
+   #:maybe-observe-axis
+   #:make-lazy-assert
+   #:make-higher-order-lazyaxis
+
+   #:with-fixing-adjustable-shape
+   #:tensor-fix-adjustable-shape)
+  (:export
    #:*opt-level*
    #:*logging-vm-execution*   
    #:accept-instructions

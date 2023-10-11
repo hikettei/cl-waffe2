@@ -69,6 +69,7 @@ That is:
 ```
 "
   `(with-devices (JITCPUTensor ,@more-devices)
+     (setf *lazy-c-source* "")
      ,@body))
 
 (defmacro with-tensor-ptr ((bind tensor) &body body)

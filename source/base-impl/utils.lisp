@@ -1,16 +1,15 @@
 
 (in-package :cl-waffe2/base-impl)
 
-
 (defun padding (tensor pad-width
 		&key
-		  (pad-maker #'cl-waffe2/distributions:ax+b)
-		  (initargs `(0 0)))
+		  (pad-maker #'make-input)
+		  (initargs `(nil)))
   "
 ## [function] padding
 
 ```lisp
-(padding tensor pad-width &key (pad-maker #'ax+b) (initargs `(0 0)))
+(padding tensor pad-width &key (pad-maker #'make-input) (initargs `(nil)))
 ```
 
 Creating a new InputTensor with shape after padding, the function `padding` moves the given tensor into a new area.

@@ -426,3 +426,6 @@
 (proceed (lazy #'sin (ax+b `(3 3) 0 1) :diff #'cos))
 (proceed (lazy-reduce #'max (ax+b `(3 3 3) 1 0)))
 
+;; Lazy Reshape
+(print (!reshape (make-input `(N C H W) nil) (~ N C H W -> (* N C H) W)))
+

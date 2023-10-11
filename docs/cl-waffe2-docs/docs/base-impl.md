@@ -479,22 +479,35 @@ Tips: `(!permute tensor (torch-order 2 1 0))` to use the same notation to pytorc
 (!reshape tensor &rest shapes)
 ```
 
-Changes the shape of given tensor.
-
-Before and after the operation, the total elements of tensors must correspond.
+Returns a InputTensor with the same number of elements bu with the specified `shapes`.
 
 ### Inputs
 
-`tensor` `AbstractTensor` but must not includes `symbol` in the shape.
+`tensor[AbstractTensor]` Shapes can include: Fixnum, Symbol, and LazyAxis.
 
+`shapes[list]` specify the shape of tensors transformed to. This form can include `t` at once and the value of t is automatically inferred given shapes. This form is consisted of: `Fixnum(>=1)`, `T`, `Symbol` and `LazyAxis`. If the first element of `shapes` is a function, the form `shapes` including rest will be replaced with the returned value. the function form must be: `#'(lambda (tensor) after-shape)`
 
-`shapes` could be one of: fixnum `t`. `t` can be used at one, but the value of t is automatically inferenced.
-
-Note: If the first element of `shapes` is a function, `shapes` are overwritten with the function's value.
+### Examples
 
 ```lisp
+(!reshape (randn `(3 3)) 1 9)
+
+(!reshape (randn `(3 3)) t)
+
+;; the ~ macro is useful for transforming lazy shapes
+(!reshape (make-input `(N C H W) :X) (~ N C H W -> (* N C H) W))
+
+;; can compose several higher-order functions
 (!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; => (2 3 5) Tensor
+
+;; (* A B) is regarded as a LazyAxis
+(!reshape (make-input `(A B) nil) `(* A B))
 ```
+
+### Workloads
+
+- [ ] Compiling error for dynamic shapes.
+
 
 ## [function] !view
 
@@ -530,15 +543,9 @@ Subscripts are following:
 
 2. `fixnum` points out the specified index.
 
-3. `(start end)` slices the area.
+3. `(start end)` slices the area: `[start, end)`
 
-4. `(start end step-by)` slices the area by `step-by`. step-by can be a negative-fixnum. (Not tested)
-
-5. `(:broadcast N-times)` broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.
-
-6. `(:tflist ...)` (TODO)
-
-7. `(:indices ...)` (TODO)
+4. `(:broadcast N-times)` broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.
 
 ### Return
 
@@ -1964,7 +1971,7 @@ The function a=b sets `true-then` if the equation: `A = B` is t, otherwise set `
 ## [function] padding
 
 ```lisp
-(padding tensor pad-width &key (pad-maker #'ax+b) (initargs `(0 0)))
+(padding tensor pad-width &key (pad-maker #'make-input) (initargs `(nil)))
 ```
 
 Creating a new InputTensor with shape after padding, the function `padding` moves the given tensor into a new area.

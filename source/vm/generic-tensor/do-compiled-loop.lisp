@@ -113,9 +113,9 @@ Examples:
 	   (type (member :heuristic :runtime) mode)
 	   (optimize (speed 3)))
 
-  (dolist (tensor tensors)
-    (when (some #'symbolp (shape tensor))
-      (setf (slot-value tensor 'visible-shape) (translate-adjustable-shape (shape tensor)))))
+  ;;(dolist (tensor tensors)
+  ;;  (when (some #'symbolp (shape tensor))
+    ;;  (setf (slot-value tensor 'visible-shape) (translate-adjustable-shape (shape tensor)))))
   
   (when (not (eql mode :runtime))
     (assert (every #'(lambda (x)

@@ -46,12 +46,8 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 	   ;; [TODO]: Delete (if (numberp ...))
 	   :where (Input[N C H_in W_in] -> Output[N C H_out W_out]
 			   where
-			   H_out = (if (numberp H_in)
-				       (pool-out-size H_in (car padding) (car kernel-size) (car stride))
-				       -1)
-			   W_out = (if (numberp W_out)
-				       (pool-out-size W_in (second padding) (second kernel-size) (second stride))
-				       -1))
+			   H_out = (pool-out-size H_in (car padding) (car kernel-size) (car stride))
+			   W_out = (pool-out-size W_in (second padding) (second kernel-size) (second stride)))
 	   :on-call-> apply-maxpool2d))
 
 (defmodel (AvgPool2D (self kernel-size
@@ -80,12 +76,8 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 	   ;; [TODO]: Delete (if (numberp ...))
 	   :where (Input[N C H_in W_in] -> Output[N C H_out W_out]
 			   where
-			   H_out = (if (numberp H_in)
-				       (pool-out-size H_in (car padding)    (car kernel-size) (car stride))
-				       -1)
-			   W_out = (if (numberp W_out)
-				       (pool-out-size W_in (second padding) (second kernel-size) (second stride))
-				       -1))
+			   H_out = (pool-out-size H_in (car padding) (car kernel-size) (car stride))
+			   W_out = (pool-out-size W_in (second padding) (second kernel-size) (second stride)))
 	   :on-call-> apply-avgpool2d))
 
 (defmethod apply-maxpool2d ((self MaxPool2D) input)
@@ -95,7 +87,7 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
 	(call-> input
 		(asnode #'unfold  `(1 1) kernel-size stride padding)
-		(asnode #'!reshape t (apply #'* kernel-size))
+		(asnode #'!reshape t `(* ,@kernel-size))
 		(asnode #'!max     :axis 1)
 		(asnode #'!reshape N H-out W-out C)
 		(asnode #'!permute 3 0 2 1))))))
@@ -107,7 +99,7 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
 	(call-> input
 		(asnode #'unfold  `(1 1) kernel-size stride padding)
-		(asnode #'!reshape t (apply #'* kernel-size))
+		(asnode #'!reshape t `(* ,@kernel-size))
 		(asnode #'!mean     :axis 1)
 		(asnode #'!reshape N H-out W-out C)
 		(asnode #'!permute 3 0 2 1))))))

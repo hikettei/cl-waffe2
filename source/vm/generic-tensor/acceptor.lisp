@@ -114,7 +114,6 @@ The NodeVariables structure stores the tensors and Shapes that have been lazily 
 Giving values to delay-evaluated tensors.
 "
   (declare (type NodeVariables nodevars))
-  
   (let ((input-tensor (gethash variable-name (nodevariables-variables nodevars))))
     
     (when (null input-tensor)
@@ -141,7 +140,7 @@ The operation was: Setting ~a <- ~a
             
       ;; InputTensor <- Actual-Tensor
       (embody-actual-tensor input-tensor actual-tensor)
-
+      
       ;; Update hash-table
       (maphash
        #'(lambda (key value)
@@ -274,10 +273,30 @@ Before calling the forward method, set any value to these InputTensors first.
 (defun set-adjustable-symbols (model)
   (let* ((var-table (compiled-variables model))
 	 (symbols   (nodevariables-symbols var-table))
-	 (allocator (make-hash-table)))
-    (loop for i fixnum upfrom 0 below (length symbols) by 2
-	  do (register-adjustable-shape (nth i symbols) (read-symbol (nth (1+ i) symbols)))
-	     (setf (gethash (nth i symbols) allocator)  (read-symbol (nth (1+ i) symbols))))
+	 (allocator (make-hash-table))
+	 (lazyaxis-list))
+    (loop for i fixnum upfrom 0 below (length symbols) by 2 do
+      (let ((symbol-place (nth i symbols))
+	    (symbol-value (read-symbol (nth (1+ i) symbols)))) ;; If symbol is registed at the prior scope? read fixnum as possible
+	(if (cl-waffe2/vm:symbol-lazyaxis symbol-place)
+	    ;; LazyAxis -> Determine later
+	    (push symbol-place lazyaxis-list)
+	    (progn
+	      (when (null symbol-value)
+		(error "set-adjustable-symbols: the adjustable symbol ~a -> ~a wasn't registerd well?" symbol-place symbol-value))
+	      (register-adjustable-shape symbol-place symbol-value)
+	      (setf (gethash symbol-place allocator) symbol-value)))))
+
+    ;; Given symbols ignoring LazyAxis, determine the result of LazyAxis
+    (dolist (lazyaxis lazyaxis-list)
+      (let* ((axis (cl-waffe2/vm:symbol-lazyaxis lazyaxis))
+	     (val  (cl-waffe2/vm:observe-axis axis)))
+	
+	(when (null val)
+	  (error "set-adjustable-symbols: the adjustable symbol ~a wasn't registered well?" axis))
+
+	(register-adjustable-shape lazyaxis val)
+	(setf (gethash lazyaxis allocator) val)))
     allocator))
 
 (defmethod cl-waffe2/vm.nodes:forward ((model Compiled-Composite) &rest inputs)
@@ -298,8 +317,8 @@ Before calling the forward method, set any value to these InputTensors first.
 	(loop for val   in inputs
 	      for place in places
 	      for name  in input-args do
-		(loop for  shape in (tensor-input-shape place)
-		      for  value in (shape val)
+		(loop for shape in (tensor-input-shape place)
+		      for value in (shape val)
 		      if (or (null (gethash shape shape-table))
 			     (= (gethash shape shape-table) (read-symbol value)))
 			do (setf (gethash shape shape-table) (read-symbol value))
@@ -523,9 +542,12 @@ Or, your network may be disconnected at a certain position."
 		(with-output-to-string (out)
 		  (maphash
 		   #'(lambda (size stride)
-		       (format out "+(~a x ~a)"
+		       (format out "+(~a x ~a)~a"
 			       size
-			       (/ stride 1e+6)))
+			       (/ stride 1e+6)
+			       (if (<= (hash-table-count adjust-size) 1)
+				   ""
+				   (format nil "~%                      "))))
 		   adjust-size))
 		""))))
 
