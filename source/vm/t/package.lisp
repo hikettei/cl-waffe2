@@ -4,6 +4,7 @@
 (defpackage :cl-waffe2/vm.test
   (:use
    :cl
+   :cl-waffe2
    :cl-waffe2/vm
    :cl-waffe2/vm.nodes
    :cl-waffe2/vm.generic-tensor

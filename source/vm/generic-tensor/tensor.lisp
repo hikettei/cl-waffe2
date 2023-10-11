@@ -595,9 +595,8 @@ The size of tensor created with make-tensor should be determined.
 		     :facet :exist
 		     :view view)))
 
-;; It is allowed: (make-input `(batch-size 512))
-(defun make-input (shape
-		   named
+;; It is allowed: (make-input `(batch-size 512) nil)
+(defun make-input (shape named
 		   &key
 		     (create-from nil)
 		     (scalar-p nil)
