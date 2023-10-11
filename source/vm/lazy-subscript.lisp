@@ -375,6 +375,10 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
   nil)
 
 (defun maybe-observe-axis (value)
+  "Reads the given value as a fixnum.
+value is excepted as: LazyAxis, Symbol, Fixnum, rest...
+If value is dynamic-shape -> observe it and returns as a fixnum
+Otherwise                 -> Return as it is."
   (if (typep value 'LazyAxis)
       (if (every (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value)) ;; Can determine?
 	  (observe-axis value)

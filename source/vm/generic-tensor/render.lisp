@@ -185,8 +185,7 @@ The result sequence MUST not over max-length.
      (tensor-stride tensor)
      (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
      (tensor-stride tensor)
-     (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))
-  
+     (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))  
   
   (with-output-to-string (out)
     (let ((*matrix-element-displaying-size*

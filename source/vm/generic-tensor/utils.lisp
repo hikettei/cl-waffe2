@@ -179,7 +179,10 @@ If there's any undetermined one, returns an error (TODO: Add Conditions)"
       (when (cl-waffe2/vm:symbol-lazyaxis s)
 	(cl-waffe2/vm:observe-axis
 	 (cl-waffe2/vm:symbol-lazyaxis s)))
-      (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
+      (error "read-adjustable-symbol: encountered unknown symbol: ~a
+~a"
+	     s
+	     (cl-waffe2/vm::render-debug-info))))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
   "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
@@ -194,7 +197,7 @@ Usage:
 "
 
   `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
-
+     
      (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
 	 
      ,@body))

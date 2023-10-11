@@ -54,11 +54,21 @@
 	     (Conv2D out-channels1 out-channels2 `(5 5))
 	     (asnode #'!relu)
 	     (MaxPool2D `(2 2))
-	     (asnode #'!reshape t (* 16 4 4)) 
+	     (asnode #'!reshape t (* 16 4 4))
 	     (LinearLayer (* 16 4 4) 10))
 
 (defun cnn-build-test ()
   (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))
   )
+
+;; テストを追加すること
+
 ;; ReshapeTest
-;;(print (!reshape (make-input `(3 3 3 3)) (~ N C H W -> N C H W)))
+;; (print (!reshape (make-input `(3 3 3 3)) (~ N C H W -> N C H W)))
+;; Rendering test?
+;; Shape-Error-Test
+;; JIT CNN BUILD TEST
+;; StateDict Save And Load
+;; Error Rendering
+;; ADjustable shape with do-compiled-loop
+
