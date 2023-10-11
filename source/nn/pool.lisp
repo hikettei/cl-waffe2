@@ -87,7 +87,7 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
 	(call-> input
 		(asnode #'unfold  `(1 1) kernel-size stride padding)
-		(asnode #'!reshape N `(* ,@kernel-size))
+		(asnode #'!reshape t `(* ,@kernel-size))
 		(asnode #'!max     :axis 1)
 		(asnode #'!reshape N H-out W-out C)
 		(asnode #'!permute 3 0 2 1))))))
@@ -99,7 +99,8 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
 	(call-> input
 		(asnode #'unfold  `(1 1) kernel-size stride padding)
-		(asnode #'!reshape N `(* ,@kernel-size))
+		(asnode #'!reshape t `(* ,@kernel-size))
 		(asnode #'!mean     :axis 1)
 		(asnode #'!reshape N H-out W-out C)
 		(asnode #'!permute 3 0 2 1))))))
+

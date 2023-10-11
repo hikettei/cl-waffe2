@@ -356,9 +356,7 @@ Returns a InputTensor with the same number of elements bu with the specified `sh
 ### Examples
 
 ```lisp
-;; Both are valid.
 (!reshape (randn `(3 3)) 1 9)
-(!reshape (randn `(3 3)) `(1 9))
 
 (!reshape (randn `(3 3)) t)
 
@@ -367,6 +365,9 @@ Returns a InputTensor with the same number of elements bu with the specified `sh
 
 ;; can compose several higher-order functions
 (!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; => (2 3 5) Tensor
+
+;; (* A B) is regarded as a LazyAxis
+(!reshape (make-input `(A B) nil) `(* A B))
 ```
 
 ### Workloads
@@ -376,12 +377,7 @@ Returns a InputTensor with the same number of elements bu with the specified `sh
 "
   (declare (type AbstractTensor tensor))
 
-  (let* (;; Both `(3 3 3) `((3 3 3)) is vaild
-	 (shapes (if (and (listp (car shapes))
-			  (= (length shapes) 1))
-		     (car shapes)
-		     shapes))
-	 ;; Symbols are regarded as a LazyAxis
+  (let* (;; Symbols are regarded as a LazyAxis
 	 (shapes (if (functionp (car shapes))
 		     (funcall   (car shapes) tensor)
 		     (loop for s in shapes

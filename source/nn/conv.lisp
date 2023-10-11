@@ -104,3 +104,4 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 			    (!add out (%transform bias[i] -> [~ i]))
 			    out)))
 	    (!permute (!reshape out N h-out w-out C-out) 3 0 2 1)))))))
+
