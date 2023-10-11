@@ -45,6 +45,8 @@ Its abstraction layers are almost reaching the goals and working enough, but the
 
 In the simplest example, the `build` function traces and compiles the network from the endpoints of the computation nodes. 
 
+Example1. Compiling a node
+
 ```lisp
 (let ((a (make-input `(A B) :A))
       (b (make-input `(A B) :B)))
@@ -68,6 +70,55 @@ In the simplest example, the `build` function traces and compiles the network fr
 ;;  :facet :input
 ;;  :requires-grad NIL
 ;;  :backward NIL} 
+```
+
+The advantages of using Common Lisp are numerous:
+- The shape of the tensors is not limited to numbers, but can also include symbols and even **S-expressions**!
+- Automatic Generation of Iterators, ShapeError, etc.
+- Works as a Domain Specific Language for Deep Learning embedded in Common Lisp
+
+Example2. MLP Model
+
+```lisp
+;; From https://github.com/hikettei/cl-waffe2/blob/master/examples/mnist/mlp.lisp
+(defsequence MLP (in-features hidden-dim out-features
+			   &key (activation #'!relu))
+	     "Three Layers MLP Model"
+	     (LinearLayer in-features hidden-dim)
+	     (asnode activation)
+	     (LinearLayer hidden-dim hidden-dim)
+	     (asnode activation)
+	     (LinearLayer hidden-dim out-features))
+
+(defun build-mlp-model (in-class out-class &key (hidden-size 256) (activation #'!relu) (lr 1e-3))
+  (let* ((mlp (MLP in-class hidden-size out-class :activation activation))
+	 (lazy-loss (criterion #'softmax-cross-entropy
+			       (call mlp
+				     (make-input `(batch-size ,in-class) :X))
+			       (make-input `(batch-size ,out-class) :Y)
+			       :reductions (list #'!sum #'->scal)))
+	 (model     (build lazy-loss :inputs `(:X :Y))))
+    (mapc (hooker x (Adam x :lr lr)) (model-parameters model))
+    (values model mlp)))
+
+(defun step-train-mlp (model x y)
+  (let ((act-loss (forward model x y)))
+    (backward model)
+    (mapc #'call-optimizer! (model-parameters model))
+    (/ (tensor-vec act-loss) 100)))
+
+(defmethod accuracy ((model MLP) x y)
+  (let* ((out   (!argmax (call model x)))
+	 (label (!argmax y))
+	 (total (proceed (->scal (!sum (A=B out label))))))
+    (float (/ (tensor-vec total) (nth 0 (shape out))))))
+```
+
+Example3. reshape and transform
+
+```lisp
+(!reshape (make-input `(N C H W) nil) (~ N C H W -> (* N C H) W))
+(%transform (ax+b `(3) 1 0)[i] -> [~ i])
 ```
 
 We also provide [example projects](https://github.com/hikettei/cl-waffe2/tree/master/examples) here!
