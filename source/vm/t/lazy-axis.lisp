@@ -57,18 +57,72 @@
 	     (asnode #'!reshape t (* 16 4 4))
 	     (LinearLayer (* 16 4 4) 10))
 
-(defun cnn-build-test ()
-  (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))
-  )
+;; Testing dynamic shape
+(defun cnn-build-test-cpujit ()
+  (with-cpu-jit (CPUTensor LispTensor)
+    (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))))
 
-;; テストを追加すること
+(defun cnn-build-test-cputensor ()
+  (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X)))
 
-;; ReshapeTest
-;; (print (!reshape (make-input `(3 3 3 3)) (~ N C H W -> N C H W)))
-;; Rendering test?
-;; Shape-Error-Test
-;; JIT CNN BUILD TEST
-;; StateDict Save And Load
-;; Error Rendering
-;; ADjustable shape with do-compiled-loop
+(test dynamic-shape-build
+  (is (cnn-build-test-cpujit))
+  (is (cnn-build-test-cputensor)))
+
+(defun cnn-train-test-jit ()
+  (let ((model (cnn-build-test-cpujit)))
+    (forward model (randn `(100 1 28 28)))
+    (backward model)
+    (forward model (randn `(10 1 28 28)))
+    (backward model)
+    (forward model (randn `(121 1 28 28)))
+    (backward model)))
+
+(defun cnn-train-test-cpu ()
+  (let ((model (cnn-build-test-cputensor)))
+    (forward model (randn `(100 1 28 28)))
+    (backward model)
+    (forward model (randn `(10 1 28 28)))
+    (backward model)
+    (forward model (randn `(121 1 28 28)))
+    (backward model)))
+
+;; Including JITCPUTensor Test...
+(test dynamic-shaped-cnn-build-test
+  (is (cnn-train-test-jit))
+  (is (cnn-train-test-cpu)))
+
+(defun make-test-tensor ()
+  (!reshape (make-input `(N C H W) :X) (~ N C H W -> (* N C H) W)))
+
+(defun lazy-feature-test ()
+  (let ((model
+	  (build (lazy #'sin (make-test-tensor)) :inputs `(:X))))
+    (let ((a (forward model (ax+b `(3 3 3 3) 0 1))))
+      (every #'(lambda (i) (= i (sin 1))) (tensor-vec a)))))
+
+(test dynamic-lazy-tset
+  (is (lazy-feature-test)))
+
+(defun do-compiled-dynamic-test ()
+  (let ((model
+	  (build (!expt (make-test-tensor) 2) :inputs `(:X))))
+    (let ((a (forward model (ax+b `(3 3 3 3) 0 2))))
+      (every #'(lambda (i) (= i (expt 2 2))) (tensor-vec a)))))
+
+(test do-compiled-dynamic-test
+  (is (do-compiled-dynamic-test)))
+
+;; [TO ADD]: where
+;; (funcall (where A[i j] B[i j] -> C[i j] where i = (* 2 x))
+;;  	    (randn `(3 3))
+;;	    (randn `(3 3)))
+
+(defun rendering-test ()
+  (print (randn `(10 10 10))))
+
+(test rendering-tensor-test
+  (is (rendering-test)))
+
+;; CNN with activation
 

@@ -26,8 +26,9 @@
       (mapc (hooker x (Adam x :lr lr)) (model-parameters compiled-model))
       (values compiled-model model))))
 
-(with-cpu-jit (CPUTensor LispTensor)
-  (proceed-bench (call (MNIST-CNN) (randn `(100 1 28 28))) :backward t))
+;;(with-cpu-jit (CPUTensor LispTensor)
+;;  (format t "[INFO] Doing CNN benchmark...~%")
+;;  (proceed-bench (call (MNIST-CNN) (randn `(100 1 28 28))) :backward t))
 
 (defun step-cnn (model X Y)
   (let ((act-loss (forward model X Y)))
