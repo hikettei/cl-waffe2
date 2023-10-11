@@ -1039,7 +1039,7 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 
 (defmethod print-object ((tensor AbstractTensor) stream)
   (when *with-printing-tensor-omitted*
-    (format stream "<<~a Tensor (Omitted)>>" (shape tensor))
+    (format stream "<<~a Tensor (Omitted)>>" (lazy-shape tensor))
     (return-from print-object))
   
   (format stream
@@ -1059,7 +1059,12 @@ Creates a new tensor with :requires-grad=t from the given tensor. If the tensor 
 		(T
 		 ;; It has a view
 		 (format nil ":shape ~a -> :view ~a -> :visible-shape ~a"
-			 (slot-value tensor 'orig-shape)
+			 (map
+			  'list
+			  #'(lambda (s)
+			      (or (cl-waffe2/vm:symbol-lazyaxis s)
+				  s))			 
+			  (slot-value tensor 'orig-shape))
 			 (slot-value tensor 'view)
 			 (render-shape tensor)))))
 	  (if (eql (tensor-facet tensor) :input)

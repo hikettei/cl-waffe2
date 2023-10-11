@@ -27,7 +27,7 @@
     (T
      (error "%transform: unknown syntax of view: ~a" arg))))
 
-;; TODO: This feature isn't enough.
+;; TODO: This feature is still hard to satisfy
 (defmacro %transform (&body transform-syntax)
   "
 ## [macro] %transform

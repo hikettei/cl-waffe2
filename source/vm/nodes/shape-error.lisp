@@ -71,10 +71,8 @@ Suggestion"
 	   (type (or AbstractNode Composite)))
 
   (with-output-to-string (out)
-    (format out "[Shaping Error]:")
-
     (if (eql forward-or-call :call)
-	(format out " The Composite ~a was called with invaild arguments." model-name)
+	(format out "The Composite ~a was called with invaild arguments." model-name)
 	(case (checkpoint-state *shape-error-when*)
 	  (:forward
 	   (format out " The AbstractNode ~a was called with invaild arguments." model-name))
