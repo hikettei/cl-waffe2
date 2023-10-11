@@ -141,3 +141,21 @@
     (setf (wfop-grad-adder-p (car out)) t)
     out))
 
+(defun render-debug-info ()
+  "Displays all global variables related to the error"
+  (with-output-to-string (out)
+    (format out "= [DebugInfo] =====~%")
+    (format out "Global Variables:~%")
+    (format out "Dynamic Shape:~%")
+    (maphash #'(lambda (k v)
+		 (format out "    ~a -> ~a~%"
+			 (if (symbol-lazyaxis k)
+			     (format nil "~a(~a)" k (symbol-lazyaxis k))
+			     k)
+			 v))
+	     cl-waffe2/vm.generic-tensor::*adjustable-shape-table*)
+    (format out "LazyAxis Table:~%")
+    (maphash #'(lambda (s axis)
+		 (format out "    ~a -> ~a~%" s axis))
+	     *symbol->lazyaxis*)))
+

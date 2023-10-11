@@ -26,7 +26,6 @@ This parameter is useful for printing how all instructions are performed. If set
 ")
 
 (declaim (inline maybe-read-result write-result apply-instructions apply-inst-sv4bw))
-
 (defmodel (SV4BW-Copier (self)
 	   :on-call-> ((self x y)
 		       (declare (ignore self))
@@ -223,7 +222,9 @@ disassemble:
 ~a
 
 condition:
-  ~a"
+  ~a
+
+~a"
 	 position
 	 (with-output-to-string (out)
 	   (let* ((start (max 0 (- position 3)))
@@ -236,7 +237,8 @@ condition:
 		       do (format out "~a*: ~a~%" nth (nth nth iseq))
 		     else
 		       do (format out "~a : ~a~%" nth (nth nth iseq))))))
-	 condition))
+	 condition
+	 (render-debug-info)))
 
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)

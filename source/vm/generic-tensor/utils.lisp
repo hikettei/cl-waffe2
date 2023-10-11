@@ -28,7 +28,7 @@
 (defun wrap-x (x)
   (typecase x
     (number `(the fixnum ,x))
-    (symbol `(the fixnum (read-symbol ',x)))
+    (symbol `(the fixnum (cl-waffe2/vm:maybe-observe-axis ',x)))
     (T `(the fixnum ,x))))
 
 (defun lazy* (x y)
@@ -165,14 +165,21 @@ Reading the *adjustable-shape-table*, the function returns an list consisted of 
 If there's any undetermined one, returns an error (TODO: Add Conditions)"
   (declare (type list shape)
 	   (optimize (speed 3)))
-  (map 'list #'read-symbol shape))
+  ;;(map 'list #'read-symbol shape)
+  (map 'list #'cl-waffe2/vm:maybe-observe-axis shape))
 
 (declaim (ftype (function ((or fixnum symbol)) fixnum) read-adjustable-symbol))
 (defun read-adjustable-symbol (s)
   (typecase s
     (fixnum s)
     (symbol
-     (or (read-symbol s) (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
+     (or
+      (let ((out (read-symbol s)))
+	(when (integerp out) out))
+      (when (cl-waffe2/vm:symbol-lazyaxis s)
+	(cl-waffe2/vm:observe-axis
+	 (cl-waffe2/vm:symbol-lazyaxis s)))
+      (error "translate-adjustable-shape: encountered unknown symbol: ~a" s)))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
   "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
@@ -243,10 +250,6 @@ Usage:
 	;; Return fixnum
 	(T symbol))
       symbol))
-
-(defun no-need-update-p (tensor)
-  (declare (type AbstractTensor tensor))
-  (adjustable-shape-compatible (tensor-alloc-state tensor)))
 
 (defun range (from to)
   (loop for i fixnum upfrom from below to collect i))

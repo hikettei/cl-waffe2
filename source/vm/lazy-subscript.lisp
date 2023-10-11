@@ -408,7 +408,7 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
 
 (defmethod lazyaxis-symbol ((lazyaxis LazyAxis))
   (or (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*)
-      (let ((id (gensym "AXIS")))
+      (let ((id (gensym "LAZYAXIS")))
 	(setf (gethash id *symbol->lazyaxis*) lazyaxis
 	      (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*) id))))
 
