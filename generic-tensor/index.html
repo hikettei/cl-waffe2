@@ -599,7 +599,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1860 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1881 
   :vec-state [maybe-not-computed]
     &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
@@ -761,7 +761,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
 </code></pre>
-<pre><code>#S(STATE-DICT :TABLE #&lt;HASH-TABLE :TEST EQUAL :COUNT 2 {10037FCF63}&gt;
+<pre><code>#S(STATE-DICT :TABLE #&lt;HASH-TABLE :TEST EQUAL :COUNT 2 {10045F03B3}&gt;
  table-key-to-value:
     param:linearlayer.0.bias    -&gt; CPUTENSOR{FLOAT}(10)
     param:linearlayer.0.weights -&gt; CPUTENSOR{FLOAT}(10 10)

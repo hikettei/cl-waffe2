@@ -241,6 +241,10 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#inputs_19">Inputs</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#workloads">Workloads</a>
+    </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-view">[function] !view</a>
@@ -255,7 +259,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-rankup">[function] !rankup</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a>
+    <li class="toctree-l3"><a class="reference internal" href="#examples_1">Examples</a>
     </li>
         </ul>
     </li>
@@ -639,7 +643,7 @@
         <ul>
     <li class="toctree-l3"><a class="reference internal" href="#input_1">Input</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#examples_1">Examples</a>
+    <li class="toctree-l3"><a class="reference internal" href="#examples_2">Examples</a>
     </li>
         </ul>
     </li>
@@ -1096,14 +1100,28 @@ Stride     :   4  1  2
 <h2 id="function-reshape">[function] !reshape</h2>
 <pre><code>(!reshape tensor &amp;rest shapes)
 </code></pre>
-<p>Changes the shape of given tensor.</p>
-<p>Before and after the operation, the total elements of tensors must correspond.</p>
+<p>Returns a InputTensor with the same number of elements bu with the specified <code>shapes</code>.</p>
 <h3 id="inputs_19">Inputs</h3>
-<p><code>tensor</code> <code>AbstractTensor</code> but must not includes <code>symbol</code> in the shape.</p>
-<p><code>shapes</code> could be one of: fixnum <code>t</code>. <code>t</code> can be used at one, but the value of t is automatically inferenced.</p>
-<p>Note: If the first element of <code>shapes</code> is a function, <code>shapes</code> are overwritten with the function's value.</p>
-<pre><code class="language-lisp">(!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; =&gt; (2 3 5) Tensor
+<p><code>tensor[AbstractTensor]</code> Shapes can include: Fixnum, Symbol, and LazyAxis.</p>
+<p><code>shapes[list]</code> specify the shape of tensors transformed to. This form can include <code>t</code> at once and the value of t is automatically inferred given shapes. This form is consisted of: <code>Fixnum(&gt;=1)</code>, <code>T</code>, <code>Symbol</code> and <code>LazyAxis</code>. If the first element of <code>shapes</code> is a function, the form <code>shapes</code> including rest will be replaced with the returned value. the function form must be: <code>#'(lambda (tensor) after-shape)</code></p>
+<h3 id="examples">Examples</h3>
+<pre><code class="language-lisp">(!reshape (randn `(3 3)) 1 9)
+
+(!reshape (randn `(3 3)) t)
+
+;; the ~ macro is useful for transforming lazy shapes
+(!reshape (make-input `(N C H W) :X) (~ N C H W -&gt; (* N C H) W))
+
+;; can compose several higher-order functions
+(!reshape (ax+b `(5 3 2) 1 0) (compose #'reverse #'shape)) ;; =&gt; (2 3 5) Tensor
+
+;; (* A B) is regarded as a LazyAxis
+(!reshape (make-input `(A B) nil) `(* A B))
 </code></pre>
+<h3 id="workloads">Workloads</h3>
+<ul>
+<li>[ ] Compiling error for dynamic shapes.</li>
+</ul>
 <h2 id="function-view">[function] !view</h2>
 <pre><code class="language-lisp">(!view tensor &amp;rest subscripts)
 </code></pre>
@@ -1136,19 +1154,10 @@ Stride     :   4  1  2
 <p><code>fixnum</code> points out the specified index.</p>
 </li>
 <li>
-<p><code>(start end)</code> slices the area.</p>
-</li>
-<li>
-<p><code>(start end step-by)</code> slices the area by <code>step-by</code>. step-by can be a negative-fixnum. (Not tested)</p>
+<p><code>(start end)</code> slices the area: <code>[start, end)</code></p>
 </li>
 <li>
 <p><code>(:broadcast N-times)</code> broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.</p>
-</li>
-<li>
-<p><code>(:tflist ...)</code> (TODO)</p>
-</li>
-<li>
-<p><code>(:indices ...)</code> (TODO)</p>
 </li>
 </ol>
 <h3 id="return">Return</h3>
@@ -1171,7 +1180,7 @@ Stride     :   4  1  2
 <p>If <code>ntimes</code> &lt; 0, reduces 1, if the axis=1, otherwise returns error.</p>
 </li>
 </ol>
-<h3 id="examples">Examples</h3>
+<h3 id="examples_1">Examples</h3>
 <pre><code class="language-lisp">CL-WAFFE2-REPL&gt; (!rankup (randn `(3 3)) 3 :at 1)
 {CPUTENSOR[float] :shape (3 1 1 1 3) :named ChainTMP1459457 
   :vec-state [maybe-not-computed]
@@ -1871,7 +1880,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <p><code>sv4bw[bool]</code> (currently ignored)</p>
 </li>
 </ul>
-<h3 id="examples_1">Examples</h3>
+<h3 id="examples_2">Examples</h3>
 <p><code>my-topk</code> is a function to retrieve the Kth largest value in the last dimension.</p>
 <pre><code class="language-lisp">(defun topk (k)
   #'(lambda (&amp;rest args)
@@ -1994,7 +2003,7 @@ out\gets{gemm(1.0, x, y, 0.0, out)}
 <h3 id="inputs_62">Inputs</h3>
 <p><code>A</code> <code>B</code> AbstractTensor to be compared.</p>
 <h2 id="function-padding">[function] padding</h2>
-<pre><code class="language-lisp">(padding tensor pad-width &amp;key (pad-maker #'ax+b) (initargs `(0 0)))
+<pre><code class="language-lisp">(padding tensor pad-width &amp;key (pad-maker #'make-input) (initargs `(nil)))
 </code></pre>
 <p>Creating a new InputTensor with shape after padding, the function <code>padding</code> moves the given tensor into a new area.</p>
 <h3 id="implementation">Implementation</h3>
