@@ -329,7 +329,7 @@ LazyAxis: f(IN N) = floor((1+((IN+(2*N)+0+-1)/2)))
 "
   (declare (type LazyAxis lazy-expression))
   (or
-   (lazyaxis-read-as lazy-expression)
+   ;;(lazyaxis-read-as lazy-expression)
    (let ((vars (or *local-variable-table* (make-hash-table))))
      (loop for nth fixnum upfrom 0
 	   for arg in (lazyaxis-arguments lazy-expression)
@@ -363,13 +363,16 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
      ,@body))
 
 (defun tensor-fix-adjustable-shape (tensor)
+  "Resets all results of adjustable shape belongs to tensor"
+  (declare (type AbstractTensor tensor))
   (dolist (axis `(,@(slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 		  ,@(slot-value tensor 'cl-waffe2/vm.generic-tensor::visible-shape)
 		  ,@(slot-value tensor 'cl-waffe2/vm.generic-tensor::stride)
 		  ,@(slot-value tensor 'cl-waffe2/vm.generic-tensor::input-shape)))
     (when (typep axis 'LazyAxis)
       (setf (lazyaxis-read-as axis) nil)
-      (observe-axis axis))))
+      (observe-axis axis)))
+  nil)
 
 (defun maybe-observe-axis (value)
   (if (typep value 'LazyAxis)
