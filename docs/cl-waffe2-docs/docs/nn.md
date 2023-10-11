@@ -19,7 +19,7 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2209 
+{CPUTENSOR[float] :shape (10 10) :id TID2238 
   :vec-state [computed]
   ((1.2123578   -0.0        0.3656019   ~ 1.4792646   -0.0        0.39568463)                   
    (-0.0        -0.0        0.09934077  ~ -0.0        0.8187249   0.33749792)   
@@ -50,7 +50,7 @@ GeLU(x) = 0.5\times{x}\times{(1 + Tanh(\sqrt{\frac{2}{π}}\times{(x + 0.44715\ti
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2300 
+{CPUTENSOR[float] :shape (10 10) :id TID2329 
   :vec-state [computed]
   ((0.9859774   0.34466082  0.09621465  ~ 0.9216246   1.4845713   0.34032807)                   
    (0.48264125  -0.0        -0.0        ~ 0.032608878 0.72863156  1.6821892)   
@@ -80,7 +80,7 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2387 
+{CPUTENSOR[float] :shape (10 10) :id TID2416 
   :vec-state [computed]
   ((0.644825   0.6353275  0.40658134 ~ 0.8804779  0.51031536 0.3184848)                  
    (0.31827003 0.6823543  0.33825305 ~ 0.7810872  0.19540769 0.728776)   
@@ -116,7 +116,7 @@ LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2543 
+{CPUTENSOR[float] :shape (10 10) :id TID2578 
   :vec-state [computed]
   ((-0.0062375483 -0.005046675  0.42296785    ~ 1.1128049     0.09089017    -0.008739611)                     
    (0.3376901     0.36640626    1.849651      ~ 0.41286528    -0.0026475843 -0.0107471235)   
@@ -152,7 +152,7 @@ Applies the Expotential Linear Units Function (ELUs) element-wise as described i
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2634 
+{CPUTENSOR[float] :shape (10 10) :id TID2669 
   :vec-state [computed]
   ((-3.1367975e-4 0.060880393   0.4047371     ~ 0.54067177    -0.015001696  0.2813693)                     
    (-0.0017047632 -0.0036414461 0.78715545    ~ -0.011978014  -0.006375469  0.5117078)   
@@ -194,7 +194,7 @@ x_i = x_i - mean(x)
 ```lisp
 (proceed (!softmax (randn `(3 3))))
 
-{CPUTENSOR[float] :shape (3 3) :id TID2800 
+{CPUTENSOR[float] :shape (3 3) :id TID2839 
   :vec-state [computed]
   ((0.64688617 0.20169368 0.1514202)
    (0.36481348 0.0811322  0.5540543)
@@ -315,7 +315,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2939 
+{CPUTENSOR[float] :shape (10 10) :id TID2980 
   :vec-state [computed]
   ((1.0184398   2.1191165   0.45206386  ~ 1.0233625   1.4621267   0.39796215)                   
    (1.7387664   0.44385663  0.2733763   ~ 1.8357267   1.6068172   0.9255259)   
@@ -348,7 +348,7 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID3041 
+{CPUTENSOR[float] :shape (10 10) :id TID3082 
   :vec-state [computed]
   ((0.024422618  0.543947     0.0790878    ~ 0.36269054   5.4938188    0.17887937)                    
    (1.8154333    3.0576663    0.697018     ~ 0.6212674    0.0027494146 0.87471426)   
@@ -450,7 +450,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W3138}(
+<Composite: LINEARLAYER{W3179}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -487,23 +487,19 @@ which transformation of shapes are defined as:
 ```
 (INPUT[N C_IN H_IN W_IN] -> OUTPUT[N C_OUT H_OUT W_OUT] WHERE C_IN =
  IN-CHANNELS C_OUT = OUT-CHANNELS H_OUT =
- (IF (NUMBERP H_IN)
-     (FLOOR
-      (+ 1
-         (/
-          (+ H_IN (* 2 (CAR PADDING))
-             (* (- (CAR DILATION)) (- (CAR KERNEL-SIZE) 1)) -1)
-          (CAR STRIDE))))
-     -1)
+ (FLOOR
+  (+ 1
+     (/
+      (+ H_IN (* 2 (CAR PADDING))
+         (* (- (CAR DILATION)) (- (CAR KERNEL-SIZE) 1)) -1)
+      (CAR STRIDE))))
  W_OUT =
- (IF (NUMBERP W_IN)
-     (FLOOR
-      (+ 1
-         (/
-          (+ W_IN (* 2 (SECOND PADDING))
-             (* (- (SECOND DILATION)) (- (SECOND KERNEL-SIZE) 1)) -1)
-          (SECOND STRIDE))))
-     -1))
+ (FLOOR
+  (+ 1
+     (/
+      (+ W_IN (* 2 (SECOND PADDING))
+         (* (- (SECOND DILATION)) (- (SECOND KERNEL-SIZE) 1)) -1)
+      (SECOND STRIDE)))))
 ```
 ### Description
 
@@ -542,8 +538,50 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W3148}(
-    <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5 -1 -1))>
+<Composite: CONV2D{W3189}(
+    <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5
+                                            LazyAxis: observe-axis({LazyAxis: f(H_IN PADDING DILATION KERNEL-SIZE STRIDE) = (FLOOR
+                                                          (+ 1
+                                                             (/
+                                                              (+ H_IN
+                                                                 (* 2
+                                                                    (CAR
+                                                                     PADDING))
+                                                                 (*
+                                                                  (-
+                                                                   (CAR
+                                                                    DILATION))
+                                                                  (-
+                                                                   (CAR
+                                                                    KERNEL-SIZE)
+                                                                   1))
+                                                                 -1)
+                                                              (CAR STRIDE))))}, H_IN, (0
+                                                                                       0), (1
+                                                                                            1), (3
+                                                                                                 3), (1
+                                                                                                      1))
+                                            LazyAxis: observe-axis({LazyAxis: f(W_IN PADDING DILATION KERNEL-SIZE STRIDE) = (FLOOR
+                                                          (+ 1
+                                                             (/
+                                                              (+ W_IN
+                                                                 (* 2
+                                                                    (SECOND
+                                                                     PADDING))
+                                                                 (*
+                                                                  (-
+                                                                   (SECOND
+                                                                    DILATION))
+                                                                  (-
+                                                                   (SECOND
+                                                                    KERNEL-SIZE)
+                                                                   1))
+                                                                 -1)
+                                                              (SECOND STRIDE))))}, W_IN, (0
+                                                                                          0), (1
+                                                                                               1), (3
+                                                                                                    3), (1
+                                                                                                         1))))>
 
     WEIGHT -> (5 3 3 3)
     BIAS   -> (5)
@@ -566,13 +604,8 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 which transformation of shapes are defined as:
 ```
 (INPUT[N C H_IN W_IN] -> OUTPUT[N C H_OUT W_OUT] WHERE H_OUT =
- (IF (NUMBERP H_IN)
-     (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE))
-     -1)
- W_OUT =
- (IF (NUMBERP W_OUT)
-     (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
-     -1))
+ (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE)) W_OUT =
+ (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE)))
 ```
 ### Description
 
@@ -605,13 +638,8 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 which transformation of shapes are defined as:
 ```
 (INPUT[N C H_IN W_IN] -> OUTPUT[N C H_OUT W_OUT] WHERE H_OUT =
- (IF (NUMBERP H_IN)
-     (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE))
-     -1)
- W_OUT =
- (IF (NUMBERP W_OUT)
-     (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE))
-     -1))
+ (POOL-OUT-SIZE H_IN (CAR PADDING) (CAR KERNEL-SIZE) (CAR STRIDE)) W_OUT =
+ (POOL-OUT-SIZE W_IN (SECOND PADDING) (SECOND KERNEL-SIZE) (SECOND STRIDE)))
 ```
 ### Description
 

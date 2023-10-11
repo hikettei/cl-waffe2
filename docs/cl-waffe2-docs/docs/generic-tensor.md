@@ -433,7 +433,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1860 
+{CPUTENSOR[float] :shape (A 10) :id TID1881 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
@@ -653,7 +653,7 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
 > (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
 ```
 ```
-#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {10037FCF63}>
+#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {10045F03B3}>
  table-key-to-value:
     param:linearlayer.0.bias    -> CPUTENSOR{FLOAT}(10)
     param:linearlayer.0.weights -> CPUTENSOR{FLOAT}(10 10)
