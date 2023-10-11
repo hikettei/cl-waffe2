@@ -80,6 +80,8 @@ If the re-allocation is performed, frees the old one.
 		    val
 		    (or (let ((out (gethash val shape-table)))
 			  (when (numberp out) out))
+			(when (symbol-lazyaxis val)
+			  (observe-axis (symbol-lazyaxis val)))			
 			(error "adjust-allocation!: The symbol ~a is unknown. Choose from: ~a -> ~a"
 			       val
 			       (alexandria:hash-table-keys shape-table)
@@ -116,7 +118,7 @@ If the re-allocation is performed, frees the old one.
       ;; Reading the orig-shape
       (when (not (scalar-p tensor))
 	(setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
-	      (map 'list #'cl-waffe2/vm.generic-tensor::read-symbol
+	      (map 'list #'maybe-observe-axis
 		   (cl-waffe2/vm.generic-tensor::original-shape tensor))))
       
       (when (null (cl-waffe2/vm.generic-tensor::vec tensor))

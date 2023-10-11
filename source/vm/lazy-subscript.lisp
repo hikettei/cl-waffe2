@@ -100,7 +100,18 @@ e.g.: A is = compared to 2
 	   (progn
 	     (setf (lazyaxis-read-as out) nil)
 	     (observe-axis out)))))
-    (:dynamic-shape (observe-variable (cadr (cadr (lazyir-car lazyir)))))
+    (:dynamic-shape
+     (let ((out (observe-variable (cadr (cadr (lazyir-car lazyir))))))
+       (if (numberp out)
+	   out
+	   ;; Still out=symbol?
+	   ;; Maybe the out is LazyAxis and undetermined due to dependencies
+	   ;; Compute out first if out is LazyAxis.
+	   (if (symbol-lazyaxis out)
+	       ;; [MEMO] Detecting Circular Dependencies?
+	       (progn
+		 (observe-axis (symbol-lazyaxis out)))
+	       (error "interpret-lazy: Encountered undeclared a dynamic shape: ~a" out)))))
     (:rest          (let ((out (second (lazyir-car lazyir))))
 		      (setf (lazyaxis-read-as out) nil)
 		      (observe-axis out)))
@@ -366,7 +377,9 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
 	  (observe-axis value)
 	  value)
       (if (symbolp value)
-	  (cl-waffe2/vm.generic-tensor::read-adjustable-symbol value)
+	  (if (symbol-lazyaxis value)
+	      (observe-axis (symbol-lazyaxis value))
+	      (cl-waffe2/vm.generic-tensor::read-adjustable-symbol value))
 	  value)))
 
 (defun maybe-observe-axis-no-err (value)

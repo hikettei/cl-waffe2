@@ -58,7 +58,7 @@
 	     (LinearLayer (* 16 4 4) 10))
 
 (defun cnn-build-test ()
-  (build (call (LazyCNN) (make-input `(N 1 28 28) :X)))
+  (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))
   )
 ;; ReshapeTest
 ;;(print (!reshape (make-input `(3 3 3 3)) (~ N C H W -> N C H W)))

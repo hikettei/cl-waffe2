@@ -23,7 +23,7 @@ For example:
 	(error "broadcast-to: Couldn't broadcast together because ranks does not match. ~a and ~a" tensor object-tensor))
       (loop for shape-tbc    in (shape tensor)
 	    for shape-object in (shape object-tensor)
-	    if (= shape-tbc shape-object)
+	    if (equal shape-tbc shape-object)
 	      collect t
 	    else
 	      collect (progn
