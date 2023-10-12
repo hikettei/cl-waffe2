@@ -130,7 +130,10 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 				if (and need-backward
 					(cl-waffe2/vm.generic-tensor:ancestor-param-p arg))
 				  collect (progn
-					    (setf (slot-value tensor 'requires-grad) t						  
+					    ;; The size of gradients are dynamically changed;
+					    ;; Allocate Manually
+					    (setf (slot-value tensor 'requires-grad) t
+						  (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor) T
 						  (cl-waffe2/vm.generic-tensor::tensor-id-lock-p tensor) T
 						  (slot-value tensor 'cl-waffe2/vm.generic-tensor::grad)
 						  (make-input (shape tensor) nil
@@ -265,7 +268,8 @@ And manages its allocation not to cause conflicts in the threads."))
 				    (apply #'values
 					   (loop for argument in (cl-waffe2/vm.generic-tensor::compiled-inputs (read-compiled-model ,self))
 						 if (cl-waffe2/vm.generic-tensor:grad (get-input (read-compiled-model ,self) argument))
-						   collect (cl-waffe2/vm.generic-tensor:grad (get-input (read-compiled-model ,self) argument))
+						   collect
+						   (cl-waffe2/vm.generic-tensor:grad (get-input (read-compiled-model ,self) argument))
 						 else
 						   collect nil)))))
 

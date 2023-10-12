@@ -80,10 +80,13 @@
      (!sumup-static a))
     (= 1 (vref (grad a) 0))))
 
+;; Backward tests
 (test defmodel-as-diff-test
   (is (defmodel->node-diff-1))
   (is (defmodel->node-diff-1-vm))
   (is (defmodel->node-diff-2)))
 
-;; TODO:    Loop Collapse
-;; Support: lazy-values
+;; 1. もうちょっとdefmodel->node-diffのテスト増やすべき
+;; 2. Backward opt
+;; 3. connected with dynamic-shape?
+;; 4. node->defnode

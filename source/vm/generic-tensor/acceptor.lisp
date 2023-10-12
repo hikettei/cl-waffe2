@@ -502,7 +502,7 @@ Or, your network may be disconnected at a certain position."
 	    (out  (replace-new (compiled-out  model))))
 	(make-instance 'Compiled-Composite
 		       ;; Duplicate Memory-Pool
-		       :allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model))
+		       :allocation allocation
 		       
 		       :compiled-forward  (compiled-forward model)
 		       :compiled-backward (compiled-backward model)
@@ -510,7 +510,7 @@ Or, your network may be disconnected at a certain position."
 		       :dout dout
 		       :out  out
 		       
-		       :inputs    (compiled-inputs model)
+		       :inputs    (compiled-inputs model) ;; a list of keywords
 		       :variables (copy-variable-table (compiled-variables model) allocation))))))
 
 ;; TODO -> (defmethod free-model ((model Compiled-Composite)))

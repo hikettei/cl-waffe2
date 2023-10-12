@@ -120,7 +120,7 @@
 			 (cl-waffe2/base-impl::ScalarAndScalarAdd)
 			 (grad tensor)
 			 grad)))
-		     (if (= (tensor-grad-count tensor) 0)			 
+		     (if (= (tensor-grad-count tensor) 0)
 			 (progn
 			   (incf (tensor-grad-count tensor) 1)
 			   (node-compile-into-vm
