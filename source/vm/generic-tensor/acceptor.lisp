@@ -495,8 +495,9 @@ Or, your network may be disconnected at a certain position."
   (let* ((allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model)))
 	 (table      (cl-waffe2/vm::vmalloc-id2pool allocation)))
     (flet ((replace-new (tensor)
-	     (or (gethash (tensor-id tensor) table)
-		 tensor)))
+	     (when tensor
+	       (or (gethash (tensor-id tensor) table)
+		   tensor))))
       (let ((dout (replace-new (compiled-dout model)))
 	    (out  (replace-new (compiled-out  model))))
 	(make-instance 'Compiled-Composite

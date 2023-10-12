@@ -3,20 +3,36 @@
 
 ;;
 ;; This file provides:
-;; Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
+;;  Compiler from Composite (i.e.: CLOS classes defined by defmodel) into another forms (e.g.: function defnode)
+;;
+;; # Reusing compiled cl-waffe2 IR
+;;
+;; AbstractNode -> HighLevelIR
+
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;                            [WFINST: MOVETENSORNODE XX <- op(...)]
+;;                            [WFINST: VIEW-NODE      XX <- op(...)]
+;;                            [WFINST: SCALARMUL XX <- op(...)]
+;; AbstractNode: [Softmax] -> [WFINST: VIEW-XX <- op(...)]
+;;                                       ...
+;;                            [WFINST: VIEWTENSORNODE]
+;;                            [WFINST: DIVNODE ...]
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;; model-compiler.lisp plays an important role for caching the result of compiled codes. 
+;; Control Flow is needed when preresenting complex and flexible models (e.g.: RNN/Gating/Reinforcement Learning) 
+;; which uses dynamic and complex computation node.
+;; We do not want to compile the whole model again when the small and minor route is changed;
+;; defmodel-as provides a common UI for storing Compiled-Composite being accessed as a function or AbstractNode.
 ;;
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-;; [TODO] Make FINISHED Workers gc-reachable, esp working with REPL
-;;```lisp
-;;#<SB-THREAD:THREAD "worker" FINISHED values: NIL {10012E02A3}> 
-;;#<SB-THREAD:THREAD "worker" FINISHED values: NIL {10012DF0E3}> 
-;;#<SB-THREAD:THREAD "worker" FINISHED values: T {10012DF073}> 
-;;#<SB-THREAD:THREAD "repl-thread" RUNNING {10010C81B3}> 
-;;```    ...
-(defvar *thread-pool-lock* (make-lock "thread cache lock"))
-(defparameter *model-function-cache-form* (make-hash-table)) ;; <- Make it gc-reachable. with worker=FINISHED
+(defvar       *thread-pool-lock* (make-lock "thread cache lock"))
+
+;; [FixME] Help Me making *model-function-cache-form* gc-reachable in a thread safe way
+;; If the key of table is finalized, the value of table should also finalized.
+(defparameter *model-function-cache-form* (make-hash-table));;(tg:make-weak-hash-table :weakness :key))
 (declaim (type hash-table *model-function-cache-form*))
 ;; model-function-cache-form
 ;;     \ thread-idx=0 ...
@@ -24,7 +40,7 @@
 ;;                    L___  ... (Compiled Composite)
 
 ;; :asif = :function -> dispatch by thread-idx
-;;       = :node     -> each time allocate
+;;       = :node     -> Allocated eact time invoked since :node execution is directly embodied in the compiled code.
 
 (defun thread-cache-table (&optional (idx nil))
   (with-lock-held (*thread-pool-lock*)
@@ -51,8 +67,7 @@
   (let ((table (thread-cache-table)))
     (or (gethash key table)
 	(setf (gethash key table) (make-hash-table :test #'equal)))))
-	  
-	       
+
 (defun read-where-args (where)
   "where -> (A B) (C D)"
   (multiple-value-bind (in out fw bw) (parse-subscript where)
@@ -67,9 +82,13 @@
 	       collect (nth-subscript i))))))
 
 (deftype model-asif-options ()
+  "A list of targets to be compiled.
+Set :function = instant execution. no backward propagation
+Set :node     = keep compiled cl-waffe2IR with fw/bw props"
   `(and keyword (member :function :node)))
 
 (defun trace-and-compile-composite (need-backward kernel-size-list named composite composite-input-size argument-names &rest args)
+  "Tracing the given composite with dummy input tensors, this function obtains a compiled-composite class that can be reused."
   (when (some #'(lambda (x) (and (tensor-state x) (eql :maybe-not-computed (cl-waffe2/vm.generic-tensor::state-name x (tensor-state x))))) args)
     (warn "defmodel-as: The function ~(~a~) received a tensor where :vec-state=[maybe-not-computed].
 Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
@@ -87,9 +106,9 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 			       kernel-size-list))
 	   (batch-symbols (loop for i upfrom 0 below (apply #'max (map 'list (compose #'cl-waffe2/vm.generic-tensor:dims) args))
 				collect (intern (format nil "rank~a" i))))
-	   (trace-tensors (loop for arg in args
-				for in-size in composite-input-size
-				for name in argument-names
+	   (trace-tensors (loop for arg        in args
+				for in-size    in composite-input-size
+				for name       in argument-names
 				for batch-size in batch-lengths
 				collect (make-input (loop for decl-size in in-size
 							  for position upfrom 0
@@ -159,6 +178,7 @@ excepted: AbstractTensor"
 		 (let* ((,dispatching-keys
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
 			  (map 'list #'(lambda (tensor)
+					 ;; This condition is more restrict than ./generic-tensor/lut.lisp
 					 (list (dtype tensor)
 					       (order tensor)
 					       (class-of tensor)
@@ -167,6 +187,7 @@ excepted: AbstractTensor"
 					       ;; [FIXME] Reusing gcompiled composite could be the main reason for SegFault!!
 					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
 					       ;; Even when the node is cached
+					       (cl-waffe2/vm.generic-tensor:tensor-actual-stride tensor)
 					       ;; It should be dispatched by ranks, but helplessly uses shape
 					       (shape tensor) ;;(cl-waffe2/vm.generic-tensor::translate-adjustable-shape (shape tensor))
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
@@ -176,15 +197,15 @@ excepted: AbstractTensor"
 		       ;; [TODO] Shape Inspection
 		       ,(if get-model
 			    found-function
-			     `(forward ,found-function ,@arguments))
+			    `(forward ,found-function ,@arguments))
 		       (let ((,found-function (trace-and-compile-composite
-						,need-backward
-						',kernel-size-list
-						',named
-						,composite
-						',composite-input-size
-						',arguments
-						,@arguments)))
+					       ,need-backward
+					       ',kernel-size-list
+					       ',named
+					       ,composite
+					       ',composite-input-size
+					       ',arguments
+					       ,@arguments)))
 			 ;; cache it
 			 (setf (gethash ,dispatching-keys (read-from-cache ,cache-key)) ,found-function)
 			 ,(if get-model
@@ -210,7 +231,7 @@ And manages its allocation not to cause conflicts in the threads."))
 
 (defun expand-define->abstractnode (differentiable-p target-model where named)
   (let* ((composite-name (car target-model))
-	 (node-name (symb composite-name '-asnode)))
+	 (node-name      (symb composite-name '-asnode)))
     (multiple-value-bind (in-names out-names in-states out-states let-bindings) (parse-subscript where)
       (declare (ignore let-bindings out-names in-states out-states))
       (with-gensyms (self dy)
@@ -220,15 +241,14 @@ And manages its allocation not to cause conflicts in the threads."))
 		       :extends (AbstractCompositeNode)
 		       :forward ((,self ,@in-names)
 				 (let ((out (multiple-value-list (forward (read-compiled-model ,self) ,@in-names))))
-				   (when (every #'scalar-p out)
-				     (setf (out-scalar-p ,self) t))
+				   ;; [TODO] Check if duplicated computation of backward is exist?
 				   (apply #'values out)))
 
 		       :backward ((,self ,dy)
 				  (when (null (cl-waffe2/vm.generic-tensor::compiled-backward (read-compiled-model ,self)))
 				    (error "Couldn't step a backpropagation of ~a (defined by the defmodel-as macro) because there's no compiled backward InstructionSeq.
 => (defmodel-as (...) :differentiable t)
-                              └── Set :differentiable=t or the forward wasn't called."
+                              └── Set :differentiable=t or the forward propagation wasn't called?"
 					   ',node-name))
 
 				  (let ((dout (read-dout ,self)))
@@ -248,9 +268,24 @@ And manages its allocation not to cause conflicts in the threads."))
 						   collect (cl-waffe2/vm.generic-tensor:grad (get-input (read-compiled-model ,self) argument))
 						 else
 						   collect nil)))))
-	     (setf (read-compiled-model ,self) (cl-waffe2/vm.generic-tensor::copy-compiled-model (,(symb named '-model) ,@in-names))
-		   (read-dout ,self) (cl-waffe2/vm.generic-tensor::compiled-dout (read-compiled-model ,self))))
 
+	     ;; Finding compiled Compiled-Composite
+	     ;; -> Copies the allocation to avoid conflicts
+	     ;; (this behaviour remained to be optimized; share the allication with current toplevel compiled composite).
+	     (setf (read-compiled-model ,self)
+		   (cl-waffe2/vm.generic-tensor::copy-compiled-model
+		    (,(symb named '-model) ,@in-names))
+		   (read-dout ,self)
+		   (cl-waffe2/vm.generic-tensor::compiled-dout (read-compiled-model ,self)))
+	     
+	     ;; Determine out-scalar-p
+	     ;; whether returned tensor of this node is matrix or scalar is determined the compiled output is mat or scalar;
+	     ;; compiled-out = a single AbstractTensor
+	     ;; This node returns the result of compiled-composite.
+	     (setf (out-scalar-p ,self) (scalar-p (cl-waffe2/vm.generic-tensor::compiled-out (read-compiled-model ,self)))))
+
+	   ;; Finds (or compiles) the differentiable function from given @in-names
+	   ;; Returning Compiled-Composite
 	   (defun ,(symb named '-model) (,@in-names)
 	     (funcall
 	      ,(expand-define->function-form
@@ -261,16 +296,20 @@ And manages its allocation not to cause conflicts in the threads."))
 		:need-backward differentiable-p
 		:get-model t)
 	      ,@in-names))
-	   
+
+	   ;; The node is excepted to be invoked via this function
+	   ;; Declaim+Inline
 	   (defun ,named (,@in-names)
+	     ""
 	     (declare (type AbstractTensor ,@in-names))
 	     ;; in-names=number -> make-tensor auto?
 	     ;; tensor-vec=Eliminate InputTensor with no existing vec.
 	     (mapc #'tensor-vec (list ,@in-names))
 	     (call (,node-name ,@in-names) ,@in-names)))))))
-)
+) ;; eval-when
 
-;; [Exported]
+
+;; API
 (defmacro defmodel-as (target-model
 		       &key
 			 (where nil)
