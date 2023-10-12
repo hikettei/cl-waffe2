@@ -87,9 +87,10 @@ Set :function = instant execution. no backward propagation
 Set :node     = keep compiled cl-waffe2IR with fw/bw props"
   `(and keyword (member :function :node)))
 
+(defparameter *static-arguments-mode* T)
 (defun trace-and-compile-composite (need-backward kernel-size-list named composite composite-input-size argument-names &rest args)
   "Tracing the given composite with dummy input tensors, this function obtains a compiled-composite class that can be reused."
-  (when (some #'(lambda (x) (and (tensor-state x) (eql :maybe-not-computed (cl-waffe2/vm.generic-tensor::state-name x (tensor-state x))))) args)
+  (when (and *static-arguments-mode* (some #'(lambda (x) (and (tensor-state x) (eql :maybe-not-computed (cl-waffe2/vm.generic-tensor::state-name x (tensor-state x))))) args))
     (warn "defmodel-as: The function ~(~a~) received a tensor where :vec-state=[maybe-not-computed].
 Note that this function isn't subject to lazy-evaluation, and all arguments need to be evaluated." named))
   
@@ -177,7 +178,7 @@ excepted: AbstractTensor"
 	     (progn
 	       `((declare (type AbstractTensor ,@arguments))
 		 ;; tensor-vec=Eliminate InputTensor with no existing vec.
-		 (mapc #'tensor-vec (list ,@arguments))
+		 ;;(mapc #'tensor-vec (list ,@arguments))
 		 (let* ((,dispatching-keys
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
 			  (map 'list #'(lambda (tensor)
@@ -233,8 +234,8 @@ excepted: AbstractTensor"
 And manages its allocation not to cause conflicts in the threads."))
 
 (defun expand-define->abstractnode (differentiable-p target-model where named)
-  (let* ((composite-name (car target-model))
-	 (node-name      (symb composite-name '-asnode)))
+  (let* (;;(composite-name (car target-model))
+	 (node-name      (symb named '-asnode)))
     (multiple-value-bind (in-names out-names in-states out-states let-bindings) (parse-subscript where)
       (declare (ignore let-bindings out-names in-states out-states))
       (with-gensyms (self dy)
@@ -263,7 +264,7 @@ And manages its allocation not to cause conflicts in the threads."))
 					(setf (tensor-vec dout) (tensor-vec ,dy)))
 				    
 				    (backward (read-compiled-model ,self))
-				    
+
 				    ;; Composing Gradients
 				    (apply #'values
 					   (loop for argument in (cl-waffe2/vm.generic-tensor::compiled-inputs (read-compiled-model ,self))
@@ -290,7 +291,7 @@ And manages its allocation not to cause conflicts in the threads."))
 
 	   ;; Finds (or compiles) the differentiable function from given @in-names
 	   ;; Returning Compiled-Composite
-	   (defun ,(symb named '-model) (,@in-names)
+	   (defun ,(symb named '-model) (,@in-names &aux (*static-arguments-mode* nil))
 	     (funcall
 	      ,(expand-define->function-form
 		target-model
@@ -308,7 +309,7 @@ And manages its allocation not to cause conflicts in the threads."))
 	     (declare (type AbstractTensor ,@in-names))
 	     ;; in-names=number -> make-tensor auto?
 	     ;; tensor-vec=Eliminate InputTensor with no existing vec.
-	     (mapc #'tensor-vec (list ,@in-names))
+	     ;;(mapc #'tensor-vec (list ,@in-names))
 	     (call (,node-name ,@in-names) ,@in-names)))))))
 ) ;; eval-when
 

@@ -28,6 +28,11 @@
 ;; AbstractNode: f(lambda_fw, lambda_bw, tensors) -> g(tensors) where g is a thread-safe compiled program.
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+;; [TODO] If the given IR includes Compiled-Composite(defmodel-as) and allocations information for it is available.
+;;         Use these information and merge them.
+;;        Such nodes are subclass of AbstractCompositeNode.
+;;
+
 (defun tensor-tmp-p (tensor &optional (include-scalar nil))
   "Returns T if the given tensor is subject to be optimized locality"
   (declare (type AbstractTensor tensor))
