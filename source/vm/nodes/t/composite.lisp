@@ -80,10 +80,92 @@
      (!sumup-static a))
     (= 1 (vref (grad a) 0))))
 
+;; Backward tests
 (test defmodel-as-diff-test
   (is (defmodel->node-diff-1))
   (is (defmodel->node-diff-1-vm))
   (is (defmodel->node-diff-2)))
 
-;; TODO:    Loop Collapse
-;; Support: lazy-values
+(node->defnode !softmax-jit-lazy (A[~] -> B[~])
+  (!softmax a))
+
+(test node->defnode-test
+  (is
+   (M=
+    (proceed (!softmax (ax+b `(20 20) 0 2)))
+    (proceed (!softmax-jit-lazy (ax+b `(20 20) 0 2))))))
+
+(node->defnode !gelu-jit-lazy (A[~] -> B[~])
+  (!gelu a))
+
+(test defmodel-as-node-diff-test-GeLU
+  (is
+   (let ((a (parameter (ax+b `(10 10) 0.001 2)))
+	 (b (parameter (ax+b `(10 10) 0.001 2))))
+     (proceed-backward
+      (!mean (!gelu-jit-lazy a)))
+     (proceed-backward
+      (!mean (!gelu-jit-lazy b)))
+     (and
+      (not (= (vref (grad a) 0) 0.0))
+      (M= (grad a) (grad b))))))
+
+(defun meet-with-dynamic-shape-larger ()
+  (let ((model (build
+		(!gelu-jit-lazy (make-input `(A B) :X))
+		:inputs `(:X))))
+    ;; Every time Reallocation
+    (forward model (ax+b `(1 10) 0 2))
+    (forward model (ax+b `(2 10) 0 1))
+    (forward model (ax+b `(3 10) 0 2))
+    (every #'(lambda (x) (= x 0.841192))
+	   (tensor-vec (forward model (ax+b `(4 10) 0 1))))))
+
+(defun meet-with-dynamic-shape-smaller ()
+  (let ((model (build
+		(!gelu-jit-lazy (make-input `(A B) :X))
+		:inputs `(:X))))
+    ;; Re-using allocations
+    (forward model (ax+b `(4 10) 0 2))
+    (forward model (ax+b `(3 10) 0 1))
+    (forward model (ax+b `(2 10) 0 2))
+    (let ((out (forward model (ax+b `(1 10) 0 1))))
+      (every #'(lambda (nth)
+		 (= (vref out nth) 0.841192))
+	     (loop for i upfrom 0 below 10 collect i)))))
+
+(defun meet-with-dynamic-shape-complicated ()
+  (let ((model (build
+		(!relu (!gelu-jit-lazy (!relu (make-input `(A B) :X))))
+		:inputs `(:X))))
+    ;; Re-using allocations
+    (forward model (ax+b `(4 10) 0 2))
+    (backward model)
+    (forward model (ax+b `(3 10) 0 1))
+    (forward model (ax+b `(2 10) 0 2))
+    (let ((out (forward model (ax+b `(1 10) 0 1))))
+      (every #'(lambda (nth)
+		 (= (vref out nth) 0.841192))
+	     (loop for i upfrom 0 below 10 collect i)))))
+
+(test meet-with-dynamic-shape
+  (is (meet-with-dynamic-shape-larger))
+  (is (meet-with-dynamic-shape-smaller))
+  (is (meet-with-dynamic-shape-complicated)))
+
+;; !sin a !sin b was computed at once.
+(node->defnode !arith-test (A[~] B[~] -> C[~])
+  (!add (!sin a) (!sin b)))
+
+;; Confirmed !arith-test backward was called at once.
+(defun backward-route-test ()
+  (let ((a (parameter (ax+b `(10 10) 0 2)))
+	(b (parameter (ax+b `(10 10) 0 2))))
+    (proceed-backward (!arith-test a b))
+    (cl-waffe2/vm:disassemble-waffe2-ir (!arith-test a b))
+    (list (grad a) (grad b))))
+
+(test defmodel-as-backward-route-test
+  (is (backward-route-test)))
+
+

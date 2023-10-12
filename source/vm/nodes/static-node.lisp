@@ -7,19 +7,16 @@
 ;; Memo: (call (StaticNode) (parameter (randn `(10 10)))) is n't working for backward
 ;; But (call (StaticNode) (!copy (parameter (randn `(10 10))))) is working.
 
+;; define-impl-op is the way to describe lambda expression of Wengert List directly by users.
+
 ;; ===========================================================
-;; Static Composite ==========================================
+;; = Static Composite ========================================
 ;; ===========================================================
 
-;; Parameters
-(defparameter *under-composite-node-mode* 0 "Incf 1 when go deeper with compis-temode, If count>=2, save-for-backwards are ignored.")
+(defparameter *under-composite-node-mode* 0 "Indicates the depth of scope of static-node. Incf 1 when go deeper with compis-temode, If count>=2, save-for-backwards are ignored.")
 
 (defparameter *composite-node-self-global* nil "Used by with-setting-save4bw, with-reading-save4bw")
 
-
-
-
-;; Using proceed instead composite-function is now much wiser desicion.
 
 ;; Implementation of save-for-backward/read-save-for-backward
 ;; Both of them are called with save-for-backward function binded by with-composite-node-mode
@@ -43,7 +40,6 @@
 	  ;; Do allocation of place
 	  ;; Set it to the slot
 	  (setf (slot-value self name) place)))
-
       (cl-waffe2/vm::%vm-move (slot-value self name) tensor)
 
       ;; FixME

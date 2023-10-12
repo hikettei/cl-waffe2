@@ -306,7 +306,7 @@ Creates a lambda function obtained by tracing and compiling the computation node
 ## [macro] node->defun
 
 ```lisp
-(node->defun (name (&rest where) &body body))
+(node->defun name (&rest where) &body body)
 ```
 
 Defines a function obtained by tracing and compiling the computation node described in the body.
@@ -343,14 +343,12 @@ Defines a function obtained by tracing and compiling the computation node descri
        :asif :function
        :named ,name)))
 
-
-#|
 (defmacro node->defnode (name (&rest where) &body body)
   "
 ## [macro] node->defnode
 
 ```lisp
-(node->defun (name (&rest where) &body body))
+(node->defun name (&rest where) &body body)
 ```
 
 Defines a differentiable AbstractNode obtained by tracing and compiling the computation node described in the body.
@@ -377,6 +375,6 @@ Defines a differentiable AbstractNode obtained by tracing and compiling the comp
 	 (asnode #'(lambda (,@(car parsed)) ,@body))
        :where ,where
        :asif :node
-       :differentiable nil
+       :differentiable t
        :named ,name)))
-|#
+

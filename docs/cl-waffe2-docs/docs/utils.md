@@ -352,7 +352,7 @@ Creates a lambda function obtained by tracing and compiling the computation node
 ## [macro] node->defun
 
 ```lisp
-(node->defun (name (&rest where) &body body))
+(node->defun name (&rest where) &body body)
 ```
 
 Defines a function obtained by tracing and compiling the computation node described in the body.
@@ -380,6 +380,31 @@ Defines a function obtained by tracing and compiling the computation node descri
   :belongs-to :memory-pool
   :requires-grad NIL
   :backward NIL}
+```
+
+## [macro] node->defnode
+
+```lisp
+(node->defun name (&rest where) &body body)
+```
+
+Defines a differentiable AbstractNode obtained by tracing and compiling the computation node described in the body.
+
+### Inputs
+
+`name[symbol]` the function is defined after it
+
+`where` declares the shape transforms. the tensor names used here are the same as those used in body.
+
+`body` Describe the construction of the computation node here.
+
+### Example
+
+```lisp
+(node->defnode log-softmax (A[~] -> OUT[~])
+    (!softmax (!loge a) :axis 1))
+
+(proceed (log-softmax (parameter (ax+b `(3 3) 0 1))))
 ```
 
 ## [function] show-backends

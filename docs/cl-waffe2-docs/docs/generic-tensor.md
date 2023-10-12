@@ -653,7 +653,7 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
 > (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
 ```
 ```
-#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {10045F03B3}>
+#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {10045083B3}>
  table-key-to-value:
     param:linearlayer.0.bias    -> CPUTENSOR{FLOAT}(10)
     param:linearlayer.0.weights -> CPUTENSOR{FLOAT}(10 10)
