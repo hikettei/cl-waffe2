@@ -147,9 +147,17 @@
     </li>
         </ul>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#macro-node-defnode">[macro] node-&gt;defnode</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#inputs_4">Inputs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example_9">Example</a>
+    </li>
+        </ul>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#function-show-backends">[function] show-backends</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example_9">Example</a>
+    <li class="toctree-l3"><a class="reference internal" href="#example_10">Example</a>
     </li>
         </ul>
     </li>
@@ -461,7 +469,7 @@ Op:COSNODE{CPUTENSOR}
 <h3 id="note">Note</h3>
 <p>⚠️ Caches of functions are created for each location where this macro is located. Never place it inside a loop!</p>
 <h2 id="macro-node-defun">[macro] node-&gt;defun</h2>
-<pre><code class="language-lisp">(node-&gt;defun (name (&amp;rest where) &amp;body body))
+<pre><code class="language-lisp">(node-&gt;defun name (&amp;rest where) &amp;body body)
 </code></pre>
 <p>Defines a function obtained by tracing and compiling the computation node described in the body.</p>
 <h3 id="inputs_3">Inputs</h3>
@@ -482,11 +490,25 @@ Op:COSNODE{CPUTENSOR}
   :requires-grad NIL
   :backward NIL}
 </code></pre>
+<h2 id="macro-node-defnode">[macro] node-&gt;defnode</h2>
+<pre><code class="language-lisp">(node-&gt;defun name (&amp;rest where) &amp;body body)
+</code></pre>
+<p>Defines a differentiable AbstractNode obtained by tracing and compiling the computation node described in the body.</p>
+<h3 id="inputs_4">Inputs</h3>
+<p><code>name[symbol]</code> the function is defined after it</p>
+<p><code>where</code> declares the shape transforms. the tensor names used here are the same as those used in body.</p>
+<p><code>body</code> Describe the construction of the computation node here.</p>
+<h3 id="example_9">Example</h3>
+<pre><code class="language-lisp">(node-&gt;defnode log-softmax (A[~] -&gt; OUT[~])
+    (!softmax (!loge a) :axis 1))
+
+(proceed (log-softmax (parameter (ax+b `(3 3) 0 1))))
+</code></pre>
 <h2 id="function-show-backends">[function] show-backends</h2>
 <pre><code class="language-lisp">(show-backends &amp;key (stream t))
 </code></pre>
 <p>collects and displays the current state of devices to the given <code>stream</code></p>
-<h3 id="example_9">Example</h3>
+<h3 id="example_10">Example</h3>
 <pre><code class="language-lisp">(show-backends)
 
 ─────[All Backends Tree]──────────────────────────────────────────────────
