@@ -20,6 +20,8 @@
 
 # cl-waffe2
 
+<img alt="Concepts" src="./assets/concepts.jpeg" width="120%">
+
 > ⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 > 
 > I actually have a repository [cl-waffe(DEPRECATED UNSUPPORTED!)](https://github.com/hikettei/cl-waffe) with a similar name. Don't misunderstand that: cl-waffe**2** is the latest one and all features are inherited from the old one.
