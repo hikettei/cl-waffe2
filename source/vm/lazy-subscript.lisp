@@ -253,15 +253,22 @@ No macro usings are allowed; functions and fixnum, list are available.
   (let* ((lazyir (parse-lazy-exp expression))
 	 (args   (ir->args lazyir))
 	 (form   (ir->list lazyir)))
-    (if (and (typep (lazyir-car lazyir) 'fixnum)
-	     (eql (lazyir-type lazyir) :number))
-	(lazyir-car lazyir)
-	(%make-lazyaxis
-	 args
-	 lazyir
-	 (if (listp form)
-	     #'(lambda () (interpret-lazy lazyir))
-	     #'(lambda () form))))))
+
+    (when (and
+	   (typep (lazyir-car lazyir) 'fixnum)
+	   (eql (lazyir-type lazyir) :number))
+      (return-from make-lazyaxis (lazyir-car lazyir)))
+
+    (when (eql (lazyir-type lazyir) :dynamic-shape)
+      (return-from make-lazyaxis
+	(cadr (second (lazyir-car lazyir)))))
+    
+    (%make-lazyaxis
+     args
+     lazyir
+     (if (listp form)
+	 #'(lambda () (interpret-lazy lazyir))
+	 #'(lambda () form)))))
 
 (defun make-dumpable-lazy-axis (expression)
   (let* ((lazyir (parse-lazy-exp expression))
