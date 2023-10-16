@@ -126,3 +126,11 @@
 
 ;; CNN with activation
 
+(defun lazyaxis-and-symbol-comparison ()
+  (build (softmax-cross-entropy
+	  (!reshape (call (Conv2D 3 6 `(5 5)) (make-input `(N 3 25 25) :X)) (~ N C H W -> N (* C H W)))
+	  (make-input `(N 2646) :X))))
+
+(test lazyaxis-and-symbol-comparison
+  (is (lazyaxis-and-symbol-comparison)))
+  
