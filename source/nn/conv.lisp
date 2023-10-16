@@ -65,11 +65,9 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 			   C_in  = in-channels
 			   C_out = out-channels
 			   ;; H_out = floor(((H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]) + 1)
-			   H_out = (floor (+ 1 (/ (+ H_in (* 2 (car padding)) (* (- (car dilation)) (- (car kernel-size) 1)) -1)
-						      (car stride))))
+			   H_out = (conv-out-size H_in (car padding) (car dilation) (car kernel-size) (car stride))
 			   ;; W_out = floor(((W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]) + 1)
-			   W_out = (floor (+ 1 (/ (+ W_in (* 2 (second padding)) (* (- (second dilation)) (- (second kernel-size) 1)) -1)
-						      (second stride)))))
+			   W_out = (conv-out-size W_in (second padding) (second dilation) (second kernel-size) (second stride)))
 	   :on-call-> apply-conv2d)
 		       
   (assert (typep kernel-size 'list)
