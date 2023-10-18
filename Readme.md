@@ -129,7 +129,7 @@ We also provide [example projects](https://github.com/hikettei/cl-waffe2/tree/ma
 
 Don't underestimate the power of lazy evaluation. Nodes are first converted to fully optimized IRs before doing forward and backward propagations. 
 
-cl-waffe2 is still under development, there are still many optimization techniques that can be implemented. These benchmarks were measured under single-core but performs enough performance!
+Since cl-waffe2 is still under development, there are still many optimization techniques remains to be implemented. Even these benchmarks were measured under single-core but shows enough performance!
 
 ## MLP
 
