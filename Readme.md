@@ -24,13 +24,13 @@
 
 > ⚠️ cl-waffe2 is still in the experimental stage. Things are subject to change, and APIs can be changed without warnings. DO NOT USE CL-WAFFE2 IN YOUR PRODUCT.
 > 
-> I actually have a repository [cl-waffe(DEPRECATED UNSUPPORTED!)](https://github.com/hikettei/cl-waffe) with a similar name. Don't misunderstand that: cl-waffe**2** is the latest one and all features are inherited from the old one.
+> I actually have a repository [cl-waffe(DEPRECATED UNSUPPORTED!)](https://github.com/hikettei/cl-waffe) with a similar name. Note that cl-waffe**2** is the latest one and all features are inherited from the old one.
 
-cl-waffe2 provides fast, systematic, easy to optimize, customizable, and environment- and device- independent abstract matrix operations, and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.
+cl-waffe2 provides fast, systematic, easy to optimize, customizable, device independent abstract matrix operations, and reverse mode tape-based Automatic Differentiation on Common Lisp. Plus, we also provide features for building and training neural network models, accelerated by JIT Compiler.
 
 Roughly speaking, this is a framework for the graph and tensor abstraction without overheads. All features provided here can be extended by users without exception. And with the minimal code. In fact, cl-waffe2 is designed as the truly easiest framework to write extensions by users. There's no barrier between users and developers. There's no restriction imposed by framework ignoring the developing language is limited to Common Lisp.
 
-Its abstraction layers are almost reaching the goals and working enough, but there is still a serious lack of backend functionality, and documentations. Contributions are welcome and I would appreciate if somebody who is interested in by project contact me: [hikettei](https://github.com/hikettei).
+As of this writing, its abstraction layers are almost reaching the goals and working enough, but there is still a serious lack of backend functionality, and documentations. Contributions are welcome and I would appreciate if somebody who is interested in by project contact me: [hikettei](https://github.com/hikettei).
 
 ## ✨Features
 
@@ -40,14 +40,14 @@ Its abstraction layers are almost reaching the goals and working enough, but the
 - **Graph-Level Optimization** cl-waffe2 provides a powerful abstract graph optimization tool that can be used on any devices. For example, it optimizes the locality of memory, and make operations in-place as much as possible.
 - **Visualize** Super easy to know the bottleneck in your network, because a `proceed-bench` function profiles every instruction.
 - **Debugging** cl-waffe2 is enough clever that not only detecting all Shaping-Error before the execution but also suggests alternatives! In addition, All objects in cl-waffe2 are nicely rendered on your REPL.
-- **Systematic Nodes**: AbstractNodes and Models are written with small codes.
+- **Systematic Nodes** AbstractNodes and Models are based on small and elegant macros.
 - **Symbolic Differentiation** In the first place, cl-waffe2 do not create nodes that are later modified. Compiler macros eliminate functions producing such nodes.
 
 ## 🍃 Quicklook
 
-In the simplest example, the `build` function traces and compiles the network from the endpoints of the computation nodes. 
+As the simplest example, the `build` function traces and compiles the network from the endpoints of the computation nodes. 
 
-Example1. Compiling a node
+Example1. Compiling nodes
 
 ```lisp
 (let ((a (make-input `(A B) :A))
@@ -75,7 +75,7 @@ Example1. Compiling a node
 ```
 
 The advantages of using Common Lisp are numerous:
-- The shape of the tensors is not limited to numbers, but can also include symbols and even **S-expressions**!
+- The shape of tensors is not limited to numbers, but can also include symbols and even **S-expressions**!
 - Automatic Generation of Iterators, ShapeError, etc.
 - Works as a Domain Specific Language for Deep Learning embedded in Common Lisp
 
@@ -156,7 +156,7 @@ n_epoch |  cl-waffe2 | Keras | PyTorch | JAX |
 
 (Coming Soon...)
 
-# 📕 References and Acknowledgments
+# 📕 Acknowledgments
 
 - All comments on this Reddit post: [Does anyone have any interest in my deep-learning framework?](https://www.reddit.com/r/Common_Lisp/comments/124da1l/does_anyone_have_any_interest_in_my_deeplearning/).
 
