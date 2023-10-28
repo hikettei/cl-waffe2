@@ -38,7 +38,8 @@
    #:wfop-node
    #:wfop-sv4bw
    #:wfop-args
-   #:wfop-loadp))
+   #:wfop-loadp
+   #:read-loadp))
 
 (in-package :cl-waffe2/vm)
 

@@ -9,14 +9,24 @@
 (defclass Loadp-Node () nil
   (:documentation "
 Loads a system pointer from B to A:
-A* = B* where A[~] B[~] -> A[~]"))
+A* = B* where A[~] B[~] -> A[~]
+Accordingly, its forward definition is given as:
+#'(lambda (from to)
+    (setf (tensor-vec from) (tensor-vec to))
+    from)"))
+
+(defclass Loadp-Node-Rev () nil
+  (:documentation "
+#'(lambda (from to)
+     (setf (tensor-vec to) (tensor-vec from))
+     to)"))
 
 (defmethod ensure-loadp ((node Loadp-Node) args out-to)
-  "Ensures the node is declared as A* = B* forms"
+  "Ensures the node is declared as A* = B* forms.
+FROM <- (FROM, TO)"
   (and
    (= (length out-to) 1)
-   (= (length args)   2)
-   (equal (car out-to) (car args))))
+   (= (length args)   2)))
 
 (defclass Rebundant-Node () nil
   (:documentation "

@@ -227,6 +227,7 @@ Return:
 (defmacro define-and-impl-node ((abstract-name
 				 (self &rest constructor-arguments)
 				 &key
+				   (extends nil)
 				   (device t)
 				   (cache-when-compiled t)
 				   (reject-p nil)
@@ -243,6 +244,7 @@ Return:
 (define-and-impl-node (abstract-name
 				 (self &rest constructor-arguments)
 				 &key
+                                   (extends nil)
 				   (device t)
 				   (cache-when-compiled t)
 				   (reject-p nil)
@@ -259,6 +261,7 @@ Expands `defnode` and `define-impl` at the same time.
 "
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defnode (,abstract-name (,self ,@constructor-arguments)
+	       :extends ,extends
 	       :where ,where
 	       :out-scalar-p ,out-scalar-p
 	       :slots ,slots

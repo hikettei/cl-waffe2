@@ -171,6 +171,7 @@ Output: `Tensor[AbstractTensor]`
 ;; (function tensor &rest args)
 
 (defnode (ViewTensorNode (myself subscripts result before)
+	  :extends (Loadp-Node)
 	  :slots ((subscripts :initarg :subscripts))
 	  :where (A[result] B[before] -> A[result]))
   (setf (ignore-shape-error myself) t))
@@ -260,6 +261,7 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 
 
 (defnode (ReshapeTensorNode (self before after)
+	  :extends (Loadp-Node-Rev)
 	  :where (A[before] B[after] -> B[after])
 	  :slots ((before :initarg :before :reader reshapenode-shape))
 	  :backward ((self dout dx dy)
@@ -907,15 +909,13 @@ dout   ... dout values"
 	collect (- rank (position tgt new-order))))
 
 (define-and-impl-node (Permute-Node (self before after permute-old)
+		       :extends (Loadp-Node-Rev)
 		       :slots ((permute-old :initform nil :initarg :permute-old :reader permute-old))
 		       :where (Old[before] New[after] -> New[after])
 		       :forward ((self a out)
-				 `(let ((out1 (cl-waffe2/vm.generic-tensor::detach-and-clone1 ,out)))
-				    ;;(embody-actual-tensor
-				    ;; out1
-				    ;; ,a)
-				    (setf (tensor-vec out1) (tensor-vec ,a))
-				    out1))
+				 `(progn				    
+				    (setf (tensor-vec ,out) (tensor-vec ,a))
+				    ,out))
 		       :backward ((self dout a out)
 				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order a))
 				  ;;(print (cl-waffe2/vm.generic-tensor::tensor-permute-order dout))

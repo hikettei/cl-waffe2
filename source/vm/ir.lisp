@@ -72,19 +72,20 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   ;;  LOADP: A* = B*
   (when (wfop-loadp inst)
     (let ((opname "<WfInst[load_pointer{SYS}]"))
-      (format
-       stream
-       "~a~a : ~a* = ~a*>~a"
-       opname
-       (with-output-to-string (out)
-	 (dotimes (i (- *opname-indent-to* (length opname))) (princ " " out)))
-       (tensor-id (wfop-self inst))
-       (tensor-id (second (wfop-args inst)))
-       (if *no-newline*
-	   ""
-	   (format nil "~%"))))
-    
-    (return-from print-object))
+      (multiple-value-bind (from to) (read-loadp inst)
+	(format
+	 stream
+	 "~a~a : ~a* = ~a*>~a"
+	 opname
+	 (with-output-to-string (out)
+	   (dotimes (i (- *opname-indent-to* (length opname))) (princ " " out)))
+	 (tensor-id from)
+	 (tensor-id to)
+	 (if *no-newline*
+	     ""
+	     (format nil "~%"))))
+      
+      (return-from print-object)))
   
   (let ((ignored-p (and (movetensor-p (wfop-node inst))
 			(movetensor-ignore-me (wfop-node inst)))))
