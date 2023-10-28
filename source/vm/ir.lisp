@@ -10,7 +10,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil) (loadp nil))))
   "
 ## [struct] WfInstruction
 
@@ -59,13 +59,34 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (sv4bw sv4bw :type list)
   (error-check-p nil :type boolean) ;; Indicates the first shape-inspection has done?
   (bw-is-leaf-p nil :type boolean)
-  (grad-adder-p grad-adder-p :type boolean))
+  (grad-adder-p grad-adder-p :type boolean)
+  (loadp loadp :type boolean))
 
 (defparameter *omit-args-n* 5)
 (defparameter *opname-indent-to* 0 "Adds a space for this param times")
 (defparameter *no-newline* nil)
 
 (defmethod print-object ((inst WFInstruction) stream)
+
+  ;; loadp has a special form when displayed:
+  ;;  LOADP: A* = B*
+  (when (wfop-loadp inst)
+    (let ((opname "<WfInst[load_pointer{SYS}]"))
+      (multiple-value-bind (from to) (read-loadp inst)
+	(format
+	 stream
+	 "~a~a : ~a* = ~a*>~a"
+	 opname
+	 (with-output-to-string (out)
+	   (dotimes (i (- *opname-indent-to* (length opname))) (princ " " out)))
+	 (tensor-id from)
+	 (tensor-id to)
+	 (if *no-newline*
+	     ""
+	     (format nil "~%"))))
+      
+      (return-from print-object)))
+  
   (let ((ignored-p (and (movetensor-p (wfop-node inst))
 			(movetensor-ignore-me (wfop-node inst)))))
     (format stream

@@ -493,7 +493,8 @@ Reading from the last iseq, the function attributes T at each last reference"
 	  do (setf (wfop-op inst) #'(lambda (grad-place grad)
 				      (setf (tensor-vec grad-place) (tensor-vec grad))
 				      grad)
-		   (wfop-node inst) #'(lambda () "SETQ{INTERNAL}"))))
+		   (wfop-node inst) #'(lambda () "SETQ{INTERNAL}")
+		   (wfop-loadp inst) t)))
 
 
 

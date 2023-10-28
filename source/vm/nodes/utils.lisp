@@ -207,6 +207,7 @@ Return:
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defnode (System-Lazy-Cons (self a b)
+	  :extends (cl-waffe2/base-impl:Rebundant-Node)
 	  :where (A[a-size] B[b-size] -> A[a-size] B[a-size] where a-size = (shape a) b-size = (shape b)))
   (setf (ignore-shape-error self) t))
 
@@ -226,6 +227,7 @@ Return:
 (defmacro define-and-impl-node ((abstract-name
 				 (self &rest constructor-arguments)
 				 &key
+				   (extends nil)
 				   (device t)
 				   (cache-when-compiled t)
 				   (reject-p nil)
@@ -242,6 +244,7 @@ Return:
 (define-and-impl-node (abstract-name
 				 (self &rest constructor-arguments)
 				 &key
+                                   (extends nil)
 				   (device t)
 				   (cache-when-compiled t)
 				   (reject-p nil)
@@ -258,6 +261,7 @@ Expands `defnode` and `define-impl` at the same time.
 "
   `(eval-when (:compile-toplevel :load-toplevel :execute)
      (defnode (,abstract-name (,self ,@constructor-arguments)
+	       :extends ,extends
 	       :where ,where
 	       :out-scalar-p ,out-scalar-p
 	       :slots ,slots

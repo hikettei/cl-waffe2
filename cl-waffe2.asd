@@ -59,6 +59,7 @@
 	       (:file "vm/nodes/package")
 	       (:file "vm/nodes/symbolic")
 	       (:file "base-impl/package")
+	       (:file "base-impl/attributes")
 
 	       (:file "vm/package")
 	       (:file "vm/generic-tensor/dtype")
