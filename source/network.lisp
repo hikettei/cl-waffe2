@@ -8,7 +8,7 @@
 (defmodel (Encapsulated-Node (self node-func)
 	   :slots ((node-func :initarg :node-func))
 	   :initargs (:node-func node-func)
-	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (excepted to construct networks) with no `:where` dependency"))
+	   :documentation "(asnode ) dedicated Composite. Wraps the given node-func (expected to construct networks) with no `:where` dependency"))
 
 (defmodel (RepeatN-Node (self node-func)
 	   :slots ((node-func :initarg :node-func)
@@ -44,7 +44,7 @@
 (asnode function &rest arguments)
 ```
 
-Wraps the given `function` which excepted to create computation nodes with the `Encapsulated-Node` composite. That is, functions are regarded as a `Composite` and be able to use a variety of APIs (e.g.: `call`, `call->`, `defmodel-as` ...).
+Wraps the given `function` which is expected to create computation nodes with the `Encapsulated-Node` composite. That is, functions are regarded as a `Composite` and be able to use a variety of APIs (e.g.: `call`, `call->`, `defmodel-as` ...).
 
 In principle, a function takes one argument and returns one value, but by adding more `arguments` the macro automatically wraps the function to satisfy it. For example, `(asnode #'!add 1.0) is transformed into: #'(lambda (x) (!add x 1.0))`. So the first arguments should receive AbstractTensor.
 

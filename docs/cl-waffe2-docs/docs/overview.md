@@ -189,7 +189,7 @@ There's two ways to declare `MyTensor` is a valid device that cl-waffe2 can use:
 
 ;; Gemm with OpenBLAS
 ;; Set bench=t, and measures time
-;; As excepted, this one is 20~30times faster.
+;; As expected, this one is 20~30times faster.
 (defun test-gemm-cpu (&key (bench nil))
   (with-devices (CPUTensor)
     (let ((a (randn `(100 100)))
@@ -596,7 +596,7 @@ See also: [Converting AbstractTensor and other arrays](https://hikettei.github.i
 
 (TODO)
 
-cl-waffe2 is enough clever to detect Shape-Error and suggest an alternative arising from wrong inputs. In this case, both ranks are invaild because broadcasing rank-up rule is not applied in cl-waffe2:
+cl-waffe2 is enough clever to detect Shape-Error and suggest an alternative arising from wrong inputs. In this case, both ranks are invalid because broadcasing rank-up rule is not applied in cl-waffe2:
 
 ```lisp
 (!add (randn `(3 3)) (randn `(3)))
@@ -605,7 +605,7 @@ cl-waffe2 is enough clever to detect Shape-Error and suggest an alternative aris
 If you do this, you will get the following error before **running the operation**
 
 ```lisp
-[Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invaild arguments.
+[Shaping Error]: The AbstractNode ADDNODE-CPUTENSOR was called with invalid arguments.
 
  The constraint:
     ADDNODE-CPUTENSOR: (A[~] B[~] -> A[~])
@@ -621,7 +621,7 @@ B:
     ─ the 1th shape is (3) but it violates ~ = (3 3)
     ─ The given rank 2 do not match declared: (3)
 
-Excepted:
+Expected:
     (forward
         (ADDNODE-CPUTENSOR ...)
         A(3 3)
@@ -672,7 +672,7 @@ When doing (!sqrt x) where x is a negative number:
          (!sin (ax+b `(3 3) 0 1))))))
 ```
 
-As excepted it produces FLOATING-POINT-INVAILD-OPERATION:
+As expected it produces FLOATING-POINT-INVALID-OPERATION:
 
 ```lisp
 cl-waffe2 VM: Encountered Runtime Error at 3th instruction.

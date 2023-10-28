@@ -13,7 +13,7 @@ See the `Readme.md` and install Roswell
 
 ### 2. Installing Common Lisp
 
-Common Lisp has several implementations on ANSI Common Lisp. The development is ongoing under SBCL for its performance and the good support of arithmetic operations. Differences between different implementations are absorbed by CFFI I guess, so it should work with other processors, but it has not been tested. (Modern Mode probably doesn't work.)
+Common Lisp has several implementations of ANSI Common Lisp. The development is ongoing under SBCL due to its performance and the good support of arithmetic operations. Differences between different implementations are handled by CFFI (I guess), so it should work with other processors, but it has not been tested. (Modern Mode probably doesn't work.)
 
 If you've installed Roswell:
 
@@ -27,7 +27,7 @@ should work and everything is done.
 
 ### 3. Setting up IDE (optional)
 
-The following editors are recommended as we're working with REPL:
+The following editors are recommended as we are working with the REPL:
 
 - [Emacs](https://www.gnu.org/software/emacs/) + [Slime](https://slime.common-lisp.dev/)
 
@@ -36,9 +36,9 @@ The following editors are recommended as we're working with REPL:
 
 ## Installing cl-waffe2
 
-As of this writing(2023/9/13), cl-waffe2 is not yet available on Quicklisp. So I'm sorry but you have to install it manually.
+As of this writing(2023/9/13), cl-waffe2 is not yet available on Quicklisp. So, I am sorry but you have to install it manually.
 
-With roswell, the latest cl-wafe2 repository can be fetch like:
+With roswell, the latest cl-waffe2 repository can be fetched like:
 
 ```sh
 $ ros install hikettei/cl-waffe2
@@ -46,7 +46,7 @@ $ ros install hikettei/cl-waffe2
 
 In this case, you have to note that SBCL also needs to be started via Roswell.
 
-Another valid option would be loading `cl-waffe2.asd` file manually after cloning cl-waffe2 github repos:
+Another valid option would be loading the `cl-waffe2.asd` file manually after cloning the cl-waffe2 github repos:
 
 ```sh
 $ git clone https://github.com/hikettei/cl-waffe2.git
@@ -54,25 +54,25 @@ $ cd ./cl-waffe2
 $ ros run # start repl
 $ (load "cl-waffe2.asd")
 $ (ql:quickload :cl-waffe2)
-$ (in-pacakge :cl-waffe2-repl) # or make repl
+$ (in-package :cl-waffe2-repl) # or make repl
 ```
 
-After you ensured it should work, move the `./cl-waffe2` directory to `~/quicklisp/local-projects/` and quicklisp can find the project!
+After you have ensured that it works, move the `./cl-waffe2` directory to `~/quicklisp/local-projects/` and quicklisp can find the project!
 
-The get the full performance of cl-waffe2, you also have to do the following steps:
+In order to get the full performance of cl-waffe2, you also have to do the following steps:
 
-### Setting BLAS
+### Setting up BLAS
 
 cl-waffe2 searches for and reads the `libblas` file by default. The following steps are only necessary if you get a warning when loading the library
 
-First, install the libopenblas
+First, install the libopenblas library
 
 ```sh
-# with ubuntu for example
+# with ubuntu, for example:
 $ apt install libopenblas
 
 # With macOS
-$ brew instlal libopenblas
+$ brew install libopenblas
 ```
 
 Load the package again:
@@ -83,7 +83,7 @@ $ (load "cl-waffe2.asd")
 $ (ql:quickload :cl-waffe2)
 ```
 
-If you've got no warning after loading cl-waffe2, `CPUTensor` is successfully enabled and can recognize the OpenBLAS. If you still get warnings, you have to step an additional configs because cl-waffe2 couldn't find out the location.
+If you get no warning after loading cl-waffe2, `CPUTensor` is successfully enabled and can recognize the OpenBLAS. If you still get warnings, you need to apply additional configs because cl-waffe2 could not find out the location.
 
 So, In your init file, (e.g.: `~/.roswell/init.lisp` or `~/.sbclrc`), add the code below for example. (Change the path depending on your environment. You can find where you've installed the library with `$ locate libblas` for example of macOS).
 
@@ -103,9 +103,9 @@ SIMD Extension is an extension for speeding up the execution of mathematical fun
 $ make build_simd_extension
 ```
 
-and everything is ok. Ensure that no warnings are displayed in your terminal after loaded cl-waffe2.
+and everything should be ok. Ensure that no warnings are displayed in your terminal after loaded cl-waffe2.
 
 ### Is GPU(CUDA/Metal/OpenCL etc...) supported?
 
-Currently, No. But cl-waffe2 is designed to be independent of which devices work on, and writing extension is easy. Personally, I don't have enough environment and equipment to do the test, so I plan to do it one day when I save up the money.
+Currently, no. But cl-waffe2 is designed to be independent of which devices work on, and writing extension is easy. Personally, I do not have enough environment and equipment to do the test, so I plan to do it one day when I save up the money.
 

@@ -133,8 +133,8 @@ Instruction: ~a
     (when (or (null outs)
 	      (not (every #'(lambda (x) (typep x 'AbstractTensor)) outs)))
       (error "cl-waffe2 VM: Runtime Error.
-The instruction ~a returned an invaild typed result.
-All outputs must be AbstractTensor, but returned: ~a"
+The instruction ~a returned an invalid typed result.
+All outputs must be an AbstractTensor, but it returned: ~a"
 	     instruction
 	     outs))
     
@@ -150,7 +150,7 @@ All outputs must be AbstractTensor, but returned: ~a"
 		 (not (= (length outs) (length (wfop-out-to instruction)))))
 	(warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
-should be return ~R arguments, but got ~R.
+should return ~R arguments, but provided ~R.
 
 out-to returned:
 
@@ -160,20 +160,20 @@ out-to returned:
 	      (length (wfop-out-to instruction))
 	      outs))
       
-      (mapc #'(lambda (excepted received)
-		(when (not (eql (the boolean (scalar-p excepted)) (scalar-p received)))
+      (mapc #'(lambda (expected received)
+		(when (not (eql (the boolean (scalar-p expected)) (scalar-p received)))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 ~a
-Excepted:
+Expected:
 ~a
-Butgot:
+But got:
 ~a"
 			instruction
 			(if (scalar-p received)
-			    "returned a ScalarTensor but Matrix is excepted:"
-			    "returned a Matrix but ScalarTensor is excepted:")
-			excepted
+			    "returned a ScalarTensor but Matrix is expected:"
+			    "returned a Matrix but ScalarTensor is expected:")
+			expected
 			received))
 
 		;; Under *opt-level* = 1, we do runtime shape inspection
@@ -185,20 +185,20 @@ Butgot:
 		(when (if (= *opt-level* 1)
 			  (not ;; Shape-Equal is slow op
 			   (cl-waffe2/vm.generic-tensor::shape-equal
-			    (shape excepted) (shape received)))
+			    (shape expected) (shape received)))
 			  (not
-			   (or (some #'symbolp (shape excepted))
+			   (or (some #'symbolp (shape expected))
 			       (some #'symbolp (shape received))
-			       (equal (shape excepted) (shape received)))))
+			       (equal (shape expected) (shape received)))))
 		  (warn "cl-waffe2 VM: Runtime Warning
 The instruction: ~a
 Shapes are incompatible.
-Excepted:
+Expected:
 ~a
-Butgot:
+But got:
 ~a"
 			instruction
-			excepted
+			expected
 			received)))
 	    (wfop-out-to instruction) outs))
     

@@ -84,7 +84,7 @@
 
 ;; Gemm with OpenBLAS
 ;; Set bench=t, and measures time
-;; As excepted, this one is 20~30times faster.
+;; As expected, this one is 20~30times faster.
 (defun test-gemm-cpu (&key (bench nil))
   (with-devices (CPUTensor)
     (let ((a (randn `(100 100)))

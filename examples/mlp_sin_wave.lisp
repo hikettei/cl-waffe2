@@ -3,7 +3,7 @@
 
 ;;
 ;; This example provides the smallest package for training neural network in cl-waffe2
-;; Excepted to be something like Project Template.
+;; Expected to be something like a Project Template.
 ;;
 
 (defpackage :mlp-sin-wave
@@ -23,7 +23,7 @@
 
 ;; Steps:
 ;;  1. Create your neural network with AbstractNode
-;;  2. Compile the network with build funciton
+;;  2. Compile the network with the build funciton
 ;;  3. Hook optimizers to all the parameters
 ;;  4. forward/backward to step the computation
 ;;  5. call-optimizer! to minimize the loss

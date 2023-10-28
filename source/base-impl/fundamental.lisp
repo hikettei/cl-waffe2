@@ -310,7 +310,7 @@ When attempting: ~a -> ~a" base-shape reshape-to)
 			      (>= x 1))))
 		 reshape-to)
 	  ()
-	  "!reshape: invaild operation.
+	  "!reshape: invalid operation.
 (!reshape tensor ~a)
                   L shapes should be consisted of:
                        - LazyAxis

@@ -70,7 +70,7 @@ If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory),
 			      (views
 			       (nthcdr rank (wtensor-view tensor))))
 	   (or
-	    ;; T :broadcast is invaild for example;
+	    ;; T :broadcast is invalid for example;
 	    ;; Possible cases are: T T T... or broadcast broadcast ...
 	    ;;(not
 	    ;; (every #'(lambda (v)

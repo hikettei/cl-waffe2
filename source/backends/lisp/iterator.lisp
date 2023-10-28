@@ -73,7 +73,7 @@ apply - Set to (apply function array). nil to (dotimes (...) ... )"
 				      ,(lazy-aref-form tensor indices)))))))
 	 (assert (= (length ,results) (the fixnum ,(lli-reduced-to instruction)))
 		 nil
-		 "lazy-reduction: Assertion was failed. the function is excepted to be returning ~a arguments but got ~a"
+		 "lazy-reduction: Assertion was failed. the function is expected to be returning ~a arguments but got ~a"
 		 ,(lli-reduced-to instruction)
 		 (length ,results))
 	 (dotimes (,index-symbol ,(lli-reduced-to instruction))

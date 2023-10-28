@@ -86,7 +86,7 @@
       (compile
        nil
        ;; [TODO]
-       ;; Excepted body: (lambda args body)
+       ;; Expected body: (lambda args body)
        ;;                            ^ Insert Compile-Option
        (let ((body (compiled-kernel-body compiled-function)))
 	 `(,(car body)

@@ -157,14 +157,14 @@ Predicted Output(s) : ((3 2))
 Here's a list of reports.
 
 1. Couldn't idenfity ~~: ~~ is determined as 3 
- butgot: 2.
- Excepted ~~ = (3 2), butgot: (2 4)
+ but got: 2.
+ Expected ~~ = (3 2), but got: (2 4)
 
 Also, these reports could be helpful for you (calculated ignoring the first errors.)
 
 2. Couldn't idenfity ~~: ~~ is determined as 2 
- butgot: 4.
- Excepted ~~ = (3 2), butgot: (2 4)
+ but got: 4.
+ Expected ~~ = (3 2), but got: (2 4)
 ```
 
 ### Determine Rules

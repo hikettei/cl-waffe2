@@ -168,7 +168,7 @@
   (is (linear-non-composite-test-single-layer))
   (is (linear-non-composite-test-single-layer-no-bw)))
 
-;; Known Issue: Second call of this got invaild.
+;; Known Issue: Second call of this got invalid.
 ;; 問題は、Compositeを用いてモデルを初期化した時に、二回目以降のコンパイルがおかしくなる
 
 ;; Cache関数が悪いか、メモリプールが悪いか

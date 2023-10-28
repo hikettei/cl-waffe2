@@ -126,19 +126,19 @@ At  : ~ath symbol, ~a"
 
   (let ((pointer 0)
 	(var-name-tmp nil)
-	(excepted-mode :variable-name)) ;; :symbol := :init-form
+	(expected-mode :variable-name)) ;; :symbol := :init-form
     (dolist (exp exps)
       (cond
-	((and (symbol-eq excepted-mode :variable-name)
+	((and (symbol-eq expected-mode :variable-name)
 	      (and (symbolp exp) ;; i.e.: exp is variable name
 		   (not (symbol-eq exp '=))))
 	 (setq var-name-tmp exp)
-	 (setq excepted-mode :=))
-	((and (symbol-eq excepted-mode :=)
+	 (setq expected-mode :=))
+	((and (symbol-eq expected-mode :=)
 	      (symbol-eq exp '=))
-	 (setq excepted-mode :init-form))
-	((symbol-eq excepted-mode :init-form)
-	 (setq excepted-mode :variable-name)
+	 (setq expected-mode :init-form))
+	((symbol-eq expected-mode :init-form)
+	 (setq expected-mode :variable-name)
 	 (push (list var-name-tmp exp) results))
 	(T
 	 (error 'subscripts-content-error
@@ -148,7 +148,7 @@ But got: ~a.
 
 Subscript: ~a
 At       : ~ath Token, ~a"
-			     excepted-mode
+			     expected-mode
 			     exp
 			     exps
 			     pointer
@@ -230,7 +230,7 @@ Return:
 
 	  (unless (symbol-eq (car output-part) '->)
 	    (error 'subscripts-format-error
-		   :because :invaild-template-order
+		   :because :invalid-template-order
 		   :target '->
 		   :subscript subscripts
 		   :msg "Please follow this template:
@@ -241,7 +241,7 @@ Return:
 	  (when (and (not (null let-part))
 		     (not (symbol-eq (car let-part) 'where)))
 	    (error 'subscripts-format-error
-		   :because :invaild-template-order
+		   :because :invalid-template-order
 		   :target 'where
 		   :subscript subscripts
 		   :msg "Please follow this template:
@@ -363,12 +363,12 @@ Return: (values names subscripts where)
 (defun get-common-symbols (symbols)
   (remove-duplicates (flatten symbols) :test #'symbol-eq))
 
-(defun build-subscript-note (nth-pos position called-as excepted butgot states)
+(defun build-subscript-note (nth-pos position called-as expected butgot states)
   (make-shape-error-message
    :position position
-   :in-short   (format nil "~a should be ~a but got ~a." called-as excepted butgot)
-   :content    (format nil "the ~ath shape is ~a. ~a should be ~a but got ~a." nth-pos states called-as excepted butgot)
-   :suggestion (format nil "In ~a, set ~a=~a." states called-as excepted)))
+   :in-short   (format nil "~a should be ~a but got ~a." called-as expected butgot)
+   :content    (format nil "the ~ath shape is ~a. ~a should be ~a but got ~a." nth-pos states called-as expected butgot)
+   :suggestion (format nil "In ~a, set ~a=~a." states called-as expected)))
 
 
 (defun find-symbols (list)
@@ -482,7 +482,7 @@ Example:
 
     (let* ((least-required-dims (loop for s in first-state
 				      collect (length (the list (remove '~ s :test #'symbol-eq)))))
-	   ;; (1 2 3) for [x y] is invaild on the other hand (1 2 3) for [~ x y] is ok.
+	   ;; (1 2 3) for [x y] is invalid on the other hand (1 2 3) for [~ x y] is ok.
 	   (max-required-dims (loop for s in first-state
 				    if (find '~ (the list s) :test #'symbol-eq)
 				      collect -1
