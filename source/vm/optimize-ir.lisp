@@ -35,11 +35,6 @@ from-tensor* = to-tensor*
 - Moving ReshapeTensor to the top of instructions, places Loadp where it was
 - Deletes an instruction which is a subclass of Rebundant-Node class.
 - Sets loadp=t if the node is a subclass of Loadp-Node"
-  ;; Subtype of LoadpInstruction class, SystemIR class (lazy-cons)
-  ;; Reshape ... 一番上に持ってくる + Replace with make-loadp
-  ;; Rebundant-Node
-  ;; Reshapeじゃなくて...Loadp-But-KeepMe-Node
-  ;; Replace-Loadp-Node
 
   (loop for inst in iseq
 	if (and
