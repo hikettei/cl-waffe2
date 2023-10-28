@@ -756,6 +756,7 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
 ;; ===============================================================
 
 (defnode (Flexible-Rank-Node (myself At)
+	  :extends (Load-Myself-Node)
 	  :where (A[~] -> A[~])
 	  :slots ((at :initarg :at :reader flex-at))
 	  :backward ((self dout dx)
