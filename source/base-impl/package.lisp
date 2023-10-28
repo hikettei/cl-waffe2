@@ -24,7 +24,9 @@
   ;; Attributes
   (:export
    #:Loadp-Node
-   #:Rebundant-Node)
+   #:ensure-loadp
+   #:Rebundant-Node
+   #:Load-MySelf-Node)
   
   (:export
    #:AddNode

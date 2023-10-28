@@ -207,6 +207,7 @@ Return:
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defnode (System-Lazy-Cons (self a b)
+	  :extends (cl-waffe2/base-impl:Rebundant-Node)
 	  :where (A[a-size] B[b-size] -> A[a-size] B[a-size] where a-size = (shape a) b-size = (shape b)))
   (setf (ignore-shape-error self) t))
 

@@ -32,6 +32,7 @@ C\\gets{gemm(1.0, A, B, 0.0, C)}
 "))
 
 (defnode (LazyTransposeNode (self)
+	  :extends (load-myself-node)
 	  :where (A[~ i j] -> A[~ i j])
 	  :slots ((raw-tensor :accessor raw-tensor))
 	  :documentation "LazyTransposeNode is a matmul-dedicated node to implement zero-cost transpose.

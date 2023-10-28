@@ -11,9 +11,21 @@
 Loads a system pointer from B to A:
 A* = B* where A[~] B[~] -> A[~]"))
 
+(defmethod ensure-loadp ((node Loadp-Node) args out-to)
+  "Ensures the node is declared as A* = B* forms"
+  (and
+   (= (length out-to) 1)
+   (= (length args)   2)
+   (equal (car out-to) (car args))))
+
 (defclass Rebundant-Node () nil
   (:documentation "
 AbstractNodes which extends this class is destinated to be eliminated when compiled and after backprop iseq is constructed.
+"))
+
+(defclass Load-MySelf-Node () nil
+  (:documentation "
+AbstractNodes which extends this class is interpreted as: lambda(x) (tensor-vec x)
 "))
 
 
