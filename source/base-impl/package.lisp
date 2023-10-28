@@ -21,6 +21,11 @@
    #:mv-lazy-sv4bw
    #:movetensor-save-for-backward
    #:move-maybe-in-place)
+  ;; Attributes
+  (:export
+   #:Loadp-Node
+   #:Rebundant-Node)
+  
   (:export
    #:AddNode
    #:SubNode
