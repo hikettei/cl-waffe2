@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/nn)
 
-;; Provides A BASIC APIs for Regression
+;; Provides A BASIC API for Regression
 ;;
 ;; LinearLayer DenseLayer L1/L2 Norm Etc...
 ;;
@@ -45,7 +45,7 @@ y = xA^\\intercal + b
 
 `(linear-weight self)` the trainable value of the model of shape `out_features * in_features`. The values are sampled from  `xavier-uniform`.
 
-`(linear-bias self)` the tranable value of bias of shape `out_features`. If bias is t, the initial values are sampled from uniform distribution: `U(-k, k)` where k = `sqrt(1/out-features)`.
+`(linear-bias self)` the trainable value of bias of shape `out_features`. If bias is t, the initial values are sampled from a uniform distribution: `U(-k, k)` where k = `sqrt(1/out-features)`.
 ")
 
   (setf (linear-weight self) (xavier-uniform `(,out-features ,in-features) :requires-grad t))

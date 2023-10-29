@@ -40,9 +40,9 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 	(with-dist-doc 'chisquare   'function
 	  (with-example
 	    "(chisquare `(3 3) 1.0)"))
-	(with-dist-doc 'expotential 'function
+	(with-dist-doc 'exponential 'function
 	  (with-example
-	    "(expotential `(3 3))"))
+	    "(exponential `(3 3))"))
 	(with-dist-doc 'gamma       'function
 	  (with-example
 	    "(gamma `(3 3) 1.0)"))
