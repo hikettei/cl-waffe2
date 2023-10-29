@@ -77,7 +77,12 @@ type:
   (declare (type AbstractTensor tensor))
   (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) (range 0 (dims tensor)))))
     (flet ((index-of (rank index stride)
-	     (list (format nil "(~a+~a)*~a" (cOffset tensor rank) index stride)
+	     (list (format nil "(~a+~a)*~a"
+			   (if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+				     (force-list (nth rank (tensor-view tensor)))))
+			       "0"
+			       (cOffset tensor rank))
+			   index stride)
 		   "+")))
       (format nil "~a[~a]"
 	      (tensor-id tensor)
@@ -102,7 +107,7 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 		  ;; TENSOR_PTR OFFSET3 OFFSET2 OFFSET1
 		  do (cVar arg :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id)) :comma t)
 		     (dotimes (rank (dims arg))
-		       (write-buff "uint32_t ~a~a"
+		       (write-buff "const uint32_t ~a~a"
 				   (cOffset arg rank)
 				   ;; Judge if the last or not
 				   (if (and (= rank (1- (dims arg)))

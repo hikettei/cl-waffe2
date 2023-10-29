@@ -11,7 +11,7 @@
        ;; modify: A fname B
        (write-c-line "~a ~a ~a;~%"
 		     (cAref displace-to indices)
-		     fname
+		     fname		     
 		     (apply
 		      #'concatenate
 		      'string

@@ -96,7 +96,7 @@
 			*use-open-mp*)
 	       (write-c-line (pragma-omp indices)))
 	     (write-c-line
-	      "for (int ~a=0;~a<~a;~a++) {~%"
+	      "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 	      index-char
 	      index-char
 	      (c-name (format nil "~a" (aloop-size loop)))
@@ -108,7 +108,7 @@
 	       (write-c-line "#pragma omp parallel for ~%"))
 	     
 	     (write-c-line
-	      "for (int ~a=0;~a<~a;~a++) {~%"
+	      "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 	      index-char
 	      index-char
 	      (c-name (format nil "~a" (aloop-element-n loop)))
@@ -142,7 +142,6 @@
     (write-c-line "~a { ~%" (cFunction function-name shapes variables))
     
     (with-indent 4
-
       (flet ((first-touch ()
 	       (when (and (= *indent-width* 4)
 			  *use-open-mp*)
@@ -162,12 +161,13 @@
 	;; disabled for a now
 	;;(first-touch)
 	)
-      
+
+      (print abstract-loop)
       
       (loop with indices = (iterator-symbols (length abstract-loop))
 	    for *indent-width* upfrom 4 by 4
-	    for index-char  in indices
-	    for loop        in abstract-loop do
+	    for index-char  in indices;;`(,@(reverse (butlast indices)) ,(car indices))
+	    for loop        in abstract-loop do;;`(,@(reverse (butlast abstract-loop)) ,(car abstract-loop)) do
 	      (case (aloop-mode loop)
 		(:batch
 		 ;; If *use-open-mp* is set to T and the currently processing loop is the first one
@@ -176,7 +176,7 @@
 			    *use-open-mp*)
 		   (write-c-line (pragma-omp indices)))
 		 (write-c-line
-		  "for (int ~a=0;~a<~a;~a++) {~%"
+		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 		  index-char
 		  index-char
 		  (c-name (format nil "~a" (aloop-size loop)))
@@ -188,7 +188,7 @@
 		   (write-c-line "#pragma omp parallel for ~%"))
 		 
 		 (write-c-line
-		  "for (int ~a=0;~a<~a;~a++) {~%"
+		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 		  index-char
 		  index-char
 		  (c-name (format nil "~a" (aloop-element-n loop)))
