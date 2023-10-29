@@ -65,7 +65,7 @@ Return:
 
       (assert (equal (shape out) shape)
 	      nil
-	      "!sum: Assertion Failed because the given out's shape is ~a, but excepted: ~a" (shape out) shape)
+	      "!sum: Assertion Failed because the given out's shape is ~a, but expected: ~a" (shape out) shape)
 
       ;; Main Parts
       (multiple-value-bind (out* reverser) (apply #'!view out view-args)

@@ -4,7 +4,7 @@
 # Requirements
 
 ```lisp
-$ pip instlal mkdocs
+$ pip install mkdocs
 $ pip install markdown-katex
 ```
 

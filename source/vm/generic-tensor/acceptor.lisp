@@ -304,7 +304,7 @@ Before calling the forward method, set any value to these InputTensors first.
     (when input-args
       (assert (= (the fixnum (length input-args)) (the fixnum (length inputs)))
 	  nil
-	  "forward: Can't invoke the forward step of given Compiled-Composite because the number of arguments received is invaild.
+	  "forward: Can't invoke the forward step of given Compiled-Composite because the number of arguments received is invalid.
     (forward compiled-model~a)
                             └── the model is compiled as~a."
 	  (with-output-to-string (out)
@@ -328,8 +328,8 @@ At:
 ~a
 
 (forward compiled-model~a)
-                        └── Excepted:~a
-                            Butgot:  ~a"
+                        └── Expected:~a
+                            But got:  ~a"
 				  model
 				  (with-output-to-string (out)
 				    (dolist (arg places) (format out " ~a" (tensor-name arg))))
@@ -345,8 +345,8 @@ At:
 ~a
 
 (forward compiled-model~a)
-                        └── Excepted:~a
-                            Butgot:  ~a"
+                        └── Expected:~a
+                            But got:  ~a"
 				  model
 				  (with-output-to-string (out)
 				    (dolist (arg places) (format out " ~a" (tensor-name arg))))
@@ -435,7 +435,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
   (when inputs
     (assert (every #'keywordp inputs)
 	nil
-	"build: Can't compile the tensor because the :inputs is malformed or invaild.
+	"build: Can't compile the tensor because the :inputs list is malformed or invalid.
     (build toplevel :inputs ( ... ) ...)
                               └── :inputs receive a list of keyword indicating the name of tensors created by make-input
                                   Set like `(:A :B) "))

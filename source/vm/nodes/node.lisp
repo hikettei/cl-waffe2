@@ -32,7 +32,7 @@
 
    ;; Utils
    (ignore-shape-error :initform nil :accessor ignore-shape-error)
-   (excepted-output-shape :initform nil :type list :accessor node-output-shape) ;; <- Debug Information
+   (expected-output-shape :initform nil :type list :accessor node-output-shape) ;; <- Debug Information
    (passed-at-least-once :initform nil :accessor node-passed-p :type boolean)   ;;
 
    ;; [TODO] (tpsort-id :initform (gensym)) ...
@@ -142,7 +142,7 @@ butgot: ~a"
     ;; Input-State -> Output-State
     (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states) ;; ... Finishes in < 1e-6 sec
       ;;(setq out-state (delete-broadcast out-state))
-      ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexceptedly invaild.
+      ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexpectedly invalid.
 
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
@@ -158,7 +158,7 @@ butgot: ~a"
 
 	  (if (and detected-errors-1
 		   (not (ignore-shape-error node)))
-	      ;; There's no flexible tensor, then it is invaild.
+	      ;; There's no flexible tensor, then it is invalid.
 	      ;; If there's any flexible tensor, uprank it and try again.
 
 	      ;; The node is declared as uprankable
@@ -177,7 +177,7 @@ butgot: ~a"
 		    ;; inputs-top -> inputs-new nodes are continuous.
 		    ;; because inputs-new are made from inputs-top
 		    (return-from forward (apply #'forward node inputs-new)))
-		  ;; Otherwise the operation was invaild.
+		  ;; Otherwise the operation was invalid.
 		  (describe-problems node detected-errors inputs out-state))
 	      (setq out-state out-state1))))
 
@@ -218,7 +218,7 @@ butgot: ~a"
 			       ;; Exntend Permuted Stride Orders
 
 			       (when extend-from
-				 ;; FixME: A[i j] -> A[j i] is invaild beucase before and after the operation, indicates the same pointer but shapes arenot the same.
+				 ;; FixME: A[i j] -> A[j i] is invalid because before and after the operation, indicates the same pointer but shapes arenot the same.
 				 ;; Detect Errors
 				 (let ((input (nth extend-from inputs)))
 				   ;; Extend View Forms

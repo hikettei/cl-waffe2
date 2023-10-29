@@ -126,7 +126,7 @@ If the last backward of given arguments are `LazyTransposeNode` (created with th
 
     (when (not (shape-equal jx jy))
       (shaping-error
-       "!matmul failed because the last two shapes of the two given matrices are invaild.
+       "!matmul failed because the last two shapes of the two given matrices are invalid.
 The operation is: A[~~ i j] B[~~ j k] C[~~ i k] -> C[~~ i k]
                         ^      ^
                      j doesn't match: ~a and ~a
@@ -141,7 +141,7 @@ Shapes: A = ~a, B = ~a"
 	     (let ((last-two-view (last (tensor-view tensor) 2))
 		   (last-two-permute (last (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor) 2))
 
-		   (excepted-permute (last (reverse (loop for i upfrom 0 below (dims tensor) collect i)) 2)))
+		   (expected-permute (last (reverse (loop for i upfrom 0 below (dims tensor) collect i)) 2)))
 
 	       (cond
 		 ;; transposed? True when last backward is LazyTranspsoe
@@ -156,7 +156,7 @@ Shapes: A = ~a, B = ~a"
 		       (every
 			#'=
 			last-two-permute
-			excepted-permute))
+			expected-permute))
 		  ;; Memory-layout is OK. (because last two axes are not polluted)
 		  ;; (values tensor nil) <=>
 		  (values tensor transposed?))

@@ -179,7 +179,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
   (declare (type AbstractTensor toplevel))
   
   ;; fuse-p is intentionally disabled forcibly for a while
-  ;; because it cause unexcepted behaviours
+  ;; because it cause unexpected behaviours
   (let ((*compile-option* (cl-waffe2/vm.generic-tensor::compile-option-form compile-mode)))
     (multiple-value-bind (iseq-forward leaves)
 	(node-compile-into-vm toplevel :fuse-p fuse-p)

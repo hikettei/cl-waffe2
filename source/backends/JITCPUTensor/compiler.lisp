@@ -111,7 +111,7 @@
 		  (c-name (format nil "~a" (aloop-size loop)))
 		  index-char))
 		(T
-		 ;; Excepted one of: :apply :apply-flatten
+		 ;; Expected one of: :apply :apply-flatten
 		 (when (and (= *indent-width* 4)
 			    *use-open-mp*)
 		   (write-c-line "#pragma omp parallel for ~%"))

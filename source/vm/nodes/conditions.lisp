@@ -9,7 +9,7 @@
    (target-symbol :initarg :target)
    (subscripts :initarg :subscript)
    (msg :initarg :msg :initform ""))
-  (:documentation "The Condition subscripts-format-error occurs when cl-waffe couldn't interpret the given subscript because of invaild format.")
+  (:documentation "The Condition subscripts-format-error occurs when cl-waffe couldn't interpret the given subscript because of invalid format.")
   (:report
    (lambda (c s)
      (case (slot-value c 'because)

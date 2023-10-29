@@ -99,10 +99,10 @@ Several smaller nodes can be composed to create a larger function. Likewise Arro
 ;; Usage
 
 ;; MSELoss
-(criterion #'MSE pred excepted :reductions '(#'!sum #'->scal))
+(criterion #'MSE pred expected :reductions '(#'!sum #'->scal))
 
 ;; SoftmaxCrossEntropyLoss
-(criterion #'softmax-cross-entropy pred excepted :reductions '(#'!sum #'->scal))
+(criterion #'softmax-cross-entropy pred expected :reductions '(#'!sum #'->scal))
 ```
 
 ## Compiling Models

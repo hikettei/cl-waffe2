@@ -152,8 +152,8 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 	   (toplevel (apply #'call composite trace-tensors)))
       
       (unless (typep toplevel 'AbstractTensor)
-	(error "defmodel-as: Attempted to compile the function ~(~a~) but failed because the composite didn't return any AbstractTensor. butgot: ~a
-excepted: AbstractTensor"
+	(error "defmodel-as: Attempted to compile the function ~(~a~) but failed because the composite did not return any AbstractTensor. but got: ~a
+expected: AbstractTensor"
 	       (or named "lambda")
 	       toplevel))
 
@@ -302,7 +302,7 @@ And manages its allocation not to cause conflicts in the threads."))
 		:get-model t)
 	      ,@in-names))
 
-	   ;; The node is excepted to be invoked via this function
+	   ;; The node is expected to be invoked via this function
 	   ;; Declaim+Inline
 	   (defun ,named (,@in-names)
 	     ""
@@ -366,7 +366,7 @@ Depending on the `device` and `dtype` used of arguments, several methods are com
 "
 
   (when (not (typep asif 'model-asif-options))
-    (error "defmodel-as got unexcepted option for :asif.
+    (error "defmodel-as got unexpected option for :asif.
 
 (defmodel-as target-model :where ... :asif ~a ...)
                                            └── could be one of :function or :node
@@ -399,7 +399,7 @@ Choose :asif option from:
   (when (and
 	 (not (null named))
 	 (not (typep named 'symbol)))
-    (error "defmodel-as: the option :named is invaild.
+    (error "defmodel-as: the option :named is invalid.
 
 (defmodel-as target-model ... :named ~a)
                                      └── :named could be a symbol, and this macro defines a function after `named`.

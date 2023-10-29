@@ -40,7 +40,7 @@
   "
 ShapeError Template:
 
-Shaping-Error: Can't forward/call the Node/Composite because shapings are invaild.
+Shaping-Error: Can't forward/call the Node/Composite because shapings are invalid.
 
 At: [A] [B]
      ----
@@ -52,7 +52,7 @@ Received: (call (MODEL ...) A(a) B(a) C(10))
                                    L(2) |
                                        (3)
 
-Excepted: (call (MODEL ...) A(10 10) B(10 10))
+Expected: (call (MODEL ...) A(10 10) B(10 10))
 
 <<Call Form Attempted>>
 
@@ -72,12 +72,12 @@ Suggestion"
 
   (with-output-to-string (out)
     (if (eql forward-or-call :call)
-	(format out "The Composite ~a was called with invaild arguments." model-name)
+	(format out "The Composite ~a was called with invalid arguments." model-name)
 	(case (checkpoint-state *shape-error-when*)
 	  (:forward
-	   (format out " The AbstractNode ~a was called with invaild arguments." model-name))
+	   (format out " The AbstractNode ~a was called with invalid arguments." model-name))
 	  (:backward
-	   (format out " The AbstractNode ~a inside backward definition was called with invaild arguments.
+	   (format out " The AbstractNode ~a inside backward definition was called with invalid arguments.
 
     (define-impl (~a (self ...)
         ...
@@ -107,7 +107,7 @@ Received:
         (~a ...)~a)
               └── Received Too ~a Arguments.
   
-Excepted:
+Expected:
     (~a (~a ...)~a)
 "
 		    caller-name model-name
@@ -139,7 +139,7 @@ Received:
         (~a ...)~a
         )
 ~a
-Excepted:
+Expected:
     (~a
         (~a ...)~a
         )

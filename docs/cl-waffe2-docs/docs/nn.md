@@ -227,7 +227,7 @@ BatchNorm(x) = \frac{x - E[x]}{\sqrt{Var[x] + ε}}\times{γ}+β
 
 ### Inputs
 
-`in-features[fixnum]` - C from an excepted input size (N C H W)
+`in-features[fixnum]` - C from an expected input size (N C H W)
 
 `affine[bool]` Set T to apply affine transofmration to the output. In default, set to t.
 

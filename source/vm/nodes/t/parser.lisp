@@ -8,16 +8,16 @@
 ;; Support Scalar e.g.: Int, [x y] -> ...
 
 (defun test-bnf (subscript
-		 excepted1
-		 excepted2
-		 excepted3)
+		 expected1
+		 expected2
+		 expected3)
   (multiple-value-bind
 	(is bs x y z)
       (cl-waffe2/vm.nodes::parse-subscript subscript)
     (declare (ignore is bs))
-    (and (equal x excepted1)
-	 (equal y excepted2)
-	 (equal z excepted3))))
+    (and (equal x expected1)
+	 (equal y expected2)
+	 (equal z expected3))))
 
 (test bnf-parse-test
   (is (test-bnf `([x y] -> [z])

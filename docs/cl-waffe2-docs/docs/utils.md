@@ -159,7 +159,7 @@ Powerful macros in Common Lisp enabled me to provide an advanced APIs for make t
 (asnode function &rest arguments)
 ```
 
-Wraps the given `function` which excepted to create computation nodes with the `Encapsulated-Node` composite. That is, functions are regarded as a `Composite` and be able to use a variety of APIs (e.g.: `call`, `call->`, `defmodel-as` ...).
+Wraps the given `function` which is expected to create computation nodes with the `Encapsulated-Node` composite. That is, functions are regarded as a `Composite` and be able to use a variety of APIs (e.g.: `call`, `call->`, `defmodel-as` ...).
 
 In principle, a function takes one argument and returns one value, but by adding more `arguments` the macro automatically wraps the function to satisfy it. For example, `(asnode #'!add 1.0) is transformed into: #'(lambda (x) (!add x 1.0))`. So the first arguments should receive AbstractTensor.
 
@@ -300,7 +300,7 @@ A convenient macro to hook AbstractOptimizers to each AbstractTensor. As the mos
      (hook-optimizer! ,bind ,optimizer))
 ```
 
-where `bind` is excepted to be AbstractTensor, optimizer is a creation form of `AbstractOptimizer`, and the function `hook-optimizer!` hooks the given optimizer into bind.
+where `bind` is expected to be AbstractTensor, optimizer is a creation form of `AbstractOptimizer`, and the function `hook-optimizer!` hooks the given optimizer into bind.
 
 In cl-waffe2, one independent Optimizer must be initialised per parameter. This macro can be used to concisely describe the process of initialising the same Optimiser for many parameters.
 

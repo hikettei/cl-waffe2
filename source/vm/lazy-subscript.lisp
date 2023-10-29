@@ -348,7 +348,7 @@ LazyAxis: f(IN N) = floor((1+((IN+(2*N)+0+-1)/2)))
 	   (setf (lazyaxis-read-as lazy-expression) out)
 	   out)))))
 
-;; [TODO] Under this mode=T, changing adjustable shape is a invaild operation.
+;; [TODO] Under this mode=T, changing adjustable shape is a invalid operation.
 (defparameter *observe-mode* nil "
 ## [parameter] *observe-mode*
 
@@ -383,7 +383,7 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
 
 (defun maybe-observe-axis (value)
   "Reads the given value as a fixnum.
-value is excepted as: LazyAxis, Symbol, Fixnum, rest...
+value is expected as: LazyAxis, Symbol, Fixnum, rest...
 If value is dynamic-shape -> observe it and returns as a fixnum
 Otherwise                 -> Return as it is."
   (if (typep value 'LazyAxis)
