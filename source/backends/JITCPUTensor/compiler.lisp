@@ -119,18 +119,21 @@
 		 (render-instruction inst indices))))))
   (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 4 by 4 do
     (write-c-line "}~%")))
-    
+
 (defun pragma-omp (make-me-private)
   (format
    nil
-   "#pragma omp parallel for private(~a)~%"
+   "#pragma omp parallel for~%"
+   #|
    (apply
     #'concatenate
     'string
     (butlast
      (loop for var in make-me-private
 	   append
-	   (list var ","))))))
+   (list var ","))))
+   |#
+   ))
 
 (defun generate-c-kernel (function-name shapes variables abstract-loop instructions)
   (with-compiling-mode
@@ -175,6 +178,11 @@
 		 (when (and (= *indent-width* 4)
 			    *use-open-mp*)
 		   (write-c-line (pragma-omp indices)))
+
+		 (when (and (not (= *indent-width* 4))
+			    (numberp (aloop-size loop)))
+		   (write-c-line "#pragma omp unroll partial(16)~%"))
+		 
 		 (write-c-line
 		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 		  index-char
@@ -184,9 +192,12 @@
 		(T
 		 ;; Expected one of: :apply :apply-flatten
 		 (when (and (= *indent-width* 4)
-		          *use-open-mp*)
+		            *use-open-mp*)
 		   (write-c-line "#pragma omp parallel for ~%"))
-		 
+
+		 (when (and (not (= *indent-width* 4))
+			    (numberp (aloop-element-n loop)))
+		   (write-c-line "#pragma omp unroll full~%"))
 		 (write-c-line
 		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 		  index-char

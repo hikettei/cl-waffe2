@@ -54,7 +54,7 @@ Declares configurations about JITCPUTensor.
   (setf *default-c-compiler* compiler
 	*viz-compiled-code*  viz-compiled-code
 	*use-open-mp*        openMP
-	*compiler-flags*     flags)
+	*compiler-flags*     `(,@flags ,(when openMP "-fopenmp")))
   t)
 
 (defmacro with-cpu-jit ((&rest more-devices) &body body)
