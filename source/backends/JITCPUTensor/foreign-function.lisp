@@ -64,7 +64,7 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
   (with-slots ((name name) (dynamic-symbols dynamic-symbols) (args args)) jit-compiled-kernel
     `(lambda (,@(map 'list #'tensor-id args))
        (with-tensor-ptrs (,@(loop for arg in args
-				  collect `(,(cPointer arg) ,arg)))
+				  collect `(,(cPointer arg) ,(tensor-id arg))))
 	 (cffi:foreign-funcall
 	  ,name
 	  ,@(loop for symbol in dynamic-symbols

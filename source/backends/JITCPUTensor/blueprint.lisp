@@ -25,6 +25,8 @@ type:
   (displace-to displace-to :type AbstractTensor)
   (args function-arguments :type list))
 
+(defgeneric load-instructions (node &rest inputs))
+
 (defun collect-variables (instructions)
   (let ((result))
     (dolist (inst instructions)

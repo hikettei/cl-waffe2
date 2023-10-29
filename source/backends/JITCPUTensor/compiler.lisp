@@ -138,7 +138,7 @@ kernel = instructions[last](... instructions[1](instructions[0](Arguments)))
 
 Inputs:
  - function-name[symbol]
- - instructions a list of Instruction
+ - instructions[list] a list of instruction
 
 Return:
  JIT-Compiled-Kernel"
@@ -167,4 +167,22 @@ Return:
        :args             variables
        :dynamic-symbols  adjustable-shape
        :body             source))))
+
+(defun make-jit-compiled-op (function-name instructions)
+  (let* ((jit-kernel (invoke-compiler function-name instructions))
+	 (args       (map 'list #'tensor-id (jit-args jit-kernel)))
+	 (out        (tensor-id (instruction-displace-to (car (last instructions)))))
+	 (inputs     (gensym)))
+    (assert (position out args)
+	    ()
+	    "Assertion Failed: ~a weren't appeared in ~a when jit-compiling ~a" out args instructions)
+    (compile
+     nil
+     `(lambda (&rest ,inputs)
+	(let* (,@(loop for nth upfrom 0
+		       for arg in args
+		       collect
+		       `(,arg (nth ,nth ,inputs))))
+	  (funcall ,(jit-funcall-form jit-kernel) ,@args)
+	  (nth ,(position out args) ,inputs))))))
 

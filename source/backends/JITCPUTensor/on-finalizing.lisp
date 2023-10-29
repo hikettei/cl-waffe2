@@ -4,33 +4,52 @@
 (defparameter *lazy-c-source* "")
 (defparameter *compiling-ntime-count* 0)
 
-(defparameter *known-functions* (make-hash-table :test #'eq))
+;; [Fix] 何回も同じコードをコンパイルするの？
+;; [TODO] Im2Col Col2Im Fusion
+;; [TODO] OpenMP
+;;  1. 最適化関数 A-=...が動いていない？
+;;  2. OpのArgs Outs関連
 
-;; [TODO] element-wise op fusion
-;; [TODO] Use SLEEF Backend For Mathematical Kernel, simdify
-;; [TODO] AVXnnn Intrinsics?
-;; [TODO] Add: JITLispTensor
-
+;; This is a toplevel of JIT-Compiling Backend
+;; After High-Level IR compiling is finished, the method on-finalizing-compiling will be invoked.
+;; Depending on *using-backend*, the method below would be also invoked.
 (defmethod on-finalizing-compiling ((device-name (eql 'JITCPUTensor)) iseq-fw iseq-bw)
-  (let* ((jit-nodes (loop for inst in `(,@iseq-fw ,@iseq-bw)
-			  if (typep (wfop-self inst) 'JITCPUTensor)
-			    collect inst)))
-    (when (and (not (string= *lazy-c-source* ""))
-	       ;; wfop-op is created by doing (compile nil) or search from LUT
-	       ;; This method records all functions of (wfop-op x)
-	       ;; If this method encounter an unknown method, it indicates the function isn't also compiled by gcc.
-	       (some #'(lambda (x) (null (gethash (wfop-op x) *known-functions*))) jit-nodes))
-      (mapc
-       #'(lambda (x)
-	   (setf (gethash (wfop-op x) *known-functions*) T))
-       jit-nodes)
+  (flet ((applying-jit-helper (iseq &aux (out nil))
+	   ;; Replacing the op slot whose backend is JITxxxTensor
+	   ;; with compiled C kernel
+	   ;; without modifying orders of instructions
+	   ;; If any, fuse several instructions
+	   ;; To Eliminate Unused MoveTensorNode.
 
-      (let ((source *lazy-c-source*))
-	(setf *lazy-c-source* "")
-	(when *viz-compiled-code*
-	  (print source))
-	(load-foreign-function source)))
+	   ;; WfInstruction: out-to <- op(args)
+	   ;; args = Tensor | sv4bw(Tensor) ...
+	   (loop for inst in iseq do
+	     (typecase (wfop-node inst)
+	       (CPUJIT-Blueprint
+		;; [TODO] Stack as for element-wise operations
+		(let ((ir (apply #'load-instructions (wfop-node inst) (tensor-variables (wfop-self inst)))))
+		  ;; As of this writing, this backend does not provide features for FusionOPs
+		  ;; So just replacing op is ok and wfop-args cause no conflicts
+		  ;; But If the instruction is created by fusion several ops
+		  ;; we have to note that create a new WfINstruction
+		  (setf (wfop-op inst) (make-jit-compiled-op (symbol-name (gensym)) ir))
+		  (push inst out)))
+	       (T
+		(push inst out))))
+	   (reverse out)))
 
-    (setf *lazy-c-source* "")
-    (values iseq-fw iseq-bw)))
+    ;; Resets buffers
+    (let ((*lazy-c-source* ""))
+      (multiple-value-bind (iseq-fw iseq-bw)
+	  (values
+	   (applying-jit-helper iseq-fw)
+	   (applying-jit-helper iseq-bw))
+	
+	;; Compiles *lazy-c-source*
+	;; And loads via CFFI as a shared library
+	(when (not (string= *lazy-c-source* ""))
+	  (when *viz-compiled-code*
+	    (print *lazy-c-source*))
+	  (load-foreign-function *lazy-c-source*))
+	(values iseq-fw iseq-bw)))))
 
