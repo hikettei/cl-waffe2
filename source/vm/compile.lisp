@@ -217,8 +217,11 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	(let ((forward  (reverse iseq-forward))
 	      (backward (if (and need-backward out-symbol-p (not (scalar-p toplevel)))
 			    (append
-			     (reverse
-			      (node-compile-into-vm dout))
+			     (let ((out
+				     (reverse
+				      (node-compile-into-vm dout))))
+			       (setf (wfop-comment (car out)) "dout += 1")
+			       out)
 			     backward-iseq)
 			    backward-iseq)))
 	  

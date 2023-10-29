@@ -10,7 +10,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil) (loadp nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil) (loadp nil) (comment nil))))
   "
 ## [struct] WfInstruction
 
@@ -48,6 +48,10 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 `wfop-args[list of AbstractTensor]` corresponds with `(tensor-variable wfop-self)`. tensors to be called with: `arg1 arg2 arg3...`.
 
 `wfop-sv4bw[list of AbstractTensor]` indicates list of tensors storing save-for-backward tensors. if the corresponding position is `save-for-backward=nil`, the corresponding position also become nil.
+
+`wfop-comment[string or null]` If any, the value of slot is displayed when printing IR.
+
+`wfop-loadp[boolean]` If set to t, the operation is interpreted as `load-pointer`. See also: (read-loadp instruction)
 "
   (op   op   :type function)  
   (node node :type (or function string null AbstractNode))
@@ -60,7 +64,8 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (error-check-p nil :type boolean) ;; Indicates the first shape-inspection has done?
   (bw-is-leaf-p nil :type boolean)
   (grad-adder-p grad-adder-p :type boolean)
-  (loadp loadp :type boolean))
+  (loadp loadp :type boolean)
+  (comment comment :type (or null string)))
 
 (defparameter *omit-args-n* 5)
 (defparameter *opname-indent-to* 0 "Adds a space for this param times")
@@ -75,12 +80,15 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
       (multiple-value-bind (from to) (read-loadp inst)
 	(format
 	 stream
-	 "~a~a : ~a* = ~a*>~a"
+	 "~a~a : ~a* = ~a*>~a~a"
 	 opname
 	 (with-output-to-string (out)
 	   (dotimes (i (- *opname-indent-to* (length opname))) (princ " " out)))
 	 (tensor-id from)
 	 (tensor-id to)
+	 (if (wfop-comment inst)
+	     (format nil " ;; ~a" (wfop-comment inst))
+	     "")
 	 (if *no-newline*
 	     ""
 	     (format nil "~%"))))
@@ -90,7 +98,7 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (let ((ignored-p (and (movetensor-p (wfop-node inst))
 			(movetensor-ignore-me (wfop-node inst)))))
     (format stream
-	    "~a~a : ~a<= op(~a)>~a"
+	    "~a~a : ~a<= op(~a)>~a~a"
 	    (instruction-opname inst)
 	    (with-output-to-string (out)
 	      (dotimes (i (- *opname-indent-to* (length (instruction-opname inst)))) (princ " " out)))
@@ -129,6 +137,9 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 				  (if (nth (1+ i) (wfop-args inst))
 				      " "
 				      "")))))))
+	    (if (wfop-comment inst)
+		(format nil " ;; ~a" (wfop-comment inst))
+		"")
 	    (if *no-newline*
 		""
 		(format nil "~%")))))

@@ -39,7 +39,8 @@
    #:wfop-sv4bw
    #:wfop-args
    #:wfop-loadp
-   #:read-loadp))
+   #:read-loadp
+   #:wfop-comment))
 
 (in-package :cl-waffe2/vm)
 
