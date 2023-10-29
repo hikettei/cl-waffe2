@@ -83,6 +83,55 @@
 			(list (format nil "~a" (tensor-id arg)) " "))))
 	  (jit-body obj)))
 
+(defun appending-first-touch (abstract-loop instructions)
+  (loop with indices = (iterator-symbols (length abstract-loop))
+	for *indent-width* upfrom 4 by 4
+	for index-char  in indices
+	for loop        in abstract-loop do
+	  (case (aloop-mode loop)
+	    (:batch
+	     ;; If *use-open-mp* is set to T and the currently processing loop is the first one
+	     ;; Inserts the pragma:
+	     (when (and (= *indent-width* 4)
+			*use-open-mp*)
+	       (write-c-line (pragma-omp indices)))
+	     (write-c-line
+	      "for (int ~a=0;~a<~a;~a++) {~%"
+	      index-char
+	      index-char
+	      (c-name (format nil "~a" (aloop-size loop)))
+	      index-char))
+	    (T
+	     ;; Expected one of: :apply :apply-flatten
+	     (when (and (= *indent-width* 4)
+			*use-open-mp*)
+	       (write-c-line "#pragma omp parallel for ~%"))
+	     
+	     (write-c-line
+	      "for (int ~a=0;~a<~a;~a++) {~%"
+	      index-char
+	      index-char
+	      (c-name (format nil "~a" (aloop-element-n loop)))
+	      index-char)
+
+	     (let ((*indent-width* (+ 4 *indent-width*)))
+	       (dolist (inst instructions)
+		 (render-instruction inst indices))))))
+  (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 4 by 4 do
+    (write-c-line "}~%")))
+    
+(defun pragma-omp (make-me-private)
+  (format
+   nil
+   "#pragma omp parallel for private(~a)~%"
+   (apply
+    #'concatenate
+    'string
+    (butlast
+     (loop for var in make-me-private
+	   append
+	   (list var ","))))))
+
 (defun generate-c-kernel (function-name shapes variables abstract-loop instructions)
   (with-compiling-mode
     ;; place-toplevel-form appends these forms:
@@ -93,6 +142,28 @@
     (write-c-line "~a { ~%" (cFunction function-name shapes variables))
     
     (with-indent 4
+
+      (flet ((first-touch ()
+	       (when (and (= *indent-width* 4)
+			  *use-open-mp*)
+
+		 ;; doin a first touch (only effective when the architecture is numo)
+		 (appending-first-touch
+		  abstract-loop
+		  (map 'list
+		       #'(lambda (tensor)
+			   (make-inst
+			    :modify
+			    "= 0.0" ;; [Fix] 4 sparse tensor?
+			    tensor
+			    nil))
+		       variables)))))
+	#'first-touch
+	;; disabled for a now
+	;;(first-touch)
+	)
+      
+      
       (loop with indices = (iterator-symbols (length abstract-loop))
 	    for *indent-width* upfrom 4 by 4
 	    for index-char  in indices
@@ -103,7 +174,7 @@
 		 ;; Inserts the pragma:
 		 (when (and (= *indent-width* 4)
 			    *use-open-mp*)
-		   (write-c-line "#pragma omp parallel for~%"))
+		   (write-c-line (pragma-omp indices)))
 		 (write-c-line
 		  "for (int ~a=0;~a<~a;~a++) {~%"
 		  index-char
@@ -113,7 +184,7 @@
 		(T
 		 ;; Expected one of: :apply :apply-flatten
 		 (when (and (= *indent-width* 4)
-			    *use-open-mp*)
+		          *use-open-mp*)
 		   (write-c-line "#pragma omp parallel for ~%"))
 		 
 		 (write-c-line

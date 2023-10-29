@@ -1,14 +1,31 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
-(defparameter *lazy-c-source* "")
+;; Env in my macbook:
+;; (cpujit-set-config
+;;    :compiler "/usr/local/bin/gcc-13"
+;;    :viz-compiled-code nil
+;;    :openmp t)
+
+(defparameter *lazy-c-source* "
+(gensym).c
+#pragma simd
+<<Headers>>
+
+<<Definitions>>
+")
+
 (defparameter *compiling-ntime-count* 0)
 
 ;; [Fix] 何回も同じコードをコンパイルするの？
 ;; [TODO] Im2Col Col2Im Fusion
 ;; [TODO] OpenMP
-;;  1. 最適化関数 A-=...が動いていない？
-;;  2. OpのArgs Outs関連
+
+;; Workloads:
+;;  - [Fix] 何回も同じコードをコンパイルするのか？
+;;  - [Opt] Im2Col Col2Im
+;;  - [Add] OpenMP (thresholds, nested)
+;;  - [Add]
 
 ;; This is a toplevel of JIT-Compiling Backend
 ;; After High-Level IR compiling is finished, the method on-finalizing-compiling will be invoked.
@@ -32,6 +49,9 @@
 		  ;; So just replacing op is ok and wfop-args cause no conflicts
 		  ;; But If the instruction is created by fusion several ops
 		  ;; we have to note that create a new WfINstruction
+
+		  ;; [TODO]
+		  ;; compilers should be reluctant to insert a new c line which is not worth it.		  
 		  (setf (wfop-op inst) (make-jit-compiled-op (symbol-name (gensym)) ir))
 		  (push inst out)))
 	       (T
