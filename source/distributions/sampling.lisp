@@ -94,7 +94,7 @@ If keep-order = t, forcibly it uses mref (with computing strides). This option i
       #'(lambda (i)
 	  (declare (ignore i))
 	  (sample-uniform-random upfrom below)))
-    "The function uniform-random is a family of initializer funtions, and samples matrices from uniform random distribution using Common Lisp's standard function, `(random arg)`.
+    "The function uniform-random is a family of initializer functions, and samples matrices from uniform random distribution using Common Lisp's standard function, `(random arg)`.
 
 Input:
 
@@ -188,13 +188,13 @@ stddev - Standard Deviation, σ.
 3. https://marui.hatenablog.com/entry/2023/01/23/194507")
 
   (define-initializer-function
-      expotential
+      exponential
       ()
-    (let ((sampler (get-expotential-sampler (dtype tensor))))
+    (let ((sampler (get-exponential-sampler (dtype tensor))))
       #'(lambda (i)
 	  (declare (ignore i))
 	  (funcall sampler)))
-    "The function expotential is a family of initializer functions, and samples the expotential distribution using ziggurat algorithm with table-size=256.
+    "The function exponential is a family of initializer functions, and samples the exponential distribution using ziggurat algorithm with table-size=256.
 
 
 ### References

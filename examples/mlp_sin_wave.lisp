@@ -2,7 +2,7 @@
 (in-package :cl-user)
 
 ;;
-;; This example provides the smallest package for training neural network in cl-waffe2
+;; This example provides the smallest package for training a neural network in cl-waffe2
 ;; Expected to be something like a Project Template.
 ;;
 

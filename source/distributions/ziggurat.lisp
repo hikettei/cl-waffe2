@@ -86,7 +86,7 @@
 			  (exp (* -0.5 x x)))
 			 (return x))))))))
 
-(define-with-typevar-dense (make-expotential-generator u) (rx ry ir table-size)
+(define-with-typevar-dense (make-exponential-generator u) (rx ry ir table-size)
   (declare (optimize (speed 3) (safety 0))
    (type (simple-array u (*)) rx ry ir)
    (type fixnum table-size))
@@ -157,12 +157,12 @@
       0.0049286732339721695d0
       make-gaussian-generator)
     
-    (define-ziggurat-sampler get-expotential-sampler
-      make-expotential-sampler
+    (define-ziggurat-sampler get-exponential-sampler
+      make-exponential-sampler
       #'(lambda (x) (exp (- x)))
       #'(lambda (y) (- (log y)))
       7.6971174701310288d0
       0.0039496598225815527d0
-      make-expotential-generator)))
+      make-exponential-generator)))
 
 

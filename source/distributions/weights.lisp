@@ -22,7 +22,7 @@
 	   (coeff (sqrt (/ 6 (+ in-features out-features)))))
       #'(lambda (i)
 	  (declare (ignore i))
-	  (* coeff (sample-uniform-random -1.0 1.0))))
+	  (coerce (* coeff (sample-uniform-random -1.0 1.0)) (dtype->lisp-type (dtype tensor)))))
     "")
 
 (define-tensor-initializer-export
