@@ -1,6 +1,11 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+;; [TODO]
+;; With enough time, we could introduce these features to a JIT Compiler:
+;;  - Polyhedral Compiler
+;;  - Tiling, Unrolling
+;;  - considering L1/L2 caching, reducing
 
 ;; ~~ Params ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (defvar *compiled-code-buffer* nil
@@ -83,43 +88,6 @@
 			(list (format nil "~a" (tensor-id arg)) " "))))
 	  (jit-body obj)))
 
-(defun appending-first-touch (abstract-loop instructions)
-  (loop with indices = (iterator-symbols (length abstract-loop))
-	for *indent-width* upfrom 4 by 4
-	for index-char  in indices
-	for loop        in abstract-loop do
-	  (case (aloop-mode loop)
-	    (:batch
-	     ;; If *use-open-mp* is set to T and the currently processing loop is the first one
-	     ;; Inserts the pragma:
-	     (when (and (= *indent-width* 4)
-			*use-open-mp*)
-	       (write-c-line (pragma-omp indices)))
-	     (write-c-line
-	      "for (uint32_t ~a=0;~a<~a;~a++) {~%"
-	      index-char
-	      index-char
-	      (c-name (format nil "~a" (aloop-size loop)))
-	      index-char))
-	    (T
-	     ;; Expected one of: :apply :apply-flatten
-	     (when (and (= *indent-width* 4)
-			*use-open-mp*)
-	       (write-c-line "#pragma omp parallel for ~%"))
-	     
-	     (write-c-line
-	      "for (uint32_t ~a=0;~a<~a;~a++) {~%"
-	      index-char
-	      index-char
-	      (c-name (format nil "~a" (aloop-element-n loop)))
-	      index-char)
-
-	     (let ((*indent-width* (+ 4 *indent-width*)))
-	       (dolist (inst instructions)
-		 (render-instruction inst indices))))))
-  (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 4 by 4 do
-    (write-c-line "}~%")))
-
 (defun pragma-omp (make-me-private)
   (format
    nil
@@ -135,7 +103,25 @@
    |#
    ))
 
-(defun generate-c-kernel (function-name shapes variables abstract-loop instructions)
+(defstruct (Iteration
+	    (:constructor
+		make-iteration (rank size index)))
+  (rank rank)
+  (size size)
+  (index index))
+
+(defstruct (LoopVariable
+	    (:constructor
+		make-lvariable (tensor depends-on)))
+  (tensor tensor)
+  (depends-on depends-on))
+
+(defun maybe> (x y)
+  (if (and (numberp x) (numberp y))
+      (> x y)
+      T))
+
+(defun generate-c-kernel (function-name shapes variables abstract-loop instructions &aux (iters nil) (indices (iterator-symbols (length abstract-loop))))
   (with-compiling-mode
     ;; place-toplevel-form appends these forms:
     ;;  - includes
@@ -145,73 +131,108 @@
     (write-c-line "~a { ~%" (cFunction function-name shapes variables))
     
     (with-indent 4
-      (flet ((first-touch ()
-	       (when (and (= *indent-width* 4)
-			  *use-open-mp*)
+      ;; [ADD] First touching
 
-		 ;; doin a first touch (only effective when the architecture is numo)
-		 (appending-first-touch
-		  abstract-loop
-		  (map 'list
-		       #'(lambda (tensor)
-			   (make-inst
-			    :modify
-			    "= 0.0" ;; [Fix] 4 sparse tensor?
-			    tensor
-			    nil))
-		       variables)))))
-	#'first-touch
-	;; disabled for a now
-	;;(first-touch)
-	)
-
-      (print abstract-loop)
-      
-      (loop with indices = (iterator-symbols (length abstract-loop))
-	    for *indent-width* upfrom 4 by 4
-	    for index-char  in indices;;`(,@(reverse (butlast indices)) ,(car indices))
-	    for loop        in abstract-loop do;;`(,@(reverse (butlast abstract-loop)) ,(car abstract-loop)) do
+      (loop for rank       upfrom 0
+	    for index-char in indices
+	    for loop       in abstract-loop do
 	      (case (aloop-mode loop)
 		(:batch
-		 ;; If *use-open-mp* is set to T and the currently processing loop is the first one
-		 ;; Inserts the pragma:
-		 (when (and (= *indent-width* 4)
-			    *use-open-mp*)
-		   (write-c-line (pragma-omp indices)))
-
-		 (when (and (not (= *indent-width* 4))
-			    (numberp (aloop-size loop)))
-		   (write-c-line "#pragma omp unroll partial(16)~%"))
-		 
-		 (write-c-line
-		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
-		  index-char
-		  index-char
-		  (c-name (format nil "~a" (aloop-size loop)))
-		  index-char))
+		 (push (make-iteration rank (aloop-size loop) index-char) iters))
 		(T
-		 ;; Expected one of: :apply :apply-flatten
-		 (when (and (= *indent-width* 4)
-		            *use-open-mp*)
-		   (write-c-line "#pragma omp parallel for ~%"))
+		 (push (make-iteration rank (aloop-element-n loop) index-char) iters))))
+      (setq iters (reverse iters))
 
-		 (when (and (not (= *indent-width* 4))
-			    (numberp (aloop-element-n loop)))
-		   (write-c-line "#pragma omp unroll full~%"))
-		 (write-c-line
-		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
-		  index-char
-		  index-char
-		  (c-name (format nil "~a" (aloop-element-n loop)))
-		  index-char)
+      (let* ((deps (map 'list #'solve-depends-on variables))
+	     (isecs)
+	     (not-isecs)
+	     (loop-strategy)
+	     (vars (map 'list #'make-lvariable variables deps)))
 
-		 (let ((*indent-width* (+ 4 *indent-width*)))
-		   (dolist (inst instructions)
-		     (render-instruction inst indices)))))))
+	(flet ((isec-helper (list1 list2)
+		 (intersection list1 list2 :test #'equal)))
+	  (setq isecs     (reduce #'isec-helper deps))
+	  (setq not-isecs (loop for rank upfrom 0 below (dims (car variables))
+				unless (find rank isecs)
+				  collect rank)))
+	
+	(setq
+	 loop-strategy
+	 `(,@(sort
+	      (loop for i in isecs
+		    collect (nth i iters))
+	      #'maybe>
+	      :key #'iteration-size)
+	   ,@(sort
+	      (loop for i in not-isecs
+		    collect (nth i iters))
+	      #'maybe>
+	      :key #'iteration-size)))
 
-    ;; Closing Brackets
-    (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
-      (write-c-line "}~%"))))
+	(flet ((step-rank (rank var)
+		 (setf (loopvariable-depends-on var)
+		       (delete rank (loopvariable-depends-on var))))
+	       (determined-p (var)
+		 (null (loopvariable-depends-on var))))
+	  (loop with placed = (make-hash-table) ;; ID -> PTR_NAME
+		with loop-stacks = nil
+		for iterator in loop-strategy
+		for nth upfrom 0
+		for *indent-width* upfrom 4 by 4 do
+		  (push iterator loop-stacks)
+		  (mapc #'(lambda (v)
+			    (step-rank (iteration-rank iterator) v))
+			vars)
+		  
+		  (when (and
+			 (= *indent-width* 4)
+			 (maybe> (iteration-size iterator) 100))
+		    (write-c-line "#pragma omp parallel for~%"))
+
+		  (when (and
+			 (= *indent-width* 4)
+			 (numberp (iteration-size iterator))
+			 (<= (iteration-size iterator) 100))
+		    (write-c-line "#pragma omp unroll full~%"))
+
+		  (write-c-line
+		   "for (uint32_t ~a=0;~a<~a;~a++) {~%"
+		   (iteration-index iterator)
+		   (iteration-index iterator)
+		   (c-name (format nil "~a" (iteration-size iterator)))
+		   (iteration-index iterator))
+		  
+		  (dolist (v vars)
+		    (when (and
+			   (not (= nth (1- (length loop-strategy))))
+			   (not
+			    (gethash
+			     (tensor-id (loopvariable-tensor v))
+			     placed))
+			   (determined-p v))
+		      ;; [Fix] Private Var?
+		      (let ((name (format nil "~(~a~)" (gensym))))
+			(write-c-line
+			 "    ~a ~a = ~a;~%"
+			 (dtype->ctype (dtype (loopvariable-tensor v)))
+			 name
+			 (cAref-with-ranks
+			  (loopvariable-tensor v)
+			  (map 'list #'iteration-index loop-stacks)
+			  (map 'list #'iteration-rank  loop-stacks)))
+			(setf (gethash (tensor-id (loopvariable-tensor v)) placed) name))))
+
+		  ;; Finally, rendering instructings
+		  (when (= nth (1- (length loop-strategy)))
+		    (let ((*indent-width* (+ 4 *indent-width*)))
+		      (dolist (inst instructions)
+			(render-instruction
+			 inst
+			 indices
+			 placed)))))))
+      ;; Closing Brackets
+      (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
+	(write-c-line "}~%")))))
 
 (defun invoke-compiler (function-name instructions)
   "Compiles to C Kernel.

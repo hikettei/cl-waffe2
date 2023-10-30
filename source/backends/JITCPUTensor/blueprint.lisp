@@ -77,11 +77,11 @@ type:
   (declare (type AbstractTensor tensor))
   (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) (range 0 (dims tensor)))))
     (flet ((index-of (rank index stride)
-	     (list (format nil "(~a+~a)*~a"
+	     (list (format nil "(~a~a)*~a"
 			   (if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
 				     (force-list (nth rank (tensor-view tensor)))))
-			       "0"
-			       (cOffset tensor rank))
+			       ""
+			       (format nil "~a+" (cOffset tensor rank)))
 			   index stride)
 		   "+")))
       (format nil "~a[~a]"
@@ -91,6 +91,40 @@ type:
 		      (flatten
 		       (map 'list #'index-of
 			    (range 0 (dims tensor)) indices strides))))))))
+
+(defun cAref-with-ranks (tensor indices ranks)
+  "Reading a id of the given tensor, places a form reading an arbitary position of elements."
+  (declare (type AbstractTensor tensor))
+  (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) ranks)))
+    (flet ((index-of (rank index stride)
+	     (list (format nil "(~a~a)*~a"
+			   (if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+				     (force-list (nth rank (tensor-view tensor)))))
+			       ""
+			       (format nil "~a+" (cOffset tensor rank)))
+			   index stride)
+		   "+")))
+      (format nil "~a[~a]"
+	      (tensor-id tensor)
+	      (apply #'concatenate 'string
+		     (butlast
+		      (flatten
+		       (map 'list #'index-of ranks indices strides))))))))
+
+
+(defun solve-depends-on (tensor)
+  "Returns a list of indices tensor depends on"
+  (declare (type AbstractTensor tensor))
+  (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) (range 0 (dims tensor)))))
+    (flet ((index-of (rank stride)
+	     (if (or (and (stringp stride)
+			  (string= stride "0"))
+		     (and (numberp stride)
+			  (= stride 0)))
+		 nil
+		 rank)))
+      (loop for s in (map 'list #'index-of (range 0 (dims tensor)) strides)
+	    if s collect s))))
 
 (defun cFunction (function-name adjustable-shape arguments)
   "Header:
