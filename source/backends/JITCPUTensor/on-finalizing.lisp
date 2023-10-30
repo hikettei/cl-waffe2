@@ -52,7 +52,7 @@
 
 		  ;; [TODO]
 		  ;; compilers should be reluctant to insert a new c line which is not worth it.		  
-		  (setf (wfop-op inst) (make-jit-compiled-op (symbol-name (gensym)) ir))
+		  (setf (wfop-op inst) (make-jit-compiled-op (symbol-name (gensym "FOREIGN_")) ir))
 		  (push inst out)))
 	       (T
 		(push inst out))))

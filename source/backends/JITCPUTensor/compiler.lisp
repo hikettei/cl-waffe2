@@ -48,7 +48,7 @@
   `("immintrin.h" "stdbool.h" "stdlib.h" "math.h" "stdio.h" "stdint.h")
   "A list of header files envolved in compiling.")
 
-(defun place-toplevel-form (cffi-call-name shapes tensors)
+(defun place-toplevel-form (cffi-call-name shapes tensors dlist)
   "Places headers, function definition and macros."
 
   ;; Ensures that this call is the first time.
@@ -61,9 +61,15 @@
       (write-buff "#include <~a>~%" include))
 
     (when *use-open-mp*
-      (write-buff "#include <omp.h>~%")))
+      (write-buff "#include <omp.h>
+
+int get_threads();
+int get_threads() { return omp_get_max_threads(); }
+")))
   
-  (write-buff "~%~a;~%~%" (cFunction cffi-call-name shapes tensors)))
+  (write-buff "~%~a;~%~%" (cFunction cffi-call-name shapes tensors :displace-to-list dlist)))
+
+(defun get-threads () (cffi:foreign-funcall "get_threads" :int))
 
 (defun iterator-symbols (rank)
   (loop for r upfrom 0 below rank
@@ -129,6 +135,8 @@
       (< x y)
       T))
 
+(defparameter *solved-as-zero* nil)
+;; [Fix] private変数にしないとthreadでconflictssuru kamo
 (defun generate-c-kernel (function-name shapes variables abstract-loop instructions
 			  &aux
 			    (multi-threading-thresholds 128)
@@ -136,14 +144,22 @@
 			    (indices (iterator-symbols (length abstract-loop)))
 			    (indent-count 0)
 			    (tiling-p (>= (length abstract-loop) 3)))
-  
   (with-compiling-mode
     ;; place-toplevel-form appends these forms:
     ;;  - includes
     ;;  - header
     ;;  - macros
-    (place-toplevel-form function-name shapes variables)
-    (write-c-line "~a { ~%" (cFunction function-name shapes variables))
+    (let ((dlist
+	    (loop for inst in instructions
+		  collect
+		  (tensor-id (instruction-displace-to inst)))))
+      (place-toplevel-form function-name shapes variables dlist)
+      (write-c-line "~a { ~%" (cFunction
+			       function-name
+			       shapes
+			       variables
+			       :displace-to-list
+			       dlist)))
     
     (with-indent 4
       ;; [ADD] First touching
@@ -158,6 +174,7 @@
 		 (push (make-iteration rank (aloop-element-n loop) index-char) iters))))
       (setq iters (reverse iters))
 
+      ;; Detecting reductions
       (let* ((deps (map 'list #'solve-depends-on variables))
 	     (isecs)
 	     (not-isecs)
@@ -213,7 +230,11 @@
 			 (x y)
 		       (> (cost (iteration-rank x))
 			  (cost (iteration-rank y))))))))
-	
+
+	;; Loop Priority (tmp):
+	;; <<Reductions>>
+	;; <<Larger  strides(e.g.: batch-size)>>
+	;; <<Smaller strides>>
 	(setq
 	 loop-strategy
 	 `(,@isecs
@@ -224,7 +245,8 @@
 		       (delete rank (loopvariable-depends-on var))))
 	       (determined-p (var)
 		 (null (loopvariable-depends-on var))))
-	  (loop with placed = (make-hash-table) ;; ID -> PTR_NAME
+	  (loop with *solved-as-zero* = nil
+	        with placed = (make-hash-table) ;; ID -> PTR_NAME
 		with loop-stacks = nil
 		for iterator in loop-strategy
 		for nth upfrom 0 do
@@ -248,11 +270,11 @@
 			   (not delete-loop-p)
 			   (numberp (iteration-size iterator))
 			   (<= (iteration-size iterator) multi-threading-thresholds))
-		      (write-c-line "#pragma omp unroll full~%"))
+		      (write-c-line "#pragma omp unroll partial(4)~%"))
 
 		    (when (and
 			   tiling-p
-			   (not delete-loop-p)
+			   ;;(not delete-loop-p)
 			   (= 2 (- (length abstract-loop) nth)))
 		      ;;(write-c-line "#pragma omp tile sizes(8, 2)~%")
 		      (let ((determined-iters (butlast loop-strategy 2))
@@ -269,21 +291,24 @@
 			      (map 'list #'iteration-rank  determined-iters)))
 
 			    (setf (gethash (tensor-id (loopvariable-tensor v)) placed)
-				  (format nil
-					  "~a"
-					  (caref-with-ranks
-					   (loopvariable-tensor v)
-					   (map 'list #'iteration-index nd-iters)
-					   (map 'list #'iteration-rank  nd-iters)
-					   :name name)))))
+				  #'(lambda ()
+				      (format nil
+					      "~a"
+					      (caref-with-ranks
+					       (loopvariable-tensor v)
+					       (map 'list #'iteration-index nd-iters)
+					       (map 'list #'iteration-rank  nd-iters)
+					       :name name))))))))
 
-			(write-c-line "#pragma omp tile sizes(4, 4)~%")
-			))
+		     (when (= nth (1- (length abstract-loop)))
+		       (write-c-line "#pragma omp unroll partial(4)~%"))
 
 		    (if delete-loop-p
-			(write-c-line
-			 "uint32_t ~a=0;~%"
-			 (iteration-index iterator))
+			(progn
+			  ;;(write-c-line
+			  ;; "const uint32_t ~a=0;~%"
+			  ;; (iteration-index iterator))
+			  (push (iteration-index iterator) *solved-as-zero*))
 			(progn
 			  (incf indent-count)
 			  (write-c-line

@@ -38,9 +38,9 @@ type:
 (defun cPointer (tensor)
   (symb (tensor-id tensor) '-ptr))
 
-(defun cVar (tensor &key (restrict nil) (comma nil))
+(defun cVar (tensor &key (restrict nil) (comma nil) (const nil))
   (declare (type AbstractTensor tensor))
-  (cType tensor :restrict restrict)
+  (cType tensor :restrict restrict :const const)
   (write-buff "~a~a"
 	      (tensor-id tensor)
 	      (if comma ", " "")))
@@ -77,13 +77,22 @@ type:
   (declare (type AbstractTensor tensor))
   (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) (range 0 (dims tensor)))))
     (flet ((index-of (rank index stride)
-	     (list (format nil "(~a~a)*~a"
-			   (if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-				     (force-list (nth rank (tensor-view tensor)))))
-			       ""
-			       (format nil "~a+" (cOffset tensor rank)))
-			   index stride)
-		   "+")))
+	     (when (not (member index *solved-as-zero* :test #'string=))
+	       (list
+		(let ((char
+			(format nil "(~a~a)"
+				(if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+					  (force-list (nth rank (tensor-view tensor)))))
+				    ""
+			            (format nil "~a+"
+					    (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+					     (force-list (nth rank (tensor-view tensor))))))
+				index)))
+		  (if (and (numberp stride)
+			   (= stride 1))
+		      char
+		      (format nil "~a*~a" char stride)))
+		"+"))))
       (format nil "~a[~a]"
 	      (tensor-id tensor)
 	      (apply #'concatenate 'string
@@ -97,13 +106,22 @@ type:
   (declare (type AbstractTensor tensor))
   (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) ranks)))
     (flet ((index-of (rank index stride)
-	     (list (format nil "(~a~a)*~a"
-			   (if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-				     (force-list (nth rank (tensor-view tensor)))))
-			       ""
-			       (format nil "~a+" (cOffset tensor rank)))
-			   index stride)
-		   "+")))
+	     (when (not (member index *solved-as-zero* :test #'string=))
+	       (list 
+		(let ((char
+			(format nil "(~a~a)"
+				(if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+					  (force-list (nth rank (tensor-view tensor)))))
+				    ""
+			            (format nil "~a+"
+					    (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
+					     (force-list (nth rank (tensor-view tensor))))))
+				index)))
+		  (if (and (numberp stride)
+			   (= stride 1))
+		      char
+		      (format nil "~a*~a" char stride)))
+		"+"))))
       (format nil "~a[~a]"
 	      (or name (tensor-id tensor))
 	      (apply #'concatenate 'string
@@ -126,7 +144,7 @@ type:
       (loop for s in (map 'list #'index-of (range 0 (dims tensor)) strides)
 	    if s collect s))))
 
-(defun cFunction (function-name adjustable-shape arguments)
+(defun cFunction (function-name adjustable-shape arguments &key (displace-to-list nil))
   "Header:
 void function-name (int size, float * restrict x1, int stride, int offset, float* x2 ...)
 
@@ -139,15 +157,10 @@ void function-name (int size, float * restrict x1, int stride, int offset, float
 	    (loop for arg in arguments
 		  for nth upfrom 0
 		  ;; TENSOR_PTR OFFSET3 OFFSET2 OFFSET1
-		  do (cVar arg :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id)) :comma t)
-		     (dotimes (rank (dims arg))
-		       (write-buff "const uint32_t ~a~a"
-				   (cOffset arg rank)
-				   ;; Judge if the last or not
-				   (if (and (= rank (1- (dims arg)))
-					    (= nth  (1- (length arguments))))
-				       ""
-				       ", "))))
+		  do (cVar arg :restrict (= 1 (count (tensor-id arg) arguments :key #'tensor-id))
+			       :comma (not (= nth (1- (length arguments))))
+			       :const (and (not (null displace-to-list))
+					   (not (member (tensor-id arg) displace-to-list)))))
 	    (write-buff ")"))))
     (format nil "void ~a~a" function-name arguments-form)))
 

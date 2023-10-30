@@ -73,12 +73,6 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
 	  ,@(loop for arg in args
 		  append
 		  (append
-		   `(:pointer ,(cPointer arg))
-		   (loop for rank upfrom 0 below (dims arg)
-			 append
-			 `(:uint32
-			   (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-			    (force-list
-			     (nth ,rank (tensor-view ,(tensor-id arg)))))))))
+		   `(:pointer ,(cPointer arg))))
 	  :void)))))
 

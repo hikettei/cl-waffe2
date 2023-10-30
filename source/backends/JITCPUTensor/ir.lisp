@@ -8,7 +8,12 @@
   (with-slots ((type type) (displace-to displace-to) (args args) (fname fname)) instruction
     (flet ((place-holder-p (tensor)
 	     (and place-holders
-		  (gethash (tensor-id tensor) place-holders))))
+		  (let ((result (gethash (tensor-id tensor) place-holders)))
+		    (and
+		     result
+		     (if (functionp result)
+			 (funcall result)
+			 result))))))
       (case type
 	(:modify
 	 ;; modify: A fname B
