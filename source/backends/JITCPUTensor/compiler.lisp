@@ -121,7 +121,19 @@
       (> x y)
       T))
 
-(defun generate-c-kernel (function-name shapes variables abstract-loop instructions &aux (iters nil) (indices (iterator-symbols (length abstract-loop))))
+(defun maybe< (x y)
+  (if (and (numberp x) (numberp y))
+      (< x y)
+      T))
+
+(defun generate-c-kernel (function-name shapes variables abstract-loop instructions
+			  &aux
+			    (multi-threading-thresholds 128)
+			    (iters nil)
+			    (indices (iterator-symbols (length abstract-loop)))
+			    (indent-count 0)
+			    (tiling-p (>= (length abstract-loop) 3)))
+  
   (with-compiling-mode
     ;; place-toplevel-form appends these forms:
     ;;  - includes
@@ -155,19 +167,54 @@
 	  (setq not-isecs (loop for rank upfrom 0 below (dims (car variables))
 				unless (find rank isecs)
 				  collect rank)))
+
+	(when (not (null not-isecs))
+	  (setq tiling-p nil))
+
+	(setq isecs
+	      (sort
+	       (loop for i in isecs
+		     collect (nth i iters))
+	       #'maybe>
+	       :key #'iteration-size))
+	
+	(setq not-isecs
+	      (sort
+	       (loop for i in not-isecs
+		     collect (nth i iters))
+	       #'maybe>
+	       :key #'iteration-size))
+
+	;; not-isecs:
+	;;  to maximize the locality of memory, and use of L1/L2 cache
+	;;  Sort by strides
+	(when tiling-p
+	  (flet ((cost (rank)
+		   (let ((strides
+			   (map 'list
+				#'(lambda (v)
+				    (let ((out (cStride v rank)))
+				      (if (numberp out)
+					  out
+					  (if (string= "0" out)
+					      0
+					      most-positive-fixnum))))
+				(list (car variables)))))
+		     (if (find 1 strides)
+			 -1
+			 (apply #'* strides)))))
+	    (setq isecs
+		  (sort
+		   isecs
+		   #'(lambda
+			 (x y)
+		       (> (cost (iteration-rank x))
+			  (cost (iteration-rank y))))))))
 	
 	(setq
 	 loop-strategy
-	 `(,@(sort
-	      (loop for i in isecs
-		    collect (nth i iters))
-	      #'maybe>
-	      :key #'iteration-size)
-	   ,@(sort
-	      (loop for i in not-isecs
-		    collect (nth i iters))
-	      #'maybe>
-	      :key #'iteration-size)))
+	 `(,@isecs
+	   ,@not-isecs))
 
 	(flet ((step-rank (rank var)
 		 (setf (loopvariable-depends-on var)
@@ -177,61 +224,80 @@
 	  (loop with placed = (make-hash-table) ;; ID -> PTR_NAME
 		with loop-stacks = nil
 		for iterator in loop-strategy
-		for nth upfrom 0
-		for *indent-width* upfrom 4 by 4 do
-		  (push iterator loop-stacks)
-		  (mapc #'(lambda (v)
-			    (step-rank (iteration-rank iterator) v))
-			vars)
-		  
-		  (when (and
-			 (= *indent-width* 4)
-			 (maybe> (iteration-size iterator) 100))
-		    (write-c-line "#pragma omp parallel for~%"))
-
-		  (when (and
-			 (= *indent-width* 4)
-			 (numberp (iteration-size iterator))
-			 (<= (iteration-size iterator) 100))
-		    (write-c-line "#pragma omp unroll full~%"))
-
-		  (write-c-line
-		   "for (uint32_t ~a=0;~a<~a;~a++) {~%"
-		   (iteration-index iterator)
-		   (iteration-index iterator)
-		   (c-name (format nil "~a" (iteration-size iterator)))
-		   (iteration-index iterator))
-		  
-		  (dolist (v vars)
+		for nth upfrom 0 do
+		  (let ((*indent-width* (+ 4 (* 4 indent-count)))
+			(delete-loop-p
+			  (and (numberp (iteration-size iterator))
+			       (= 1 (iteration-size iterator)))))
+		    (push iterator loop-stacks)
+		    (mapc #'(lambda (v)
+			      (step-rank (iteration-rank iterator) v))
+			  vars)
+		    
 		    (when (and
-			   (not (= nth (1- (length loop-strategy))))
-			   (not
-			    (gethash
-			     (tensor-id (loopvariable-tensor v))
-			     placed))
-			   (determined-p v))
-		      ;; [Fix] Private Var?
-		      (let ((name (format nil "~(~a~)" (gensym))))
-			(write-c-line
-			 "    ~a ~a = ~a;~%"
-			 (dtype->ctype (dtype (loopvariable-tensor v)))
-			 name
-			 (cAref-with-ranks
-			  (loopvariable-tensor v)
-			  (map 'list #'iteration-index loop-stacks)
-			  (map 'list #'iteration-rank  loop-stacks)))
-			(setf (gethash (tensor-id (loopvariable-tensor v)) placed) name))))
+			   (not delete-loop-p)
+			   (= indent-count 0)
+			   (maybe> (iteration-size iterator) multi-threading-thresholds))
+		      (write-c-line "#pragma omp parallel for~%"))
 
-		  ;; Finally, rendering instructings
-		  (when (= nth (1- (length loop-strategy)))
-		    (let ((*indent-width* (+ 4 *indent-width*)))
-		      (dolist (inst instructions)
-			(render-instruction
-			 inst
+		    (when (and
+			   (= indent-count 0)
+			   (not delete-loop-p)
+			   (numberp (iteration-size iterator))
+			   (<= (iteration-size iterator) multi-threading-thresholds))
+		      (write-c-line "#pragma omp unroll full~%"))
+
+		    (when (and
+			   tiling-p
+			   (not delete-loop-p)
+			   (= 2 (- (length abstract-loop) nth)))
+		      (write-c-line "#pragma omp tile sizes(8, 2)~%")
+		      (write-c-line "~%")
+		      )
+
+		    (if delete-loop-p
+			(write-c-line
+			 "uint32_t ~a=0;~%"
+			 (iteration-index iterator))
+			(progn
+			  (incf indent-count)
+			  (write-c-line
+			   "for (uint32_t ~a=0;~a<~a;~a++) {~%"
+			   (iteration-index iterator)
+			   (iteration-index iterator)
+			   (c-name (format nil "~a" (iteration-size iterator)))
+			   (iteration-index iterator))))
+		    
+		    (dolist (v vars)
+		      (when (and
+			     (not (= nth (1- (length loop-strategy))))
+			     (not
+			      (gethash
+			       (tensor-id (loopvariable-tensor v))
+			       placed))
+			     (determined-p v))
+			;; [Fix] Private Var?
+			(let ((name (format nil "~(~a~)" (gensym))))			
+			  (write-c-line
+			   "~a ~a = ~a;~%"
+			   (dtype->ctype (dtype (loopvariable-tensor v)))
+			   name
+			   (cAref-with-ranks
+			    (loopvariable-tensor v)
+			    (map 'list #'iteration-index loop-stacks)
+			    (map 'list #'iteration-rank  loop-stacks)))
+			  (setf (gethash (tensor-id (loopvariable-tensor v)) placed) name))))
+
+		    ;; Finally, rendering instructings
+		    (when (= nth (1- (length loop-strategy)))
+		      (let ((*indent-width* (* 4 (1+ indent-count))))
+			(dolist (inst instructions)
+			  (render-instruction
+			   inst
 			 indices
-			 placed)))))))
+			 placed))))))))
       ;; Closing Brackets
-      (loop for *indent-width* downfrom (* 4 (length abstract-loop)) to 0 by 4 do
+      (loop for *indent-width* downfrom (* 4 indent-count) to 0 by 4 do
 	(write-c-line "}~%")))))
 
 (defun invoke-compiler (function-name instructions)
