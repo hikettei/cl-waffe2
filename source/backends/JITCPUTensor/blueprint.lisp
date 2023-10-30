@@ -92,7 +92,7 @@ type:
 		       (map 'list #'index-of
 			    (range 0 (dims tensor)) indices strides))))))))
 
-(defun cAref-with-ranks (tensor indices ranks)
+(defun cAref-with-ranks (tensor indices ranks &key (name nil))
   "Reading a id of the given tensor, places a form reading an arbitary position of elements."
   (declare (type AbstractTensor tensor))
   (let ((strides (map 'list #'(lambda (axis) (cStride tensor axis)) ranks)))
@@ -105,7 +105,7 @@ type:
 			   index stride)
 		   "+")))
       (format nil "~a[~a]"
-	      (tensor-id tensor)
+	      (or name (tensor-id tensor))
 	      (apply #'concatenate 'string
 		     (butlast
 		      (flatten

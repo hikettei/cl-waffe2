@@ -6,6 +6,9 @@
 ;;  - Polyhedral Compiler
 ;;  - Tiling, Unrolling
 ;;  - considering L1/L2 caching, reducing
+;; As of this writing, optimization techniques we provide are limited to:
+;;  - Memory Locality(L1/L2 Cache)
+;;  - Tiling, Unrolling, OpenMP using
 
 ;; ~~ Params ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (defvar *compiled-code-buffer* nil
@@ -251,9 +254,31 @@
 			   tiling-p
 			   (not delete-loop-p)
 			   (= 2 (- (length abstract-loop) nth)))
-		      (write-c-line "#pragma omp tile sizes(8, 2)~%")
-		      (write-c-line "~%")
-		      )
+		      ;;(write-c-line "#pragma omp tile sizes(8, 2)~%")
+		      (let ((determined-iters (butlast loop-strategy 2))
+			    (nd-iters         (last loop-strategy 2)))
+			(dolist (v vars)
+			  (let ((name (format nil "~(~a~)" (gensym "p"))))
+			    (write-c-line
+			     "~a* ~a = &~a;~%"
+			     (dtype->ctype (dtype (loopvariable-tensor v)))
+			     name
+			     (cAref-with-ranks
+			      (loopvariable-tensor v)
+			      (map 'list #'iteration-index determined-iters)
+			      (map 'list #'iteration-rank  determined-iters)))
+
+			    (setf (gethash (tensor-id (loopvariable-tensor v)) placed)
+				  (format nil
+					  "~a"
+					  (caref-with-ranks
+					   (loopvariable-tensor v)
+					   (map 'list #'iteration-index nd-iters)
+					   (map 'list #'iteration-rank  nd-iters)
+					   :name name)))))
+
+			(write-c-line "#pragma omp tile sizes(4, 4)~%")
+			))
 
 		    (if delete-loop-p
 			(write-c-line
@@ -279,7 +304,7 @@
 			;; [Fix] Private Var?
 			(let ((name (format nil "~(~a~)" (gensym))))			
 			  (write-c-line
-			   "~a ~a = ~a;~%"
+			   "    ~a ~a = ~a;~%"
 			   (dtype->ctype (dtype (loopvariable-tensor v)))
 			   name
 			   (cAref-with-ranks

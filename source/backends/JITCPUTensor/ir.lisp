@@ -13,7 +13,7 @@
 	(:modify
 	 ;; modify: A fname B
 	 (write-c-line "~a ~a ~a;~%"
-		       (cAref displace-to indices)
+		       (or (place-holder-p displace-to) (cAref displace-to indices))
 		       fname		     
 		       (apply
 			#'concatenate
@@ -25,7 +25,7 @@
 	(:apply
 	 ;; apply: A = fname(B)
 	 (write-c-line "~a ~a ~a;~%"
-		       (cAref displace-to indices)
+		       (or (place-holder-p displace-to) (cAref displace-to indices))
 		       fname
 		       (apply
 			#'concatenate
