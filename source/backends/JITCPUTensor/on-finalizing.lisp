@@ -1,6 +1,18 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+;; [Design] JIT Compiler
+;; - A single High-Level IR(WfInstruction) produces a single C function
+;;    [Op1] <-> void FOREIGN_XXX ...
+;;    [Op2] <-> void FOREIGN_YYY ...
+
+;; - To fuse several IRs, cl-waffe2 rewrites the graph to make one based on the declared combination.
+;;
+;;    [WfInst: Sin]
+;;    [WfInst: Cos] -> [WfInst: SinCos]
+;;    Decls: Sin + Cos -> SinCos
+;;    (TODO: this could be achieved by defpath macro?)
+
 ;; Env in my macbook:
 ;; (cpujit-set-config
 ;;    :compiler "/usr/local/bin/gcc-13"
@@ -17,12 +29,8 @@
 
 (defparameter *compiling-ntime-count* 0)
 
-;; [Fix] 何回も同じコードをコンパイルするの？
-;; [TODO] Im2Col Col2Im Fusion
-;; [TODO] OpenMP
-
 ;; Workloads:
-;;  - [Fix] 何回も同じコードをコンパイルするのか？
+;;  - [Fix] Caching compiled ops
 ;;  - [Opt] Im2Col Col2Im
 ;;  - [Add] OpenMP (thresholds, nested)
 ;;  - [Add]
@@ -43,7 +51,9 @@
 	   (loop for inst in iseq do
 	     (typecase (wfop-node inst)
 	       (CPUJIT-Blueprint
-		;; [TODO] Stack as for element-wise operations
+		;; [TODO] Cache functions which isn't worth ir or previously compiled
+		
+		;; [TODO] Stack several ops (as for element-wise operations)
 		(let ((ir (apply #'load-instructions (wfop-node inst) (tensor-variables (wfop-self inst)))))
 		  ;; As of this writing, this backend does not provide features for FusionOPs
 		  ;; So just replacing op is ok and wfop-args cause no conflicts

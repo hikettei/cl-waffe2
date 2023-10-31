@@ -39,20 +39,22 @@
      ;; Has reached out the end of nodes.
      nil)
     (T
-     (let ((result
-	     (make-wfop
-	      (apply
-	       #'find-cached-function
-	       (statecontainer-forward-out-form (tensor-state tensor))
-	       *compile-option*
-	       (tensor-variables tensor))
-	      tensor
-	      (tensor-backward tensor)
-	      (tensor-variables tensor)
-	      :out-to (node-out-to (tensor-backward tensor))
-	      :sv4bw  (node-sv4bw (tensor-backward tensor)))))
-       (setf (tensor-compiled-instruction-cache-fw tensor) result)
-       result))))
+     (multiple-value-bind (f lut-p) (apply
+				     #'find-cached-function
+				     (statecontainer-forward-out-form (tensor-state tensor))
+				     *compile-option*
+				     (tensor-variables tensor))
+       (let ((result
+	       (make-wfop
+		f
+		tensor
+		(tensor-backward tensor)
+		(tensor-variables tensor)
+		:lut-cache-p lut-p
+		:out-to (node-out-to (tensor-backward tensor))
+		:sv4bw  (node-sv4bw (tensor-backward tensor)))))
+	 (setf (tensor-compiled-instruction-cache-fw tensor) result)
+	 result)))))
 
 ;;
 ;; Avoid duplicate compilation:

@@ -10,7 +10,7 @@
 
 (defstruct (WfInstruction
 	    (:conc-name wfop-)
-	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil) (loadp nil) (comment nil))))
+	    (:constructor make-wfop (op self node args &key (sv4bw nil) (out-to nil) (block-iseq nil) (grad-adder-p nil) (loadp nil) (comment nil) (lut-cache-p nil))))
   "
 ## [struct] WfInstruction
 
@@ -52,6 +52,8 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
 `wfop-comment[string or null]` If any, the value of slot is displayed when printing IR.
 
 `wfop-loadp[boolean]` If set to t, the operation is interpreted as `load-pointer`. See also: (read-loadp instruction)
+
+`wfop-lut-cache-p[boolean]` If set to T, indicates `wfop-op` is already compiled and cached in LUT.
 "
   (op   op   :type function)  
   (node node :type (or function string null AbstractNode))
@@ -65,6 +67,7 @@ SV4BW (i.e: save-for-backward) is a temporary tensor to compute backwards and cl
   (bw-is-leaf-p nil :type boolean)
   (grad-adder-p grad-adder-p :type boolean)
   (loadp loadp :type boolean)
+  (lut-cache-p lut-cache-p :type boolean)
   (comment comment :type (or null string)))
 
 (defparameter *omit-args-n* 5)
