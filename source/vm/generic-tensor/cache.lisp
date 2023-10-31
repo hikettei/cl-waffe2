@@ -118,6 +118,7 @@
 	(apply target args))))
 
 (defun find-cached-function (kernel-function compile-option &rest args)
+  "Return: (values result is-the-result-from-lut?)"
   (declare (type Compiled-Kernel kernel-function))
 
   (let* ((function-name (compiled-kernel-name kernel-function))
@@ -137,6 +138,6 @@
 	     function-name
 	     args
 	     :setme compiled-function))
-	  compiled-function)
-	target)))
+	  (values compiled-function nil))
+	(values target t))))
 
