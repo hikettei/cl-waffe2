@@ -136,7 +136,7 @@ int get_threads() { return omp_get_max_threads(); }
       T))
 
 (defparameter *solved-as-zero* nil)
-;; [Fix] private変数にしないとthreadでconflictssuru kamo
+;; [Fix] set private variables
 (defun generate-c-kernel (function-name shapes variables abstract-loop instructions
 			  &aux
 			    (multi-threading-thresholds 128)
@@ -329,14 +329,15 @@ int get_threads() { return omp_get_max_threads(); }
 			;; [Fix] Private Var?
 			(let ((name (format nil "~(~a~)" (gensym))))			
 			  (write-c-line
-			   "    ~a ~a = ~a;~%"
+			   "    ~a* ~a = &~a;~%"
 			   (dtype->ctype (dtype (loopvariable-tensor v)))
 			   name
 			   (cAref-with-ranks
 			    (loopvariable-tensor v)
 			    (map 'list #'iteration-index loop-stacks)
 			    (map 'list #'iteration-rank  loop-stacks)))
-			  (setf (gethash (tensor-id (loopvariable-tensor v)) placed) name))))
+			  (setf (gethash (tensor-id (loopvariable-tensor v)) placed)
+				(format nil "~a[0]" name)))))
 
 		    ;; Finally, rendering instructings
 		    (when (= nth (1- (length loop-strategy)))

@@ -93,13 +93,16 @@ type:
 		      char
 		      (format nil "~a*~a" char stride)))
 		"+"))))
-      (format nil "~a[~a]"
-	      (tensor-id tensor)
-	      (apply #'concatenate 'string
-		     (butlast
-		      (flatten
-		       (map 'list #'index-of
-			    (range 0 (dims tensor)) indices strides))))))))
+      (let ((index (apply #'concatenate 'string
+			  (butlast
+			   (flatten
+			    (map 'list #'index-of
+				 (range 0 (dims tensor)) indices strides))))))
+	(format nil "~a[~a]"
+		(tensor-id tensor)
+		(if (string= "" index)
+		    "0"
+		    index))))))
 
 (defun cAref-with-ranks (tensor indices ranks &key (name nil))
   "Reading a id of the given tensor, places a form reading an arbitary position of elements."
@@ -122,12 +125,15 @@ type:
 		      char
 		      (format nil "~a*~a" char stride)))
 		"+"))))
-      (format nil "~a[~a]"
-	      (or name (tensor-id tensor))
-	      (apply #'concatenate 'string
-		     (butlast
-		      (flatten
-		       (map 'list #'index-of ranks indices strides))))))))
+      (let ((index (apply #'concatenate 'string
+			  (butlast
+			   (flatten
+			    (map 'list #'index-of ranks indices strides))))))
+	(format nil "~a[~a]"
+		(or name (tensor-id tensor))
+		(if (string= index "")
+		    "0"
+		    index))))))
 
 
 (defun solve-depends-on (tensor)
