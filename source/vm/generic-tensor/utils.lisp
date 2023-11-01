@@ -199,6 +199,8 @@ Usage:
 
   `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
      (setf (gethash ',symbol-name *adjustable-shape-table*) ,symbol-value)
+     ;; [TODO/Fixme?]
+     ;; When quitting the scope, this macro should delete the symbol-name from adjustable-symbol-table.
      ,@body))
 
 (defmacro with-adjustable-symbols ((&rest forms) &body body)
