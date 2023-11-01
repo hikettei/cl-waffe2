@@ -8,8 +8,10 @@
    #:range
    #:range-size
    #:range-from
+   #:range-start-index
    #:range-to
    #:range-step
+   #:range-nth
    #:do-range
    #:.range))
 

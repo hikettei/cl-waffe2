@@ -442,22 +442,22 @@ This function is setfable and inlined.
 	     (slot-value tensor 'orig-shape) (copy-list (original-shape create-from))
 	     (tensor-permute-order tensor)   (copy-list (tensor-permute-order create-from))
 	     
-	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
-	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
+	     (tensor-view tensor) (compute-next-view tensor (getf initargs :past-view) (or view `(t)))
+	     (tensor-visible-shape tensor) (compute-visible-shape tensor)))
       ((eql (getf initargs :facet) :input)
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
 	 (setf (tensor-view tensor)
-	       (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+	       (compute-next-view tensor (getf initargs :past-view) (or view `(t))))
 	 (setf (tensor-visible-shape tensor)
-	       (compute-visible-shape orig-shape (tensor-view tensor)))
+	       (compute-visible-shape tensor))
 	 nil))
       (T
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
-	 (setf (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+	 (setf (tensor-view tensor) (compute-next-view tensor (getf initargs :past-view) (or view `(t))))
 	 (setf (tensor-visible-shape tensor)
-	       (compute-visible-shape orig-shape (tensor-view tensor)))
+	       (compute-visible-shape tensor))
 	 nil)))
     ;; Initial Permution: 5 4 3 2 ... 1 0
     (unless (tensor-permute-order tensor)
@@ -656,16 +656,16 @@ This function is setfable."
   (vref tensor
 	(+
 	 (tensor-initial-offset tensor)
-	 (apply #'+
-		(map 'list
-		     #'(lambda (stride s view shape)
-			 (declare (ignore shape))
-			 (* stride (compute-stepby (subscript-view view))
-			    (+ s (compute-visible-start-idx (subscript-view view)))))
-		     (tensor-stride tensor)
-		     subscripts
-		     (tensor-view tensor)
-		     (slot-value tensor 'orig-shape))))))
+	 (apply
+	  #'+
+	  (map 'list
+	       #'(lambda (stride count view)
+		   (* stride
+		      (compute-stepby (subscript-view view))
+		      (wf/iter:range-nth (subscript-range view) count)))
+	       (tensor-stride tensor)
+	       subscripts
+	       (tensor-view tensor))))))
 
 ;; Note that mref is super slow and only used in a limited situation.
 (defun (setf mref) (new-value tensor &rest subscripts)
@@ -678,16 +678,16 @@ This function is setfable."
   (setf (vref tensor
 	      (+
 	       (tensor-initial-offset tensor)
-	       (apply #'+
-		      (map 'list
-			   #'(lambda (stride s view shape)
-			       (declare (ignore shape))
-			       (* stride (compute-stepby (subscript-view view))
-				  (+ s (compute-visible-start-idx (subscript-view view)))))
-			   (tensor-stride tensor)
-			   subscripts
-			   (tensor-view tensor)
-			   (slot-value tensor 'orig-shape)))))
+	       (apply
+		#'+
+		(map 'list
+		     #'(lambda (stride count view)
+			 (* stride
+			    (compute-stepby (subscript-view view))
+			    (wf/iter:range-nth (subscript-range view) count)))
+		     (tensor-stride tensor)
+		     subscripts
+		     (tensor-view tensor)))))
 	new-value))
 
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.

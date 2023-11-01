@@ -188,8 +188,9 @@ The result sequence MUST not over max-length.
      (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))  
   
   (with-output-to-string (out)
+    ;; Determining the largest width of elements
     (let ((*matrix-element-displaying-size*
-	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))		       
+	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-shape tensor))		       
 		       maximize (length (format nil "~a" (vref tensor i)))))))
       (pprint-vector out tensor tensor t indent)
       out)))

@@ -77,6 +77,11 @@
        value)
       value))
 
+(defun range-start-index (range)
+  "Returns a number of starting point"
+  (declare (type range range))
+  (make-lazyaxis `(min ,(range-from range) ,(range-to   range))))
+
 (defun range-size (range)
   (declare (type range range))
   (make-lazyaxis
@@ -84,6 +89,32 @@
      (abs (- ,(range-from range)
 	     ,(range-to   range)))
      (abs ,(range-step range)))))
+
+(defun range-nth (range count)
+  (declare (type range range)
+	   (type fixnum count))
+  (let* ((a (maybe-observe-axis (range-from range)))
+	 (b (maybe-observe-axis (range-to   range)))
+	 (c (maybe-observe-axis (range-step range)))
+	 (from  (min a b))
+	 (below (max a b)))
+    (if (< c 0)
+	(let ((tmp below))
+	  (setq below from
+		from (+ c tmp))))
+    (+ from (* c count))))
+
+(define-compiler-macro range-nth (range count)
+  `(let* ((a (maybe-observe-axis (range-from ,range)))
+	  (b (maybe-observe-axis (range-to   ,range)))
+	  (c (maybe-observe-axis (range-step ,range)))
+	  (from  (min a b))
+	  (below (max a b)))
+     (if (< c 0)
+	 (let ((tmp below))
+	   (setq below from
+		 from (+ c tmp))))
+     (+ from (* c ,count))))
 
 (defun pprint-range-size (range)
   (declare (type range range))
@@ -184,7 +215,7 @@ Applying a further slicing:
     (Range 2 10 2) ;; range1
  +) (Range 0 4  2) ;; range2
  ------------------
-    (Range 2 4 2)
+    (Range 2 6 2)
 
 is defined as:
  A = min(range1.from, range1.to)
@@ -219,18 +250,21 @@ new_range_step  = lcm(range1.step, range2.step)
     ;; - Adding an assertion
     ;; - Adding a lazy assertion
     (let ((result (range from to step)))
+      
       (assert
        (or
 	(not (numberp (range-size result)))
 	(not (numberp (range-size range1)))
 	(<= (range-size result) (range-size range1)))
        ()
-       "range. before and after the composition, the size of range ~a must not exceed ~a. ~a and ~a => result ~a"
+       ".range: before and after the composition, the size of range ~a must not exceed ~a.
+from ~a to ~a => ~a"
        (range-size result)
        (range-size range1)
        range1
        range2
        result)
+      
       ;; [FixME] The assertion above is not enough...
       ;; e.g.: (.range (range 2 8 1) (range 2 8 1)) should produce an error
       ;; but interpreted as a vaild operation.
