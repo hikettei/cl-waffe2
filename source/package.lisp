@@ -3,6 +3,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2
+  (:nicknames #:wf/utils)
   (:use
    :cl
    :cl-waffe2/vm.generic-tensor

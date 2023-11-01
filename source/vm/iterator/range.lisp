@@ -39,6 +39,17 @@
 ;; Lazy-LoopとDynamic-Shapeの任意編集を組み合わせてDiagnoal実装可能?
 ;; view.lisp <-> iterator.lisp通信 (Parsing etc...)
 
+;; [TODO] Readmeかどっかに書く nicknames
+;; cl-waffe2/vm.generic-tensor -> wf/t
+;; cl-waffe2/vm.nodes          -> wf/nodes
+;; cl-waffe2/vm.iterator       -> wf/iter
+;; cl-waffe2                   -> wf/utils
+;; cl-waffe2/distributions     -> wf/d
+;; cl-waffe2/nn                -> wf/nn
+;; cl-waffe2/vm                -> wf/vm
+;; cl-waffe2/optimizers        -> wf/opt
+;; cl-waffe2/base-impl         -> wf
+
 (deftype Index-Symbol-T ()
   `(or fixnum symbol))
 
