@@ -105,3 +105,16 @@
   (is (range-test-1))
   (is (range-test-2))
   (is (range-test-3)))
+
+(defun compose-test ()
+  (let ((a1 (.range
+	     (range 2 6 2)
+	     (range 2 8 1))))
+    (and
+     (= (range-from a1) 4)
+     (= (range-to   a1) 8)
+     (= (range-step a1) 2))))
+
+(test range-compose-test
+  (is (compose-test)))
+

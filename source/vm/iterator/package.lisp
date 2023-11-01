@@ -7,6 +7,9 @@
   (:export
    #:range
    #:range-size
+   #:range-from
+   #:range-to
+   #:range-step
    #:do-range
    #:.range))
 
