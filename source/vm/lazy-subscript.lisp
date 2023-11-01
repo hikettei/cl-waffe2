@@ -387,7 +387,7 @@ value is expected as: LazyAxis, Symbol, Fixnum, rest...
 If value is dynamic-shape -> observe it and returns as a fixnum
 Otherwise                 -> Return as it is."
   (if (typep value 'LazyAxis)
-      (if (every (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value)) ;; Can determine?
+      (if (every (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value)) ;; Can be determined?
 	  (observe-axis value)
 	  value)
       (if (symbolp value)

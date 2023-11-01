@@ -65,6 +65,10 @@
 	       (:file "vm/generic-tensor/dtype")
 	       (:file "vm/lazy-subscript")
 	       (:file "vm/allocation")
+
+	       ;; Iterators
+	       (:file "vm/iterator/package")
+	       (:file "vm/iterator/range")
 	       
 	       (:file "vm/generic-tensor/cache")
 	       (:file "vm/generic-tensor/utils")
@@ -216,7 +220,8 @@
   :serial t
   :pathname "source"
   :depends-on (:cl-waffe2 :fiveam)
-  :components ((:file "vm/t/package")
+  :components ((:file "vm/iterator/test-suites")
+	       (:file "vm/t/package")
 	       (:file "vm/t/lazy-axis")
 	       (:file "vm/t/utils")
 	       (:file "vm/generic-tensor/t/package")
@@ -253,6 +258,7 @@
 	       (:file "nn/t/regression")	       
 	       )
   :perform (test-op (o s)
+		    (symbol-call :fiveam :run! :iterator-test)
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
 		    

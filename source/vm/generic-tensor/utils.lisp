@@ -185,29 +185,20 @@ If there's any undetermined one, returns an error (TODO: Add Conditions)"
 	     (cl-waffe2/vm::render-debug-info))))))
 
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
-  "Adding an element: symbol-name -> symbol-value to *adjustable-shape-table*, which can be read by translate-adjustable-shape function.
+  "
+Registering adjustable symbol (a.k.a: dynamic shape) to the runtime. This variable can be observed via cl-waffe2/vm:maybe-observe-axis.
 
 Usage:
 
-(with-adjustable-symbols (('a 1) ('b 1))
+(with-adjustable-symbols ((a 1) (b 1))
     (with-let-adjustable-symbols (a b)
         (print a)   ;; = 1
         (print b))) ;; = 1
-
 "
 
   `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
-     
-     (setf (gethash ,symbol-name *adjustable-shape-table*) ,symbol-value)
-	 
+     (setf (gethash ',symbol-name *adjustable-shape-table*) ,symbol-value)
      ,@body))
-
-(defmacro with-adjustable-symbol-scope (&body body)
-  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table)))))
-     ,@body))
-
-(defun register-adjustable-shape (symbol value)
-  (setf (gethash symbol *adjustable-shape-table*) value))
 
 (defmacro with-adjustable-symbols ((&rest forms) &body body)
   (labels ((expand-form (rest-forms)
@@ -217,6 +208,12 @@ Usage:
 		    ,(expand-form (cdr rest-forms))))))
     (expand-form forms)))
 
+(defmacro with-adjustable-symbol-scope (&body body)
+  `(let* ((*adjustable-shape-table* (alexandria:copy-hash-table (or *adjustable-shape-table* (make-hash-table)))))
+     ,@body))
+
+(defun register-adjustable-shape (symbol value)
+  (setf (gethash symbol *adjustable-shape-table*) value))
 
 (defmacro with-let-adjustable-symbol (symbol-name &body body)
   ;; TO DELETE: Binding with symbol-name
@@ -289,3 +286,4 @@ Usage:
    (symbolp y)
    (equal (symbol-name x)
 	  (symbol-name y))))
+
