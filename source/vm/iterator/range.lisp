@@ -50,6 +50,14 @@
 ;; cl-waffe2/optimizers        -> wf/opt
 ;; cl-waffe2/base-impl         -> wf
 
+;; 次やること
+;; .range
+;; .do-compiled-loopを実装
+
+;; Parse-View/Call-With-Viewとの統合
+
+;; diagnoal:
+;; (A=B (lazy-index-components (range 0 10)) (range 0 10))
 (deftype Index-Symbol-T ()
   `(or fixnum symbol))
 
@@ -167,24 +175,62 @@ Creates a range: `[from, to) where step=step`. This structure is dedicated to a 
 
 Interprets the value of range2 from a viewpoint of range1.
 
+`Original Tensor -> range2 -> [View] -> range1`
+
 ```
 Applying further slicing:
     (Range 2 10 2) ;; range1
  +) (Range 0 4  2) ;; range2
  ------------------
     (Range 2 4 2)
+
+is defined as:
+ A = min(range1.from, range1.to)
+ B = min(range2.from, range2.to)
+ C = max(range2.from, range2.to)
+
+new_range_from  = A + B
+new_range_to    = A + C
+new_range_step  = lcm(range1.step, range2.step) 
 ```
 "
   (declare (type Range range2)
 	   (type (or null Range) range1))
 
   (when (null range1)
-    ;; NIL(RANGE1...)
+    ;; NIL(RANGE1(...))
     (return-from .range range2))
 
-  
-  
-  
+  (let* ((upfrom1 `(min ,(range-from range1)
+			,(range-to   range1)))
+	 ;;(below1  `(max ,(range-from range1)
+	 ;;		,(range-to   range1)))
+	 (upfrom2 `(min ,(range-from range2)
+			,(range-to   range2)))
+	 (below2  `(max ,(range-from range2)
+			,(range-to   range2)))
+	 (from    (make-lazyaxis `(+ ,upfrom1 ,upfrom2)))
+	 (to      (make-lazyaxis `(+ ,upfrom1 ,below2)))
+	 (step    `(lcm ,(range-step range1) ,(range-step range2))))
 
-  )
+    ;; [TODO]
+    ;; - Adding an assertion
+    ;; - Adding a lazy assertion
+    (let ((result (range from to step)))
+      (assert
+       (or
+	(not (numberp (range-size result)))
+	(not (numberp (range-size range1)))
+	(<= (range-size result) (range-size range1)))
+       ()
+       "range. before and after the composition, the size of range ~a must not exceed ~a. ~a and ~a => result ~a"
+       (range-size result)
+       (range-size range1)
+       range1
+       range2
+       result)
+      ;; [FixME] The assertion above is not enough...
+      ;; e.g.: (.range (range 2 8 1) (range 2 8 1)) should produce an error
+      ;; but interpreted as a vaild operation.
+      result)))
 
