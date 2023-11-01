@@ -184,6 +184,7 @@ If there's any undetermined one, returns an error (TODO: Add Conditions)"
 	     s
 	     (cl-waffe2/vm::render-debug-info))))))
 
+
 (defmacro with-adjustable-symbol ((symbol-name symbol-value) &body body)
   "
 Registering adjustable symbol (a.k.a: dynamic shape) to the runtime. This variable can be observed via cl-waffe2/vm:maybe-observe-axis.
