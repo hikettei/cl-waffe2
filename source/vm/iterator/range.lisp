@@ -22,6 +22,9 @@
 ;;(~ M 1~ N)
 ;; (range 3 0)みたいなのを禁止する？
 
+;; -1 がBLAS XXX de ikeruka
+;; Broadcasting semantic update
+
 ;; !viewでflexible insert kanou ni suru
 
 ;; [TODO1]

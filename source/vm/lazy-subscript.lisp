@@ -112,9 +112,11 @@ e.g.: A is = compared to 2
 	   ;; Compute out first if out is LazyAxis.
 	   (if (symbol-lazyaxis out)
 	       ;; [MEMO] Detecting Circular Dependencies?
-	       (progn
-		 (observe-axis (symbol-lazyaxis out)))
-	       (error "interpret-lazy: Encountered undeclared a dynamic shape: ~a" out)))))
+	       (observe-axis (symbol-lazyaxis out))
+	       (let ((result (wf/t::read-symbol out)))
+		 (if (numberp result)
+		     result
+		     (error "interpret-lazy: Encountered undeclared a dynamic shape: ~a" out)))))))
     (:rest          (let ((out (second (lazyir-car lazyir))))
 		      (setf (lazyaxis-read-as out) nil)
 		      (observe-axis out)))
@@ -237,7 +239,6 @@ Describe the transformation of shapes as simple as possible.
       (helper ir)
       (delete-duplicates result))))
 
-;;(defparameter *exp->compiled-cache* (make-hash-table :test #'equal))
 (defun make-lazyaxis (expression)
   "
 ## [function] make-lazyaxis

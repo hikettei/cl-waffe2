@@ -133,9 +133,9 @@ butgot ~a."
       #'aloop-rank)
      solved-loop)
 
-    (labels ((maybe-observe-axis (value)
+    (labels ((maybe-observe-axis1 (value)
 	       (or (when (numberp value) value)
-		   `(cl-waffe2/vm:maybe-observe-axis ,value)))
+		   `(cl-waffe2/vm:maybe-observe-axis ',value)))
 	     (expand-helper (rank)
 	       (let ((subject (nth rank solved-loop)))
 		 (when (null subject) (return-from expand-helper))
@@ -164,7 +164,7 @@ butgot ~a."
 		    ,(if (eql (aloop-mode subject) :batch)
 			 (alexandria:with-gensyms (total-count count)
 			   `(loop with ,offsets-place = (copy-seq ,offsets-place)
-				  with ,total-count   = ,(maybe-observe-axis (aloop-size subject))
+				  with ,total-count   = ,(maybe-observe-axis1 (aloop-size subject))
 				  for ,count of-type (unsigned-byte 32) upfrom 0 below ,total-count
 				  do (progn
 				       ,(expand-helper (1+ rank))
@@ -197,10 +197,10 @@ butgot ~a."
 							    0))))))
 				       (if (eql (aloop-mode subject) :apply-flatten)					  
 					   `(the fixnum
-						 ,(cl-waffe2/vm:maybe-observe-axis
+						 ,(maybe-observe-axis1
 						   (aloop-element-n subject)))
 					   `(the fixnum
-						 ,(cl-waffe2/vm:maybe-observe-axis
+						 ,(maybe-observe-axis1
 						   (nth nth-rank (shape tensor)))))
 				       (if (eql (aloop-mode subject) :apply-flatten)
 					   (if (subscript-broadcast
@@ -245,7 +245,7 @@ butgot ~a."
 							     (signed-byte 32)
 							     (wf/iter:range-nth ,view 0))))))))))))))))
 	 (declare (type (simple-array (unsigned-byte 64) (*)) ,offsets-place)
-		  ,@(when (not no-batch-p) `((type (simple-array (signed-byte 64) (* *)) ,diffs-place))))
+		  ,@(when (not no-batch-p) `((type (simple-array (signed-byte 64) (* *)) ,diffs-place) (ignorable ,diffs-place))))
 	 ,(expand-helper 0)))))
 
 (defmacro with-ranked-loop (((op-function &rest variables)
