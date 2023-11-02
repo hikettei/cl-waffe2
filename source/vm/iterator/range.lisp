@@ -5,6 +5,24 @@
 
 ;; Range = (LIST FROM TO STEP <<LazyAxis>>)
 
+;; LazyAxisの表示を単純化する
+
+;; 追加する:
+;;  do-ranges do-inlined-ranges
+;;  Broadcasting:
+;;  ( 1 ~ 1 )
+;;      ^ ここの~は強制挿入
+;;  ( ~ 1 1 )
+;;    ^ 先頭/終端はOptional (RankError is needed)
+
+;; 次やること: call-with-view / do-compiled-loopのRefactoring
+
+;;これ解ける？
+;;(~ ~ M N)
+;;(~ M 1~ N)
+
+;; !viewでflexible insert kanou ni suru
+
 ;; [TODO1]
 ;;  - package nicknames to all packs (OK)
 ;;  - make-tensor, make-input: ~ as a !flexible
@@ -90,12 +108,31 @@
   (make-lazyaxis `(min ,(range-from range) ,(range-to   range))))
 
 (defun range-size (range)
+  "Computes the number of iterations of range as simple as possible:
+Basically can be computed in this formula:
+    floor(ABS(from - to) // STEP)"
+  (declare (type range range))
+  (if (and (numberp (range-step range))
+	   (= (range-step range) 1))
+      (if (and (numberp (range-from range))
+	       (= 0     (range-from range)))
+	  (make-lazyaxis (range-to range))
+	  (make-lazyaxis
+	   `(abs (- ,(range-from range)
+		    ,(range-to   range)))))
+      (make-lazyaxis
+       `(floor
+	 (abs (- ,(range-from range)
+		 ,(range-to   range)))
+	 (abs ,(range-step range))))))
+
+(defun pprint-range-size (range)
   (declare (type range range))
   (make-lazyaxis
    `(floor
-     (abs (- ,(range-from range)
-	     ,(range-to   range)))
-     (abs ,(range-step range)))))
+     (abs (- ,(symbol-pprint-helper (range-from range))
+	     ,(symbol-pprint-helper (range-to   range))))
+     (abs ,(symbol-pprint-helper (range-step range))))))
 
 (defun range-nth (range count)
   (declare (type range range)
@@ -122,14 +159,6 @@
 	   (setq below from
 		 from (+ c tmp))))
      (+ from (* c ,count))))
-
-(defun pprint-range-size (range)
-  (declare (type range range))
-  (make-lazyaxis
-   `(floor
-     (abs (- ,(symbol-pprint-helper (range-from range))
-	     ,(symbol-pprint-helper (range-to   range))))
-     (abs ,(symbol-pprint-helper (range-step range))))))
 
 (defmacro do-range ((var range) &body body)
   "Creates an iteration following the instruction of range.

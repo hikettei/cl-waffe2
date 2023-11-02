@@ -21,25 +21,35 @@
 ;; forward is a function where computes the next inputs of nodes/composites
 ;; (forward model A[10 10 10] B[10 10 10]) : All shapes are determined. Shape Transformation is instantly executed
 ;; (forward model A[10 A B]   B[10 A B]    : All shapes are NOT determined. shape computation is also lazily evaluated.
+;;
 
 (in-package :cl-waffe2/vm)
 
 ;; Specs/Changes:
 ;;  Tensor.shape = (list LazyShape[0] LazyShape[1] LazyShape[2] ...)
 
-;; Usage:
+;; How this behaviour appeared in the pragram?
 ;;   (!reshape x (transform N C H W -> (* N C H) W))
 ;;   (%transform x[N C H W] -> [(* N C H) W]) (TODO)
 
-;; Goals:
-;;   (!reshape x (transform N C H W -> (* N C H) W)) ... Reshape/Permute/Viewの数はlambdaにすべき(Style)
-;;   (call (conv2d 3 6 `(5 5)) 3 3)
-;;
+;; Dynamic Shape (with S-expression) System in cl-waffe2.
 
+;; Basic Usage:
+;;  1. AbstractTensor can include symbols as a shape, strides, views.
+;;    - (N C H W) Tensor is ok for example and symbols are later changed.
 
-;; make-lazyaxis (Lazy and Encapsulate)
-;;  -> (shape tensor) (tensor-view ...) and observe the result.
+;;  2. AbstractTensor is also needed to be include S-expression as a shape/stride/views
+;;    - e.g.: when slicing (N C H W) Tensor, the result should be expressed in S-exp.
+;;    - (I know this is ugly but) this file provides S-exp <-> Symbol hash-table
+;;      - AbstractTensor interprets S-exp as a symbol because S-exp is replaced with randomly generated symbols in runtime.
 
+;;  3. (make-lazyaxis S-exp) to create a lazy-S-exp
+;;     (maybe-observe-axis symbol) to evaluate a LazyAxis.
+
+;; In the node construction phase, all shapes are not necessary to be determined;
+;; But we can determine them by comparing inputs given by (forward model ...) method.
+;; Tensor Shapes and Subscript DSL is expressed in a high order lambda function.
+;; Determines symbols step-by-step.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
@@ -54,6 +64,7 @@
   (read-as     nil)
   (id          (gensym "axis")))
 
+;; [FixME] This feature is not available for a now.
 (defstruct (LazyAssertion
 	    (:constructor make-lazy-assert (f evaluated-to)))
   "
@@ -65,15 +76,7 @@ e.g.: A is = compared to 2
   (evaluated-to evaluated-to))
 
 (defmethod print-object ((lazyaxis LazyAxis) stream)
-  (if (lazyaxis-arguments lazyaxis)
-      (if (= (length (lazyaxis-arguments lazyaxis)) 1)
-	  (format stream "LazyAxis: ~a"
-		  (lazyaxis-form lazyaxis))	  
-	  (format stream "LazyAxis: f~a = ~a"
-		  (lazyaxis-arguments lazyaxis)
-		  (lazyaxis-form lazyaxis)))
-      (format stream "LazyAxis: ~a"
-	      (lazyaxis-form lazyaxis))))
+  (format stream "[~a]" (lazyaxis-form lazyaxis)))
 
 (defstruct (LazyIR
 	    (:constructor make-lazyIR (type car cdr)))
@@ -124,17 +127,20 @@ e.g.: A is = compared to 2
 	    (:number        (lazyir-car lazyir))
 	    (:dynamic-shape
 	     ;; (READ_SYMBOL 'A) -> 'A
-	     (cadadr (lazyir-car lazyir))) 
+	     (let ((sym (cadadr (lazyir-car lazyir))))
+	       (or
+		(symbol-lazyaxis sym)
+		sym)))
 	    (:rest
 	     (format nil "{~a}" (second (lazyir-car lazyir))))
 	    (:arithmetic
 	     (with-output-to-string (out)
-	       (format out "(")
+	       (format out "")
 	       (dotimes (nth (length (lazyir-cdr lazyir)))
 		 (format out "~a" (nth nth (lazyir-cdr lazyir)))
 		 (unless (= nth (1- (length (lazyir-cdr lazyir))))
 		   (format out "~a" (lazyir-car lazyir))))
-	       (format out ")")))
+	       (format out "")))
 	    (:function
 	     (with-output-to-string (out)
 	       (format out "~(~a~)(" (lazyir-car lazyir))

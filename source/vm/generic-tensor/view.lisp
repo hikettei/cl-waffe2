@@ -13,123 +13,6 @@
 ;; - ~  (Flexible)
 ;; - 1~ (Forced Flexible)
 
-;; [TODO] 1~ = `(:broadcast T)として処理
-
-;; [Optim] !sum produces a lot of compute-visible-start-idx
-;;  This could be due to run-time creation of tensors?
-
-
-(defun compute-visible-end-idx-actual (view size)
-  (error "deleted")
-  (read-symbol
-   (case (viewtype view)
-     (:index (1+ view))
-     (:t     size)
-     (:slice (second view))
-     (:slice-step
-      (round (/ (if (> (third view) 0)
-		    (max (car view) (second view))
-		    (min (car view) (second view)))
-		(abs (third view)))))
-     (:indices (length (cdr view)))
-     (:tflist  size)
-     (:broadcast 1))))
-
-(defun compute-visible-shape (orig-shape view)
-  "Returns a visible size of orig-shape given view."
-  (loop for o in orig-shape
-	for i upfrom 0
-	collect (let* ((v     (or (nth i view) t))
-		       (end   (compute-visible-end-idx   (force-list v) o))
-		       (start (compute-visible-start-idx (force-list v))))
-		  (cond
-		    ((and (typep start 'fixnum)
-			  (= start 0))
-		     end)
-		    ((and (typep end 'fixnum)
-			  (typep start 'fixnum))
-		     (abs (- end start)))
-		    (T
-		     `(abs (- ,end ,start)))))))
-
-(defun actual-shape (tensor)
-  (when (scalar-p tensor)
-    (return-from actual-shape `(1)))
-  
-  (loop with view = (tensor-view tensor)
-        for o in (original-shape tensor)
-	for i upfrom 0
-	collect (let* ((v     (or (nth i view) t))
-		       (end   (compute-visible-end-idx-actual (force-list v) o))
-		       (start (compute-visible-start-idx (force-list v))))
-		  (cond
-		    ((and (typep start 'fixnum)
-			  (= start 0))
-		     end)
-		    ((and (typep end 'fixnum)
-			  (typep start 'fixnum))
-		     (abs (- end start)))
-		    (T
-		     `(abs (- ,end ,start)))))))
-
-(defun parse-absolute (index size)
-  "Returns a absolute index."
-  (typecase size
-    (fixnum (if (< index 0)
-		(+ index size)
-		index))
-    (symbol
-     (if (< index 0)
-	 `(+ ,index ,size)
-	 index))))
-
-(defun preprocess-subscript (dim tensor size past-view subscript)
-  (declare (type fixnum dim)
-	   (type AbstractTensor tensor)
-	   (ignore dim))
-  (error "deprecated")
-  (let* ((determined-p (typep size 'fixnum))
-	 (projected-p  (slot-value tensor 'projected-p))
-	 (past-view (or (when projected-p past-view)
-			(make-subscript
-			 :determined-p t
-			 :view t)))
-	 (view (make-subscript
-		:determined-p determined-p ;; includes symbol?
-		:view subscript)))
-
-    (step-subscript
-     (viewtype (subscript-view past-view))
-     (viewtype (subscript-view view))
-     past-view
-     view
-     size)))
-
-(defun parse-view-subscripts (tensor past-view subscripts)
-  "
-TensorのShape...`((10 10) (10 10) (10 a)) ...
-未決定のシンボルがあったら、それに対する制約を求める。
-shape = (batch-size), viewが`(0 10)なら, batch-size>=10.
-STEP=-1など
-
-subscript = fixnum, t ,list
-list = (0 10)
-       or (0 10 -1)
-       or (:tflist 0 10 0 10)
-       or (:indices 0 1 2 3 4 5)
-       or (:broadcast 10)
-       or (:repeat 10)
-
-Return: List[SubScript]
-"
-  (error "deprecated")
-  (loop with shape = (slot-value tensor 'orig-shape)
-        for i fixnum upfrom 0 below (length shape)
-	collect (preprocess-subscript i
-				      tensor
-				      (nth i shape)
-				      (nth i past-view)
-				      (or (nth i subscripts) t))))
 
 (defmacro %* (x y)
   `(the fixnum (* (the fixnum ,x) (the fixnum ,y))))
@@ -158,10 +41,6 @@ a=1, b=2 => NIL
   (every #'shape-equal list1 list2))
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;; 全部書き直す
-;; tensor-view -> force-list -> tensor-view
-;;  |- A list of range/bc ^ list  | A list of range
-;;  復元できるようにする
 
 (defstruct (ViewInstruction
 	    (:constructor
