@@ -187,3 +187,17 @@ Return: List[Subscript]
   (loop for v in (tensor-view tensor)
 	collect (wf/iter:range-size (subscript-range v))))
 
+(defun actual-shape (tensor)
+  "
+## [function] actual-shape
+
+Computes a shape but broadcasted axis is replaced with 1.
+"
+  (loop for s in (shape tensor)
+	for v in (tensor-view tensor)
+	if (subscript-broadcast v)
+	  collect 1
+	else
+	  collect
+	s))
+

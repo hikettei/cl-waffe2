@@ -16,238 +16,11 @@
 ;; call-with-view utils
 ;; ===============================================
 
-(defun tensor-gensym-list (tensors) (loop for tensor in tensors collect (gensym)))
-
-(defun expand-first-offset-adder (tensors
-				  offset-places
-				  stride-places
-				  start-points)
-  (loop for k upfrom 0
-	for tensor in tensors
-	collect
-	;; offset += stride * start-points
-	`(incf ,(nth k offset-places)
-	       (%* ,(nth k start-points)
-		   ,(nth k stride-places)))))
-
-(defun expand-view-stride-adder (offset-places
-				 stride-places
-				 target-dim
-				 tensors)
-  (loop for k fixnum upfrom 0
-	for tensor in tensors
-	collect (let* ((view (subscript-view (nth target-dim (tensor-view tensor))))
-		       (viewtype (viewtype view)))
-		  (cond
-		    ((or (eql viewtype :index)
-			 (eql viewtype :broadcast))
-		     ;; when Tensor[Index], iternum = 1 therefore there's no need to incr offsets.
-		     ;; when :broadcast, freeze the axis stride.
-		     nil)
-		    ((or (eql viewtype :t)
-			 (eql viewtype :slice))
-		     `(incf (the fixnum ,(nth k offset-places))
-			    (the fixnum ,(nth k stride-places))))
-		    ((eql viewtype :slice-step)
-		     `(incf (the fixnum ,(nth k offset-places))
-			    (%* ,(third view)
-				(the fixnum ,(nth k stride-places)))))
-		    ((eql viewtype :indices)
-		     (error ":INDICES IS NOT IMPLEMENTED"))
-		    ((eql viewtype :tflist)
-		     (error ":TFLIST IS NOT IMPLEMENTED"))
-		    (T
-		     (error "Unknown keyword ~a" viewtype))))))
-
-(defun compute-index (offset stride target-dim ith tensor)
-  (let* ((view     (subscript-view (nth target-dim (tensor-view tensor))))
-	 (viewtype (viewtype view)))
-    (cond
-      ((or (eql viewtype :index)
-	   (eql viewtype :broadcast))
-       offset)
-      ((or (eql viewtype :t)
-	   (eql viewtype :slice))
-       `(+ (the fixnum ,offset) (%* ,stride ,ith)))
-      ((eql viewtype :slice-step)
-       `(+ (the fixnum ,offset) (%* ,ith (%* ,(third view) (the fixnum ,stride)))))
-      (T (error "Unsupported view keyword: ~a" viewtype)))))
-
-;; e.g: (view tensor `(0 2) t t) could be splitted into: `(0 2) * t*t times order
-(defun order-reductable-p (dim-start-from &rest tensors)
-  "
-Returns T if the rest axes of all tensors, has no views.
-dim-start-from:
-Set 1 if the operation is element-wise
-Set 2 if the operation is matmul for example.
-
-`(t t t) -> t"
-  (flet ((not-reductable-p (tensor
-			    &aux
-			      (views
-			       (nthcdr dim-start-from (tensor-view tensor))))
-	   (or
-	    ;;(not
-	    ;;(every #'(lambda (v)
-	    ;;		(eql (force-list v)
-	    ;;		     (force-list (car views))))
-	    ;;	    views))
-	    (some #'(lambda (v)
-		      (not (or (eql (force-list v) t)
-			       (eql (force-list v) :broadcast))))
-		  views))))
-    ;; Remaining strides are reg
-    ;; If tensors are consisted of non-projected-tensor...?
-    (not (some #'not-reductable-p tensors))))
-
-
-(defun expand-funcall-with-view (function tensors offsets-place target-dim rest-dims)
-  ""
-  ;; (apply function view1 view2 view3 ...)
-
-  (apply function
-	 (loop for kth-tensor upfrom 0
-	       for tensor in tensors
-	       collect
-	       ;; Iterate for kernel-dim
-	       (loop for target-dim-n
-		     upfrom target-dim
-		       below (+ rest-dims target-dim)
-		     collect (make-viewinstruction
-			      (nth kth-tensor offsets-place)
-			      (if (symbolp (nth target-dim-n (shape tensor)))
-				  `(read-adjustable-symbol (nth ,target-dim-n (shape ,tensor)))
-				  (nth target-dim-n (shape tensor)))
-			      (let ((stride (nth target-dim-n  (tensor-stride tensor)))
-				    (view   (subscript-view (nth target-dim-n (tensor-view tensor)))))
-				(lazy* stride (compute-stepby view))))))))
-
-(defun expand-call-with-view-flatten
-    (function
-     tensors
-     offset-place
-     target-dim
-     &key
-       (dim-start-from 0))
-  ;; At-least-dim = 1
-  (let* ((size-list (mapcar
-		     #'(lambda (tensor
-				&aux				  
-				  (s (shape tensor))
-				  (v (tensor-view tensor)))
-			 (loop for i upfrom dim-start-from below (length s)
-			       unless (eql (force-list (nth i v)) t)
-				 do (error "Internal Error: call-with-view-1dkernel is only applied to view=t axes.")
-			       if (symbolp (nth i (shape tensor)))				 
-				 collect `(read-symbol (nth ,i (shape ,tensor)))
-			       else
-				 collect (nth i (shape tensor))))
-		     tensors))
-	 (sizes (map 'list #'(lambda (x) (apply #'lazy-mulup x)) size-list)))
-
-    ;; sizes (for exmaple) = ((100) (100))
-    ;; for element-wise operation, whenever row/column major, set stride=1
-
-
-    ;; (THE FIXNUM (* (THE FIXNUM 3) (THE FIXNUM A))) ..
-
-    (apply
-     function
-     (loop for tensor in tensors
-	   for k upfrom 0
-	   collect (let ((view (make-viewinstruction
-				(nth k offset-place)
-				(if (symbolp (nth k sizes))
-				    `(read-adjustable-symbol ,(nth k sizes))
-				    (nth k sizes))
-				(compute-stepby
-				 (subscript-view (nth target-dim (tensor-view tensor)))))))
-		     (list view))))))
-
-
-(defmacro with-expand-init-tmp-form (offset-name-place tensors &body body)
-  "Expands: initializing offsets, determining symbols form
-
-Return: (values offsets-place form)"
-
-  `(let ((,offset-name-place (tensor-gensym-list ,tensors)))
-     ;; Initializing Offsets with 0
-     `(let*-ignorable (,@(loop for name in ,offset-name-place
-			       for tensor in tensors
-			       collect `(,name (tensor-initial-offset ,tensor))))
-	(locally (declare (type fixnum ,@,offset-name-place))
-	  ,,@body))))
-
-
-(defmacro with-update-offset-place (offset-name-place tensors &body body &aux (tmp-space (gensym)))
-  ""
-  `(let ((,tmp-space ,offset-name-place)
-	 (,offset-name-place (tensor-gensym-list ,tensors)))
-     `(let*-ignorable (,@(loop for name in ,offset-name-place
-			       for past-value in ,tmp-space
-			       collect `(,name ,past-value)))
-	(locally (declare (type fixnum ,@,offset-name-place))
-	  ,,@body))))
-
-(defparameter *under-lparallel* nil)
-
-;; TODO: SIMDfied mathematical functions, inline view offsets.
-(defmacro with-expanding-explore-form ((lparallel tensors offset-places target-dim start-points end-points) &body body &aux (endpoint-place (gensym)))
-  ;; Set Strides At Runtime
-  ;; Expand Loop      
-  `(let ((stride-places (tensor-gensym-list ,tensors))
-	 (ith (gensym)))
-     `(let* (,@(loop for stride-place in stride-places ;; (place <- stride)
-		     for tensor in ,tensors
-		     collect `(,stride-place (nth ,,target-dim (list ,@(tensor-stride tensor)))))
-	     (,',endpoint-place ,(car ,end-points))
-	     (,',endpoint-place (read-adjustable-symbol ,',endpoint-place)))
-
-	,@(expand-first-offset-adder
-	   ,tensors
-	   ,offset-places
-	   stride-places
-	   ,start-points)
-
-	,(if (and (not *under-lparallel*) ,lparallel (not (= 1 cl-waffe2/threads:*num-cores*)))
-	     (let ((*under-lparallel* t))
-	       `(cl-waffe2/threads:maybe-pdotimes (,ith
-						   ,',endpoint-place
-						   :thread-safe-vars ,,offset-places
-						   :disable-p (<= (apply #'* (translate-adjustable-shape (shape ,(car ,tensors))))
-								  cl-waffe2/threads:*multithread-threshold*))
-		  (let* (,@(loop for offset in ,offset-places
-				 for k fixnum upfrom 0
-				 for tensor in tensors
-				 collect
-				 `(,offset ,(compute-index offset (nth k stride-places) ,target-dim ith tensor))))
-		    ,,@body)))
-	     ;; Expand Multi-Dimensional Looping Forms
-	     `(loop for ,ith fixnum upfrom 0 below ,',endpoint-place
-		    ;; 1. Execute Operation
-		    ;; 2. Adding Offsets
-		    do (progn ,,@body)
-		    unless (= ,ith (1- ,',endpoint-place))
-		      ;; Unless islast, expand it.
-		      do (progn ,@(expand-view-stride-adder ,offset-places stride-places ,target-dim ,tensors)))))))
 
 (defun update-calling-route (value)
+  ;; Utils
+  ;; cl-waffe2/vm.nodes can trace the result of *call-with-view-route*
   (push value cl-waffe2/vm.nodes::*call-with-view-route*))
-
-(defmacro with-bind-shape (&body body)
-  `(flet ((original-shape (tensor)
-	    (translate-adjustable-shape (original-shape tensor)))
-	  (shape (tensor)
-	    (translate-adjustable-shape (shape tensor))))
-     ,@body))
-
-(defun no-permute-p (tensors)
-  (flet ((check (tensor)
-	   (let ((k (loop for i upfrom 0 below (length (shape tensor))
-			  collect i)))
-	     ;; Permute Order is 3 2 1...?
-	     (equal (reverse k) (tensor-permute-order tensor)))))
-    (every #'check tensors)))
 
 (defun call-with-view (function
 		       tensors
@@ -257,13 +30,15 @@ Return: (values offsets-place form)"
 			 (lparallel nil)
 		       &aux
 			 (shape (shape (car tensors)))
-			 (dims  (length shape))
-			 (force-order (if (or (not lparallel)
-					      (= cl-waffe2/threads:*num-cores* 1))
-					  force-order
-					  t)))
+			 (force-order
+			  (if (or (not lparallel)
+				  (= cl-waffe2/threads:*num-cores* 1))
+			      force-order
+			      t)))
   "
 ## [function] call-with-view
+
+(TODO) Update Docs.
 
 A principle operator to extend your functions to higher arrays.
 
@@ -329,10 +104,10 @@ Note that `call-with-view` should be used at once or zero in the one `define-imp
 See also: `with-ranked-loop` to the more elegant wrapping macro.
 "
   
-  (declare ;;(optimize (speed 3))
+  (declare
    (type function function)
    (type list tensors shape)
-   (type fixnum at-least-dim dims))
+   (type fixnum at-least-dim))
   
   (assert (every #'(lambda (tensor) (shape-equal-list (butlast (shape tensor) at-least-dim) (butlast shape at-least-dim))) tensors)
 	  nil
@@ -347,85 +122,120 @@ butgot ~a."
 
   (when *freeze-call-with-view*
     (setq force-order t))
-  
-  ;; If this parameter=t, call-with-view never generate inlined iteration but iteration for ND-array
-  ;; Instead, using function
-  ;;(when *freeze-call-with-view*
-  ;;  (return-from call-with-view
-  ;;    (expand-call-with-view* function tensors at-least-dim)))
 
-  (labels ((explore (rest-dim offsets-place &aux (target-dim (- dims rest-dim)))
-	     (declare (type fixnum rest-dim target-dim)
-		      (type list offsets-place))
-	     ;; Exploring ND .. 3D 2D 1D
+  (let ((solved-loop   (solve-loop-order tensors at-least-dim force-order :mode :heuristic))
+	(offsets-place (gensym "offsets"))
+	(diffs-place   (gensym)))
+    (mapc
+     (compose
+      #'update-calling-route
+      #'aloop-rank)
+     solved-loop)
 
-	     ;; Contiguous Layouts are flattened
-	     (when (and (= at-least-dim 1) ;; Element-Wise Operation
-			(not force-order)
-			(every #'(lambda (x)
-				   (equal (tensor-permute-order x) (tensor-permute-order (car tensors))))
-			       tensors)
-			(apply #'order-reductable-p target-dim tensors) ;; check views
-			(not (= rest-dim 0))) ;; If rest-dim = 0, use normal ver.
-	       
-	       ;; Register the route as FLATTEN
-	       (update-calling-route nil)
-	       (return-from explore
-		 (expand-call-with-view-flatten
-		  function
-		  tensors
-		  offsets-place
-		  target-dim
-		  :dim-start-from target-dim)))
+    (labels ((maybe-observe-axis (value)
+	       (or (when (numberp value) value)
+		   `(cl-waffe2/vm:maybe-observe-axis ,value)))
+	     (expand-helper (rank)
+	       (let ((subject (nth rank solved-loop)))
+		 (when (null subject) (return-from expand-helper))
+		 `(progn
+		    ;; Initial Offsets
+		    ,@(loop with rank fixnum = (aloop-rank subject)
+			    for tensor in tensors
+			    for position upfrom 0
+			    collect
+			    (let ((start-idx
+				    (if (subscript-broadcast (nth rank (tensor-view tensor)))
+					0
+					`(wf/iter:range-nth
+					  (subscript-range ,(nth rank (tensor-view tensor)))
+					  0))))
+			      (when (listp start-idx)
+				`(incf
+				     (the fixnum (aref ,offsets-place ,position))
+				     (the fixnum
+					  (*
+					   ,start-idx
+					   ,(nth rank (tensor-stride tensor))))))))
 
-	     ;; Register route as Nth-dim
-	     (update-calling-route rest-dim)
-	     ;; Otherwise...
-
-	     ;; Computing Multi-Dimensional Offsets
-	     (let* ((start-points (loop for tensor in tensors
-					collect
-					;; Here, should be computed in advance to reduce the size of compiled code.
-					`(compute-visible-start-idx
-					  (subscript-view (nth ,target-dim (tensor-view ,tensor))))))
-		    (end-points (loop for tensor in tensors
+		    ;; Exploring remaining loops
+		    ,(if (eql (aloop-mode subject) :batch)
+			 (alexandria:with-gensyms (total-count count)
+			   `(loop with ,offsets-place = (copy-seq ,offsets-place)
+				  with ,total-count   = ,(maybe-observe-axis (aloop-size subject))
+				  for ,count of-type (unsigned-byte 32) upfrom 0 below ,total-count
+				  do (progn
+				       ,(expand-helper (1+ rank))
+				       (unless (= ,count (1- ,total-count))
+					 (progn
+					   ,@(loop with dim = (aloop-rank subject)
+						   for tensor in tensors
+						   for pos upfrom 0
+						   unless (subscript-broadcast (nth dim (tensor-view tensor)))
+						     collect
+						   `(incf
+							(the (unsigned-byte 32) (aref ,offsets-place ,pos))
+							(aref ,diffs-place ,rank ,pos))))))))
+			 (apply
+			  function
+			  (loop with dim fixnum = (aloop-rank subject)
+				for tensor in tensors
+				for position upfrom 0
+				collect
+				(loop with offsets  = `(aref ,offsets-place ,position)
+				      for  nth-rank upfrom rank below (dims (car tensors))
 				      collect
-				      `(compute-visible-end-idx
-					(subscript-view (nth ,target-dim (tensor-view ,tensor)))
-					(nth ,target-dim (original-shape ,tensor))))))
-	       (cond
-		 ((<= rest-dim at-least-dim)
-
-		  ;; If elements are contiguous in memory, flatten as 1D vector.
-		  ;; Otherwise do element-wise?
-		  (with-update-offset-place offsets-place tensors
-		    (let ((stride-places (tensor-gensym-list tensors)))
-		      `(let (,@(loop for stride-place in stride-places
-				     for tensor in tensors
-				     collect `(,stride-place (the fixnum (nth ,target-dim (list ,@(tensor-stride tensor)))))))
-			 ,@(expand-first-offset-adder
-			    tensors
-			    offsets-place
-			    stride-places
-			    start-points)
-			 ,(expand-funcall-with-view
-			   function
-			   tensors
-			   offsets-place
-			   target-dim
-			   rest-dim)))))
-		 (T
-		  ;; batching
-		  (with-update-offset-place offsets-place tensors
-		    (with-expanding-explore-form
-			(lparallel tensors offsets-place target-dim start-points end-points)
-		      (explore
-		       (1- rest-dim)
-		       offsets-place))))))))
-    
-    (with-expand-init-tmp-form offset-place tensors
-      (explore dims offset-place))))
-
+				      (make-viewinstruction
+				       `(+ ,offsets
+					   (the (unsigned-byte 64)
+						(wf/iter:range-nth
+						 ,(subscript-range
+						   (nth nth-rank (tensor-view tensor)))
+						 0)))
+				       (if (eql (aloop-mode subject) :apply-flatten)					  
+					   `(cl-waffe2/vm:maybe-observe-axis
+					     ,(aloop-element-n subject))
+					   `(cl-waffe2/vm:maybe-observe-axis
+					     ,(nth nth-rank (shape tensor))))
+				       (if (eql (aloop-mode subject) :apply-flatten)
+					   (aloop-by subject)
+					   (if (subscript-broadcast
+						(nth nth-rank (tensor-view tensor)))
+					       0
+					       `(aref ,diffs-place ,rank ,position))))))))))))
+      `(let ((,offsets-place (make-array
+			      ,(length tensors)
+			      :element-type '(unsigned-byte 64)
+			      :initial-element 0))
+	     (,diffs-place (make-array
+			    (list ,(length solved-loop) ,(length tensors))
+			    :element-type '(unsigned-byte 64)
+			    :initial-contents
+			    (list
+			     ,@(loop for aloop in solved-loop
+				     collect
+				     `(list
+				       ,@(loop with rank = (aloop-rank aloop)
+					       for tensor in tensors
+					       collect
+					       (let ((view (subscript-range (nth rank (tensor-view tensor)))))
+						 `(the
+						   (unsigned-byte 64)
+						   (*
+						    ,(nth rank (tensor-stride tensor))
+						    (the
+						     fixnum
+						     (-
+						      (the
+						       fixnum
+						       (wf/iter:range-nth ,view 1))
+						      (the
+						       fixnum
+						       (wf/iter:range-nth ,view 0))))))))))))))
+	 (declare (type (simple-array (unsigned-byte 64) (*)) ,offsets-place)
+		  (type (simple-array (unsigned-byte 64) (* *)) ,diffs-place)
+		  (ignorable ,diffs-place))
+	 ,(expand-helper 0)))))
 
 (defmacro with-ranked-loop (((op-function &rest variables)
 			     &key

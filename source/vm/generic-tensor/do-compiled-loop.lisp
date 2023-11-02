@@ -107,8 +107,6 @@ Examples:
 
   (when *freeze-call-with-view* (setq force-order t))
   (decf kernel-size)
-
-  ;; [CHECK] !sum :axis=1とかCollapseされない？
   
   ;; Tensor(10 20 30)
   ;;            ^ when kernel-size=2
@@ -234,8 +232,8 @@ Examples:
 						 (the
 						  fixnum
 						  (-
-						   (the fixnum (wf/iter:range-nth range 0))
-						   (the fixnum (wf/iter:range-nth range 1))))))))
+						   (the fixnum (wf/iter:range-nth range 1))
+						   (the fixnum (wf/iter:range-nth range 0))))))))
 					 tensors)
 			   for index fixnum
 			   upfrom 0 below iter-num do
@@ -279,7 +277,18 @@ Examples:
 				       by
 				       (if (subscript-broadcast (nth nth-rank (tensor-view tensor)))
 					   0
-					   1)))))))))))
+					   (*
+					    (the (signed-byte 32) (nth nth-rank (tensor-stride tensor)))
+					    (the (signed-byte 32)
+						 (-
+						  (wf/iter:range-nth
+						   (subscript-range
+						    (nth nth-rank (tensor-view tensor)))
+						   1)
+						  (wf/iter:range-nth
+						   (subscript-range
+						    (nth nth-rank (tensor-view tensor)))
+						   0)))))))))))))))					       
     ;; #+sbcl(declare (inline expand-helper))
     (expand-helper 0)
     nil))

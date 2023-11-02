@@ -46,7 +46,7 @@
     (multiple-value-bind (id2 stride-tree)
 	(gethash-with-id (dtype tensor) dtype-tree :test #'equal)
       (multiple-value-bind (id3 shape-tree)
-	  (gethash-with-id (tensor-actual-stride tensor) stride-tree :test #'equal)
+	  (gethash-with-id `(,@(map 'list #'force-list (tensor-view tensor)) ,@(tensor-actual-stride tensor)) stride-tree :test #'equal)
 	;; (DEVICE DTYPE STRIDE SHAPE)
 	`(,id1 ,id2 ,id3 ,(gethash-leaf (shape tensor) shape-tree))))))
 
