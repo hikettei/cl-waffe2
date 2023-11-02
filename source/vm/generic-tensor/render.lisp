@@ -44,6 +44,8 @@ The result sequence MUST not over max-length.
 
 (defun last-mref (tensor orig-tensor index &aux (k (length (shape1 tensor))))
   ;; 0 0 0 ... 2?
+  ;;(let ((s (car (last (tensor-view tensor)))))
+  ;;  (print (subscript-range s)))
   (let ((sub  (make-list k :initial-element 0))
 	(view (make-list k :initial-element t)))
     (setf (nth (1- k) view) (car (last (tensor-view orig-tensor))))
@@ -88,7 +90,7 @@ The result sequence MUST not over max-length.
 	(write-string ")" stream))))
 
 
-;; More columns in one print
+;; More columns in a single print
 (defun pprint-vector (stream
 		      orig-tensor
 		      tensor

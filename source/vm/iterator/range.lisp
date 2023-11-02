@@ -13,6 +13,13 @@
 ;;  - Dynamic-Shape 手動で帰れるようにする (OK?)
 ;;  - LoopNode 実装 Dynamic-Shape更新するようにする (Unnecessary?)
 
+
+;; 手動で再実装しない？
+;; render.lisp
+;; mref
+;; call-with-view
+;; do-compiled-loop
+
 ;; Range ... Dynamic Shape, LazyAxis対応したい (OK)
 
 ;; Ranges should satisfy following properties:

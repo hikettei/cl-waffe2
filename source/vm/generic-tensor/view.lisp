@@ -281,11 +281,20 @@ Return: List[Subscript]
 	 (old-view    (when past-view
 			(view->range base-size (force-list past-view))))
 	 (composed-range (wf/iter:.range latest-view old-view)))
-    (make-subscript
-     view
-     (and (listp (force-list view))
-	  (eql (car (force-list view)) :broadcast))
-     composed-range)))
+    
+    ;; <T> to try to extend the previous view.
+    (or
+     (when (and old-view (eql view t))
+       (make-subscript
+	past-view
+	(and (listp (force-list old-view))
+	     (eql (car (force-list old-view)) :broadcast))
+	old-view))
+     (make-subscript
+      view
+      (and (listp (force-list view))
+	   (eql (car (force-list view)) :broadcast))
+      composed-range))))
 
 (declaim (ftype (function (subscript-t) fixnum) compute-stepby))
 (defun compute-stepby (view)

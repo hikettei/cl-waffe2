@@ -799,11 +799,10 @@ Note that the function *view* doesn't records ANY NODES, while the function *!vi
 Subscripts can be following:
 
 - fixnum
+- (:index <fixnum | LazyAxis>)
 - (start stop)
 - (start stop by)
 - t
-- (:indices ...)
-- (:tflist ...)
 - (:broadcast fixnum)
 
 Note that view is only created for Tensors, not a Scalar.
