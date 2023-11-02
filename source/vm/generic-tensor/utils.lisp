@@ -265,6 +265,8 @@ Usage:
 (define-compiler-macro sync (list order) `(loop for o in ,order collect (nth o ,list)))
 
 (defun find-size (wtensors rank)
+  ;; Tries to find a number of shape from the same rank
+  ;; If failed, returns a symbol.
   (nth rank
        (wtensor-shape
 	(or

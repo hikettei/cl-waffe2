@@ -430,6 +430,8 @@ Otherwise                 -> Return as it is."
 	(setf (gethash id *symbol->lazyaxis*) lazyaxis
 	      (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*) id))))
 
+(defmethod lazyaxis-symbol ((lazyaxis T)) nil)
+
 (defun symbol-lazyaxis (symbol)
   (gethash symbol *symbol->lazyaxis*))
 
