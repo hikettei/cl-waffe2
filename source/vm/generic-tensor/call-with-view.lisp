@@ -124,8 +124,8 @@ butgot ~a."
     (setq force-order t))
 
   (let* ((solved-loop   (solve-loop-order tensors at-least-dim force-order :mode :heuristic))
- 	 (offsets-place (gensym "offsets"))
-	 (diffs-place   (gensym))
+ 	 (offsets-place (gensym "OFFSETS"))
+	 (diffs-place   (gensym "DIFFS"))
 	 (no-batch-p    (= (length solved-loop) 1)))
     (mapc
      (compose
@@ -140,24 +140,25 @@ butgot ~a."
 	       (let ((subject (nth rank solved-loop)))
 		 (when (null subject) (return-from expand-helper))
 		 `(progn
-		    ;; Initial Offsets
-		    ,@(loop with rank fixnum = (aloop-rank subject)
-			    for tensor in tensors
-			    for position upfrom 0
-			    collect
-			    (let ((start-idx
-				    (if (subscript-broadcast (nth rank (tensor-view tensor)))
-					0
-					`(wf/iter:range-nth
-					  (subscript-range ,(nth rank (tensor-view tensor)))
-					  0))))
-			      (when (listp start-idx)
-				`(incf
-				     (the fixnum (aref ,offsets-place ,position))
-				     (the fixnum
-					  (*
-					   ,start-idx
-					   ,(nth rank (tensor-stride tensor))))))))
+		    ;; Initial Offsets		    
+		    ,@(when (eql (aloop-mode subject) :batch)
+			(loop with rank fixnum = (aloop-rank subject)
+			      for tensor in tensors
+			      for position upfrom 0
+			      collect
+			      (let ((start-idx
+				      (if (subscript-broadcast (nth rank (tensor-view tensor)))
+					  0
+					  `(wf/iter:range-nth
+					    (subscript-range ,(nth rank (tensor-view tensor)))
+					    0))))
+				(when (listp start-idx)
+				  `(incf
+				       (the fixnum (aref ,offsets-place ,position))
+				       (the fixnum
+					    (*
+					     ,start-idx
+					     ,(nth rank (tensor-stride tensor)))))))))
 
 		    ;; Exploring remaining loops
 		    ,(if (eql (aloop-mode subject) :batch)
@@ -166,7 +167,7 @@ butgot ~a."
 				  with ,total-count   = ,(maybe-observe-axis (aloop-size subject))
 				  for ,count of-type (unsigned-byte 32) upfrom 0 below ,total-count
 				  do (progn
-				       ,(expand-helper (1+ rank))
+				       ,(print (expand-helper (1+ rank)))
 				       (unless (= ,count (1- ,total-count))
 					 (progn
 					   ,@(loop with dim = (aloop-rank subject)
@@ -179,15 +180,14 @@ butgot ~a."
 							(aref ,diffs-place ,(aloop-rank subject) ,pos))))))))
 			 (apply
 			  function
-			  (loop with dim fixnum = (aloop-rank subject)
-				for tensor in tensors
+			  (loop for tensor in tensors
 				for position upfrom 0
 				collect
 				(loop with offsets  = `(the fixnum (aref ,offsets-place ,position))
 				      for  nth-rank upfrom rank below (dims (car tensors))
 				      collect
 				      (make-viewinstruction
-				       `(the fixnum
+				       `(the (unsigned-byte 64)
 					     (+ ,offsets
 						(the (unsigned-byte 64)
 						     (wf/iter:range-nth
@@ -196,17 +196,17 @@ butgot ~a."
 						      0))))
 				       (if (eql (aloop-mode subject) :apply-flatten)					  
 					   `(the fixnum
-						 (cl-waffe2/vm:maybe-observe-axis
-						  ,(aloop-element-n subject)))
+						 ,(cl-waffe2/vm:maybe-observe-axis
+						   (aloop-element-n subject)))
 					   `(the fixnum
-						 (cl-waffe2/vm:maybe-observe-axis
-						  ,(nth nth-rank (shape tensor)))))
+						 ,(cl-waffe2/vm:maybe-observe-axis
+						   (nth nth-rank (shape tensor)))))
 				       (if (eql (aloop-mode subject) :apply-flatten)
 					   (aloop-by subject)
 					   (if (subscript-broadcast
 						(nth nth-rank (tensor-view tensor)))
 					       0
-					       `(the fixnum (aref ,diffs-place ,(aloop-rank subject) ,position)))))))))))))
+					       `(the fixnum (aref ,diffs-place ,rank ,position)))))))))))))
       `(let ((,offsets-place (make-array
 			      ,(length tensors)
 			      :element-type '(unsigned-byte 64)
@@ -218,28 +218,31 @@ butgot ~a."
 				  :initial-contents
 				  (list
 				   ,@(loop for aloop in solved-loop
+					   for n-rank upfrom 0
 					   collect
 					   `(list
-					     ,@(loop with rank = (aloop-rank aloop)
+					     ,@(loop with rank = (if (eql (aloop-mode aloop) :batch)
+								     (aloop-rank aloop)
+								     n-rank)
 						     for tensor in tensors
 						     collect
 						     (let ((view (subscript-range (nth rank (tensor-view tensor)))))
 						       `(the
-							 (signed-byte 64)
+							 (signed-byte 32)
 							 (*
 							  ,(nth rank (tensor-stride tensor))
 							  (the
-							   fixnum
+							   (signed-byte 32)
 							   (-
 							    (the
-							     fixnum
+							     (signed-byte 32)
 							     (wf/iter:range-nth ,view 1))
 							    (the
-							     fixnum
+							     (signed-byte 32)
 							     (wf/iter:range-nth ,view 0))))))))))))))))
 	 (declare (type (simple-array (unsigned-byte 64) (*)) ,offsets-place)
 		  ,@(when (not no-batch-p) `((type (simple-array (signed-byte 64) (* *)) ,diffs-place))))
-	 ,(expand-helper 0)))))
+	 ,(print (expand-helper 0))))))
 
 (defmacro with-ranked-loop (((op-function &rest variables)
 			     &key
