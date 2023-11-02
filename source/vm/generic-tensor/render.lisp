@@ -179,23 +179,37 @@ The result sequence MUST not over max-length.
 	(dotimes (i indent) (princ " " str))
 	(format str "~a" (tensor-vec tensor)))))
 
-  ;; [FIXME] Delete this line:
-  ;; ALL LAZY STRIDES SHOULD BE COMPUTED WHEN ADJUST_ALLOCATION! WAS CALLED
-  ;; See also: do-compiled-loop* in do-compiled-loop.lisp
-  (when (some #'listp (tensor-stride tensor))
-    (setf
-     (tensor-stride tensor)
-     (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
-     (tensor-stride tensor)
-     (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))  
-  
-  (with-output-to-string (out)
-    ;; Determining the largest width of elements
-    (let ((*matrix-element-displaying-size*
-	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-shape tensor))		       
-		       maximize (length (format nil "~a" (vref tensor i)))))))
-      (pprint-vector out tensor tensor t indent)
-      out)))
+  ;; For example:
+  ;; (!view (Randn `(3 3)) `(A B) nil) -> ...
+  ;; The tensor has an allocated vector
+  ;; but the shape remained to be determined?
+  (let ((shape-determined
+	  (not
+	   (some #'(lambda (x)
+		     (and (symbolp x)
+			  (symbolp (read-symbol x))))
+		 (shape tensor)))))
+    (when (null shape-determined)
+      ;; [TODO] Enhance printings of this case:
+      (return-from render-tensor "<Lazy-Shaped>"))
+
+    ;; [FIXME] Delete this line:
+    ;; ALL LAZY STRIDES SHOULD BE COMPUTED WHEN ADJUST_ALLOCATION! WAS CALLED
+    ;; See also: do-compiled-loop* in do-compiled-loop.lisp
+    (when (some #'listp (tensor-stride tensor))
+      (setf
+       (tensor-stride tensor)
+       (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
+       (tensor-stride tensor)
+       (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))  
+    
+    (with-output-to-string (out)
+      ;; Determining the largest width of elements
+      (let ((*matrix-element-displaying-size*
+	      (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-shape tensor))		       
+			 maximize (length (format nil "~a" (vref tensor i)))))))
+	(pprint-vector out tensor tensor t indent)
+	out))))
 
 
 ;;TO ADD: Table Printer

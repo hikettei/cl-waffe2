@@ -30,7 +30,8 @@
 ;;  - Lazy...複数の引数
 ;;  - Dynamic-Shape 手動で帰れるようにする (OK?)
 ;;  - LoopNode 実装 Dynamic-Shape更新するようにする (Unnecessary?)
-
+;;  - Examples/MLPが動いているか？ -> Merge
+;;  - Iterator BLAS系の命令でも -1 Direction OK?
 
 ;; 手動で再実装しない？
 ;; render.lisp
