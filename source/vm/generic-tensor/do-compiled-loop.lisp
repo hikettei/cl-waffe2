@@ -194,19 +194,21 @@ Examples:
 		      (type (simple-array (unsigned-byte 32) (*)) offsets))
 	     (let ((subject (nth c loop-blueprint)))
 	       (when subject
-		 (loop with rank fixnum = (aloop-rank subject)
-		       for tensor in tensors
-		       for position fixnum upfrom 0 do
-			 (let ((start-idx
-				 (if (subscript-broadcast (nth rank (tensor-view tensor)))
-				     0
-				     (wf/iter:range-nth
-				      (subscript-range (nth rank (tensor-view tensor)))
-				      0))))
-			   (declare (type (unsigned-byte 32) start-idx))
-			   (when (not (= 0 start-idx)) ;; If start-idx = 0 -> isn't worth it.
-			     (incf (the fixnum (aref offsets position))
-				   (the fixnum (* start-idx (the fixnum (nth rank (tensor-stride tensor)))))))))
+
+		 (when (eql (aloop-mode subject) :batch)
+		   (loop with rank fixnum = (aloop-rank subject)
+			 for tensor in tensors
+			 for position fixnum upfrom 0 do
+			   (let ((start-idx
+				   (if (subscript-broadcast (nth rank (tensor-view tensor)))
+				       0
+				       (wf/iter:range-nth
+					(subscript-range (nth rank (tensor-view tensor)))
+					0))))
+			     (declare (type (unsigned-byte 32) start-idx))
+			     (when (not (= 0 start-idx)) ;; If start-idx = 0 -> isn't worth it.
+			       (incf (the fixnum (aref offsets position))
+				   (the fixnum (* start-idx (the fixnum (nth rank (tensor-stride tensor))))))))))
 		 
 		 (if (eql (aloop-mode subject) :batch)
 		     (loop with offsets = (copy-seq offsets)
@@ -257,17 +259,21 @@ Examples:
 				     ;; If stride is a negative number:
 				     ;; e.g.: (0 5 -1)
 				     ;; the offset starts from 5
-				     (wf/iter:range-nth
-				      (subscript-range
-				       (nth
-					rank
-					(tensor-view tensor)))
-				      0)))
+				     (unless (subscript-broadcast (nth nth-rank (tensor-view tensor)))
+				       (wf/iter:range-nth
+					(subscript-range
+					 (nth
+					  rank
+					  (tensor-view tensor)))
+					0))))
 				   (if (eql (aloop-mode subject) :apply-flatten)
 				       (cl-waffe2/vm:maybe-observe-axis (aloop-element-n subject))
 				       (cl-waffe2/vm:maybe-observe-axis (nth nth-rank (shape tensor))))
 				   (if (eql (aloop-mode subject) :apply-flatten)
-				       by
+				       (if (subscript-broadcast
+					    (nth nth-rank (tensor-view tensor)))
+					   0
+					   1)
 				       (if (subscript-broadcast (nth nth-rank (tensor-view tensor)))
 					   0
 					   (*

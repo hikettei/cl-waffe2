@@ -167,7 +167,7 @@ butgot ~a."
 				  with ,total-count   = ,(maybe-observe-axis (aloop-size subject))
 				  for ,count of-type (unsigned-byte 32) upfrom 0 below ,total-count
 				  do (progn
-				       ,(print (expand-helper (1+ rank)))
+				       ,(expand-helper (1+ rank))
 				       (unless (= ,count (1- ,total-count))
 					 (progn
 					   ,@(loop with dim = (aloop-rank subject)
@@ -189,11 +189,12 @@ butgot ~a."
 				      (make-viewinstruction
 				       `(the (unsigned-byte 64)
 					     (+ ,offsets
-						(the (unsigned-byte 64)
-						     (wf/iter:range-nth
-						      ,(subscript-range
-							(nth nth-rank (tensor-view tensor)))
-						      0))))
+						,@(unless (subscript-broadcast (nth nth-rank (tensor-view tensor)))
+						    `((the (unsigned-byte 64)
+							   (wf/iter:range-nth
+							    ,(subscript-range
+							      (nth nth-rank (tensor-view tensor)))
+							    0))))))
 				       (if (eql (aloop-mode subject) :apply-flatten)					  
 					   `(the fixnum
 						 ,(cl-waffe2/vm:maybe-observe-axis
@@ -202,7 +203,10 @@ butgot ~a."
 						 ,(cl-waffe2/vm:maybe-observe-axis
 						   (nth nth-rank (shape tensor)))))
 				       (if (eql (aloop-mode subject) :apply-flatten)
-					   (aloop-by subject)
+					   (if (subscript-broadcast
+						(nth nth-rank (tensor-view tensor)))
+					       0
+					       1)
 					   (if (subscript-broadcast
 						(nth nth-rank (tensor-view tensor)))
 					       0
@@ -242,7 +246,7 @@ butgot ~a."
 							     (wf/iter:range-nth ,view 0))))))))))))))))
 	 (declare (type (simple-array (unsigned-byte 64) (*)) ,offsets-place)
 		  ,@(when (not no-batch-p) `((type (simple-array (signed-byte 64) (* *)) ,diffs-place))))
-	 ,(print (expand-helper 0))))))
+	 ,(expand-helper 0)))))
 
 (defmacro with-ranked-loop (((op-function &rest variables)
 			     &key
