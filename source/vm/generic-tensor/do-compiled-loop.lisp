@@ -16,6 +16,7 @@
 ;;       https://arxiv.org/pdf/2005.04091.pdf
 ;;
 
+;;
 ;; As of this writing, features on iterations works enough as for element-wise operations
 ;; but as for permuted tensors, it signifcantly reduces the performance.
 ;; We can easily tackle this problem by using foreign DL Frameworks like oneDNN; but it restricts the flexibility of cl-waffe2
@@ -23,6 +24,11 @@
 ;; JIT Compiling to Vectorized C++/CUDA Kernel?
 ;;
 
+;; [TODO]
+;; - 1. solve-iter = Dynamic Shape を考慮する
+;; - 2. do-ranges do-inlined-rangesを使用する
+;; - 3. Sliceに対応する
+;; - 4. call-with-viewをdo-compiled-loopでReplaceする
 
 (defstruct (AbstractLoop
 	    (:conc-name aloop-)

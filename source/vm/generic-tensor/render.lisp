@@ -112,10 +112,11 @@ The result sequence MUST not over max-length.
 	      *matrix-columns-displaying-length*)
 	   ;; Can elements be printed at once?
 	   (let ((first-dim (nth dim-indicator (shape tensor)))
-		 (args      (make-list dim-indicator :initial-element t)))
+		 (args      (make-list dim-indicator :initial-element t))
+		 (range     (subscript-range (nth dim-indicator (tensor-view tensor)))))
 	     (dotimes (i first-dim)
 	       ;; pprint(n-1) and indent
-	       (let ((tensor-view (apply #'view tensor `(,@args ,i))))
+	       (let ((tensor-view (apply #'view tensor `(,@args ,(wf/iter:range-nth range i)))))
 		 (pprint-vector stream orig-tensor tensor-view newline (1+ indent-size) (1+ dim-indicator)))
 	       
 	       (unless (= i (1- first-dim))
@@ -128,7 +129,8 @@ The result sequence MUST not over max-length.
 		     (write-string " " stream))))
 	     (write-string ")" stream))
 	   (let ((args (make-list dim-indicator :initial-element t))
-		 (midpoint (round (/ *matrix-columns-displaying-length* 2))))
+		 (midpoint (round (/ *matrix-columns-displaying-length* 2)))
+		 (range     (subscript-range (nth dim-indicator (tensor-view tensor)))))
 	     (labels ((render-column (line do-newline)
 			(pprint-vector stream orig-tensor line newline (1+ indent-size) (1+ dim-indicator))
 			(if do-newline
@@ -137,7 +139,7 @@ The result sequence MUST not over max-length.
 				  (write-string " " stream)))))
 		      (display-nth (n newline)
 			(render-column
-			 (apply #'view tensor `(,@args ,n))
+			 (apply #'view tensor `(,@args ,(wf/iter:range-nth range n)))
 			 newline)))
 	       ;; Displays first and last vector
 

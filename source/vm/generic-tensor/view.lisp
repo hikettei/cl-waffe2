@@ -186,3 +186,4 @@ Return: List[Subscript]
 (defun compute-visible-shape (tensor)
   (loop for v in (tensor-view tensor)
 	collect (wf/iter:range-size (subscript-range v))))
+
