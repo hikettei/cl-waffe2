@@ -20,6 +20,7 @@
 ;;これ解ける？
 ;;(~ ~ M N)
 ;;(~ M 1~ N)
+;; (range 3 0)みたいなのを禁止する？
 
 ;; !viewでflexible insert kanou ni suru
 
@@ -135,32 +136,49 @@ Basically can be computed in this formula:
 	     ,(symbol-pprint-helper (range-to   range))))
      (abs ,(symbol-pprint-helper (range-step range))))))
 
+(declaim (ftype (function (Range fixnum) fixnum) range-nth))
 (defun range-nth (range count)
   (declare (type range range)
-	   (type fixnum count))
-  (let* ((a (maybe-observe-axis (range-from range)))
-	 (b (maybe-observe-axis (range-to   range)))
-	 (c (maybe-observe-axis (range-step range)))
-	 (from  (min a b))
-	 (below (max a b)))
+	   (type fixnum count)
+	   (optimize (speed 3)))
+  (let* ((a (the fixnum (maybe-observe-axis (range-from range))))
+	 (b (the fixnum (maybe-observe-axis (range-to   range))))
+	 (c (the fixnum (maybe-observe-axis (range-step range))))
+
+	 ;; 10 ... 1 step=step <=> 1 ... 10, step=-step
+	 (c (if (> a b)
+		(let ((tmp a))
+		  (setq a b
+			b tmp)
+		  (- c))
+		c)))
+    (declare (type fixnum a b c))
     (if (< c 0)
-	(let ((tmp below))
-	  (setq below from
-		from (+ c tmp))))
-    (+ from (* c count))))
+	(let ((tmp b))
+	  (setq b a
+		a (+ c tmp))))
+    (the fixnum (+ a (the fixnum (* c count))))))
 
 (define-compiler-macro range-nth (range count)
-  `(let* ((a (maybe-observe-axis (range-from ,range)))
-	  (b (maybe-observe-axis (range-to   ,range)))
-	  (c (maybe-observe-axis (range-step ,range)))
-	  (from  (min a b))
-	  (below (max a b)))
-     (if (< c 0)
-	 (let ((tmp below))
-	   (setq below from
-		 from (+ c tmp))))
-     (+ from (* c ,count))))
+  `(let* ((a (the fixnum (maybe-observe-axis (range-from ,range))))
+	  (b (the fixnum (maybe-observe-axis (range-to   ,range))))
+	  (c (the fixnum (maybe-observe-axis (range-step ,range))))
 
+	  ;; 10 ... 1 step=step <=> 1 ... 10, step=-step
+	  (c (if (> a b)
+		 (let ((tmp a))
+		   (setq a b
+			 b tmp)
+		   (- c))
+		 c)))
+     (declare (type fixnum a b c))
+     (if (< c 0)
+	 (let ((tmp b))
+	   (setq b a
+		 a (+ c tmp))))
+     (the fixnum (+ a (the fixnum (* c ,count))))))
+
+;; FIX!!
 (defmacro do-range ((var range) &body body)
   "Creates an iteration following the instruction of range.
 Range can include dynamic shape.
@@ -235,6 +253,33 @@ Creates a range: `[from, to) where step=step`. This structure is dedicated to a 
 	  (symbol-pprint-helper (range-to   obj))
 	  (symbol-pprint-helper (range-step obj))))
 
+(defun ifelse (condition then else) (if condition then else))
+(defun range-absolute-start-idx (range)
+  "(range 0 5 -1) -> 4 3 2 1 0
+                     ^ absolute-start-idx"
+  (declare (type Range range))
+  (make-lazyaxis
+   `(ifelse (> ,(range-step range) 0)
+	    (min ,(range-from range) ,(range-to range))
+	    (max ,(range-from range) ,(range-to range)))))
+
+(defun range-absolute-end-idx (range)
+  "(range 0 5 -1) -> 4 3 2 1 0
+                             ^ absolute-end-idx"
+  (declare (type Range range))
+  (make-lazyaxis
+   `(ifelse (> ,(range-step range) 0)
+	    (max ,(range-from range) ,(range-to range))
+	    (min ,(range-from range) ,(range-to range)))))
+
+(defun pretty-range (range)
+  "Makes range.step > 0"
+  (declare (type Range range))
+  (make-range
+   (range-absolute-start-idx range)
+   (range-absolute-end-idx   range)
+   (make-lazyaxis `(abs ,(range-step range)))))
+
 (defun .range (range2 &optional (range1 nil))
   "
 ## [function] .range
@@ -261,7 +306,10 @@ is defined as:
 
 new_range_from  = A + B
 new_range_to    = A + C
-new_range_step  = lcm(range1.step, range2.step) 
+new_range_step  = lcm(range1.step, range2.step)
+
+i.e.:
+{a_2x+b_2}∪{a_1x+b_1} 
 ```
 "
   (declare (type Range range2)
@@ -270,24 +318,34 @@ new_range_step  = lcm(range1.step, range2.step)
   (when (null range1)
     ;; NIL(RANGE1(...))
     (return-from .range range2))
+  
+  ;; range1 = base
+  ;; range2 = new
+  
+  (let* ((upfrom1 (range-from range1))
+	 (below1  (range-to   range1))
 
-  (let* ((upfrom1 `(min ,(range-from range1)
-			,(range-to   range1)))
-	 ;;(below1  `(max ,(range-from range1)
-	 ;;		,(range-to   range1)))
-	 (upfrom2 `(min ,(range-from range2)
-			,(range-to   range2)))
-	 (below2  `(max ,(range-from range2)
-			,(range-to   range2)))
-	 (from    `(+ ,upfrom1 ,upfrom2))
-	 (to      `(+ ,upfrom1 ,below2))
-	 (step    `(lcm ,(range-step range1) ,(range-step range2))))
+	 (upfrom2 (range-from range2))
+	 (below2  (range-to   range2))
 
+	 (step1   (range-step range1))
+	 (step2   (range-step range2))
+
+	 (offset `(ifelse
+		   (> ,step1 0)
+		   (min ,upfrom1 ,below1)
+		   (max ,upfrom1 ,below1)))
+
+	 (from  `(+ ,offset (* (signum ,step1) ,upfrom2)))
+	 (to    `(+ ,offset (* (signum ,step1) ,below2)))
+	 
+	 (from1 `(min ,from ,to))
+	 (to1   `(max ,from ,to))
+	 (step  `(* (signum ,step2) (lcm ,step1 ,step2))))
     ;; [TODO]
     ;; - Adding an assertion
     ;; - Adding a lazy assertion
-    (let ((result (range from to step)))
-      
+    (let ((result (range from1 to1 step)))
       (assert
        (or
 	(not (numberp (range-size result)))
@@ -301,6 +359,8 @@ from ~a to ~a => ~a"
        range1
        range2
        result)
+
+      (print result)
       
       ;; [FixME] The assertion above is not enough...
       ;; e.g.: (.range (range 2 8 1) (range 2 8 1)) should produce an error

@@ -217,7 +217,8 @@ Describe the transformation of shapes as simple as possible.
   (let ((args (map 'list #'parse-lazy-exp cdr)))
     (if (every #'(lambda (ir)
 		   (and (eql (lazyir-type ir) :number)
-			(typep (lazyir-car ir) 'fixnum)))
+			(or (typep (lazyir-car ir) 'fixnum)
+			    (typep (lazyir-car ir) 'boolean))))
 	       args)
 	(make-lazyIR :number
 		     (apply car (map 'list #'lazyir-car args))

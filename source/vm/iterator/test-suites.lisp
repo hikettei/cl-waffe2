@@ -118,3 +118,48 @@
 (test range-compose-test
   (is (compose-test)))
 
+(test range-compose-complicated-test
+  (is (progn
+	(let ((result (.range (range 4)
+			      (range 0 5 -1))))
+	  (and (= (range-step result) 1)
+	       (= (range-from result) 0)
+	       (= (range-to   result) 1)))))
+  (is (progn
+	(let ((result (.range (range 0 5)
+			      (range 0 5 -1))))
+	  (and (= (range-step result) 1)
+	       (= (range-from result) 0)
+	       (= (range-to   result) 5)))))
+  (is (progn
+	(let ((result (.range (range 0 5 -1)
+			      (range 0 5))))
+	  (and (= (range-step result) -1)
+	       (= (range-from result) 0)
+	       (= (range-to   result) 5))))))
+
+(test range-nth-test
+  (is (= 2 (range-nth (range 3 0 -1) 2)))
+  (is (= 1 (range-nth (range 3 0 -1) 1)))
+  (is (= 0 (range-nth (range 3 0 -1) 0)))
+
+  (is (= 2 (range-nth (range 3 0 1) 0)))
+  (is (= 1 (range-nth (range 3 0 1) 1)))
+  (is (= 0 (range-nth (range 3 0 1) 2)))
+  
+  (is (= 2 (range-nth (range 0 3 1) 2)))
+  (is (= 1 (range-nth (range 0 3 1) 1)))
+  (is (= 0 (range-nth (range 0 3 1) 0)))
+
+  (is (= 3 (range-nth (range 3 6 1) 0)))
+  (is (= 4 (range-nth (range 3 6 1) 1)))
+  (is (= 5 (range-nth (range 3 6 1) 2)))
+
+  (is (= 5 (range-nth (range 3 6 -1) 0)))
+  (is (= 4 (range-nth (range 3 6 -1) 1)))
+  (is (= 3 (range-nth (range 3 6 -1) 2)))
+
+  (is (= 5 (range-nth (range 6 3 1) 0)))
+  (is (= 4 (range-nth (range 6 3 1) 1)))
+  (is (= 3 (range-nth (range 6 3 1) 2))))
+  
