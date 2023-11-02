@@ -24,13 +24,6 @@
 ;; JIT Compiling to Vectorized C++/CUDA Kernel?
 ;;
 
-;; [TODO]
-;; BLAS : OFFEST - DIRECTION * STRIDE...みたいな具合でViewInstructionを作成
-;; - 1. solve-iter = Dynamic Shape を考慮する
-;; - 2. do-ranges do-inlined-rangesを使用する
-;; - 3. Sliceに対応する
-;; - 4. call-with-viewをdo-compiled-loopでReplaceする
-
 (defstruct (AbstractLoop
 	    (:conc-name aloop-)
 	    (:constructor make-aloop (rank by element-n size mode)))

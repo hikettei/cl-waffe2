@@ -123,9 +123,10 @@ butgot ~a."
   (when *freeze-call-with-view*
     (setq force-order t))
 
-  (let ((solved-loop   (solve-loop-order tensors at-least-dim force-order :mode :heuristic))
-	(offsets-place (gensym "offsets"))
-	(diffs-place   (gensym)))
+  (let* ((solved-loop   (solve-loop-order tensors at-least-dim force-order :mode :heuristic))
+ 	 (offsets-place (gensym "offsets"))
+	 (diffs-place   (gensym))
+	 (no-batch-p    (= (length solved-loop) 1)))
     (mapc
      (compose
       #'update-calling-route
@@ -174,67 +175,70 @@ butgot ~a."
 						   unless (subscript-broadcast (nth dim (tensor-view tensor)))
 						     collect
 						   `(incf
-							(the (unsigned-byte 32) (aref ,offsets-place ,pos))
-							(aref ,diffs-place ,rank ,pos))))))))
+							(the (unsigned-byte 64) (aref ,offsets-place ,pos))
+							(aref ,diffs-place ,(aloop-rank subject) ,pos))))))))
 			 (apply
 			  function
 			  (loop with dim fixnum = (aloop-rank subject)
 				for tensor in tensors
 				for position upfrom 0
 				collect
-				(loop with offsets  = `(aref ,offsets-place ,position)
+				(loop with offsets  = `(the fixnum (aref ,offsets-place ,position))
 				      for  nth-rank upfrom rank below (dims (car tensors))
 				      collect
 				      (make-viewinstruction
-				       `(+ ,offsets
-					   (the (unsigned-byte 64)
-						(wf/iter:range-nth
-						 ,(subscript-range
-						   (nth nth-rank (tensor-view tensor)))
-						 0)))
+				       `(the fixnum
+					     (+ ,offsets
+						(the (unsigned-byte 64)
+						     (wf/iter:range-nth
+						      ,(subscript-range
+							(nth nth-rank (tensor-view tensor)))
+						      0))))
 				       (if (eql (aloop-mode subject) :apply-flatten)					  
-					   `(cl-waffe2/vm:maybe-observe-axis
-					     ,(aloop-element-n subject))
-					   `(cl-waffe2/vm:maybe-observe-axis
-					     ,(nth nth-rank (shape tensor))))
+					   `(the fixnum
+						 (cl-waffe2/vm:maybe-observe-axis
+						  ,(aloop-element-n subject)))
+					   `(the fixnum
+						 (cl-waffe2/vm:maybe-observe-axis
+						  ,(nth nth-rank (shape tensor)))))
 				       (if (eql (aloop-mode subject) :apply-flatten)
 					   (aloop-by subject)
 					   (if (subscript-broadcast
 						(nth nth-rank (tensor-view tensor)))
 					       0
-					       `(aref ,diffs-place ,rank ,position))))))))))))
+					       `(the fixnum (aref ,diffs-place ,(aloop-rank subject) ,position)))))))))))))
       `(let ((,offsets-place (make-array
 			      ,(length tensors)
 			      :element-type '(unsigned-byte 64)
 			      :initial-element 0))
-	     (,diffs-place (make-array
-			    (list ,(length solved-loop) ,(length tensors))
-			    :element-type '(unsigned-byte 64)
-			    :initial-contents
-			    (list
-			     ,@(loop for aloop in solved-loop
-				     collect
-				     `(list
-				       ,@(loop with rank = (aloop-rank aloop)
-					       for tensor in tensors
-					       collect
-					       (let ((view (subscript-range (nth rank (tensor-view tensor)))))
-						 `(the
-						   (unsigned-byte 64)
-						   (*
-						    ,(nth rank (tensor-stride tensor))
-						    (the
-						     fixnum
-						     (-
-						      (the
-						       fixnum
-						       (wf/iter:range-nth ,view 1))
-						      (the
-						       fixnum
-						       (wf/iter:range-nth ,view 0))))))))))))))
+	     ,@(when (not no-batch-p)
+		 `((,diffs-place (make-array
+				  (list ,(length solved-loop) ,(length tensors))
+				  :element-type '(signed-byte 64)
+				  :initial-contents
+				  (list
+				   ,@(loop for aloop in solved-loop
+					   collect
+					   `(list
+					     ,@(loop with rank = (aloop-rank aloop)
+						     for tensor in tensors
+						     collect
+						     (let ((view (subscript-range (nth rank (tensor-view tensor)))))
+						       `(the
+							 (signed-byte 64)
+							 (*
+							  ,(nth rank (tensor-stride tensor))
+							  (the
+							   fixnum
+							   (-
+							    (the
+							     fixnum
+							     (wf/iter:range-nth ,view 1))
+							    (the
+							     fixnum
+							     (wf/iter:range-nth ,view 0))))))))))))))))
 	 (declare (type (simple-array (unsigned-byte 64) (*)) ,offsets-place)
-		  (type (simple-array (unsigned-byte 64) (* *)) ,diffs-place)
-		  (ignorable ,diffs-place))
+		  ,@(when (not no-batch-p) `((type (simple-array (signed-byte 64) (* *)) ,diffs-place))))
 	 ,(expand-helper 0)))))
 
 (defmacro with-ranked-loop (((op-function &rest variables)

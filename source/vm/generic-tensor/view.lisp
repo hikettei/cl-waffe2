@@ -185,7 +185,10 @@ Return: List[Subscript]
 
 (defun compute-visible-shape (tensor)
   (loop for v in (tensor-view tensor)
-	collect (wf/iter:range-size (subscript-range v))))
+	if (subscript-broadcast v)
+	  collect (second (force-list v))
+	else
+	  collect (wf/iter:range-size (subscript-range v))))
 
 (defun actual-shape (tensor)
   "
@@ -193,6 +196,9 @@ Return: List[Subscript]
 
 Computes a shape but broadcasted axis is replaced with 1.
 "
+  (when (scalar-p tensor)
+    (return-from actual-shape `(1)))
+  
   (loop for s in (shape tensor)
 	for v in (tensor-view tensor)
 	if (subscript-broadcast v)
