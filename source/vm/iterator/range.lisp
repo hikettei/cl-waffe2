@@ -3,6 +3,11 @@
 
 ;; Examples: view と ~ の使い方追加する？
 
+;;  !view
+;;  !make-input -> !view
+;;  !view but step = -1
+;;  Broadcasting usages
+
 ;; Range is designed to replace view.
 
 ;; Range = (LIST FROM TO STEP <<LazyAxis>>)

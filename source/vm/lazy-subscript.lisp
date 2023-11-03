@@ -439,14 +439,15 @@ Otherwise                 -> Return as it is."
 
 ;; [FIXME]
 ;; When I have enough time, Reimplement dynamic-shaping as much better ... elegant way.
-(defparameter *lazyaxis->symbol* (make-hash-table :test #'equal))
-(defparameter *symbol->lazyaxis* (make-hash-table :test #'equal))
+
+(defparameter *lazyaxis->symbol* (make-hash-table :test #'equal) "[A*B](*PACKAGE*) -> LAZYAXIS_N")
+(defparameter *symbol->lazyaxis* (make-hash-table :test #'equal) "LAZYAXIS_N -> [A*B](*PACKAGE*)")
 
 (defmethod lazyaxis-symbol ((lazyaxis LazyAxis))
-  (or (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*)
+  (or (gethash (format nil "~a~a" (package-name *package*) lazyaxis) *lazyaxis->symbol*)
       (let ((id (gensym "LAZYAXIS")))
 	(setf (gethash id *symbol->lazyaxis*) lazyaxis
-	      (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*) id))))
+	      (gethash (format nil "~a~a" (package-name *package*) lazyaxis) *lazyaxis->symbol*) id))))
 
 (defmethod lazyaxis-symbol ((lazyaxis T)) nil)
 

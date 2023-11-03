@@ -25,8 +25,6 @@
                            :initial-value (apply fn1 args))))
       #'identity))
 
-(defun as-keyword (symbol) (intern (symbol-name symbol) "KEYWORD"))
-
 (defun wrap-x (x)
   (typecase x
     (number `(the fixnum ,x))
@@ -198,7 +196,7 @@ Usage:
 "
 
   `(let* ((*adjustable-shape-table* (or *adjustable-shape-table* (make-hash-table))))
-     (setf (gethash (as-keyword ',symbol-name) *adjustable-shape-table*) ,symbol-value)
+     (setf (gethash ',symbol-name *adjustable-shape-table*) ,symbol-value)
      ;; [TODO/Fixme?]
      ;; When quitting the scope, this macro should delete the symbol-name from adjustable-symbol-table.
      ,@body))
@@ -216,11 +214,11 @@ Usage:
      ,@body))
 
 (defun register-adjustable-shape (symbol value)
-  (setf (gethash (as-keyword symbol) *adjustable-shape-table*) value))
+  (setf (gethash symbol *adjustable-shape-table*) value))
 
 (defmacro with-let-adjustable-symbol (symbol-name &body body)
   ;; TO DELETE: Binding with symbol-name
-  `(let ((,symbol-name (gethash (as-keyword ',symbol-name) *adjustable-shape-table*)))
+  `(let ((,symbol-name (gethash ',symbol-name *adjustable-shape-table*)))
      (declare (type fixnum ,symbol-name)
 	      (ignorable ,symbol-name))
      
@@ -242,7 +240,7 @@ Usage:
       (typecase symbol
 	(symbol
 	 ;; out <- table[symbol]
-	 (let ((out (gethash (as-keyword symbol) *adjustable-shape-table*)))
+	 (let ((out (gethash symbol *adjustable-shape-table*)))
 	   (if (null out)
 	       symbol ;; No result?
 	       (if (and (symbolp out)
