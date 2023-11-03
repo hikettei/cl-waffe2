@@ -102,6 +102,7 @@
 
   ;; Dynamic Shapes
   (:export
+   #:with-adjustable-symbol-scope
    #:with-adjustable-symbol
    #:with-adjustable-symbols
    #:*adjustable-shape-table*)

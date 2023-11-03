@@ -168,7 +168,7 @@ Examples:
 			  &aux
 			    (offsets (make-array (length tensors)
 						 :element-type '(unsigned-byte 32)
-						 :initial-element 0))
+						 :initial-contents (map 'list #'tensor-initial-offset tensors)))
 			    (max-rank (dims (car tensors))))
   (declare (type list loop-blueprint)
 	   (type function function)

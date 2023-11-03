@@ -7,6 +7,8 @@
 ;;  !make-input -> !view
 ;;  !view but step = -1
 ;;  Broadcasting usages
+;;  view関連のbackward tests
+;;  do-compiled-loopdでも動く？
 
 ;; Range is designed to replace view.
 
@@ -185,25 +187,6 @@ Basically can be computed in this formula:
 	  (setq b a
 		a (+ c tmp))))
     (the fixnum (+ a (the fixnum (* c count))))))
-
-(define-compiler-macro range-nth (range count)
-  `(let* ((a (the fixnum (maybe-observe-axis (range-from ,range))))
-	  (b (the fixnum (maybe-observe-axis (range-to   ,range))))
-	  (c (the fixnum (maybe-observe-axis (range-step ,range))))
-
-	  ;; 10 ... 1 step=step <=> 1 ... 10, step=-step
-	  (c (if (> a b)
-		 (let ((tmp a))
-		   (setq a b
-			 b tmp)
-		   (- c))
-		 c)))
-     (declare (type fixnum a b c))
-     (if (< c 0)
-	 (let ((tmp b))
-	   (setq b a
-		 a (+ c tmp))))
-     (the fixnum (+ a (the fixnum (* c ,count))))))
 
 (defmacro do-range ((var range) &body body)
   "Creates an iteration following the instruction of range.

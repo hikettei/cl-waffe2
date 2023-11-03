@@ -5,8 +5,8 @@
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;; [TODO] Integrate do-compiled-loop.lisp and call-with-view.lisp
 ;;        call-with-view perform by far the fastset performance while do-compiled-loop could be potentially optimized for permuted tensors.
-
-
+;;        => OK. Now they're using the same algorithm
+;;        => Next: Implementing Polyhedral Compiler
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; Force-Order=T Anywhere
@@ -38,15 +38,13 @@
   "
 ## [function] call-with-view
 
-(TODO) Update Docs.
-
-A principle operator to extend your functions to higher arrays.
+Inlined Loop Macro Generator for the extension to higher order foreign functions.
 
 ```lisp
 (call-with-view function tensors &key (at-least-dim 1) (force-order nil) (lparallel nil))
 ```
 
-The function `call-with-view` generates a lisp code of `(loop for ...)` iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal `for(int i=0;i<size;i++){...}` route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framexwork, this function is usually combined with the forward definition of `define-impl` macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.
+The function `call-with-view` generates a lisp code calling BLAS-like function for nd-arrays with considered offsets produced by views. Plus, depending on the memory-layouts and permutation(offsets) the generated loop is also collapsed and shuffled to maximize the locality of memory and reduce the overheads produced by calling CFFI function.
 
 In the simplest case, `call-with-view` first deploys `(loop for...)` until the rank of given tensors reaches the given `at-least-dim`. After reaching `at-least-dim`, the function places the result of calling the given `function`.
 
@@ -55,34 +53,12 @@ In the simplest case, `call-with-view` first deploys `(loop for...)` until the r
       #'(lambda (x-view)
 	   `(+ 1 1))
        (list (randn `(100 100 100)))
-       :at-least-dim 2)
+       :at-least-dim 1)
 
-;; will return:
-
-(CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312057 0))
-  (LOCALLY
-   (DECLARE (TYPE FIXNUM #:G312057))
-   (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312058 #:G312057))
-     (LOCALLY
-      (DECLARE (TYPE FIXNUM #:G312058))
-      (LET* ((#:G312059 (NTH 0 (LIST 10000 100 1)))
-             (#:G25 100)
-             (#:G25
-              (CL-WAFFE2/VM.GENERIC-TENSOR::READ-ADJUSTABLE-SYMBOL #:G25)))
-        (INCF #:G312058 (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312059))
-        (LOOP CL-WAFFE2/VM.GENERIC-TENSOR::FOR #:G312060 FIXNUM CL-WAFFE2/VM.GENERIC-TENSOR::UPFROM 0 CL-WAFFE2/VM.GENERIC-TENSOR::BELOW #:G25
-              DO (PROGN
-                  (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312061
-                                                                 #:G312058))
-                    (LOCALLY
-                     (DECLARE (TYPE FIXNUM #:G312061))
-                     (LET ((#:G312062 (THE FIXNUM (NTH 1 (LIST 10000 100 1)))))
-                       (INCF #:G312061
-                             (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312062))
-                       (+ 1 1)))))
-              UNLESS (= #:G312060 (1- #:G25))
-              DO (PROGN
-                  (INCF (THE FIXNUM #:G312058) (THE FIXNUM #:G312059)))))))))
+(LET ((#:OFFSETS68091
+       (MAKE-ARRAY 1 :ELEMENT-TYPE '(UNSIGNED-BYTE 64) :INITIAL-ELEMENT 0)))
+  (DECLARE (TYPE (SIMPLE-ARRAY (UNSIGNED-BYTE 64) (*)) #:OFFSETS68091))
+  (PROGN (+ 1 1)))
 ```
 
 Here, the number of tensors corresponds with the number of arguments `function` receive. Usually, the function receives information on the view of the tensor at the corresponding position: `(size-of x-view)` to get the number of iteration, `(stride-of x-view)` to get the number of increment, and, `(offset-of x-view)` to get the offset of tensor. (Sometimes they return s-expression because the shapes of tensors are not necessary number, but symbols.)
@@ -157,7 +133,7 @@ butgot ~a."
 				       (the fixnum (aref ,offsets-place ,position))
 				       (the fixnum
 					    (*
-					     ,start-idx
+					     (the fixnum ,start-idx) 
 					     ,(nth rank (tensor-stride tensor)))))))))
 
 		    ;; Exploring remaining loops
@@ -165,7 +141,7 @@ butgot ~a."
 			 (alexandria:with-gensyms (total-count count)
 			   `(loop with ,offsets-place = (copy-seq ,offsets-place)
 				  with ,total-count   = ,(maybe-observe-axis1 (aloop-size subject))
-				  for ,count of-type (unsigned-byte 32) upfrom 0 below ,total-count
+				  for ,count of-type fixnum upfrom 0 below ,total-count
 				  do (progn
 				       ,(expand-helper (1+ rank))
 				       (unless (= ,count (1- ,total-count))
@@ -176,7 +152,7 @@ butgot ~a."
 						   unless (subscript-broadcast (nth dim (tensor-view tensor)))
 						     collect
 						   `(incf
-							(the (unsigned-byte 64) (aref ,offsets-place ,pos))
+							(the fixnum (aref ,offsets-place ,pos))
 							(aref ,diffs-place ,(aloop-rank subject) ,pos))))))))
 			 (apply
 			  function
@@ -187,7 +163,7 @@ butgot ~a."
 				      for  nth-rank upfrom rank below (dims (car tensors))
 				      collect
 				      (make-viewinstruction
-				       `(the fixnum
+				       `(the (signed-byte 32)
 					     (+ ,offsets
 						,@(unless (subscript-broadcast (nth nth-rank (tensor-view tensor)))
 						    `((the fixnum
@@ -213,12 +189,12 @@ butgot ~a."
 					       `(the fixnum (aref ,diffs-place ,rank ,position)))))))))))))
       `(let ((,offsets-place (make-array
 			      ,(length tensors)
-			      :element-type '(unsigned-byte 64)
-			      :initial-element 0))
+			      :element-type 'fixnum
+			      :initial-contents (list ,@(map 'list #'(lambda (tensor) `(tensor-initial-offset ,tensor)) tensors))))
 	     ,@(when (not no-batch-p)
 		 `((,diffs-place (make-array
 				  (list ,(length solved-loop) ,(length tensors))
-				  :element-type '(signed-byte 64)
+				  :element-type 'fixnum
 				  :initial-contents
 				  (list
 				   ,@(loop for aloop in solved-loop
@@ -232,20 +208,20 @@ butgot ~a."
 						     collect
 						     (let ((view (subscript-range (nth rank (tensor-view tensor)))))
 						       `(the
-							 (signed-byte 32)
+							 fixnum
 							 (*
 							  ,(nth rank (tensor-stride tensor))
 							  (the
-							   (signed-byte 32)
+							   fixnum
 							   (-
 							    (the
-							     (signed-byte 32)
+							     fixnum
 							     (wf/iter:range-nth ,view 1))
 							    (the
-							     (signed-byte 32)
+							     fixnum
 							     (wf/iter:range-nth ,view 0))))))))))))))))
-	 (declare (type (simple-array (unsigned-byte 64) (*)) ,offsets-place)
-		  ,@(when (not no-batch-p) `((type (simple-array (signed-byte 64) (* *)) ,diffs-place) (ignorable ,diffs-place))))
+	 (declare (type (simple-array fixnum (*)) ,offsets-place)
+		  ,@(when (not no-batch-p) `((type (simple-array fixnum (* *)) ,diffs-place) (ignorable ,diffs-place))))
 	 ,(expand-helper 0)))))
 
 (defmacro with-ranked-loop (((op-function &rest variables)

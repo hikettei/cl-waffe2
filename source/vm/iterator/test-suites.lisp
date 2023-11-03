@@ -24,44 +24,49 @@
 
 ;; Range [A, B)
 (defun dynamic-do-range-test ()
-  (wf/t:with-adjustable-symbols ((A 10))
-    (let ((count nil))
-      (do-range (var (range 0 'A 1))
-	(push var count))
-      (equal count
-	     (loop for i downfrom 9 to 0 collect i)))))
+  (wf/t:with-adjustable-symbol-scope
+    (wf/t:with-adjustable-symbols ((A 10))
+      (let ((count nil))
+	(do-range (var (range 0 'A 1))
+	  (push var count))
+	(equal count
+	       (loop for i downfrom 9 to 0 collect i))))))
 
 ;; Range [A, B)
 (defun dynamic-do-range-test1 ()
-  (wf/t:with-adjustable-symbols ((A 8) (B 1))
-    (let ((count nil))
-      (do-range (var (range 'B 'A 1))
-	(push var count))
-      (equal count
-	     (loop for i downfrom 7 to 1 collect i)))))
+  (wf/t:with-adjustable-symbol-scope
+    (wf/t:with-adjustable-symbols ((A 8) (B 1))
+      (let ((count nil))
+	(do-range (var (range 'B 'A 1))
+	  (push var count))
+	(equal count
+	       (loop for i downfrom 7 to 1 collect i))))))
 
 (defun all-dynamic-do-range-test ()
-  (wf/t:with-adjustable-symbols ((A 2) (B 10) (C -2))
-    (let ((count nil))
-      (do-range (var (range 'A 'B 'C))
-	(push var count))
-      (equal count
-	     `(2 4 6 8 )))))
+  (wf/t:with-adjustable-symbol-scope
+    (wf/t:with-adjustable-symbols ((A 2) (B 10) (C -2))
+      (let ((count nil))
+	(do-range (var (range 'A 'B 'C))
+	  (push var count))
+	(equal count
+	       `(2 4 6 8 ))))))
 
 (defun all-dynamic-do-range-test1 ()
-  (wf/t:with-adjustable-symbols ((A 2) (B 10) (C 2))
-    (let ((count nil))
-      (do-range (var (range 'A 'B 'C))
-	(push var count))
-      (equal count
-	     (reverse `(2 4 6 8))))))
+  (wf/t:with-adjustable-symbol-scope
+    (wf/t:with-adjustable-symbols ((A 2) (B 10) (C 2))
+      (let ((count nil))
+	(do-range (var (range 'A 'B 'C))
+	  (push var count))
+	(equal count
+	       (reverse `(2 4 6 8)))))))
 
 (defun rev-dynamic-do-range-test ()
-  (wf/t:with-adjustable-symbols ((A 2) (B 10) (C 2))
-    (let ((count nil))
-      (do-range (var (range 'B 'A 'C))
-	(push var count))
-      (equal count `(2 4 6 8)))))
+  (wf/t:with-adjustable-symbol-scope
+    (wf/t:with-adjustable-symbols ((A 2) (B 10) (C 2))
+      (let ((count nil))
+	(do-range (var (range 'B 'A 'C))
+	  (push var count))
+	(equal count `(2 4 6 8))))))
 
 (test dynamic-do-range-test
   (is (dynamic-do-range-test))
@@ -161,4 +166,4 @@
   (is (= 5 (range-nth (range 6 3 1) 0)))
   (is (= 4 (range-nth (range 6 3 1) 1)))
   (is (= 3 (range-nth (range 6 3 1) 2))))
-  
+
