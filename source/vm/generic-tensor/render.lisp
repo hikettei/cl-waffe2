@@ -44,17 +44,12 @@ The result sequence MUST not over max-length.
 
 (defun last-mref (tensor orig-tensor index &aux (k (length (shape1 tensor))))
   ;; 0 0 0 ... 2?
-  ;;(let ((s (car (last (tensor-view tensor)))))
-  ;;  (print (subscript-range s)))
   (let ((sub  (make-list k :initial-element 0))
 	(view (make-list k :initial-element t)))
     (setf (nth (1- k) view) (car (last (tensor-view orig-tensor))))
     (setf (nth (1- k) sub) index)
-    (apply #'mref
-	   (apply #'view tensor view)
-	   sub)))
+    (apply #'mref tensor sub)))
 
-;; (1 2)
 (defun pprint-1d-vector (stream
 			 dim-indicator
 			 orig-tensor
@@ -129,7 +124,7 @@ The result sequence MUST not over max-length.
 		     (write-string " " stream))))
 	     (write-string ")" stream))
 	   (let ((args (make-list dim-indicator :initial-element t))
-		 (midpoint (round (/ *matrix-columns-displaying-length* 2)))
+		 (midpoint  (round (/ *matrix-columns-displaying-length* 2)))
 		 (range     (subscript-range (nth dim-indicator (tensor-view tensor)))))
 	     (labels ((render-column (line do-newline)
 			(pprint-vector stream orig-tensor line newline (1+ indent-size) (1+ dim-indicator))

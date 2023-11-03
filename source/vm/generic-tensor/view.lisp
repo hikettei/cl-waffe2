@@ -131,7 +131,7 @@ It should be (start stop) or (start stop step)"
 			    (T (error "Unknown view keyword ~a, all available keywords are following: :index :broadcast" view)))))
 
 (defun view->range (length view)
-  (case (viewtype view)
+  (ecase (viewtype view)
     (:index      (wf/iter:range view))
     (:slice      (apply #'wf/iter:range view))
     (:slice-step (apply #'wf/iter:range view))
@@ -166,12 +166,12 @@ Return: List[Subscript]
      (when (and old-view (eql view t))
        (make-subscript
 	past-view
-	(and (listp (force-list old-view))
+	(and (listp    (force-list old-view))
 	     (eql (car (force-list old-view)) :broadcast))
 	old-view))
      (make-subscript
       view
-      (and (listp (force-list view))
+      (and (listp   (force-list view))
 	   (eql (car (force-list view)) :broadcast))
       composed-range))))
 
