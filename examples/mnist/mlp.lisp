@@ -1,4 +1,3 @@
-
 (in-package :mnist-sample)
 
 
@@ -12,14 +11,26 @@
 
 (defsequence MLP-Sequence (in-features hidden-dim out-features
 			   &key (activation #'!relu))
-	     "Three Layers MLP Model"
+	     "Three Layer MLP Model"
 	     (LinearLayer in-features hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim hidden-dim)
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features))
 
-(defun build-mlp-model (in-class out-class &key (hidden-size 256) (activation #'!relu) (lr 1e-3))
+(defmacro with-compile-backend (backend &body body)
+  (cond ((eq backend :jit)
+	 `(with-cpu-jit (CPUTensor LispTensor)
+	    (progn
+	      ,@body)))
+	((eq *compile-backend* :cpu)
+	 `(with-cpu
+	    (progn
+	      ,@body)))
+	(t
+	 (error (format nil "Unknown backend ~A" backend)))))
+
+(defun build-mlp-model (&key in-class out-class (hidden-size 256) (activation #'!relu) (lr 1e-3))
   (let* ((mlp (MLP-Sequence in-class hidden-size out-class :activation activation))
 	 (lazy-loss (criterion #'softmax-cross-entropy
 			       (call mlp
@@ -48,21 +59,25 @@
   (setf (tensor-initial-offset tensor) (* index (second (shape tensor))))
   tensor)
 
-(defun train-and-valid-mlp (&key (epoch-num 10))
-  (multiple-value-bind (compiled-model model) (build-mlp-model 784 10 :lr 1e-3)
-    
-    (let* ((train-img  (proceed (!div (!reshape *train-data*  t (* 28 28)) 255.0)))
-	   (test-img   (proceed (!div (!reshape *test-data*   t (* 28 28)) 255.0)))
-	   
+ 
+(defparameter *reshaped-train-img-data* (proceed (!div (!reshape *train-data*  t (* 28 28)) 255.0)))
+(defparameter *reshaped-test-img-data* (proceed (!div (!reshape *test-data*   t (* 28 28)) 255.0)))
+
+
+(defun train-and-valid-mlp (&key (epoch-num 10) (benchmark-p t))
+  (multiple-value-bind (compiled-model model)
+      (with-compile-backend :jit
+	(build-mlp-model :in-class 784 :out-class 10 :lr 1e-3))
+    (let* ((train-img *reshaped-train-img-data*)
+	   (test-img  *reshaped-test-img-data*)
 	   (train-img-window (view train-img `(0 100) t))
 	   (train-label (view *train-label* `(0 100) t))
-	   (test-label  *test-label*)
-	   
+	   (test-label *test-label*)
 	   (total-loss 0.0))
 
       (format t "[Log] Start Training...~%")
-      (dotimes (nth-epoch epoch-num)
-	(format t "~ath Epoch...~%" nth-epoch)
+      (loop for nth-epoch upfrom 1 upto epoch-num do
+	(format t "Epoch ~a:~%" nth-epoch)
 
 	(time
 	 (loop for batch fixnum upfrom 0 below 60000 by 100 do
@@ -71,21 +86,24 @@
 		 (step-train-mlp compiled-model
 				 (tensor-displace-to train-img-window batch)
 				 (tensor-displace-to train-label      batch)))))
-	(format t "Training Loss: ~a~%" (/ total-loss 600))
+	(format t "Training Loss: ~a~%~%" (/ total-loss 600))
 	(setq total-loss 0.0))
-      
+
+      (format t "Validating...~%")
       (with-no-grad
-	(format t "Valid Accuracy: ~a~%" (accuracy model test-img test-label)))
+	(format t "Validation Accuracy: ~a~%~%" (accuracy model test-img test-label)))
 
-      (format t "Benchmaking (Forward Step, 1Epoch, n-sample=600)...~%")
+      (when benchmark-p
+	(format t "Benchmarking (Forward Step, 1Epoch, n-sample=600)...~%")
+	(proceed-bench
+	 (!sum (softmax-cross-entropy
+		(call
+		 (MLP-Sequence 784 256 10)
+		 (randn `(100 784)))
+		(randn `(100 10))))
+	 :n-sample 600
+	 :backward t)
+	compiled-model))))
 
-      (proceed-bench
-       (!sum (softmax-cross-entropy
-	      (call
-	       (MLP-Sequence 784 256 10)
-	       (randn `(100 784)))
-	      (randn `(100 10))))
-       :n-sample 600
-       :backward t)
-      compiled-model)))
-
+;; (cl-waffe2/vm.generic-tensor::reset-compiled-function-cache!)
+;; (train-and-valid-mlp :epoch-num 23 :benchmark-p nil)

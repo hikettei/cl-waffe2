@@ -18,7 +18,7 @@
     (when (and (not (string= *lazy-c-source* ""))
 	       ;; wfop-op is created by doing (compile nil) or search from LUT
 	       ;; This method records all functions of (wfop-op x)
-	       ;; If this method encounter an unknown method, it indicates the function isn't also compiled by gcc.
+	       ;; If this method encounters an unknown method, then it indicates that the function is not also compiled by gcc.
 	       (some #'(lambda (x) (null (gethash (wfop-op x) *known-functions*))) jit-nodes))
       (mapc
        #'(lambda (x)
