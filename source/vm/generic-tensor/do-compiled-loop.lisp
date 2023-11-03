@@ -114,7 +114,11 @@ Examples:
     (labels ((compute-loop (wtensors &optional (rank 0))
 	       (declare (type fixnum rank))
 	       (when (and (not force-order)
-			  (= kernel-size 0)		  
+			  (= kernel-size 0)
+			  (every
+			   #'(lambda (x)
+			       (equal (tensor-permute-order x) (tensor-permute-order (car tensors))))
+			   tensors)
 			  (apply #'rest-contiguous-p rank wtensors))
 		 ;; Collapsing loops because elements are contiguous on memory.
 		 (let* ((iter-n
@@ -182,7 +186,7 @@ Examples:
   ;; See also: render.lisp render-tensor
   (dolist (tensor tensors)
     (when (some #'listp (tensor-stride tensor))
-      (warn "do-compiled-loop*: runtime stride recomputation...")
+      ;;(warn "do-compiled-loop*: runtime stride recomputation...")
       (setf
        (tensor-stride tensor)
        (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))

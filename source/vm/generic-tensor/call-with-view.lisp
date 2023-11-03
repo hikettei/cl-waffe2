@@ -103,6 +103,7 @@ butgot ~a."
  	 (offsets-place (gensym "OFFSETS"))
 	 (diffs-place   (gensym "DIFFS"))
 	 (no-batch-p    (= (length solved-loop) 1)))
+    
     (mapc
      (compose
       #'update-calling-route
