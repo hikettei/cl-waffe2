@@ -144,16 +144,20 @@ butgot ~a."
 				  for ,count of-type fixnum upfrom 0 below ,total-count
 				  do (progn
 				       ,(expand-helper (1+ rank))
-				       (unless (= ,count (1- ,total-count))
-					 (progn
-					   ,@(loop with dim = (aloop-rank subject)
-						   for tensor in tensors
-						   for pos upfrom 0
-						   unless (subscript-broadcast (nth dim (tensor-view tensor)))
-						     collect
-						   `(incf
-							(the fixnum (aref ,offsets-place ,pos))
-							(aref ,diffs-place ,(aloop-rank subject) ,pos))))))))
+				       ,(when (not
+					       (and
+						(numberp (aloop-size subject))
+						(= (aloop-size subject) 1)))
+					  `(unless (= ,count (1- ,total-count))
+					     (progn
+					       ,@(loop with dim = (aloop-rank subject)
+						       for tensor in tensors
+						       for pos upfrom 0
+						       unless (subscript-broadcast (nth dim (tensor-view tensor)))
+							 collect
+						       `(incf
+							    (the fixnum (aref ,offsets-place ,pos))
+							    (aref ,diffs-place ,(aloop-rank subject) ,pos)))))))))
 			 (apply
 			  function
 			  (loop for tensor in tensors
