@@ -137,7 +137,7 @@ It should be (start stop) or (start stop step)"
     (:slice-step (apply #'wf/iter:range view))
     (:t          (wf/iter:range 0 length))
     (:range      view)
-    (:broadcast  (wf/iter:range length))))
+    (:broadcast  (wf/iter:range 0))))
 
 (defun compute-next-view (tensor past-view subscripts)
   "
@@ -155,8 +155,28 @@ Return: List[Subscript]
 		    (force-list (nth N past-view))
 		    (force-list (or (nth N subscripts) T)))))
 
+(defun parse-absolute (size subscript)
+  (if (and (numberp subscript)
+	   (< subscript 0))
+      (cl-waffe2/vm:make-lazyaxis `(+ ,size ,subscript))
+      subscript))
+
 (defun parse-view (base-size viewed-shape past-view view)
-  (let* ((latest-view (view->range (or viewed-shape base-size) (force-list view)))
+  (let* ((view (case (viewtype view)
+		 (:index
+		  (parse-absolute viewed-shape view))
+		 (:slice
+		  (list
+		   (parse-absolute viewed-shape (car view))
+		   (parse-absolute viewed-shape (second view))))
+		 (:slice-step
+		  (list
+		   (parse-absolute viewed-shape (car view))
+		   (parse-absolute viewed-shape (second view))
+		   (third view)))
+		 (T
+		  view)))		   
+	 (latest-view (view->range (or viewed-shape base-size) (force-list view)))
 	 (old-view    (when past-view
 			(view->range base-size (force-list past-view))))
 	 (composed-range (wf/iter:.range latest-view old-view)))
