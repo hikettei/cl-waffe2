@@ -61,8 +61,7 @@
     (let ((count nil))
       (do-range (var (range 'B 'A 'C))
 	(push var count))
-      (equal count
-	     (reverse `(2 4 6 8))))))
+      (equal count `(2 4 6 8)))))
 
 (test dynamic-do-range-test
   (is (dynamic-do-range-test))

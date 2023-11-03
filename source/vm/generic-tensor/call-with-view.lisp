@@ -187,10 +187,10 @@ butgot ~a."
 				      for  nth-rank upfrom rank below (dims (car tensors))
 				      collect
 				      (make-viewinstruction
-				       `(the (unsigned-byte 64)
+				       `(the fixnum
 					     (+ ,offsets
 						,@(unless (subscript-broadcast (nth nth-rank (tensor-view tensor)))
-						    `((the (unsigned-byte 64)
+						    `((the fixnum
 							   (wf/iter:range-nth
 							    ,(subscript-range
 							      (nth nth-rank (tensor-view tensor)))

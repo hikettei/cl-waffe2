@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/vm.iterator)
 
+;; Examples: view と ~ の使い方追加する？
+
 ;; Range is designed to replace view.
 
 ;; Range = (LIST FROM TO STEP <<LazyAxis>>)
@@ -90,6 +92,22 @@
 ;; diagnoal:
 ;; (A=B (lazy-index-components (range 0 10)) (range 0 10))
 
+(defun lazy-max (a b)
+  "Given the condition that dynamic shape is given as positive fixnum, this function lazily computes maximum value of a and b."
+  (if (eql a 0)
+      b
+      (if (eql b 0)
+	  a
+	  `(max ,a ,b))))
+
+(defun lazy-min (a b)
+  "Given the condition that dynamic shape is given as positive fixnum, this function lazily computes minimum value of a and b."
+  (if (eql a 0)
+      a
+      (if (eql b 0)
+	  b
+	  `(min ,a ,b))))
+
 (deftype Index-Symbol-T ()
   `(or fixnum symbol))
 
@@ -110,7 +128,7 @@
 (defun range-start-index (range)
   "Returns a number of starting point"
   (declare (type range range))
-  (make-lazyaxis `(min ,(range-from range) ,(range-to   range))))
+  (make-lazyaxis (lazy-min (range-from range) (range-to range))))
 
 (defun range-size (range)
   "Computes the number of iterations of range as simple as possible:
@@ -234,31 +252,13 @@ Creates a range: `[from, to) where step=step`. This structure is dedicated to a 
 	  (symbol-pprint-helper (range-step obj))))
 
 (defun ifelse (condition then else) (if condition then else))
-(defun range-absolute-start-idx (range)
-  "(range 0 5 -1) -> 4 3 2 1 0
-                     ^ absolute-start-idx"
-  (declare (type Range range))
-  (make-lazyaxis
-   `(ifelse (> ,(range-step range) 0)
-	    (min ,(range-from range) ,(range-to range))
-	    (max ,(range-from range) ,(range-to range)))))
-
-(defun range-absolute-end-idx (range)
-  "(range 0 5 -1) -> 4 3 2 1 0
-                             ^ absolute-end-idx"
-  (declare (type Range range))
-  (make-lazyaxis
-   `(ifelse (> ,(range-step range) 0)
-	    (max ,(range-from range) ,(range-to range))
-	    (min ,(range-from range) ,(range-to range)))))
-
-(defun pretty-range (range)
-  "Makes range.step > 0"
-  (declare (type Range range))
-  (make-range
-   (range-absolute-start-idx range)
-   (range-absolute-end-idx   range)
-   (make-lazyaxis `(abs ,(range-step range)))))
+(defun lazy-ifelse (condition then else)
+  (let ((condition (make-lazyaxis condition)))
+    (if (eql condition T)
+	then
+	(if (eql condition nil)
+	    else
+	    `(ifelse ,condition ,then ,else)))))
 
 (defun .range (range2 &optional (range1 nil))
   "
@@ -301,7 +301,8 @@ i.e.:
 
   ;; range1 = base
   ;; range2 = new
-  
+
+  ;; Dynamic Shape is asserted to be a positive number
   (let* ((upfrom1 (range-from range1))
 	 (below1  (range-to   range1))
 
@@ -311,16 +312,16 @@ i.e.:
 	 (step1   (range-step range1))
 	 (step2   (range-step range2))
 
-	 (offset `(ifelse
-		   (> ,step1 0)
-		   (min ,upfrom1 ,below1)
-		   (max ,upfrom1 ,below1)))
+	 (offset (lazy-ifelse
+		  `(> ,step1 0)
+		  (lazy-min upfrom1 below1)
+		  (lazy-max upfrom1 below1)))
 
 	 (from  `(+ ,offset (* (signum ,step1) ,upfrom2)))
 	 (to    `(+ ,offset (* (signum ,step1) ,below2)))
 	 
-	 (from1 `(min ,from ,to))
-	 (to1   `(max ,from ,to))
+	 (from1 (lazy-min from to))
+	 (to1   (lazy-max from to))
 	 (step  `(* (signum ,step2) (lcm ,step1 ,step2))))
     ;; [TODO]
     ;; - Adding an assertion

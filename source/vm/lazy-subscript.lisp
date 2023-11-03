@@ -209,9 +209,23 @@ Describe the transformation of shapes as simple as possible.
 	(make-lazyIR :number
 		     (apply car (map 'list #'lazyir-car args))
 		     nil)
-	(make-lazyIR :arithmetic
-		     car
-		     args))))
+	;; A+0 -> A Mutation
+	(let ((args
+		(if (eql car '+)
+		    (loop for arg in args
+			  if (or
+			      (not (eql (lazyir-type arg) :number))
+			      (not (eql (lazyir-car arg) 0)))
+			    collect arg)
+		    args)))
+	  (if (and (eql car '+)
+		   (= (length args) 1))
+	      (make-lazyir :number
+			   (car args)
+			   nil)
+	      (make-lazyIR :arithmetic
+			   car
+			   args))))))
 
 (defun parse-lazy-function (car cdr)
   ;; [TODO]
@@ -265,6 +279,9 @@ No macro usings are allowed; functions and fixnum, list are available.
     (when (and
 	   (typep (lazyir-car lazyir) 'fixnum)
 	   (eql (lazyir-type lazyir) :number))
+      (return-from make-lazyaxis (lazyir-car lazyir)))
+
+    (when (typep (lazyir-car lazyir) 'boolean)
       (return-from make-lazyaxis (lazyir-car lazyir)))
 
     (when (eql (lazyir-type lazyir) :dynamic-shape)
