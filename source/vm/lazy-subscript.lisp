@@ -406,6 +406,7 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
       (observe-axis axis)))
   nil)
 
+(declaim (inline maybe-observe-axis))
 (defun maybe-observe-axis (value)
   "Reads the given value as a fixnum.
 value is expected as: LazyAxis, Symbol, Fixnum, rest...

@@ -131,6 +131,10 @@
    #:with-no-grad)
 
   (:export
+   #:subscript-range
+   #:subscript-view
+   #:subscript-broadcast
+   
    #:viewinstruction
    #:viewinstruction-offset
    #:viewinstruction-size

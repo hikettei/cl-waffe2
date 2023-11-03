@@ -164,11 +164,13 @@ Basically can be computed in this formula:
 	     ,(symbol-pprint-helper (range-to   range))))
      (abs ,(symbol-pprint-helper (range-step range))))))
 
-(declaim (ftype (function (Range fixnum) fixnum) range-nth))
+(declaim (ftype (function (Range fixnum) fixnum) range-nth)
+	 (inline range-nth))
 (defun range-nth (range count)
   (declare (type range range)
 	   (type fixnum count)
-	   (optimize (speed 3)))
+	   (optimize (speed 3))
+	   (inline maybe-observe-axis range-from range-to range-step))
   ;; [TODO] If count < 0 -> count + range_size
   (let* ((a (the fixnum (maybe-observe-axis (range-from range))))
 	 (b (the fixnum (maybe-observe-axis (range-to   range))))
