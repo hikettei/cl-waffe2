@@ -1,6 +1,8 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+(defvar *dynamic-shape-envolved*)
+
 (defclass JITCPUTensor (cl-waffe2/backends.cpu:CPUTensor) nil
   (:documentation "
 ## [AbstractTensor] JITCPUTensor

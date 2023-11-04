@@ -1,82 +1,23 @@
 
 (in-package :cl-waffe2/vm.iterator)
 
-;; Examples: view と ~ の使い方追加する？
-
-;;  !view
-;;  !make-input -> !view
-;;  !view but step = -1
-;;  Broadcasting usages
-;;  view関連のbackward tests
-;;  do-compiled-loopdでも動く？
-
-;; Range is designed to replace view.
-
-;; Range = (LIST FROM TO STEP <<LazyAxis>>)
-
-;; LazyAxisの表示を単純化する
-
-;; 追加する:
-;;  do-ranges do-inlined-ranges
+;; [TODO]
+;; - Examplesが動くかCheck
+;; - MLP TrainingのCheck
+;; - Examplesに追加: view/~/broadcasting
+;; - [Enhancement] make-inputで~を挿入
+;; - !view but step = -1 (OK)
+;; - matmul/expt/eye
+;; - package nicknames to all packs (OK)
+;; - package name docs
+;; - LoopNode dynamic-shape <- N ...
+;; 
 ;;  Broadcasting:
 ;;  ( 1 ~ 1 )
 ;;      ^ ここの~は強制挿入
 ;;  ( ~ 1 1 )
 ;;    ^ 先頭/終端はOptional (RankError is needed)
 
-;; 次やること: call-with-view / do-compiled-loopのRefactoring
-
-;;これ解ける？
-;;(~ ~ M N)
-;;(~ M 1~ N)
-;; (range 3 0)みたいなのを禁止する？
-
-;; -1 がBLAS XXX de ikeruka
-;; Broadcasting semantic update
-
-;; !viewでflexible insert kanou ni suru
-
-;; [TODO1]
-;;  - package nicknames to all packs (OK)
-;;  - make-tensor, make-input: ~ as a !flexible
-;;     - 1~ 1を強制的に挿入する, shapeの構文
-;;  - Lazy...複数の引数
-;;  - Dynamic-Shape 手動で帰れるようにする (OK?)
-;;  - LoopNode 実装 Dynamic-Shape更新するようにする (Unnecessary?)
-;;  - Examples/MLPが動いているか？ -> Merge
-;;  - Iterator BLAS系の命令でも -1 Direction OK?
-
-;; 手動で再実装しない？
-;; render.lisp
-;; mref
-;; call-with-view
-;; do-compiled-loop
-
-;; Range ... Dynamic Shape, LazyAxis対応したい (OK)
-
-;; Ranges should satisfy following properties:
-
-;; - (Range 1 9) |
-;; - (Range 1 9 3) | これ合成してなんでも表現できるようにする？
-
-;; Lazy-Index-Components:
-;;  lazy ... 複数の引数呼び出せればおk
-;;  Creates a tensor of Shape
-;;  (3 3)
-;;  ((0 1 2)
-;;   (2 3 4))
-
-;; Range ... Index/Symbolが扱える
-;; Reverse/Slice/Broadcastingが表現できる
-;; Iterationが生成できる
-;; Tを使える
-;; FROM/TOのT = 行列の最後のサイズ
-;; STEPのT    = broadcasting but 相手の方に合わせる
-;; Broadcastingの状態= Tensor側に付与する (view.lisp)
-;; Rangeはここでは触れない
-
-;; Lazy-LoopとDynamic-Shapeの任意編集を組み合わせてDiagnoal実装可能?
-;; view.lisp <-> iterator.lisp通信 (Parsing etc...)
 
 ;; [TODO] Readmeかどっかに書く nicknames
 ;; cl-waffe2/vm.generic-tensor -> wf/t
@@ -89,15 +30,11 @@
 ;; cl-waffe2/optimizers        -> wf/opt
 ;; cl-waffe2/base-impl         -> wf
 
-;; 次やること
-;; .range
-;;  tensor-view equal 比較できてるの？
-;; .do-compiled-loopを実装
+;; (~ ~ M N)
+;; (~ M 1~ N)
 
-;; Parse-View/Call-With-Viewとの統合
-
-;; diagnoal:
-;; (A=B (lazy-index-components (range 0 10)) (range 0 10))
+;; Range is designed to replace view.
+;; Range = (LIST FROM TO STEP <<LazyAxis>>)
 
 (defun lazy-max (a b)
   "Given the condition that dynamic shape is given as positive fixnum, this function lazily computes maximum value of a and b."
@@ -135,7 +72,10 @@
 (defun range-start-index (range)
   "Returns a number of starting point"
   (declare (type range range))
-  (make-lazyaxis (lazy-min (range-from range) (range-to range))))
+  (make-lazyaxis
+   `(ifelse (> ,(range-step range) 0)
+	    ,(range-from range)
+	    ,(range-to   range))))
 
 (defun range-size (range)
   "Computes the number of iterations of range as simple as possible:

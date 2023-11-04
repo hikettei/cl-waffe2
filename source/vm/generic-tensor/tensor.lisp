@@ -563,9 +563,10 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
   (declare (type list view))
   (when (null *using-backend*)
     (error "make-tensor: Can't create AbstractTensor because no devices is registed in *using-backend*."))
-  
+
   (if (typep shape-or-scalar 'list)
       (progn
+	(setq shape-or-scalar (map 'list #'read-symbol shape-or-scalar))
 	(when (not (every #'numberp shape-or-scalar))
 	  (error "make-tensor: Can't create an ExistTensor of ~a.
 The size of tensor created with make-tensor should be determined.

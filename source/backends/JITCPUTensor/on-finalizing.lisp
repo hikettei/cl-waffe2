@@ -53,7 +53,7 @@
 	       (CPUJIT-Blueprint
 		;; [TODO] Cache functions which isn't worth ir or previously compiled
 		
-		;; [TODO] Stack several ops (as for element-wise operations)
+		;; [TODO] Stack several ops as for element-wise operations
 		(let ((ir (apply #'load-instructions (wfop-node inst) (tensor-variables (wfop-self inst)))))
 		  ;; As of this writing, this backend does not provide features for FusionOPs
 		  ;; So just replacing op is ok and wfop-args cause no conflicts

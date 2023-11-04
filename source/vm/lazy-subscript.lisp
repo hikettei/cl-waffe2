@@ -219,9 +219,10 @@ Describe the transformation of shapes as simple as possible.
 			    collect arg)
 		    args)))
 	  (if (and (eql car '+)
-		   (= (length args) 1))
+		   (= (length args) 1)
+		   (numberp (car args)))
 	      (make-lazyir :number
-			   (car args)
+			   (car args)			       
 			   nil)
 	      (make-lazyIR :arithmetic
 			   car
