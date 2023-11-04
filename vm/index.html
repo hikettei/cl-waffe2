@@ -219,6 +219,9 @@
 <p><code>wfop-self[AbstractTensor]</code> corresponds with <code>out_target</code>, that is, the tensor to store the results</p>
 <p><code>wfop-args[list of AbstractTensor]</code> corresponds with <code>(tensor-variable wfop-self)</code>. tensors to be called with: <code>arg1 arg2 arg3...</code>.</p>
 <p><code>wfop-sv4bw[list of AbstractTensor]</code> indicates list of tensors storing save-for-backward tensors. if the corresponding position is <code>save-for-backward=nil</code>, the corresponding position also become nil.</p>
+<p><code>wfop-comment[string or null]</code> If any, the value of slot is displayed when printing IR.</p>
+<p><code>wfop-loadp[boolean]</code> If set to t, the operation is interpreted as <code>load-pointer</code>. See also: (read-loadp instruction)</p>
+<p><code>wfop-lut-cache-p[boolean]</code> If set to T, indicates <code>wfop-op</code> is already compiled and cached in LUT.</p>
 <h2 id="function-compile-forward-and-backward">[function] compile-forward-and-backward</h2>
 <pre><code class="language-lisp">(compile-forward-and-backward toplevel &amp;key (need-backward t) (fuse-p t) (compile-mode :default) (optimize-locality t))
 </code></pre>
@@ -242,31 +245,30 @@
 
 disassemble-waffe2-ir:
  [Forward]: 
-&lt;WfInst[op=ALLOC{INTERNAL}]     : TID354 &lt;= op(TID354{float, (3 3)} &lt;Param&gt;TID349{float, (3 3)})&gt;
-&lt;WfInst[op=EXPNODE-CPUTENSOR]   : TID354 &lt;= op(&lt;Param&gt;SV4BW(TID349{float, (3 3)}) TID354{float, (3 3)})&gt;
-&lt;WfInst[op=SCALARMUL-CPUTENSOR] : TID386 &lt;= op(TID386{float, (3 1)} &lt;Input&gt;TID376{float, (1)})&gt;
-&lt;WfInst[op=VIEWTENSORNODE-T]    : TID386 &lt;= op(TID386{float, (3 3)} TID386{float, (3 1)})&gt;
-&lt;WfInst[op=ADDNODE-CPUTENSOR]   : TID386 &lt;= op(TID386{float, (3 3)} TID354{float, (3 3)})&gt;
-&lt;WfInst[op=DIVNODE-CPUTENSOR]   : TID354 &lt;= op(SV4BW(TID354{float, (3 3)}) SV4BW(TID386{float, (3 3)}))&gt;
+&lt;WfInst[op=ALLOC{INTERNAL}]     : TID474 &lt;= op(TID474{float, (3 3)} &lt;Param&gt;TID469{float, (3 3)})&gt;
+&lt;WfInst[op=EXPNODE-CPUTENSOR]   : TID474 &lt;= op(&lt;Param&gt;SV4BW(TID469{float, (3 3)}) TID474{float, (3 3)})&gt;
+&lt;WfInst[op=SCALARMUL-CPUTENSOR] : TID513 &lt;= op(TID513{float, (3 1)} &lt;Input&gt;TID502{float, (1)})&gt;
+&lt;WfInst[load_pointer{SYS}]      : TID513* = TID513*&gt;
+&lt;WfInst[op=ADDNODE-CPUTENSOR]   : TID513 &lt;= op(TID513{float, (3 3)} TID474{float, (3 3)})&gt;
+&lt;WfInst[op=DIVNODE-CPUTENSOR]   : TID474 &lt;= op(SV4BW(TID474{float, (3 3)}) SV4BW(TID513{float, (3 3)}))&gt;
 
 6 Instructions | 3 Tensors | 1 Scalars
 
 
  [Pullback]: 
-&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID444 &lt;= op(TID444{float, (3 3)} &lt;Input&gt;TID441{float, (3 3)})&gt;
-&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID444 &lt;= op(TID444{float, (3 3)} TID423{float, (3 3)})&gt;
-&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID472 &lt;= op(TID472{float, (3 3)} &lt;Input&gt;TID441{float, (3 3)})&gt;
-&lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID472 &lt;= op(TID472{float, (3 3)} &lt;Input&gt;TID469{float, (1)})&gt;
-&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID418 &lt;= op(TID418{float, (3 3)} TID472{float, (3 3)})&gt;
-&lt;WfInst[op=VIEWTENSORNODE-T]         : TID423 &lt;= op(TID423{float, (3 3)} TID423{float, (3 1)})&gt;
-&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID423 &lt;= op(TID423{float, (3 3)} TID423{float, (3 3)})&gt;
-&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID418 &lt;= op(TID418{float, (3 3)} TID423{float, (3 3)})&gt;
-&lt;WfInst[op=SYSTEM-LAZY-CONS-T]       : TID444 TID418 &lt;= op(TID444{float, (3 3)} TID418{float, (3 3)})&gt;
-&lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID364 &lt;= op(TID364{float, (3 3)} TID364{float, (3 3)})&gt;
-&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID444 &lt;= op(TID444{float, (3 3)} TID364{float, (3 3)})&gt;
-&lt;WfInst[op={GRAD}SETQ{INTERNAL}]     : &lt;Input&gt;TID351 &lt;= op(&lt;Input&gt;TID351{float, (3 3)} TID444{float, (3 3)})&gt;
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID557 &lt;= op(TID557{float, (3 3)} &lt;Input&gt;TID554{float, (3 3)})&gt;
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID557 &lt;= op(TID557{float, (3 3)} TID543{float, (3 3)})&gt;
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID578 &lt;= op(TID578{float, (3 3)} &lt;Input&gt;TID554{float, (3 3)})&gt;
+&lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID578 &lt;= op(TID578{float, (3 3)} &lt;Input&gt;TID575{float, (1)})&gt;
+&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID538 &lt;= op(TID538{float, (3 3)} TID578{float, (3 3)})&gt;
+&lt;WfInst[load_pointer{SYS}]           : TID543* = TID543*&gt;
+&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID543 &lt;= op(TID543{float, (3 3)} TID543{float, (3 3)})&gt;
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID538 &lt;= op(TID538{float, (3 3)} TID543{float, (3 3)})&gt;
+&lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID490 &lt;= op(TID490{float, (3 3)} TID490{float, (3 3)})&gt;
+&lt;WfInst[op=MULNODE-CPUTENSOR]        : TID557 &lt;= op(TID557{float, (3 3)} TID490{float, (3 3)})&gt;
+&lt;WfInst[load_pointer{SYS}]           : TID471* = TID557*&gt;
 
-12 Instructions | 7 Tensors | 1 Scalars
+11 Instructions | 7 Tensors | 1 Scalars
 
 
 </code></pre>
@@ -288,35 +290,34 @@ disassemble-waffe2-ir:
 
 [Sorted by Instructions]
  Time(s)   |   Instruction ( * - Beyonds the average execution time)
-3.39e-4    | &lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID735 &lt;= op(TID735{float, (100 100)} &lt;Input&gt;TID647{float, (100 100)})&gt;
-8.9e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID729 &lt;= op(TID729{float, (100 1)} TID729{float, (100 1)})&gt;
-1.37e-4    | &lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID729 &lt;= op(TID729{float, (100 1)} &lt;Input&gt;TID656{float, (1)})&gt;
-9.6e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID729 &lt;= op(TID729{float, (100 100)} TID729{float, (100 1)})&gt;
-0.006105*  | &lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID729 &lt;= op(TID729{float, (100 100)} &lt;Input&gt;TID647{float, (100 100)})&gt;
-8.4e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID729 &lt;= op(TID729{float, (100 1)} TID729{float, (100 100)})&gt;
-0.00186*   | &lt;WfInst[op=SCALARDIV-CPUTENSOR]      : TID729 &lt;= op(TID729{float, (100 1)} &lt;Input&gt;TID651{float, (1)})&gt;
-1.04e-4    | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID729 &lt;= op(TID729{float, (100 100)} TID729{float, (100 1)})&gt;
-0.003839*  | &lt;WfInst[op=SUBNODE-CPUTENSOR]        : TID735 &lt;= op(TID735{float, (100 100)} TID729{float, (100 100)})&gt;
-9.22e-4    | &lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID735 &lt;= op(TID735{float, (100 100)} TID735{float, (100 100)})&gt;
-1.16e-4    | &lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID729 &lt;= op(TID729{float, (100 1)} &lt;Input&gt;TID780{float, (1)})&gt;
-9.8e-5     | &lt;WfInst[op=VIEWTENSORNODE-T]         : TID729 &lt;= op(TID729{float, (100 100)} TID729{float, (100 1)})&gt;
-0.005926*  | &lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID729 &lt;= op(TID729{float, (100 100)} TID735{float, (100 100)})&gt;
-0.003747*  | &lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID735 &lt;= op(TID735{float, (100 100)} TID729{float, (100 100)})&gt;
+3.53e-4    | &lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] : TID801 &lt;= op(TID801{float, (100 100)} &lt;Input&gt;TID735{float, (100 100)})&gt;
+1.62e-4    | &lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID795 &lt;= op(TID795{float, (100 1)} &lt;Input&gt;TID744{float, (1)})&gt;
+9.2e-5     | &lt;WfInst[load_pointer{SYS}]           : TID795* = TID795*&gt;
+0.006241*  | &lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID795 &lt;= op(TID795{float, (100 100)} &lt;Input&gt;TID735{float, (100 100)})&gt;
+9.3e-5     | &lt;WfInst[load_pointer{SYS}]           : TID795* = TID795*&gt;
+1.52e-4    | &lt;WfInst[op=SCALARDIV-CPUTENSOR]      : TID795 &lt;= op(TID795{float, (100 1)} &lt;Input&gt;TID739{float, (1)})&gt;
+9.3e-5     | &lt;WfInst[load_pointer{SYS}]           : TID795* = TID795*&gt;
+0.004291*  | &lt;WfInst[op=SUBNODE-CPUTENSOR]        : TID801 &lt;= op(TID801{float, (100 100)} TID795{float, (100 100)})&gt;
+9.85e-4    | &lt;WfInst[op=EXPNODE-CPUTENSOR]        : TID801 &lt;= op(TID801{float, (100 100)} TID801{float, (100 100)})&gt;
+1.55e-4    | &lt;WfInst[op=SCALARMUL-CPUTENSOR]      : TID795 &lt;= op(TID795{float, (100 1)} &lt;Input&gt;TID839{float, (1)})&gt;
+9.7e-5     | &lt;WfInst[load_pointer{SYS}]           : TID795* = TID795*&gt;
+0.006674*  | &lt;WfInst[op=ADDNODE-CPUTENSOR]        : TID795 &lt;= op(TID795{float, (100 100)} TID801{float, (100 100)})&gt;
+0.004137*  | &lt;WfInst[op=DIVNODE-CPUTENSOR]        : TID801 &lt;= op(TID801{float, (100 100)} TID795{float, (100 100)})&gt;
 
-14 Instructions | 6 Tensors | Overheads due to SV4BW(...) -&gt; 4.79e-6(s) 
+13 Instructions | 6 Tensors | Overheads due to SV4BW(...) -&gt; 5.03e-6(s) 
 
- Total Time: 0.023462 sec
+ Total Time: 0.023525001 sec
 
 [Sorted by topK]
  Instruction                         | Total time (s) | Time/Total (n-sample=100)
-&lt;WfInst[op=ADDNODE-CPUTENSOR]        | 0.012031       | 51.278664%
-&lt;WfInst[op=SUBNODE-CPUTENSOR]        | 0.003839       | 16.362629%
-&lt;WfInst[op=DIVNODE-CPUTENSOR]        | 0.003747       | 15.970506%
-&lt;WfInst[op=SCALARDIV-CPUTENSOR]      | 0.00186        | 7.927713%
-&lt;WfInst[op=EXPNODE-CPUTENSOR]        | 9.22e-4        | 3.9297588%
-&lt;WfInst[op=VIEWTENSORNODE-T]         | 4.71e-4        | 2.0075016%
-&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] | 3.39e-4        | 1.4448895%
-&lt;WfInst[op=SCALARMUL-CPUTENSOR]      | 2.53e-4        | 1.0783395%
+&lt;WfInst[op=ADDNODE-CPUTENSOR]        | 0.012915       | 54.899044%
+&lt;WfInst[op=SUBNODE-CPUTENSOR]        | 0.004291       | 18.24017%
+&lt;WfInst[op=DIVNODE-CPUTENSOR]        | 0.004137       | 17.585546%
+&lt;WfInst[op=EXPNODE-CPUTENSOR]        | 9.85e-4        | 4.187035%
+&lt;WfInst[op=VIEWTENSORNODE-T]         | 3.75e-4        | 1.5940487%
+&lt;WfInst[op=MOVETENSORNODE-CPUTENSOR] | 3.53e-4        | 1.5005313%
+&lt;WfInst[op=SCALARMUL-CPUTENSOR]      | 3.17e-4        | 1.3475026%
+&lt;WfInst[op=SCALARDIV-CPUTENSOR]      | 1.52e-4        | 0.6461211%
 
 </code></pre>
               

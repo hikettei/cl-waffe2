@@ -599,7 +599,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 </code></pre>
-<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1881 
+<pre><code>{CPUTENSOR[float] :shape (A 10) :id TID1622 
   :vec-state [maybe-not-computed]
     &lt;&lt;Not allocated: size=(A 10)&gt;&gt;
   :facet :input
@@ -631,43 +631,21 @@
 <p>Reading all variables in the computation node, the method get-input returns an corresponding <code>InputTensor</code> of model.</p>
 <h2 id="optimized-and-ranked-tensor-iterators">Optimized and Ranked Tensor Iterators</h2>
 <h2 id="function-call-with-view">[function] call-with-view</h2>
-<p>A principle operator to extend your functions to higher arrays.</p>
+<p>Inlined Loop Macro Generator for the extension to higher order foreign functions.</p>
 <pre><code class="language-lisp">(call-with-view function tensors &amp;key (at-least-dim 1) (force-order nil) (lparallel nil))
 </code></pre>
-<p>The function <code>call-with-view</code> generates a lisp code of <code>(loop for ...)</code> iteration for nd-arrays, which follows the optimal route, is parallelized, and later composable. Since generating an optimal <code>for(int i=0;i&lt;size;i++){...}</code> route according to the given rank of tensors is one of the main concerns of JIT Compiler for Deep Learning Framexwork, this function is usually combined with the forward definition of <code>define-impl</code> macro. It is later compiled to lambda functions and used as nodes in cl-waffe2 IR.</p>
+<p>The function <code>call-with-view</code> generates a lisp code calling BLAS-like function for nd-arrays with considered offsets produced by views. Plus, depending on the memory-layouts and permutation(offsets) the generated loop is also collapsed and shuffled to maximize the locality of memory and reduce the overheads produced by calling CFFI function.</p>
 <p>In the simplest case, <code>call-with-view</code> first deploys <code>(loop for...)</code> until the rank of given tensors reaches the given <code>at-least-dim</code>. After reaching <code>at-least-dim</code>, the function places the result of calling the given <code>function</code>.</p>
 <pre><code class="language-lisp">(call-with-view
       #'(lambda (x-view)
        `(+ 1 1))
        (list (randn `(100 100 100)))
-       :at-least-dim 2)
+       :at-least-dim 1)
 
-;; will return:
-
-(CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312057 0))
-  (LOCALLY
-   (DECLARE (TYPE FIXNUM #:G312057))
-   (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312058 #:G312057))
-     (LOCALLY
-      (DECLARE (TYPE FIXNUM #:G312058))
-      (LET* ((#:G312059 (NTH 0 (LIST 10000 100 1)))
-             (#:G25 100)
-             (#:G25
-              (CL-WAFFE2/VM.GENERIC-TENSOR::READ-ADJUSTABLE-SYMBOL #:G25)))
-        (INCF #:G312058 (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312059))
-        (LOOP CL-WAFFE2/VM.GENERIC-TENSOR::FOR #:G312060 FIXNUM CL-WAFFE2/VM.GENERIC-TENSOR::UPFROM 0 CL-WAFFE2/VM.GENERIC-TENSOR::BELOW #:G25
-              DO (PROGN
-                  (CL-WAFFE2/VM.GENERIC-TENSOR::LET*-IGNORABLE ((#:G312061
-                                                                 #:G312058))
-                    (LOCALLY
-                     (DECLARE (TYPE FIXNUM #:G312061))
-                     (LET ((#:G312062 (THE FIXNUM (NTH 1 (LIST 10000 100 1)))))
-                       (INCF #:G312061
-                             (CL-WAFFE2/VM.GENERIC-TENSOR::%* 0 #:G312062))
-                       (+ 1 1)))))
-              UNLESS (= #:G312060 (1- #:G25))
-              DO (PROGN
-                  (INCF (THE FIXNUM #:G312058) (THE FIXNUM #:G312059)))))))))
+(LET ((#:OFFSETS68091
+       (MAKE-ARRAY 1 :ELEMENT-TYPE '(UNSIGNED-BYTE 64) :INITIAL-ELEMENT 0)))
+  (DECLARE (TYPE (SIMPLE-ARRAY (UNSIGNED-BYTE 64) (*)) #:OFFSETS68091))
+  (PROGN (+ 1 1)))
 </code></pre>
 <p>Here, the number of tensors corresponds with the number of arguments <code>function</code> receive. Usually, the function receives information on the view of the tensor at the corresponding position: <code>(size-of x-view)</code> to get the number of iteration, <code>(stride-of x-view)</code> to get the number of increment, and, <code>(offset-of x-view)</code> to get the offset of tensor. (Sometimes they return s-expression because the shapes of tensors are not necessary number, but symbols.)</p>
 <p><code>function [function]</code> should return a list which corresponds with invoking user-defined operation given views.</p>
@@ -761,7 +739,7 @@
 <p><strong>REPL:</strong></p>
 <pre><code class="language-lisp">&gt; (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
 </code></pre>
-<pre><code>#S(STATE-DICT :TABLE #&lt;HASH-TABLE :TEST EQUAL :COUNT 2 {10045083B3}&gt;
+<pre><code>#S(STATE-DICT :TABLE #&lt;HASH-TABLE :TEST EQUAL :COUNT 2 {1005210003}&gt;
  table-key-to-value:
     param:linearlayer.0.bias    -&gt; CPUTENSOR{FLOAT}(10)
     param:linearlayer.0.weights -&gt; CPUTENSOR{FLOAT}(10 10)

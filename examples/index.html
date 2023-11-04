@@ -227,10 +227,10 @@
 <pre><code class="language-lisp">;; Usage
 
 ;; MSELoss
-(criterion #'MSE pred excepted :reductions '(#'!sum #'-&gt;scal))
+(criterion #'MSE pred expected :reductions '(#'!sum #'-&gt;scal))
 
 ;; SoftmaxCrossEntropyLoss
-(criterion #'softmax-cross-entropy pred excepted :reductions '(#'!sum #'-&gt;scal))
+(criterion #'softmax-cross-entropy pred expected :reductions '(#'!sum #'-&gt;scal))
 </code></pre>
 <h2 id="compiling-models">Compiling Models</h2>
 <p>Since the laziness enables cl-waffe2 to optimize the network given futher information, you have to explict when you need to observe the results. The <code>build</code> function compiles given lazily evaluated neural network, returning <code>Compiled-Composite</code> which possess: compiled models(forward, backward), memory-pool, shape information, variable information, parameters.</p>

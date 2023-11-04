@@ -1125,8 +1125,8 @@ Stride     :   4  1  2
 <h2 id="function-view">[function] !view</h2>
 <pre><code class="language-lisp">(!view tensor &amp;rest subscripts)
 </code></pre>
-<p>The function !view returns a tensor which is applied lazy-evaluated view.</p>
-<p>For Example, let A be a 4x8 Matrix, and we gonna create a view of A that portrays <code>A[:, 2]</code>.</p>
+<p>Returns a tensor with the visible region modified without making a copy.</p>
+<p>For Example, let A be a 4x8 Matrix, !view creates a view of A that portrays <code>A[:, 2]</code>.</p>
 <pre><code>(!view A 2 t)
 
      A                            B
@@ -1145,21 +1145,24 @@ Stride     :   4  1  2
 </li>
 </ol>
 <h3 id="subscripts">Subscripts</h3>
-<p>Subscripts are following:</p>
-<ol>
+<p>The visible area is specified by following subscripts:</p>
+<ul>
 <li>
-<p><code>t</code> all elements in the axis.</p>
+<p><code>T</code> refers to the previous subscript if the tensor is created by <code>!view</code>. Otherwise, does nothing.</p>
 </li>
 <li>
-<p><code>fixnum</code> points out the specified index.</p>
+<p><code>Fixnum</code> equivalents to <code>(Index Index+1)</code></p>
 </li>
 <li>
-<p><code>(start end)</code> slices the area: <code>[start, end)</code></p>
+<p><code>(start end)</code> slices the area of <code>[start, end)</code></p>
 </li>
 <li>
-<p><code>(:broadcast N-times)</code> broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.</p>
+<p><code>(start end step)</code> slices the area of <code>[start, end]</code> by <code>step</code>. Set <code>step &lt; 0</code> to reverse the elements.</p>
 </li>
-</ol>
+<li>
+<p><code>(:broadcast N)</code> broadcast the axis for <code>N</code>.</p>
+</li>
+</ul>
 <h3 id="return">Return</h3>
 <p><code>(values sliced-tensor broadcast-reverser)</code></p>
 <p>Tips: Applying <code>!view</code> again to the returned <code>sliced-tensor</code> with <code>broadcast-reverser</code> will remove broadcasts from the tensor.</p>

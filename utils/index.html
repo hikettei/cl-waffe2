@@ -343,7 +343,7 @@
 <h2 id="function-asnode">[function] asnode</h2>
 <pre><code class="language-lisp">(asnode function &amp;rest arguments)
 </code></pre>
-<p>Wraps the given <code>function</code> which excepted to create computation nodes with the <code>Encapsulated-Node</code> composite. That is, functions are regarded as a <code>Composite</code> and be able to use a variety of APIs (e.g.: <code>call</code>, <code>call-&gt;</code>, <code>defmodel-as</code> ...).</p>
+<p>Wraps the given <code>function</code> which is expected to create computation nodes with the <code>Encapsulated-Node</code> composite. That is, functions are regarded as a <code>Composite</code> and be able to use a variety of APIs (e.g.: <code>call</code>, <code>call-&gt;</code>, <code>defmodel-as</code> ...).</p>
 <p>In principle, a function takes one argument and returns one value, but by adding more <code>arguments</code> the macro automatically wraps the function to satisfy it. For example, <code>(asnode #'!add 1.0) is transformed into: #'(lambda (x) (!add x 1.0))</code>. So the first arguments should receive AbstractTensor.</p>
 <h3 id="usage-call-">Usage: call-&gt;</h3>
 <p>It is not elegant to use <code>call</code> more than once when composing multiple models.</p>
@@ -437,7 +437,7 @@ Op:COSNODE{CPUTENSOR}
 <pre><code class="language-lisp">`(lambda (,bind)
      (hook-optimizer! ,bind ,optimizer))
 </code></pre>
-<p>where <code>bind</code> is excepted to be AbstractTensor, optimizer is a creation form of <code>AbstractOptimizer</code>, and the function <code>hook-optimizer!</code> hooks the given optimizer into bind.</p>
+<p>where <code>bind</code> is expected to be an AbstractTensor, optimizer is a creation form of <code>AbstractOptimizer</code>, and the function <code>hook-optimizer!</code> hooks the given optimizer into bind.</p>
 <p>In cl-waffe2, one independent Optimizer must be initialised per parameter. This macro can be used to concisely describe the process of initialising the same Optimiser for many parameters.</p>
 <h3 id="example_6">Example</h3>
 <pre><code class="language-lisp">;; (model-parameters compiled-composite) to read the list of all parameters in the network

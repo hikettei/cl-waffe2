@@ -59,7 +59,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#installing-cl-waffe2">Installing cl-waffe2</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#setting-blas">Setting BLAS</a>
+    <li class="toctree-l3"><a class="reference internal" href="#setting-up-blas">Setting up BLAS</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#building-simd-extension">Building SIMD Extension</a>
     </li>
@@ -156,7 +156,7 @@
 <p><a href="https://github.com/roswell/roswell">https://github.com/roswell/roswell</a></p>
 <p>See the <code>Readme.md</code> and install Roswell</p>
 <h3 id="2-installing-common-lisp">2. Installing Common Lisp</h3>
-<p>Common Lisp has several implementations on ANSI Common Lisp. The development is ongoing under SBCL for its performance and the good support of arithmetic operations. Differences between different implementations are absorbed by CFFI I guess, so it should work with other processors, but it has not been tested. (Modern Mode probably doesn't work.)</p>
+<p>Common Lisp has several implementations of ANSI Common Lisp. The development is ongoing under SBCL due to its performance and the good support of arithmetic operations. Differences between different implementations are handled by CFFI (I guess), so it should work with other processors, but it has not been tested. (Modern Mode probably doesn't work.)</p>
 <p>If you've installed Roswell:</p>
 <pre><code class="language-sh">$ ros install sbcl
 $ ros use &lt;Installed SBCL Version&gt;
@@ -164,7 +164,7 @@ $ ros run # REPL is launched.
 </code></pre>
 <p>should work and everything is done.</p>
 <h3 id="3-setting-up-ide-optional">3. Setting up IDE (optional)</h3>
-<p>The following editors are recommended as we're working with REPL:</p>
+<p>The following editors are recommended as we are working with the REPL:</p>
 <ul>
 <li>
 <p><a href="https://www.gnu.org/software/emacs/">Emacs</a> + <a href="https://slime.common-lisp.dev/">Slime</a></p>
@@ -174,36 +174,36 @@ $ ros run # REPL is launched.
 </li>
 </ul>
 <h2 id="installing-cl-waffe2">Installing cl-waffe2</h2>
-<p>As of this writing(2023/9/13), cl-waffe2 is not yet available on Quicklisp. So I'm sorry but you have to install it manually.</p>
-<p>With roswell, the latest cl-wafe2 repository can be fetch like:</p>
+<p>As of this writing(2023/9/13), cl-waffe2 is not yet available on Quicklisp. So, I am sorry but you have to install it manually.</p>
+<p>With roswell, the latest cl-waffe2 repository can be fetched like:</p>
 <pre><code class="language-sh">$ ros install hikettei/cl-waffe2
 </code></pre>
 <p>In this case, you have to note that SBCL also needs to be started via Roswell.</p>
-<p>Another valid option would be loading <code>cl-waffe2.asd</code> file manually after cloning cl-waffe2 github repos:</p>
+<p>Another valid option would be loading the <code>cl-waffe2.asd</code> file manually after cloning the cl-waffe2 github repos:</p>
 <pre><code class="language-sh">$ git clone https://github.com/hikettei/cl-waffe2.git
 $ cd ./cl-waffe2
 $ ros run # start repl
 $ (load &quot;cl-waffe2.asd&quot;)
 $ (ql:quickload :cl-waffe2)
-$ (in-pacakge :cl-waffe2-repl) # or make repl
+$ (in-package :cl-waffe2-repl) # or make repl
 </code></pre>
-<p>After you ensured it should work, move the <code>./cl-waffe2</code> directory to <code>~/quicklisp/local-projects/</code> and quicklisp can find the project!</p>
-<p>The get the full performance of cl-waffe2, you also have to do the following steps:</p>
-<h3 id="setting-blas">Setting BLAS</h3>
+<p>After you have ensured that it works, move the <code>./cl-waffe2</code> directory to <code>~/quicklisp/local-projects/</code> and quicklisp can find the project!</p>
+<p>In order to get the full performance of cl-waffe2, you also have to do the following steps:</p>
+<h3 id="setting-up-blas">Setting up BLAS</h3>
 <p>cl-waffe2 searches for and reads the <code>libblas</code> file by default. The following steps are only necessary if you get a warning when loading the library</p>
-<p>First, install the libopenblas</p>
-<pre><code class="language-sh"># with ubuntu for example
+<p>First, install the libopenblas library</p>
+<pre><code class="language-sh"># with ubuntu, for example:
 $ apt install libopenblas
 
 # With macOS
-$ brew instlal libopenblas
+$ brew install libopenblas
 </code></pre>
 <p>Load the package again:</p>
 <pre><code class="language-lisp">$ ros run
 $ (load &quot;cl-waffe2.asd&quot;)
 $ (ql:quickload :cl-waffe2)
 </code></pre>
-<p>If you've got no warning after loading cl-waffe2, <code>CPUTensor</code> is successfully enabled and can recognize the OpenBLAS. If you still get warnings, you have to step an additional configs because cl-waffe2 couldn't find out the location.</p>
+<p>If you get no warning after loading cl-waffe2, <code>CPUTensor</code> is successfully enabled and can recognize the OpenBLAS. If you still get warnings, you need to apply additional configs because cl-waffe2 could not find out the location.</p>
 <p>So, In your init file, (e.g.: <code>~/.roswell/init.lisp</code> or <code>~/.sbclrc</code>), add the code below for example. (Change the path depending on your environment. You can find where you've installed the library with <code>$ locate libblas</code> for example of macOS).</p>
 <pre><code class="language-lisp">;; In ~~/.sbclrc for example:
 (defparameter *cl-waffe-config*
@@ -214,9 +214,9 @@ $ (ql:quickload :cl-waffe2)
 <p>SIMD Extension is an extension for speeding up the execution of mathematical functions and some instructions (including sparse matrix) on the CPU.</p>
 <pre><code class="language-lisp">$ make build_simd_extension
 </code></pre>
-<p>and everything is ok. Ensure that no warnings are displayed in your terminal after loaded cl-waffe2.</p>
+<p>and everything should be ok. Ensure that no warnings are displayed in your terminal after loaded cl-waffe2.</p>
 <h3 id="is-gpucudametalopencl-etc-supported">Is GPU(CUDA/Metal/OpenCL etc...) supported?</h3>
-<p>Currently, No. But cl-waffe2 is designed to be independent of which devices work on, and writing extension is easy. Personally, I don't have enough environment and equipment to do the test, so I plan to do it one day when I save up the money.</p>
+<p>Currently, no. But cl-waffe2 is designed to be independent of which devices work on, and writing extension is easy. Personally, I do not have enough environment and equipment to do the test, so I plan to do it one day when I save up the money.</p>
               
             </div>
           </div><footer>

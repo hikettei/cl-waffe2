@@ -161,6 +161,10 @@
 <h2 id="parameter-viz-compiled-code">[parameter] <code>*viz-compiled-code*</code></h2>
 <p>Set t to display the compiled c code to terminal. In default, <code>nil</code></p>
 <h2 id="abstracttensor-jitcputensor">[AbstractTensor] JITCPUTensor</h2>
+<pre><code class="language-lisp">(with-devices (JITCPUTensor CPUTensor LispTensor)
+    ;; Your code follows...
+    )
+</code></pre>
 <h2 id="function-cpujit-set-config">[function] cpujit-set-config</h2>
 <pre><code class="language-lisp">(cpujit-set-config (&amp;key
                       (compiler &quot;gcc&quot;)
@@ -171,8 +175,8 @@
 <p>Declares configurations about JITCPUTensor. </p>
 <h3 id="inputs">Inputs</h3>
 <p><code>compiler[string]</code> a compiler to use. in default set to gcc</p>
-<p><code>viz-compiled-code[boolean]</code> set t to display generated C codes.</p>
-<p><code>openmp[boolean]</code> set to use OpenMP</p>
+<p><code>viz-compiled-code[boolean]</code> Set t to display generated C codes.</p>
+<p><code>openmp[boolean]</code> Set t to use OpenMP.</p>
 <p><code>flags[list]</code> additional compiler flags.</p>
 <h2 id="macro-with-cpu-jit">[macro] with-cpu-jit</h2>
 <pre><code class="language-lisp">(with-cpu-jit (&amp;rest more-devices) &amp;body body)
