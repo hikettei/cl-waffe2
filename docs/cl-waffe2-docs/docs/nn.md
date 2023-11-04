@@ -19,13 +19,13 @@ ReLU(x) = max(x, 0)
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2238 
+{CPUTENSOR[float] :shape (10 10) :id TID1943 
   :vec-state [computed]
-  ((1.2123578   -0.0        0.3656019   ~ 1.4792646   -0.0        0.39568463)                   
-   (-0.0        -0.0        0.09934077  ~ -0.0        0.8187249   0.33749792)   
+  ((-0.0        -0.0        -0.0        ~ 1.6821892   0.36130282  -0.0)                   
+   (0.87504226  1.429912    -0.0        ~ -0.0        -0.0        -0.0)   
                 ...
-   (0.16991097  -0.0        -0.0        ~ -0.0        0.55305374  -0.0)
-   (-0.0        -0.0        -0.0        ~ -0.0        -0.0        0.21929178))
+   (-0.0        -0.0        0.2992248   ~ 0.6288745   0.5963682   0.55514115)
+   (-0.0        -0.0        -0.0        ~ -0.0        -0.0        0.7646121))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -50,13 +50,13 @@ GeLU(x) = 0.5\times{x}\times{(1 + Tanh(\sqrt{\frac{2}{π}}\times{(x + 0.44715\ti
 ```lisp
 (proceed (!relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2329 
+{CPUTENSOR[float] :shape (10 10) :id TID1987 
   :vec-state [computed]
-  ((0.9859774   0.34466082  0.09621465  ~ 0.9216246   1.4845713   0.34032807)                   
-   (0.48264125  -0.0        -0.0        ~ 0.032608878 0.72863156  1.6821892)   
+  ((-0.0        1.9134964   1.9286379   ~ 0.9884213   -0.0        1.4884331)                   
+   (-0.0        -0.0        0.1880067   ~ 1.2277454   -0.0        0.3174525)   
                 ...
-   (0.15231006  -0.0        -0.0        ~ 0.7826488   -0.0        0.93430895)
-   (-0.0        1.3747818   -0.0        ~ 0.7955804   -0.0        0.6288745))
+   (0.5903688   0.32395032  -0.0        ~ -0.0        -0.0        -0.0)
+   (0.42296785  -0.0        -0.0        ~ -0.0        0.3376901   0.36640626))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -80,13 +80,13 @@ Sigmoid(x) = \frac{1}{1 + exp(-x)}
 ```lisp
 (proceed (!sigmoid (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2416 
+{CPUTENSOR[float] :shape (10 10) :id TID2027 
   :vec-state [computed]
-  ((0.644825   0.6353275  0.40658134 ~ 0.8804779  0.51031536 0.3184848)                  
-   (0.31827003 0.6823543  0.33825305 ~ 0.7810872  0.19540769 0.728776)   
-               ...
-   (0.30856767 0.56537735 0.35373107 ~ 0.85262644 0.7547459  0.63190573)
-   (0.55480015 0.7339416  0.6434497  ~ 0.18795623 0.21578257 0.3503381))
+  ((0.86408615  0.6105685   0.3788395   ~ 0.25450796  0.7772302   0.67822224)                   
+   (0.8417765   0.5603245   0.36006212  ~ 0.7668568   0.50954837  0.24739715)   
+                ...
+   (0.5413329   0.2221309   0.36529404  ~ 0.32194504  0.49215865  0.5152154)
+   (0.59982526  0.9218087   0.6415686   ~ 0.5698819   0.4574838   0.40995663))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -116,13 +116,13 @@ LeakeyReLU(x) = max(x, 0) + negative-slope\times{min(0, x)}
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2578 
+{CPUTENSOR[float] :shape (10 10) :id TID2146 
   :vec-state [computed]
-  ((-0.0062375483 -0.005046675  0.42296785    ~ 1.1128049     0.09089017    -0.008739611)                     
-   (0.3376901     0.36640626    1.849651      ~ 0.41286528    -0.0026475843 -0.0107471235)   
+  ((0.78715545    0.102183476   -0.0035984537 ~ 0.5117078     0.10139906    0.22480665)                     
+   (-0.008864752  0.37595636    -0.0015632007 ~ 0.42575783    2.48219       0.042828444)   
                   ...
-   (-0.010976263  -0.0027201648 2.0962114     ~ -0.0059532207 -0.0034302538 1.4131424)
-   (-8.48679e-4   -0.025587989  0.1657096     ~ 0.36296296    -0.008866108  -0.007448476))
+   (0.37137523    -0.001629176  -0.0038587882 ~ 0.19631904    0.71814036    -0.0044727987)
+   (-0.007339712  0.49409094    -0.010092152  ~ -0.004170165  1.1420414     0.45225763))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -152,13 +152,13 @@ Applies the Expotential Linear Units Function (ELUs) element-wise as described i
 ```lisp
 (proceed (!leakey-relu (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2669 
+{CPUTENSOR[float] :shape (10 10) :id TID2190 
   :vec-state [computed]
-  ((-3.1367975e-4 0.060880393   0.4047371     ~ 0.54067177    -0.015001696  0.2813693)                     
-   (-0.0017047632 -0.0036414461 0.78715545    ~ -0.011978014  -0.006375469  0.5117078)   
+  ((1.2949203     1.319317      -0.0013560241 ~ 0.35411915    0.13482997    -0.01092499)                     
+   (2.6539629     -0.0019639763 -0.008898432  ~ 0.5323376     -0.0083555095 -0.016043724)   
                   ...
-   (0.70126957    0.39946067    -0.0075042364 ~ -0.007006942  -0.013814761  1.4930589)
-   (0.033359565   -0.0033245932 0.37137523    ~ 0.40648147    -0.009385256  0.19631904))
+   (0.5872035     1.3011793     -1.4846033e-4 ~ -0.018327065  0.5999392     0.111192465)
+   (-0.006346898  1.8144846     -0.006539148  ~ 0.60142326    -0.00977075   0.9043215))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -194,11 +194,11 @@ x_i = x_i - mean(x)
 ```lisp
 (proceed (!softmax (randn `(3 3))))
 
-{CPUTENSOR[float] :shape (3 3) :id TID2839 
+{CPUTENSOR[float] :shape (3 3) :id TID2291 
   :vec-state [computed]
-  ((0.64688617 0.20169368 0.1514202)
-   (0.36481348 0.0811322  0.5540543)
-   (0.5637197  0.3408566  0.09542373))
+  ((0.4770026   0.42076913  0.10222831)
+   (0.074501365 0.38638794  0.53911066)
+   (0.43734843  0.06926617  0.49338531))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -315,13 +315,13 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (L1Norm (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID2980 
+{CPUTENSOR[float] :shape (10 10) :id TID2395 
   :vec-state [computed]
-  ((1.0184398   2.1191165   0.45206386  ~ 1.0233625   1.4621267   0.39796215)                   
-   (1.7387664   0.44385663  0.2733763   ~ 1.8357267   1.6068172   0.9255259)   
-                ...
-   (0.3947879   0.73081684  2.158634    ~ 0.17632142  1.0189981   0.42509243)
-   (1.4098688   1.1320047   1.1349673   ~ 1.1238005   0.7587658   1.1173241))
+  ((0.21944374   3.4906983    0.09639442   ~ 1.7210886    1.748786     0.537158)                    
+   (0.0011370182 0.8881786    2.1463056    ~ 2.0200849    0.9273455    1.6265762)   
+                 ...
+   (0.96517265   1.3054338    1.6356181    ~ 0.64939415   0.15627737   0.7375276)
+   (0.28122553   1.8060057    1.0688223    ~ 0.42294133   1.3473802    1.7486184))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -348,13 +348,13 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 ```lisp
 (proceed (MSE (randn `(10 10)) (randn `(10 10))))
 
-{CPUTENSOR[float] :shape (10 10) :id TID3082 
+{CPUTENSOR[float] :shape (10 10) :id TID2450 
   :vec-state [computed]
-  ((0.024422618  0.543947     0.0790878    ~ 0.36269054   5.4938188    0.17887937)                    
-   (1.8154333    3.0576663    0.697018     ~ 0.6212674    0.0027494146 0.87471426)   
+  ((18.540094    0.010009353  5.0938554    ~ 10.227004    0.20378923   0.039667178)                    
+   (0.16211173   2.0781722    2.433506     ~ 5.156483     0.10430828   1.3060123)   
                  ...
-   (4.9061847    0.33234626   1.3729072    ~ 5.2253733    0.07106308   6.7640767)
-   (2.9721603    0.028599644  4.3081474    ~ 0.5941522    0.04261892   4.294284))
+   (6.0381346    0.30820525   0.018570788  ~ 2.4814055    1.2736448    0.054688945)
+   (0.1717851    0.7182333    0.6443218    ~ 0.20784199   0.03354252   1.3616705))
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
@@ -442,7 +442,7 @@ y = xA^\intercal + b
 
 `(linear-weight self)` the trainable value of the model of shape `out_features * in_features`. The values are sampled from  `xavier-uniform`.
 
-`(linear-bias self)` the tranable value of bias of shape `out_features`. If bias is t, the initial values are sampled from uniform distribution: `U(-k, k)` where k = `sqrt(1/out-features)`.
+`(linear-bias self)` the trainable value of bias of shape `out_features`. If bias is t, the initial values are sampled from a uniform distribution: `U(-k, k)` where k = `sqrt(1/out-features)`.
 
 
 ### Example
@@ -450,7 +450,7 @@ y = xA^\intercal + b
 ```lisp
 (LinearLayer 10 5)
 
-<Composite: LINEARLAYER{W3179}(
+<Composite: LINEARLAYER{W2500}(
     <Input : ((~ BATCH-SIZE 10)) -> Output: ((~ BATCH-SIZE 5))>
 
     WEIGHTS -> (5 10)
@@ -487,19 +487,11 @@ which transformation of shapes are defined as:
 ```
 (INPUT[N C_IN H_IN W_IN] -> OUTPUT[N C_OUT H_OUT W_OUT] WHERE C_IN =
  IN-CHANNELS C_OUT = OUT-CHANNELS H_OUT =
- (FLOOR
-  (+ 1
-     (/
-      (+ H_IN (* 2 (CAR PADDING))
-         (* (- (CAR DILATION)) (- (CAR KERNEL-SIZE) 1)) -1)
-      (CAR STRIDE))))
+ (CONV-OUT-SIZE H_IN (CAR PADDING) (CAR DILATION) (CAR KERNEL-SIZE)
+  (CAR STRIDE))
  W_OUT =
- (FLOOR
-  (+ 1
-     (/
-      (+ W_IN (* 2 (SECOND PADDING))
-         (* (- (SECOND DILATION)) (- (SECOND KERNEL-SIZE) 1)) -1)
-      (SECOND STRIDE)))))
+ (CONV-OUT-SIZE W_IN (SECOND PADDING) (SECOND DILATION) (SECOND KERNEL-SIZE)
+  (SECOND STRIDE)))
 ```
 ### Description
 
@@ -538,50 +530,12 @@ Note: When `Conv2D` is initialised, the output is displayed as -1. This is becau
 ```lisp
 (Conv2D 3 5 '(3 3))
 
-<Composite: CONV2D{W3189}(
+<Composite: CONV2D{W2510}(
     <Input : ((N 3 H_IN W_IN)) -> Output: ((N 5
-                                            LazyAxis: observe-axis({LazyAxis: f(H_IN PADDING DILATION KERNEL-SIZE STRIDE) = (FLOOR
-                                                          (+ 1
-                                                             (/
-                                                              (+ H_IN
-                                                                 (* 2
-                                                                    (CAR
-                                                                     PADDING))
-                                                                 (*
-                                                                  (-
-                                                                   (CAR
-                                                                    DILATION))
-                                                                  (-
-                                                                   (CAR
-                                                                    KERNEL-SIZE)
-                                                                   1))
-                                                                 -1)
-                                                              (CAR STRIDE))))}, H_IN, (0
-                                                                                       0), (1
-                                                                                            1), (3
-                                                                                                 3), (1
-                                                                                                      1))
-                                            LazyAxis: observe-axis({LazyAxis: f(W_IN PADDING DILATION KERNEL-SIZE STRIDE) = (FLOOR
-                                                          (+ 1
-                                                             (/
-                                                              (+ W_IN
-                                                                 (* 2
-                                                                    (SECOND
-                                                                     PADDING))
-                                                                 (*
-                                                                  (-
-                                                                   (SECOND
-                                                                    DILATION))
-                                                                  (-
-                                                                   (SECOND
-                                                                    KERNEL-SIZE)
-                                                                   1))
-                                                                 -1)
-                                                              (SECOND STRIDE))))}, W_IN, (0
-                                                                                          0), (1
-                                                                                               1), (3
-                                                                                                    3), (1
-                                                                                                         1))))>
+                                            [observe-axis({[(CONV-OUT-SIZE H_IN (CAR PADDING) (CAR DILATION) (CAR KERNEL-SIZE)
+                 (CAR STRIDE))]}, H_IN, (0 0), (1 1), (3 3), (1 1))]
+                                            [observe-axis({[(CONV-OUT-SIZE W_IN (SECOND PADDING) (SECOND DILATION) (SECOND KERNEL-SIZE)
+                 (SECOND STRIDE))]}, W_IN, (0 0), (1 1), (3 3), (1 1))]))>
 
     WEIGHT -> (5 3 3 3)
     BIAS   -> (5)

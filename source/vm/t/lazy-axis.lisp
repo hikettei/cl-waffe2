@@ -65,7 +65,7 @@
 (defun cnn-build-test-cputensor ()
   (with-devices (LispTensor CPUTensor)
     (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))))
-
+    
 (test dynamic-shape-build
   (is (cnn-build-test-cpujit))
   (is (cnn-build-test-cputensor)))

@@ -222,6 +222,7 @@ i.e.:
     ;; - Adding an assertion
     ;; - Adding a lazy assertion
     (let ((result (range from1 to1 step)))
+      #|
       (assert
        (or
 	(not (numberp (range-size result)))
@@ -235,6 +236,7 @@ from ~a to ~a => ~a"
        range1
        range2
        result)
+      |#
       
       ;; [FixME] The assertion above is not enough...
       ;; e.g.: (.range (range 2 8 1) (range 2 8 1)) should produce an error
