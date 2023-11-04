@@ -29,6 +29,12 @@ Set t to display the compiled c code to terminal. In default, `nil`
 
 ## [AbstractTensor] JITCPUTensor
 
+```lisp
+(with-devices (JITCPUTensor CPUTensor LispTensor)
+    ;; Your code follows...
+    )
+```
+
 ## [function] cpujit-set-config
 
 ```lisp
@@ -45,9 +51,9 @@ Declares configurations about JITCPUTensor.
 
 `compiler[string]` a compiler to use. in default set to gcc
 
-`viz-compiled-code[boolean]` set t to display generated C codes.
+`viz-compiled-code[boolean]` Set t to display generated C codes.
 
-`openmp[boolean]` set to use OpenMP
+`openmp[boolean]` Set t to use OpenMP.
 
 `flags[list]` additional compiler flags.
 
