@@ -2,6 +2,14 @@
 (in-package :cl-waffe2/backends.jit.cpu)
 
 (defvar *dynamic-shape-envolved*)
+(defun maybe-symbol (value)
+  (if (and value (symbolp value))
+      (if (find value *dynamic-shape-envolved*)
+	  value
+	  (progn
+	    (push value *dynamic-shape-envolved*)
+	    value))
+      value))
 
 (defclass JITCPUTensor (cl-waffe2/backends.cpu:CPUTensor) nil
   (:documentation "

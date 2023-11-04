@@ -352,9 +352,12 @@ for(uint32_t index=0;index<size;index++) {
   (let ((*dynamic-shape-envolved*))
     (multiple-value-bind (loop-schedule lvars)
 	(make-iteration-schedule variables abstract-loop tiling-p indices)
-      (set-loop-blueprint! loop-schedule lvars tiling-p instructions indices)
+
+      (dolist (iter loop-schedule)
+	(let ((size (iteration-size iter)))
+	  (maybe-symbol size)))
       
-      (print loop-schedule)
+      (set-loop-blueprint! loop-schedule lvars tiling-p instructions indices)
       
       (values       
        (with-compiling-mode
@@ -387,7 +390,7 @@ for(uint32_t index=0;index<size;index++) {
 		  "for (uint32_t ~a=0;~a<~a;~a++) {~%"
 		  (iteration-index iter)
 		  (iteration-index iter)
-		  (iteration-size  iter)
+		  (c-name (format nil "~a" (iteration-size  iter)))
 		  (iteration-index iter))
 		 
 		 (dolist (inst   (reverse (iteration-instructions iter)))
@@ -398,7 +401,7 @@ for(uint32_t index=0;index<size;index++) {
 	       for *indent-width* downfrom (* 4 (length loop-schedule)) by 4 do
 		 (write-c-line "}~%"))
 	 (write-c-line "}"))
-       *dynamic-shape-envolved*)))))
+       *dynamic-shape-envolved*))))
 
 (defun invoke-compiler (function-name instructions)
   "Compiles to C Kernel.

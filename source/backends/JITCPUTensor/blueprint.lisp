@@ -59,8 +59,10 @@ type:
 			(expand-helper a)
 			(expand-helper b)))
 	       ((list _ b)
-		(let ((res (format nil "~a" b)))
-		  (c-name (subseq res 1 (length res)))))
+		(let* ((res (format nil "~a" b))
+		       (res (subseq res 1 (length res))))
+		  (maybe-symbol (cadr b))
+		  (c-name res)))
 	       (T
 		(error "cStride: Encountered Unknown Stride Syntax ~a" stride)))))
     (let ((view (nth axis (tensor-view tensor))))
@@ -70,11 +72,13 @@ type:
 		 (direction (wf/iter:range-step range))
 		 (stride    (expand-helper (nth axis (tensor-stride tensor)))))
 	    (if (numberp direction)
+		(if (= direction 1)
+		    (format nil "~a" stride)
+		    (format nil "~a*~a" direction stride))
 		(format nil "~a*~a"
 			(or (maybe-symbol (cl-waffe2/vm:lazyaxis-symbol direction))
 			    (maybe-symbol direction))
-			stride)
-		stride))))))
+			stride)))))))
 
 (defun cOffset (tensor rank)
   (symb (tensor-id tensor) '_offset rank))

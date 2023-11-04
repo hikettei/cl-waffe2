@@ -94,11 +94,13 @@ e.g.: A is = compared to 2
     (:function     `(,(lazyir-car lazyir) ,@(map 'list #'ir->list (lazyir-cdr lazyir))))))
 
 (defun interpret-lazy (lazyir)
-  (declare (type lazyir lazyir))
+  (declare (type LazyIR lazyir))  
   (ecase (lazyir-type lazyir)
     (:number
      (let ((out (lazyir-car lazyir)))
-       (if (numberp out)
+       (if (or (numberp out)
+	       (eql out t)
+	       (null out))
 	   out
 	   (progn
 	     (setf (lazyaxis-read-as out) nil)
