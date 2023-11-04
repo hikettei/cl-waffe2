@@ -183,17 +183,13 @@ expected: AbstractTensor"
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
 			  (map 'list #'(lambda (tensor)
 					 ;; This condition is more restrict than ./generic-tensor/lut.lisp
-					 (list (dtype tensor)
-					       (order tensor)
-					       (class-of tensor)
+					 (list (dtype tensor) (order tensor) (class-of tensor)
+					       ;;(if cl-waffe2/vm::*static-alloc-state*
+					        ;;   (tensor-id tensor)
+						 ;;  nil)
 					       (map 'list #'cl-waffe2/vm.generic-tensor::force-list (tensor-view tensor))
 					       (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
-					       ;; [FIXME] Reusing gcompiled composite could be the main reason for SegFault!!
-					       ;; [FIXME] The size of something (like gradients) could be FIXED, and IMMUTABLE
-					       ;; Even when the node is cached
-					       (cl-waffe2/vm.generic-tensor:tensor-actual-stride tensor)
-					       ;; It should be dispatched by ranks, but helplessly uses shape
-					       (shape tensor) ;;(cl-waffe2/vm.generic-tensor::translate-adjustable-shape (shape tensor))
+					       (shape tensor)
 					       (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)))
 			       (list ,@arguments)))
 			(,found-function (gethash ,dispatching-keys (read-from-cache ,cache-key))))

@@ -69,7 +69,7 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
 	  ,name
 	  ,@(loop for symbol in dynamic-symbols
 		  append
-		  `(:uint32 (cl-waffe2/vm.generic-tensor::read-symbol ',symbol)))
+		  `(:uint32 (cl-waffe2/vm:maybe-observe-axis ',symbol)))
 	  ,@(loop for arg in args
 		  append
 		  (append

@@ -352,7 +352,7 @@ A is a target to find a maximum value, and OUT is a place to set the index.
 	  :save-for-backward (t nil)
 	  :backward ((self dout da do)
 		     (declare (ignore do))
-		     ;; only max values are propagated
+		     ;; only minimum values are propagated
 
 		     ;; [forward]
 		     ;;     a       out   argmax(a)

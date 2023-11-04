@@ -2,6 +2,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/optimizers
+  (:nicknames #:wf/opt)
   (:use :cl :cl-waffe2/base-impl :cl-waffe2/vm.generic-tensor :cl-waffe2/vm.nodes :alexandria)
   (:export
    #:AbstractOptimizer

@@ -16,13 +16,13 @@
 ;;       https://arxiv.org/pdf/2005.04091.pdf
 ;;
 
+;;
 ;; As of this writing, features on iterations works enough as for element-wise operations
 ;; but as for permuted tensors, it signifcantly reduces the performance.
 ;; We can easily tackle this problem by using foreign DL Frameworks like oneDNN; but it restricts the flexibility of cl-waffe2
 ;; Loop Oriented Optimization should not be limited to call foreign libraries; implement kernel-size=0 and
 ;; JIT Compiling to Vectorized C++/CUDA Kernel?
 ;;
-
 
 (defstruct (AbstractLoop
 	    (:conc-name aloop-)
@@ -42,26 +42,11 @@
   (view   (sync (tensor-view tensor) order))
   (stride (sync (tensor-stride tensor) order)))
 
-(defun estimate-cost (loops)
-  (declare (type list loops))
-  (apply #'* (map 'list #'aloop-size loops)))
-
-(defun estimate-simd-size (loops)
-  (aloop-element-n (car (last loops))))
-
-(defun compute-last-stride (rank wtensor)
-  (if (find 1 (nthcdr rank (wtensor-stride wtensor)))
-      1
-      (let ((out (apply #'gcd (nthcdr rank (wtensor-stride wtensor)))))
-	(if (= out 1)
-	    nil
-	    out ;; out [TODO] it should return out but set as nil for now. With enough test cases, we can set as 1
-	    ))))
-
 ;; Making this function T under more various situations are the rational way to optimize;
-(defun rest-contiguous-p (rank &rest tensors &aux (layout (nthcdr rank (wtensor-stride (car tensors)))))
+(defun rest-contiguous-p (rank &rest tensors)
   "Judges if collapsing AbstractLoop for rest ranks.
-If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory), they're fused into 1D Tensor."
+If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory), they're fused into 1D Tensor.
+Tensors ... Able to include dynamic shape"
   (declare (type (unsigned-byte 32) rank)
 	   (type list tensors))
   ;; Memory-Layout
@@ -69,36 +54,29 @@ If remaining loops are consisted of T or :broacast (i.e.: contiguous on memory),
 			    &aux
 			      (views
 			       (nthcdr rank (wtensor-view tensor))))
-	   (or
-	    ;; T :broadcast is invalid for example;
-	    ;; Possible cases are: T T T... or broadcast broadcast ...
-	    ;;(not
-	    ;; (every #'(lambda (v)
-	    ;;		(eql (force-list v)
-	    ;;		     (force-list (car views))))
-	    ;;	    views))
-	    (some #'(lambda (v)
-		      (not (or (eql (force-list v) t)
-			       (eql (force-list v) :broadcast))))
-		  views))))
-    ;; Remaining strides are regarded as: 1 * broadcasted_p(tensor)
-    ;; When Row-Major    : We can do more; Make more elements stride=1
-    ;; When Column-Major : This function works
+	   
+	   (some #'(lambda (v)
+		     (not
+		      (or (eql (force-list v) t)
+			  (subscript-broadcast v))))
+		 views))
+	 (consistency-p (tensor
+			 &aux
+			   (views
+			    (nthcdr rank (wtensor-view tensor))))
+	   (let ((rep (viewtype (force-list (car views)))))
+	     (every
+	      #'(lambda (v)
+		  (equal rep (viewtype (force-list v))))
+	      views))))
     (and
-     ;; Regarding offsets
      (not (some #'not-reductable-p tensors))
-
-     ;; Memory Layouts are the same?
-     ;; [TODO] Optimize: Moving Permuted -> Not_Permuted
-     ;; [TODO] With Symbols?
-     ;; GCD(strides)
-     (every #'(lambda (x) (equal layout (nthcdr rank (wtensor-stride x)))) tensors)
-     (let ((strides (map 'list #'(lambda (x) (compute-last-stride rank x)) tensors)))
-       (every #'(lambda (x) (eql (car strides) x)) strides)))))
+     (every #'consistency-p tensors))))
+     
 
 (defun solve-loop-order (tensors kernel-size force-order &key (mode :heuristic))
   "
-Creates an optimized route of AbstractLoop.
+Creates an optimized route of Iterations.
  mode = :heuristic or :runtime (Set :heuristic for all case)
 
 Examples:
@@ -111,30 +89,16 @@ Examples:
 	   (type (unsigned-byte 32) kernel-size)
 	   (type boolean force-order)
 	   (type (member :heuristic :runtime) mode)
-	   (optimize (speed 3)))
-
-  ;;(dolist (tensor tensors)
-  ;;  (when (some #'symbolp (shape tensor))
-    ;;  (setf (slot-value tensor 'visible-shape) (translate-adjustable-shape (shape tensor)))))
+	   (optimize (speed 3))
+	   (ignore mode))
   
-  (when (not (eql mode :runtime))
-    (assert (every #'(lambda (x)
-		       (and
-			(not (some #'symbolp (shape x)))
-			(equal (butlast (shape (car tensors)) kernel-size) (butlast (shape x) kernel-size))))
-		   tensors)
-	    nil
-	    "Assertion Failed: solve-loop-order, Tensors must be the same shape size, and not include symbols.")
+  (assert (every #'(lambda (x)
+		     (>= (the fixnum (dims x)) kernel-size))
+		 tensors)
+	  nil
+	  "Assertion Failed: Ranks are too low compared to declare: ~a" kernel-size)
 
-    (assert (every #'(lambda (x)
-		       (>= (the fixnum (dims x)) kernel-size))
-		   tensors)
-	    nil
-	    "Assertion Failed: Ranks are too low compared to declare: ~a" kernel-size))
-
-  (when *freeze-call-with-view*
-    (setq force-order t))
-  
+  (when *freeze-call-with-view* (setq force-order t))
   (decf kernel-size)
   
   ;; Tensor(10 20 30)
@@ -145,40 +109,49 @@ Examples:
   ;; Tensor(10 20 30) kernel-size=0 (element-wise ops)
   ;; Everything is subject to be shuffled
 
-  (let* ((tensor-rank (dims (car tensors)))
-	 (permutations)
-	 (candidates))
+  (let* ((tensor-rank (dims (car tensors))))
     (declare (type fixnum tensor-rank))
-
-    (labels ((all-permutations (xs &optional a)
-	       (if (null xs)
-		   (push (reverse a) permutations))
-	       (dolist (x xs)
-		 (all-permutations (remove x xs) (cons x a))))
-	     (compute-loop (wtensors &optional (rank 0))
+    (labels ((compute-loop (wtensors &optional (rank 0))
 	       (declare (type fixnum rank))
 	       (when (and (not force-order)
-			  (= kernel-size 0)		  
+			  (= kernel-size 0)
+			  (every
+			   #'(lambda (x)
+			       (equal (tensor-permute-order x) (tensor-permute-order (car tensors))))
+			   tensors)
 			  (apply #'rest-contiguous-p rank wtensors))
-		 (return-from
-		  compute-loop
-		   (list
-		    (make-aloop
-		     rank
-		     (the fixnum (compute-last-stride (the fixnum rank) (car wtensors)))
-		     (apply #'l* (map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank)))
-		     1
-		     :apply-flatten))))
+		 ;; Collapsing loops because elements are contiguous on memory.
+		 (let* ((iter-n
+			  ;; N-Elements = MUL_UP(rank...tensor-rank)
+			  (cl-waffe2/vm:make-lazyaxis
+			   `(* ,@(map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank)))))
+			(iter-n (or
+				 (cl-waffe2/vm:lazyaxis-symbol iter-n)
+				 iter-n)))
+		   
+		   (return-from
+		    compute-loop
+		     (list
+		      (make-aloop
+		       rank 1 iter-n iter-n
+		       :apply-flatten)))))
 
-	       ;; Reached kernel-size+1 -> apply
+	       ;; Reached kernel-size+1 but collapsing was failed:
+	       ;; -> applying CFFI function
 	       (if (= (the fixnum (- tensor-rank rank)) (1+ kernel-size))
-		   (list (make-aloop
-			  rank
-			  1
-			  (let ((out (map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank))))
-			    (apply #'l* (loop for o in out if o collect o)))
-			  1;;(find-size wtensors rank)
-			  :apply))
+		   (let* ((list (map 'list #'(lambda (r) (find-size wtensors r)) (range rank tensor-rank)))
+			  (out (cl-waffe2/vm:make-lazyaxis
+				`(* ,@(loop for o in list
+					    if o collect o)))))
+		     (list
+		      (make-aloop
+		       rank
+		       1
+		       (or
+			(cl-waffe2/vm:lazyaxis-symbol out)
+			out)
+		       1
+		       :apply)))
 		   (cons
 		    (make-aloop
 		     rank
@@ -188,37 +161,8 @@ Examples:
 		     :batch)
 		    (compute-loop wtensors (1+ rank))))))
 
-      (case mode
-	(:heuristic
-	 (all-permutations (range kernel-size tensor-rank)))
-	(:runtime
-	 (push (range kernel-size tensor-rank) permutations)))
-
-      (dolist (~ permutations)
-	;; ~ ... (nth (car ~) shape), (nth (second ~) shape) ...
-	(flet ((wrapper (tensor) (make-wtensor tensor ~)))
-	  (push (compute-loop (map 'list #'wrapper tensors)) candidates)))
-
-      (when (eql mode :runtime)
-	;; Early Return
-	(return-from solve-loop-order (car candidates)))
-
-      ;; Sort by Costs
-      (setq candidates (sort candidates #'< :key #'estimate-cost))
-      ;; Candidates with the minimum costs
-      (setq candidates (loop with target fixnum = (estimate-cost (car candidates))
-			     for c in candidates
-			     if (= (the fixnum (estimate-cost c)) target)
-			       collect c))
-      (setq candidates (sort candidates #'> :key #'estimate-simd-size))
-
-      (setq candidates (loop with target fixnum = (estimate-simd-size (car candidates))
-			     for c in candidates
-			     if (= (the fixnum (estimate-simd-size c)) target)
-			       collect c))
-
-      (setq candidates (sort candidates #'< :key #'length))
-      (car candidates))))
+      (flet ((wrapper (tensor) (make-wtensor tensor (range kernel-size tensor-rank))))
+	(compute-loop (map 'list #'wrapper tensors))))))
 
 ;;#+sbcl(setf sb-ext:* inline
 ;; [TODO] Inline this: expand-helper
@@ -228,7 +172,7 @@ Examples:
 			  &aux
 			    (offsets (make-array (length tensors)
 						 :element-type '(unsigned-byte 32)
-						 :initial-element 0))
+						 :initial-contents (map 'list #'tensor-initial-offset tensors)))
 			    (max-rank (dims (car tensors))))
   (declare (type list loop-blueprint)
 	   (type function function)
@@ -237,63 +181,116 @@ Examples:
 	   (optimize (speed 3)))
 
   ;; ~~ [FixMe] Runtime Recomputation of strides cause reductin in performance; Delete this line: ~~~~~
-
+  
   ;; All lazy strides should be compiled once adjust-allocation! is called.
   ;; See also: render.lisp render-tensor
   (dolist (tensor tensors)
     (when (some #'listp (tensor-stride tensor))
+      ;;(warn "do-compiled-loop*: runtime stride recomputation...")
       (setf
        (tensor-stride tensor)
        (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
        (tensor-stride tensor)
        (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor))))))
-  
-  
+
   (labels ((expand-helper (&optional (c 0) (offsets offsets))
 	     (declare (type fixnum c)
 		      (type (simple-array (unsigned-byte 32) (*)) offsets))
 	     (let ((subject (nth c loop-blueprint)))
-	       (when subject		 
-		 (loop with rank fixnum = (aloop-rank subject)
-		       for tensor in tensors
-		       for position fixnum upfrom 0 do
-			 (let ((start-idx (compute-visible-start-idx (force-list (nth rank (tensor-view tensor))))))
-			   (declare (type (unsigned-byte 32) start-idx))
-			   (when (not (= 0 start-idx))
-			     (incf (the fixnum (aref offsets position))
-				   (the fixnum (* start-idx (the fixnum (nth rank (tensor-stride tensor)))))))))
+	       (when subject
+		 (when (eql (aloop-mode subject) :batch)
+		   (loop with rank fixnum = (aloop-rank subject)
+			 for tensor in tensors
+			 for position fixnum upfrom 0 do
+			   (let ((start-idx
+				   (if (subscript-broadcast (nth rank (tensor-view tensor)))
+				       0
+				       (wf/iter:range-nth
+					(subscript-range (nth rank (tensor-view tensor)))
+					0))))
+			     (declare (type (unsigned-byte 32) start-idx))
+			     (when (not (= 0 start-idx)) ;; If start-idx = 0 -> isn't worth it.
+			       (incf (the fixnum (aref offsets position))
+				   (the fixnum (* start-idx (the fixnum (nth rank (tensor-stride tensor))))))))))
 		 
 		 (if (eql (aloop-mode subject) :batch)
 		     (loop with offsets = (copy-seq offsets)
+			   with iter-num fixnum = (cl-waffe2/vm:maybe-observe-axis (aloop-size subject))
+			   with diffs = (map
+					 'list
+					 #'(lambda (tensor)
+					     (let ((range  (subscript-range (nth (aloop-rank subject) (tensor-view tensor))))
+						   (stride (nth (aloop-rank subject) (tensor-stride tensor))))
+					       (declare (type (unsigned-byte 32) stride))
+					       (the
+						fixnum
+						(*
+						 stride
+						 ;; the direction range indicating:
+						 (the
+						  fixnum
+						  (-
+						   (the fixnum (wf/iter:range-nth range 1))
+						   (the fixnum (wf/iter:range-nth range 0))))))))
+					 tensors)
 			   for index fixnum
-			   upfrom 0 below (aloop-size subject) do
+			   upfrom 0 below iter-num do
 			     (expand-helper (1+ c) offsets)
-			   unless (= index (1- (aloop-size subject)))
-			     do (loop for tensor in tensors
-				      for position fixnum upfrom 0
-				      unless (= 0 (compute-stepby
-						   (force-list (nth (aloop-rank subject) (tensor-view tensor)))))
-					do (incf (the fixnum (aref offsets position))
-						 (the fixnum (nth (aloop-rank subject) (tensor-stride tensor))))))
+			   unless (= index (1- iter-num)) do
+			     (loop for diff fixnum in diffs
+				   for tensor in tensors
+				   for position fixnum upfrom 0
+				   unless (subscript-broadcast (nth (aloop-rank subject) (tensor-view tensor)))
+				     do (incf (the fixnum (aref offsets position)) diff)))		     
 		     (apply
 		      function
 		      (loop with rank fixnum = (aloop-rank subject)
-			    with by   fixnum = (aloop-by subject)
+			    with by   fixnum = (cl-waffe2/vm:maybe-observe-axis (aloop-by subject))
 			    for tensor   in tensors
 			    for position fixnum upfrom 0
 			    collect
-			    (loop with offset fixnum = (aref offsets position)
+			    (loop with offset  fixnum = (aref offsets position)
 				  for nth-rank fixnum upfrom rank below max-rank
-				  for stride fixnum in (nthcdr rank (tensor-stride tensor))
 				  collect
-				  (make-viewinstruction
-				   (the fixnum (+ offset (the fixnum (compute-visible-start-idx (force-list (nth rank (tensor-view tensor)))))))
+				  (make-viewinstruction ;; (OFFSET, SIZE, STRIDE)
+				   (the
+				    fixnum
+				    (+
+				     offset ;; total offsets accumlated before :apply
+				     ;; offsets created by !view
+				     ;; If stride is a negative number:
+				     ;; e.g.: (0 5 -1)
+				     ;; the offset starts from 5
+				     (if (subscript-broadcast (nth nth-rank (tensor-view tensor)))
+					 0
+					 (wf/iter:range-nth
+					  (subscript-range
+					   (nth
+					    rank
+					    (tensor-view tensor)))
+					  0))))
 				   (if (eql (aloop-mode subject) :apply-flatten)
-				       (aloop-element-n subject)
-				       (nth nth-rank (shape tensor)))
+				       (cl-waffe2/vm:maybe-observe-axis (aloop-element-n subject))
+				       (cl-waffe2/vm:maybe-observe-axis (nth nth-rank (shape tensor))))
 				   (if (eql (aloop-mode subject) :apply-flatten)
-				       by
-				       (compute-stepby (force-list (nth nth-rank (tensor-view tensor))))))))))))))
+				       (if (subscript-broadcast
+					    (nth nth-rank (tensor-view tensor)))
+					   0
+					   1)
+				       (if (subscript-broadcast (nth nth-rank (tensor-view tensor)))
+					   0
+					   (*
+					    (the (signed-byte 32) (nth nth-rank (tensor-stride tensor)))
+					    (the (signed-byte 32)
+						 (-
+						  (wf/iter:range-nth
+						   (subscript-range
+						    (nth nth-rank (tensor-view tensor)))
+						   1)
+						  (wf/iter:range-nth
+						   (subscript-range
+						    (nth nth-rank (tensor-view tensor)))
+						   0)))))))))))))))					       
     ;; #+sbcl(declare (inline expand-helper))
     (expand-helper 0)
     nil))
@@ -302,6 +299,7 @@ Examples:
   (defparameter *compiled-loop-table* (make-hash-table)))
 
 (defun from-compiled-loop (cache-id tensors)
+  "Produces keys for caching the result of solve-loop-order"
   (let ((query (loop for tensor in tensors append
 		     `(,(shape tensor)
 		       ,(tensor-permute-order tensor)
@@ -310,6 +308,7 @@ Examples:
     (gethash query (gethash cache-id *compiled-loop-table*))))
 
 (defun set-compiled-loop (cache-id solved tensors)
+  "Given cache-id, stores the result obtained by solve-loop-order."
   (let ((query (loop for tensor in tensors append
 		     `(,@(shape tensor)
 		       ,@(tensor-permute-order tensor)
@@ -324,7 +323,6 @@ Examples:
 	  (set-compiled-loop cache-id solved tensors)
 	  solved))))
 
-;; :mode=:heuristic is still under experimental
 (defmacro do-compiled-loop (tensor-list (&key (kernel-size 1) (collapse t) (mode :runtime)) (&rest views-bind) &body body &aux (cache-id (gensym "LOOP_CACHE")))
   "
 ## [macro] do-compiled-loop

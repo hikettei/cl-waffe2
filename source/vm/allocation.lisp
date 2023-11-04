@@ -54,7 +54,8 @@ Records the statue and result of localized allocation state by cl-waffe2 VM.
   (allocated-p nil :type boolean)
   (id2pool     (make-hash-table) :type hash-table)
   ;;(first-table (alexandria:copy-hash-table id2pool) :type hash-table)
-  (reduce-rate 0.0 :type single-float))
+  (reduce-rate 0.0 :type single-float)
+  (alloc-id    (gensym)))
 
 (defmethod print-object ((model VMAllocation) stream)
   (format stream "{VMAllocation:

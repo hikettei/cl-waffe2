@@ -21,25 +21,35 @@
 ;; forward is a function where computes the next inputs of nodes/composites
 ;; (forward model A[10 10 10] B[10 10 10]) : All shapes are determined. Shape Transformation is instantly executed
 ;; (forward model A[10 A B]   B[10 A B]    : All shapes are NOT determined. shape computation is also lazily evaluated.
+;;
 
 (in-package :cl-waffe2/vm)
 
 ;; Specs/Changes:
 ;;  Tensor.shape = (list LazyShape[0] LazyShape[1] LazyShape[2] ...)
 
-;; Usage:
+;; How this behaviour appeared in the pragram?
 ;;   (!reshape x (transform N C H W -> (* N C H) W))
 ;;   (%transform x[N C H W] -> [(* N C H) W]) (TODO)
 
-;; Goals:
-;;   (!reshape x (transform N C H W -> (* N C H) W)) ... Reshape/Permute/Viewの数はlambdaにすべき(Style)
-;;   (call (conv2d 3 6 `(5 5)) 3 3)
-;;
+;; Dynamic Shape (with S-expression) System in cl-waffe2.
 
+;; Basic Usage:
+;;  1. AbstractTensor can include symbols as a shape, strides, views.
+;;    - (N C H W) Tensor is ok for example and symbols are later changed.
 
-;; make-lazyaxis (Lazy and Encapsulate)
-;;  -> (shape tensor) (tensor-view ...) and observe the result.
+;;  2. AbstractTensor is also needed to be include S-expression as a shape/stride/views
+;;    - e.g.: when slicing (N C H W) Tensor, the result should be expressed in S-exp.
+;;    - (I know this is ugly but) this file provides S-exp <-> Symbol hash-table
+;;      - AbstractTensor interprets S-exp as a symbol because S-exp is replaced with randomly generated symbols in runtime.
 
+;;  3. (make-lazyaxis S-exp) to create a lazy-S-exp
+;;     (maybe-observe-axis symbol) to evaluate a LazyAxis.
+
+;; In the node construction phase, all shapes are not necessary to be determined;
+;; But we can determine them by comparing inputs given by (forward model ...) method.
+;; Tensor Shapes and Subscript DSL is expressed in a high order lambda function.
+;; Determines symbols step-by-step.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
@@ -54,6 +64,7 @@
   (read-as     nil)
   (id          (gensym "axis")))
 
+;; [FixME] This feature is not available for a now.
 (defstruct (LazyAssertion
 	    (:constructor make-lazy-assert (f evaluated-to)))
   "
@@ -65,15 +76,7 @@ e.g.: A is = compared to 2
   (evaluated-to evaluated-to))
 
 (defmethod print-object ((lazyaxis LazyAxis) stream)
-  (if (lazyaxis-arguments lazyaxis)
-      (if (= (length (lazyaxis-arguments lazyaxis)) 1)
-	  (format stream "LazyAxis: ~a"
-		  (lazyaxis-form lazyaxis))	  
-	  (format stream "LazyAxis: f~a = ~a"
-		  (lazyaxis-arguments lazyaxis)
-		  (lazyaxis-form lazyaxis)))
-      (format stream "LazyAxis: ~a"
-	      (lazyaxis-form lazyaxis))))
+  (format stream "[~a]" (lazyaxis-form lazyaxis)))
 
 (defstruct (LazyIR
 	    (:constructor make-lazyIR (type car cdr)))
@@ -91,11 +94,13 @@ e.g.: A is = compared to 2
     (:function     `(,(lazyir-car lazyir) ,@(map 'list #'ir->list (lazyir-cdr lazyir))))))
 
 (defun interpret-lazy (lazyir)
-  (declare (type lazyir lazyir))
+  (declare (type LazyIR lazyir))  
   (ecase (lazyir-type lazyir)
     (:number
      (let ((out (lazyir-car lazyir)))
-       (if (numberp out)
+       (if (or (numberp out)
+	       (eql out t)
+	       (null out))
 	   out
 	   (progn
 	     (setf (lazyaxis-read-as out) nil)
@@ -109,9 +114,11 @@ e.g.: A is = compared to 2
 	   ;; Compute out first if out is LazyAxis.
 	   (if (symbol-lazyaxis out)
 	       ;; [MEMO] Detecting Circular Dependencies?
-	       (progn
-		 (observe-axis (symbol-lazyaxis out)))
-	       (error "interpret-lazy: Encountered undeclared a dynamic shape: ~a" out)))))
+	       (observe-axis (symbol-lazyaxis out))
+	       (let ((result (wf/t::read-symbol out)))
+		 (if (numberp result)
+		     result
+		     (error "interpret-lazy: Encountered undeclared a dynamic shape: ~a" out)))))))
     (:rest          (let ((out (second (lazyir-car lazyir))))
 		      (setf (lazyaxis-read-as out) nil)
 		      (observe-axis out)))
@@ -124,17 +131,20 @@ e.g.: A is = compared to 2
 	    (:number        (lazyir-car lazyir))
 	    (:dynamic-shape
 	     ;; (READ_SYMBOL 'A) -> 'A
-	     (cadadr (lazyir-car lazyir))) 
+	     (let ((sym (cadadr (lazyir-car lazyir))))
+	       (or
+		(symbol-lazyaxis sym)
+		sym)))
 	    (:rest
 	     (format nil "{~a}" (second (lazyir-car lazyir))))
 	    (:arithmetic
 	     (with-output-to-string (out)
-	       (format out "(")
+	       (format out "")
 	       (dotimes (nth (length (lazyir-cdr lazyir)))
 		 (format out "~a" (nth nth (lazyir-cdr lazyir)))
 		 (unless (= nth (1- (length (lazyir-cdr lazyir))))
 		   (format out "~a" (lazyir-car lazyir))))
-	       (format out ")")))
+	       (format out "")))
 	    (:function
 	     (with-output-to-string (out)
 	       (format out "~(~a~)(" (lazyir-car lazyir))
@@ -201,9 +211,24 @@ Describe the transformation of shapes as simple as possible.
 	(make-lazyIR :number
 		     (apply car (map 'list #'lazyir-car args))
 		     nil)
-	(make-lazyIR :arithmetic
-		     car
-		     args))))
+	;; A+0 -> A Mutation
+	(let ((args
+		(if (eql car '+)
+		    (loop for arg in args
+			  if (or
+			      (not (eql (lazyir-type arg) :number))
+			      (not (eql (lazyir-car arg) 0)))
+			    collect arg)
+		    args)))
+	  (if (and (eql car '+)
+		   (= (length args) 1)
+		   (numberp (car args)))
+	      (make-lazyir :number
+			   (car args)			       
+			   nil)
+	      (make-lazyIR :arithmetic
+			   car
+			   args))))))
 
 (defun parse-lazy-function (car cdr)
   ;; [TODO]
@@ -211,7 +236,8 @@ Describe the transformation of shapes as simple as possible.
   (let ((args (map 'list #'parse-lazy-exp cdr)))
     (if (every #'(lambda (ir)
 		   (and (eql (lazyir-type ir) :number)
-			(typep (lazyir-car ir) 'fixnum)))
+			(or (typep (lazyir-car ir) 'fixnum)
+			    (typep (lazyir-car ir) 'boolean))))
 	       args)
 	(make-lazyIR :number
 		     (apply car (map 'list #'lazyir-car args))
@@ -230,7 +256,6 @@ Describe the transformation of shapes as simple as possible.
       (helper ir)
       (delete-duplicates result))))
 
-;;(defparameter *exp->compiled-cache* (make-hash-table :test #'equal))
 (defun make-lazyaxis (expression)
   "
 ## [function] make-lazyaxis
@@ -257,6 +282,9 @@ No macro usings are allowed; functions and fixnum, list are available.
     (when (and
 	   (typep (lazyir-car lazyir) 'fixnum)
 	   (eql (lazyir-type lazyir) :number))
+      (return-from make-lazyaxis (lazyir-car lazyir)))
+
+    (when (typep (lazyir-car lazyir) 'boolean)
       (return-from make-lazyaxis (lazyir-car lazyir)))
 
     (when (eql (lazyir-type lazyir) :dynamic-shape)
@@ -381,13 +409,14 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
       (observe-axis axis)))
   nil)
 
+(declaim (inline maybe-observe-axis))
 (defun maybe-observe-axis (value)
   "Reads the given value as a fixnum.
 value is expected as: LazyAxis, Symbol, Fixnum, rest...
 If value is dynamic-shape -> observe it and returns as a fixnum
 Otherwise                 -> Return as it is."
   (if (typep value 'LazyAxis)
-      (if (every (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value)) ;; Can determine?
+      (if (every (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value)) ;; Can be determined?
 	  (observe-axis value)
 	  value)
       (if (symbolp value)
@@ -414,14 +443,17 @@ Otherwise                 -> Return as it is."
 
 ;; [FIXME]
 ;; When I have enough time, Reimplement dynamic-shaping as much better ... elegant way.
-(defparameter *lazyaxis->symbol* (make-hash-table :test #'equal))
-(defparameter *symbol->lazyaxis* (make-hash-table :test #'equal))
+
+(defparameter *lazyaxis->symbol* (make-hash-table :test #'equal) "[A*B](*PACKAGE*) -> LAZYAXIS_N")
+(defparameter *symbol->lazyaxis* (make-hash-table :test #'equal) "LAZYAXIS_N -> [A*B](*PACKAGE*)")
 
 (defmethod lazyaxis-symbol ((lazyaxis LazyAxis))
-  (or (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*)
+  (or (gethash (format nil "~a~a" (package-name *package*) lazyaxis) *lazyaxis->symbol*)
       (let ((id (gensym "LAZYAXIS")))
 	(setf (gethash id *symbol->lazyaxis*) lazyaxis
-	      (gethash (format nil "~a" lazyaxis) *lazyaxis->symbol*) id))))
+	      (gethash (format nil "~a~a" (package-name *package*) lazyaxis) *lazyaxis->symbol*) id))))
+
+(defmethod lazyaxis-symbol ((lazyaxis T)) nil)
 
 (defun symbol-lazyaxis (symbol)
   (gethash symbol *symbol->lazyaxis*))

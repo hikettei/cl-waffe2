@@ -192,7 +192,7 @@ Output: `Tensor[AbstractTensor]`
 	     ((self dout dx dy) ;; (viewed-tensor old)
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
-		     (res (!move dx (apply #'!view dout inp-sub))))		
+		     (res (!move dx (apply #'!view dout inp-sub))))
 		(values nil (->contiguous (apply #'!view res out-sub))))))
 
 (defun !view (tensor &rest subscripts)

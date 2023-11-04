@@ -9,7 +9,7 @@
 (defun lisp-name (value)
   (typecase value
     (symbol     
-     `(the fixnum (cl-waffe2/vm.generic-tensor::read-symbol ',value)))
+     `(the fixnum (cl-waffe2/vm:maybe-observe-axis ',value)))
     (T
      value)))
 
@@ -54,9 +54,18 @@ apply - Set to (apply function array). nil to (dotimes (...) ... )"
 	      (+
 	       ,@(loop for dim upfrom 0 below (dims tensor)
 		       for stride in (tensor-actual-stride tensor)
+		       for view   in (tensor-view tensor)
 		       for index in indices
 		       collect
-		       `(the (unsigned-byte 32) (* ,stride ,index)))))))
+		       (let ((range (subscript-range view)))
+			 (if (subscript-broadcast view)
+			     0
+			     `(the
+			       (unsigned-byte 32)
+			       ;; [FixME] Optimize the range-nth computation...
+			       (*
+				,stride
+				(wf/iter:range-nth ,range ,index))))))))))
 
 (defun expand-instruction (aloop instruction index-symbol indices &aux (results (gensym)))
   (declare (type LazyLispInstruction instruction))
@@ -68,8 +77,8 @@ apply - Set to (apply function array). nil to (dotimes (...) ... )"
 			       collect
 			       `(loop for ,index-symbol of-type (unsigned-byte 32)
 				      upfrom 0
-				       below ,(lisp-name (car (last (shape tensor))))
-				     collect
+					below ,(lisp-name (car (last (shape tensor))))
+				      collect
 				      ,(lazy-aref-form tensor indices)))))))
 	 (assert (= (length ,results) (the fixnum ,(lli-reduced-to instruction)))
 		 nil
