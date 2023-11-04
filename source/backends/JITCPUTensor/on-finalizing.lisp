@@ -35,8 +35,8 @@
 ;;  - [Add] OpenMP (thresholds, nested)
 ;;  - [Add]
 
-;; This is a toplevel of JIT-Compiling Backend
-;; After High-Level IR compiling is finished, the method on-finalizing-compiling will be invoked.
+;; This is a toplevel of the JIT-Compiling Backend
+;; After High-Level IR compilation is finished, the method on-finalizing-compiling will be invoked.
 ;; Depending on *using-backend*, the method below would be also invoked.
 (defmethod on-finalizing-compiling ((device-name (eql 'JITCPUTensor)) iseq-fw iseq-bw)
   (flet ((applying-jit-helper (iseq &aux (out nil))
@@ -51,14 +51,14 @@
 	   (loop for inst in iseq do
 	     (typecase (wfop-node inst)
 	       (CPUJIT-Blueprint
-		;; [TODO] Cache functions which isn't worth ir or previously compiled
+		;; [TODO] Cache functions which are not worth IR or have been previously compiled
 		
 		;; [TODO] Stack several ops as for element-wise operations
 		(let ((ir (apply #'load-instructions (wfop-node inst) (tensor-variables (wfop-self inst)))))
 		  ;; As of this writing, this backend does not provide features for FusionOPs
 		  ;; So just replacing op is ok and wfop-args cause no conflicts
-		  ;; But If the instruction is created by fusion several ops
-		  ;; we have to note that create a new WfINstruction1
+		  ;; But if the instruction is created by fusion several ops,
+		  ;; then we have to note that to create a new WfINstruction1
 
 		  ;; [TODO]
 		  ;; compilers should be reluctant to insert a new c line which is not worth it.		  

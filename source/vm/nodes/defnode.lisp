@@ -600,7 +600,7 @@ In order to place ranked matrix operations here, you MUST use `do-compiled-loop`
       (cl-waffe2/vm.generic-tensor:reset-compiled-function-cache!)
       (assert (or (null backward) (= (1- (length backward-args)) (length forward-args)))
 	      nil
-	      "define-impl-op: The number of arguments in forward and backward should be corresponds. ~a and ~a"
+	      "define-impl-op: The number of arguments in forward and backward should be corresponding to ~a and ~a"
 	      backward-args
 	      abstract-name))
     
@@ -608,7 +608,7 @@ In order to place ranked matrix operations here, you MUST use `do-compiled-loop`
        (progn
 	 (assert (or (eql ',device t) (subtypep ',device 'cl-waffe2/vm.generic-tensor:AbstractTensor))
 	     nil
-	     "define-impl-op: the node ~a 's :device (~a) is not subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
+	     "define-impl-op: the node ~a 's :device (~a) is not a subtype of cl-waffe2/vm.generic-tensor:AbstractTensor."
 	     ',abstract-name
 	     ',device))
        
@@ -616,7 +616,7 @@ In order to place ranked matrix operations here, you MUST use `do-compiled-loop`
        
        (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform nil :reader node-save-for-backward2))
-	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
+	 (:documentation ,(format nil "The node ~a is one facet of ~a for the device ~a. Automatically defined by cl-waffe."
 				  impl-name
 				  abstract-name
 				  device)))

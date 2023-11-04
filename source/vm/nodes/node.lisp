@@ -271,7 +271,7 @@ forward: Couldn't step forward step of ~a because it is undefined.
 	 (class-name (class-of node))))
 
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-;;  Reverse Mode Graph-Level Netowork Construction
+;;  Reverse Mode Graph-Level Network Construction
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; [TODO] :backward Shape-Error Detection here?

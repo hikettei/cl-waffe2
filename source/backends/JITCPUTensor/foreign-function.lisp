@@ -4,19 +4,19 @@
 (defparameter *default-c-compiler* "gcc" "
 ## [parameter] `*default-c-compiler*`
 
-Specify the command to compile the generated c codes. In default, \"gcc\".
+Specify the command to compile the generated c codes. Defaults to: \"gcc\".
 ")
 
 (defparameter *compiler-flags* '("-fPIC" "-O3" "-march=native") "
 ## [parameter] `*compiler-flags*`
 
-In default, `*compielr-flags*` = `'(\"-fPIC\" \"-O3\" \"-march=native\")`
+By default, `*compiler-flags*` = `'(\"-fPIC\" \"-O3\" \"-march=native\")`
 ")
 
 (defparameter *viz-compiled-code* nil "
 ## [parameter] `*viz-compiled-code*`
 
-Set t to display the compiled c code to terminal. In default, `nil`
+Set to T in order to display the compiled c code in the terminal. Defaults to: `nil`
 ")
 
 ;; Ref: https://stackoverflow.com/questions/6612169/compile-a-stream-of-data-in-c

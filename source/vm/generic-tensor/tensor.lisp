@@ -813,7 +813,7 @@ If you added a new backend with having different ptr-type (can't be accessed by 
 
 (defun view (tensor &rest subscripts)
   "The function view creates a view of given tensor.
-Note that the function *view* doesn't records ANY NODES, while the function *!view* does.
+Note that the function *view* does not record ANY NODES, while the function *!view* does.
 
 Subscripts can be following:
 

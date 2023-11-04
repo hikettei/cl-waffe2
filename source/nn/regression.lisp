@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2/nn)
 
-;; Provides A BASIC API for Regression
+;; Provides a BASIC API for Regression
 ;;
 ;; LinearLayer DenseLayer L1/L2 Norm Etc...
 ;;

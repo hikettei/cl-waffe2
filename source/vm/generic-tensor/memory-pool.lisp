@@ -30,9 +30,9 @@
 
 
 ;; Dealing with dynamycally shaped tensors:
-;;   In cl-waffe2, the size of InputTensor dynamically changes depeneding on batch-size.
+;;   In cl-waffe2, the size of InputTensor dynamically changes depending on batch-size.
 ;;   That is, X=(BATCH 100) tensor also could be: (1 100) or (100 100) tensor.
-;;   If the total size of tensor resized, is larger than before allocated one, do a reallocate otherwise use old one.
+;;   If the total size of the tensor resized, is larger than the before allocated one, then do a reallocate otherwise use old one.
 ;;  
 ;;  Case1. BATCH=1 -> BATCH=100
 ;;   => Reallocate or find 1 100 Tensor
@@ -42,7 +42,7 @@
 ;;
 
 ;; Keep Thread-Safe:
-;;  Memory-Pool is devided to each thread managed by bordeaux-threads to avoid conflicts.
+;;  Memory-Pool is devided to each thread managed by bordeaux-threads in order to avoid conflicts.
 ;;  The toplevel variable is a *thread-memory-pool*, and branching like:
 ;;   *thread-memory-pool*
 ;;        thread-idx
@@ -53,15 +53,15 @@
 
 
 ;; Caching Tensors:
-;;  First, tensors in the memory-pool has a these state:
+;;  First, tensors in the memory-pool have one of these state:
 ;;   InputTensor[state=:input]
 ;;      - Whenever the computation done and the allocation isn't needed anymore, ...
 ;;        Tensors with state=:input would never moved into cached-room
 ;;        InputTensor with their name is a keyword, is register as :input
 ;;   InputTensor[state=:tmp]
-;;      - InputTensors created like (make-input `(...) nil) is registered as :tmp
-;;      - The storage vec isn't guaranteed to be filled with 0.
-;;      - When ref-count become 0, they're moved into cached-tensors
+;;      - InputTensors created like (make-input `(...) nil) are registered as :tmp
+;;      - The storage vec is not guaranteed to be filled with 0.
+;;      - When ref-count becomes 0, they are moved into cached-tensors
 ;;      - 
 ;;   InputTensor[state=:save-for-backward]
 ;;      - When *no-grad*=nil, becomes :input
@@ -77,7 +77,7 @@
 (defvar *thread-pool-lock* (make-lock "thread cache lock"))
 
 ;; It was originally (defvar *adjustable-shape-table* nil)
-;; If there's any shape-error related to static composite functions, doubt this:
+;; If there is any shape-error related to static composite functions, doubt this:
 (defparameter *adjustable-shape-table* (make-hash-table) "An hash-table: Symbol -> Size.") ;; (A -> 10, B -> 10)
 
 (defvar *current-shape-state* nil) ;; Global Adjustable-Shape-State
@@ -229,7 +229,7 @@ InputTensors created inside this macro guarantees for all read information to be
 	   (optimize (speed 3)))
   
   (when (some #'symbolp (shape tensor))
-    (error "tensor-vec: Can't allocate the InputTensor on memory because the given one still inludes a symbol.
+    (error "tensor-vec: Cannot allocate the InputTensor on memory because the given one still inludes a symbol.
 ~a
 
 -> Compile the tensor with `build`, and set inputs." tensor))

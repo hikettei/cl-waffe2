@@ -357,7 +357,7 @@ When attempting: ~a -> ~a" base-shape reshape-to)
 (!reshape tensor &rest shapes)
 ```
 
-Returns a InputTensor with the same number of elements bu with the specified `shapes`.
+Returns an InputTensor with the same number of elements but with the specified `shapes`.
 
 ### Inputs
 
