@@ -300,7 +300,7 @@ A convenient macro to hook AbstractOptimizers to each AbstractTensor. As the mos
      (hook-optimizer! ,bind ,optimizer))
 ```
 
-where `bind` is expected to be AbstractTensor, optimizer is a creation form of `AbstractOptimizer`, and the function `hook-optimizer!` hooks the given optimizer into bind.
+where `bind` is expected to be an AbstractTensor, optimizer is a creation form of `AbstractOptimizer`, and the function `hook-optimizer!` hooks the given optimizer into bind.
 
 In cl-waffe2, one independent Optimizer must be initialised per parameter. This macro can be used to concisely describe the process of initialising the same Optimiser for many parameters.
 

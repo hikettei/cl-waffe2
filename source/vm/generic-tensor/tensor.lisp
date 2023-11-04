@@ -442,22 +442,22 @@ This function is setfable and inlined.
 	     (slot-value tensor 'orig-shape) (copy-list (original-shape create-from))
 	     (tensor-permute-order tensor)   (copy-list (tensor-permute-order create-from))
 	     
-	     (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t)))
-	     (tensor-visible-shape tensor) (compute-visible-shape orig-shape (tensor-view tensor))))
+	     (tensor-view tensor) (compute-next-view tensor (getf initargs :past-view) (or view `(t)))
+	     (tensor-visible-shape tensor) (compute-visible-shape tensor)))
       ((eql (getf initargs :facet) :input)
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
 	 (setf (tensor-view tensor)
-	       (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+	       (compute-next-view tensor (getf initargs :past-view) (or view `(t))))
 	 (setf (tensor-visible-shape tensor)
-	       (compute-visible-shape orig-shape (tensor-view tensor)))
+	       (compute-visible-shape tensor))
 	 nil))
       (T
        (when (not scalar-p)
 	 (setf (tensor-stride tensor) (calc-strides orig-shape order))
-	 (setf (tensor-view tensor) (parse-view-subscripts tensor (getf initargs :past-view) (or view `(t))))
+	 (setf (tensor-view tensor) (compute-next-view tensor (getf initargs :past-view) (or view `(t))))
 	 (setf (tensor-visible-shape tensor)
-	       (compute-visible-shape orig-shape (tensor-view tensor)))
+	       (compute-visible-shape tensor))
 	 nil)))
     ;; Initial Permution: 5 4 3 2 ... 1 0
     (unless (tensor-permute-order tensor)
@@ -559,31 +559,41 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 5. `initial-element`[Anything] Set anything which you want to set as a initial element.
 
 6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
+
+## Tips
+
+Inserting `~` allows direct insertion of broadcastable axis at the corresponding position:
+
+```lisp
+(randn `(3 ~ 3))
+(make-tensor `(3 ~ 3))
+```
 "
   (declare (type list view))
   (when (null *using-backend*)
     (error "make-tensor: Can't create AbstractTensor because no devices is registed in *using-backend*."))
   
   (if (typep shape-or-scalar 'list)
-      (progn
-	(when (not (every #'numberp shape-or-scalar))
-	  (error "make-tensor: Can't create an ExistTensor of ~a.
+      (with-flexible-shape (shape-or-scalar shape-or-scalar)
+	(if (typep shape-or-scalar 'list)
+	    (progn
+	      (setq shape-or-scalar (map 'list #'read-symbol shape-or-scalar))
+	      (when (not (every #'numberp shape-or-scalar))
+		(error "make-tensor: Can't create an ExistTensor of ~a.
 The size of tensor created with make-tensor should be determined.
   → All of shapes are fixnum, not a LazyAxis or symbol.
   → make-input to create dynamically shaped tensor.
 " shape-or-scalar))))
-  
-  (if (typep shape-or-scalar 'list)
-      (make-instance (or device (car *using-backend*))
-		     :dtype dtype
-		     :order order
-		     :create-from create-from
-		     :requires-grad requires-grad
-		     :shape (copy-list shape-or-scalar)
-		     :projected-p nil
-		     :facet :exist
-		     :initial-element initial-element
-		     :view view)
+	(make-instance (or device (car *using-backend*))
+		       :dtype dtype
+		       :order order
+		       :create-from create-from
+		       :requires-grad requires-grad
+		       :shape (copy-list shape-or-scalar)
+		       :projected-p nil
+		       :facet :exist
+		       :initial-element initial-element
+		       :view view))
       (make-instance (or device (find-scalar-tensor))
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
@@ -624,6 +634,14 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
 `order` [keyword] Set order.
 
 `create-from[nil or AbstractTensor]` The returned InputTensor will extend Permutions/Strides and so on from `create-from` if any.
+
+## Tips
+
+Inserting `~` allows direct insertion of broadcastable axis at the corresponding position:
+
+```lisp
+(make-input `(~ N C) nil)
+```
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
@@ -631,17 +649,18 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
   (when (null *using-backend*)
     (error "make-input: Can't create AbstractTensor because no devices is registed in *using-backend*."))
 
-  (make-instance (if scalar-p
-		     (find-scalar-tensor)
-		     (car *using-backend*))
-		 :scalar-p scalar-p
-		 :create-from create-from
-		 :dtype dtype
-		 :order order
-		 :shape shape
-		 :input-shape shape
-		 :named (or named (symbol-name (gensym "ChainTMP")))
-		 :facet :input))
+  (with-flexible-shape (shape shape)
+    (make-instance (if scalar-p
+		       (find-scalar-tensor)
+		       (car *using-backend*))
+		   :scalar-p scalar-p
+		   :create-from create-from
+		   :dtype dtype
+		   :order order
+		   :shape shape
+		   :input-shape shape
+		   :named (or named (symbol-name (gensym "ChainTMP")))
+		   :facet :input)))
 
 (defun mref (tensor &rest subscripts)
   "The function mref is only used to print/initialize tensors, accessing the index of subscripts **with** considering views..
@@ -656,16 +675,16 @@ This function is setfable."
   (vref tensor
 	(+
 	 (tensor-initial-offset tensor)
-	 (apply #'+
-		(map 'list
-		     #'(lambda (stride s view shape)
-			 (declare (ignore shape))
-			 (* stride (compute-stepby (subscript-view view))
-			    (+ s (compute-visible-start-idx (subscript-view view)))))
-		     (tensor-stride tensor)
-		     subscripts
-		     (tensor-view tensor)
-		     (slot-value tensor 'orig-shape))))))
+	 (apply
+	  #'+
+	  (map 'list
+	       #'(lambda (stride count view)
+		   (* stride
+		      (compute-stepby (subscript-view view))
+		      (wf/iter:range-nth (subscript-range view) count)))
+	       (tensor-stride tensor)
+	       subscripts
+	       (tensor-view tensor))))))
 
 ;; Note that mref is super slow and only used in a limited situation.
 (defun (setf mref) (new-value tensor &rest subscripts)
@@ -678,16 +697,16 @@ This function is setfable."
   (setf (vref tensor
 	      (+
 	       (tensor-initial-offset tensor)
-	       (apply #'+
-		      (map 'list
-			   #'(lambda (stride s view shape)
-			       (declare (ignore shape))
-			       (* stride (compute-stepby (subscript-view view))
-				  (+ s (compute-visible-start-idx (subscript-view view)))))
-			   (tensor-stride tensor)
-			   subscripts
-			   (tensor-view tensor)
-			   (slot-value tensor 'orig-shape)))))
+	       (apply
+		#'+
+		(map 'list
+		     #'(lambda (stride count view)
+			 (* stride
+			    (compute-stepby (subscript-view view))
+			    (wf/iter:range-nth (subscript-range view) count)))
+		     (tensor-stride tensor)
+		     subscripts
+		     (tensor-view tensor)))))
 	new-value))
 
 ;; If you've created a new backend with different ptr, only you have to do is to define vref.
@@ -799,11 +818,10 @@ Note that the function *view* doesn't records ANY NODES, while the function *!vi
 Subscripts can be following:
 
 - fixnum
+- (:index <fixnum | LazyAxis>)
 - (start stop)
 - (start stop by)
 - t
-- (:indices ...)
-- (:tflist ...)
 - (:broadcast fixnum)
 
 Note that view is only created for Tensors, not a Scalar.

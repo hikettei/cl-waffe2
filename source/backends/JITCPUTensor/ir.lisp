@@ -17,28 +17,28 @@
       (case type
 	(:modify
 	 ;; modify: A fname B
-	 (write-c-line "~a ~a ~a;~%"
-		       (or (place-holder-p displace-to) (cAref displace-to indices))
-		       fname		     
-		       (apply
-			#'concatenate
-			'string
-			(butlast
-			 (loop for arg in args
-			       append
-			       (list (or (place-holder-p arg) (cAref arg indices)) ", "))))))
+	 (format nil "~a ~a ~a;"
+		 (or (place-holder-p displace-to) (cAref displace-to indices))
+		 fname		     
+		 (apply
+		  #'concatenate
+		  'string
+		  (butlast
+		   (loop for arg in args
+			 append
+			 (list (or (place-holder-p arg) (cAref arg indices)) ", "))))))
 	(:apply
 	 ;; apply: A = fname(B)
-	 (write-c-line "~a ~a ~a;~%"
-		       (or (place-holder-p displace-to) (cAref displace-to indices))
-		       fname
-		       (apply
-			#'concatenate
-			'string
-			(butlast
-			 (loop for arg in args
-			       append
-			       (list (or (place-holder-p arg) (cAref arg indices)) ", "))))))
+	 (format nil "~a ~a ~a;"
+		 (or (place-holder-p displace-to) (cAref displace-to indices))
+		 fname
+		 (apply
+		  #'concatenate
+		  'string
+		  (butlast
+		   (loop for arg in args
+			 append
+			 (list (or (place-holder-p arg) (cAref arg indices)) ", "))))))
 	(T
 	 (error "Unknown instruction type: ~a" instruction))))))
 

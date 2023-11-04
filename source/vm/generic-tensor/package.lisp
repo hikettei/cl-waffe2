@@ -2,8 +2,13 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/vm.generic-tensor
+  (:documentation "A package providing features for AbstractTensor. This package is also known as wf/t or cl-waffe2/tensor.")
+		  
   (:use :cl :lparallel :bordeaux-threads :cl-waffe2/threads)
-
+  
+  ;; Abbreviates (More proper naming)
+  (:nicknames #:wf/t #:cl-waffe2/tensor)
+  
   (:export
    #:State-Dict
    #:State-dict-table
@@ -95,6 +100,13 @@
    #:compile-option-t
    )
 
+  ;; Dynamic Shapes
+  (:export
+   #:with-adjustable-symbol-scope
+   #:with-adjustable-symbol
+   #:with-adjustable-symbols
+   #:*adjustable-shape-table*)
+  
   (:export
    #:hook-optimizer!
    #:call-optimizer!
@@ -119,6 +131,10 @@
    #:with-no-grad)
 
   (:export
+   #:subscript-range
+   #:subscript-view
+   #:subscript-broadcast
+   
    #:viewinstruction
    #:viewinstruction-offset
    #:viewinstruction-size

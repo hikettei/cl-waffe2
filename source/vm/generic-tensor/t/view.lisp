@@ -30,8 +30,8 @@
 
 ;; T->T, T->Index, T->Slice, T->Slice-By
 (test view-t->index-1d
-  (is (= (round (mref (view (test-array `(10)) 0) 0) 0)))
-  (is (= (round (mref (view (test-array `(10)) 1) 0) 1))))
+  (is (= (round (mref (view (test-array `(10)) 0) 0)) 0))
+  (is (= (round (mref (view (test-array `(10)) 1) 0)) 1)))
 
 (test view-t->slice-1d
   (is (sliced-well-p
@@ -48,20 +48,22 @@
 	3
 	1))
   (is (sliced-well-p
-       (view (test-array `(10)) `(2 -1))
+       (view (test-array `(10)) `(2 10))
 	0
 	6
 	2)))
 
-(test view-t->slice-1d-by ;; To ADD: by = -1 -2...
+(test view-t->slice-1d-by
   (is (M= (view (test-array `(10)) `(0 10 2))
 	  `(0 2 4 6 8)))
-  (is (M= (view (test-array `(10)) `(2 10 2))
-	  `(4 6 8))))
+  (is (M= (view (test-array `(10)) `(2 -1 2))
+	  `(2 4 6 8)))
+  (is (M= (view (test-array `(10)) `(2 10 -2))
+	  `(8 6 4 2))))
 
 (test view-index->t-1d
-  (is (M= (view (view (test-array `(10)) 1) t) `(1)))
-  (is (M= (view (view (test-array `(10)) 0) t) `(0))))
+  (is (M= (view (view (test-array `(10)) 1) 0) `(1)))
+  (is (M= (view (view (test-array `(10)) 0) 0) `(0))))
 
 (test view-slice->slice-1d
   (is (M= (view (view (test-array `(10)) `(1 5)) `(1 3)) `(2 3))))

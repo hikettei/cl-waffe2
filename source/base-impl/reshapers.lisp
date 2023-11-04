@@ -84,7 +84,7 @@ Translates the given orders into PyTorch's notation
 (~ forms)
 ```
 
-(TODO)
+(TODO: Docs)
 
 ```lisp
 (~ N=1 -> N ...)
@@ -109,6 +109,4 @@ Translates the given orders into PyTorch's notation
 			  collect
 			  `(cl-waffe2/vm:make-lazyaxis
 			    (replace-forms ',axis ,table)))))))
-	(error "Invaild form: ~a
-AXIS_1 AXIS_2 AXIS_3 ... -> TRANSFORMED_AXIS1 TRANSFORMED_AXIS2 ... " forms))))
-
+	`(cl-waffe2/vm.iterator:range ,@forms))))

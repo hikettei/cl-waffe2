@@ -59,15 +59,26 @@ type:
 			(expand-helper a)
 			(expand-helper b)))
 	       ((list _ b)
-		(let ((res (format nil "~a" b)))
-		  (c-name (subseq res 1 (length res)))))
+		(let* ((res (format nil "~a" b))
+		       (res (subseq res 1 (length res))))
+		  (maybe-symbol (cadr b))
+		  (c-name res)))
 	       (T
 		(error "cStride: Encountered Unknown Stride Syntax ~a" stride)))))
-    (let ((view (force-list (nth axis (tensor-view tensor)))))
-      (if (and (listp view)
-	       (eql (car view) :broadcast))
+    (let ((view (nth axis (tensor-view tensor))))
+      (if (subscript-broadcast view)
 	  "0"
-	  (expand-helper (nth axis (tensor-stride tensor)))))))
+	  (let* ((range     (subscript-range view))
+		 (direction (wf/iter:range-step range))
+		 (stride    (expand-helper (nth axis (tensor-stride tensor)))))
+	    (if (numberp direction)
+		(if (= direction 1)
+		    (format nil "~a" stride)
+		    (format nil "~a*~a" direction stride))
+		(format nil "~a*~a"
+			(or (maybe-symbol (cl-waffe2/vm:lazyaxis-symbol direction))
+			    (maybe-symbol direction))
+			stride)))))))
 
 (defun cOffset (tensor rank)
   (symb (tensor-id tensor) '_offset rank))
@@ -79,15 +90,19 @@ type:
     (flet ((index-of (rank index stride)
 	     (when (not (member index *solved-as-zero* :test #'string=))
 	       (list
-		(let ((char
-			(format nil "(~a~a)"
-				(if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-					  (force-list (nth rank (tensor-view tensor)))))
-				    ""
-			            (format nil "~a+"
-					    (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-					     (force-list (nth rank (tensor-view tensor))))))
-				index)))
+		(let* ((offset (wf/iter:range-start-index
+				(wf/t:subscript-range
+				 (nth rank (tensor-view tensor)))))
+		       (offset (maybe-symbol (or (cl-waffe2/vm:lazyaxis-symbol offset) offset)))
+		       (char
+			 (format nil "(~a~a)"
+				 ;; Computing offsets:
+				 (if (and
+				      (numberp offset)
+				      (= 0 offset))
+				     ""
+			             (format nil "~a+" offset))
+				 index)))
 		  (if (and (numberp stride)
 			   (= stride 1))
 		      char
@@ -111,15 +126,19 @@ type:
     (flet ((index-of (rank index stride)
 	     (when (not (member index *solved-as-zero* :test #'string=))
 	       (list 
-		(let ((char
-			(format nil "(~a~a)"
-				(if (= 0 (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-					  (force-list (nth rank (tensor-view tensor)))))
-				    ""
-			            (format nil "~a+"
-					    (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-					     (force-list (nth rank (tensor-view tensor))))))
-				index)))
+		(let* ((offset (wf/iter:range-start-index
+				(wf/t:subscript-range
+				 (nth rank (tensor-view tensor)))))
+		       (offset (or (cl-waffe2/vm:lazyaxis-symbol offset) offset))
+		       (char
+			 (format nil "(~a~a)"
+				 ;; Computing offsets:
+				 (if (and
+				      (numberp offset)
+				      (= 0 offset))
+				     ""
+			             (format nil "~a+" (maybe-symbol offset)))
+				 index)))
 		  (if (and (numberp stride)
 			   (= stride 1))
 		      char
