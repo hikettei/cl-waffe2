@@ -39,7 +39,9 @@
    #:wfop-sv4bw
    #:wfop-args
    #:wfop-loadp
-   #:read-loadp))
+   #:read-loadp
+   #:wfop-comment
+   #:wfop-lut-cache-p))
 
 (in-package :cl-waffe2/vm)
 
