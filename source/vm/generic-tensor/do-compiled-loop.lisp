@@ -198,7 +198,6 @@ Examples:
 		      (type (simple-array (unsigned-byte 32) (*)) offsets))
 	     (let ((subject (nth c loop-blueprint)))
 	       (when subject
-
 		 (when (eql (aloop-mode subject) :batch)
 		   (loop with rank fixnum = (aloop-rank subject)
 			 for tensor in tensors
@@ -252,7 +251,6 @@ Examples:
 			    collect
 			    (loop with offset  fixnum = (aref offsets position)
 				  for nth-rank fixnum upfrom rank below max-rank
-				  for stride   fixnum in (nthcdr rank (tensor-stride tensor))
 				  collect
 				  (make-viewinstruction ;; (OFFSET, SIZE, STRIDE)
 				   (the
@@ -263,13 +261,14 @@ Examples:
 				     ;; If stride is a negative number:
 				     ;; e.g.: (0 5 -1)
 				     ;; the offset starts from 5
-				     (unless (subscript-broadcast (nth nth-rank (tensor-view tensor)))
-				       (wf/iter:range-nth
-					(subscript-range
-					 (nth
-					  rank
-					  (tensor-view tensor)))
-					0))))
+				     (if (subscript-broadcast (nth nth-rank (tensor-view tensor)))
+					 0
+					 (wf/iter:range-nth
+					  (subscript-range
+					   (nth
+					    rank
+					    (tensor-view tensor)))
+					  0))))
 				   (if (eql (aloop-mode subject) :apply-flatten)
 				       (cl-waffe2/vm:maybe-observe-axis (aloop-element-n subject))
 				       (cl-waffe2/vm:maybe-observe-axis (nth nth-rank (shape tensor))))

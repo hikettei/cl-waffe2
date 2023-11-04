@@ -154,8 +154,10 @@
 			     k)
 			 v))
 	     cl-waffe2/vm.generic-tensor::*adjustable-shape-table*)
-    (format out "LazyAxis Table:~%")
-    (maphash #'(lambda (s axis)
-		 (format out "    ~a -> ~a~%" s axis))
-	     *symbol->lazyaxis*)))
+    ;; Dynamic Shapes currently using is already displayed.
+    ;;(format out "LazyAxis Table:~%")
+    ;;(maphash #'(lambda (s axis)
+    ;;		 (format out "    ~a -> ~a~%" s axis))
+    ;;	     *symbol->lazyaxis*)
+    ))
 

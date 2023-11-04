@@ -186,6 +186,9 @@ expected: AbstractTensor"
 					 (list (dtype tensor)
 					       (order tensor)
 					       (class-of tensor)
+					       (if cl-waffe2/vm::*static-alloc-state*
+						   (cl-waffe2/vm::vmalloc-alloc-id cl-waffe2/vm::*static-alloc-state*)
+						   nil)
 					       (map 'list #'cl-waffe2/vm.generic-tensor::force-list (tensor-view tensor))
 					       (cl-waffe2/vm.generic-tensor::tensor-permute-order tensor)
 					       ;; [FIXME] Reusing gcompiled composite could be the main reason for SegFault!!

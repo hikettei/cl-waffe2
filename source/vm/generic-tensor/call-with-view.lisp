@@ -136,7 +136,6 @@ butgot ~a."
 					    (*
 					     (the fixnum ,start-idx) 
 					     ,(nth rank (tensor-stride tensor)))))))))
-
 		    ;; Exploring remaining loops
 		    ,(if (eql (aloop-mode subject) :batch)
 			 (alexandria:with-gensyms (total-count count)
@@ -191,7 +190,7 @@ butgot ~a."
 					   (if (subscript-broadcast
 						(nth nth-rank (tensor-view tensor)))
 					       0
-					       `(the fixnum (aref ,diffs-place ,rank ,position)))))))))))))
+					       `(the fixnum (aref ,diffs-place ,nth-rank ,position)))))))))))))
       `(let ((,offsets-place (make-array
 			      ,(length tensors)
 			      :element-type 'fixnum
@@ -206,9 +205,7 @@ butgot ~a."
 					   for n-rank upfrom 0
 					   collect
 					   `(list
-					     ,@(loop with rank = (if (eql (aloop-mode aloop) :batch)
-								     (aloop-rank aloop)
-								     n-rank)
+					     ,@(loop with rank = (aloop-rank aloop)
 						     for tensor in tensors
 						     collect
 						     (let ((view (subscript-range (nth rank (tensor-view tensor)))))
