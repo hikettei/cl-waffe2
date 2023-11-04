@@ -559,32 +559,41 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 5. `initial-element`[Anything] Set anything which you want to set as a initial element.
 
 6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
+
+## Tips
+
+Inserting `~` allows direct insertion of broadcastable axis at the corresponding position:
+
+```lisp
+(randn `(3 ~ 3))
+(make-tensor `(3 ~ 3))
+```
 "
   (declare (type list view))
   (when (null *using-backend*)
     (error "make-tensor: Can't create AbstractTensor because no devices is registed in *using-backend*."))
-
+  
   (if (typep shape-or-scalar 'list)
-      (progn
-	(setq shape-or-scalar (map 'list #'read-symbol shape-or-scalar))
-	(when (not (every #'numberp shape-or-scalar))
-	  (error "make-tensor: Can't create an ExistTensor of ~a.
+      (with-flexible-shape (shape-or-scalar shape-or-scalar)
+	(if (typep shape-or-scalar 'list)
+	    (progn
+	      (setq shape-or-scalar (map 'list #'read-symbol shape-or-scalar))
+	      (when (not (every #'numberp shape-or-scalar))
+		(error "make-tensor: Can't create an ExistTensor of ~a.
 The size of tensor created with make-tensor should be determined.
   → All of shapes are fixnum, not a LazyAxis or symbol.
   → make-input to create dynamically shaped tensor.
 " shape-or-scalar))))
-  
-  (if (typep shape-or-scalar 'list)
-      (make-instance (or device (car *using-backend*))
-		     :dtype dtype
-		     :order order
-		     :create-from create-from
-		     :requires-grad requires-grad
-		     :shape (copy-list shape-or-scalar)
-		     :projected-p nil
-		     :facet :exist
-		     :initial-element initial-element
-		     :view view)
+	(make-instance (or device (car *using-backend*))
+		       :dtype dtype
+		       :order order
+		       :create-from create-from
+		       :requires-grad requires-grad
+		       :shape (copy-list shape-or-scalar)
+		       :projected-p nil
+		       :facet :exist
+		       :initial-element initial-element
+		       :view view))
       (make-instance (or device (find-scalar-tensor))
 		     :scalar-p t
 		     :vec (coerce-lazy shape-or-scalar (dtype->lisp-type dtype))
@@ -625,6 +634,14 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
 `order` [keyword] Set order.
 
 `create-from[nil or AbstractTensor]` The returned InputTensor will extend Permutions/Strides and so on from `create-from` if any.
+
+## Tips
+
+Inserting `~` allows direct insertion of broadcastable axis at the corresponding position:
+
+```lisp
+(make-input `(~ N C) nil)
+```
 "
   (declare (type list shape)
 	   (type (or null keyword) named))
@@ -632,17 +649,18 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
   (when (null *using-backend*)
     (error "make-input: Can't create AbstractTensor because no devices is registed in *using-backend*."))
 
-  (make-instance (if scalar-p
-		     (find-scalar-tensor)
-		     (car *using-backend*))
-		 :scalar-p scalar-p
-		 :create-from create-from
-		 :dtype dtype
-		 :order order
-		 :shape shape
-		 :input-shape shape
-		 :named (or named (symbol-name (gensym "ChainTMP")))
-		 :facet :input))
+  (with-flexible-shape (shape shape)
+    (make-instance (if scalar-p
+		       (find-scalar-tensor)
+		       (car *using-backend*))
+		   :scalar-p scalar-p
+		   :create-from create-from
+		   :dtype dtype
+		   :order order
+		   :shape shape
+		   :input-shape shape
+		   :named (or named (symbol-name (gensym "ChainTMP")))
+		   :facet :input)))
 
 (defun mref (tensor &rest subscripts)
   "The function mref is only used to print/initialize tensors, accessing the index of subscripts **with** considering views..

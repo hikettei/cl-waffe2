@@ -290,3 +290,13 @@ Usage:
    (equal (symbol-name x)
 	  (symbol-name y))))
 
+(defmacro with-flexible-shape ((bind shape) &body body)
+  "body -> returning tensor"
+  (alexandria:with-gensyms (pos)
+    `(let* ((,pos   (position '~ ,shape :test #'symbol-eq))
+	    (,bind (loop for s in ,shape unless (symbol-eq s '~) collect s))
+	    (created-tensor (progn ,@body)))
+       (if ,pos
+	   (cl-waffe2/base-impl:!flexible created-tensor :at ,pos)
+	   created-tensor))))
+       
