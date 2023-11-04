@@ -63,34 +63,61 @@
     (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))))
 
 (defun cnn-build-test-cputensor ()
-  (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X)))
+  (with-devices (LispTensor CPUTensor)
+    (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))))
 
 (test dynamic-shape-build
   (is (cnn-build-test-cpujit))
   (is (cnn-build-test-cputensor)))
 
-(defun cnn-train-test-jit ()
+(defun cnn-train-test-jit-fw ()
+  (let ((model (cnn-build-test-cpujit)))
+    (forward model (randn `(100 1 28 28)))
+    ;;(backward model)
+    (forward model (randn `(10 1 28 28)))
+    ;;(backward model)
+    (forward model (randn `(121 1 28 28)))
+    ;;(backward model)
+    t))
+
+(defun cnn-train-test-cpu-fw ()
+  (let ((model (cnn-build-test-cputensor)))
+    (forward model (randn `(100 1 28 28)))
+    ;;(backward model)
+    (forward model (randn `(10 1 28 28)))
+    ;;(backward model)
+    (forward model (randn `(121 1 28 28)))
+    ;;(backward model)
+    t))
+
+(defun cnn-train-test-jit-fwbw ()
   (let ((model (cnn-build-test-cpujit)))
     (forward model (randn `(100 1 28 28)))
     (backward model)
     (forward model (randn `(10 1 28 28)))
     (backward model)
     (forward model (randn `(121 1 28 28)))
-    (backward model)))
+    (backward model)
+    t))
 
-(defun cnn-train-test-cpu ()
+(defun cnn-train-test-cpu-fwbw ()
   (let ((model (cnn-build-test-cputensor)))
     (forward model (randn `(100 1 28 28)))
     (backward model)
     (forward model (randn `(10 1 28 28)))
     (backward model)
     (forward model (randn `(121 1 28 28)))
-    (backward model)))
+    (backward model)
+    t))
 
 ;; Including JITCPUTensor Test...
 (test dynamic-shaped-cnn-build-test
-  (is (cnn-train-test-jit))
-  (is (cnn-train-test-cpu)))
+  (is (cnn-train-test-jit-fw))
+  (is (cnn-train-test-cpu-fw)))
+
+(test dynamic-shaped-cnn-build-test-diff
+  (is (cnn-train-test-jit-fwbw))
+  (is (cnn-train-test-cpu-fwbw)))
 
 (defun make-test-tensor ()
   (!reshape (make-input `(N C H W) :X) (~ N C H W -> (* N C H) W)))

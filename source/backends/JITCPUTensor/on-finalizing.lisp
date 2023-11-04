@@ -58,7 +58,7 @@
 		  ;; As of this writing, this backend does not provide features for FusionOPs
 		  ;; So just replacing op is ok and wfop-args cause no conflicts
 		  ;; But If the instruction is created by fusion several ops
-		  ;; we have to note that create a new WfINstruction
+		  ;; we have to note that create a new WfINstruction1
 
 		  ;; [TODO]
 		  ;; compilers should be reluctant to insert a new c line which is not worth it.		  

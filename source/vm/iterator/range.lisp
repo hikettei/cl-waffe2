@@ -1,41 +1,6 @@
 
 (in-package :cl-waffe2/vm.iterator)
 
-;; [TODO]
-;; - Examplesが動くかCheck
-;; - MLP TrainingのCheck
-;; - Examplesに追加: view/~/broadcasting
-;; - [Enhancement] make-inputで~を挿入
-;; - !view but step = -1 (OK)
-;; - matmul/expt/eye
-;; - package nicknames to all packs (OK)
-;; - package name docs
-;; - LoopNode dynamic-shape <- N ...
-;; 
-;;  Broadcasting:
-;;  ( 1 ~ 1 )
-;;      ^ ここの~は強制挿入
-;;  ( ~ 1 1 )
-;;    ^ 先頭/終端はOptional (RankError is needed)
-
-
-;; [TODO] Readmeかどっかに書く nicknames
-;; cl-waffe2/vm.generic-tensor -> wf/t
-;; cl-waffe2/vm.nodes          -> wf/nodes
-;; cl-waffe2/vm.iterator       -> wf/iter
-;; cl-waffe2                   -> wf/utils
-;; cl-waffe2/distributions     -> wf/d
-;; cl-waffe2/nn                -> wf/nn
-;; cl-waffe2/vm                -> wf/vm
-;; cl-waffe2/optimizers        -> wf/opt
-;; cl-waffe2/base-impl         -> wf
-
-;; (~ ~ M N)
-;; (~ M 1~ N)
-
-;; Range is designed to replace view.
-;; Range = (LIST FROM TO STEP <<LazyAxis>>)
-
 (defun lazy-max (a b)
   "Given the condition that dynamic shape is given as positive fixnum, this function lazily computes maximum value of a and b."
   (if (eql a 0)
