@@ -62,8 +62,8 @@
 	  `(8 6 4 2))))
 
 (test view-index->t-1d
-  (is (M= (view (view (test-array `(10)) 1) t) `(1)))
-  (is (M= (view (view (test-array `(10)) 0) t) `(0))))
+  (is (M= (view (view (test-array `(10)) 1) 0) `(1)))
+  (is (M= (view (view (test-array `(10)) 0) 0) `(0))))
 
 (test view-slice->slice-1d
   (is (M= (view (view (test-array `(10)) `(1 5)) `(1 3)) `(2 3))))

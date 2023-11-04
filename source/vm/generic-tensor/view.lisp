@@ -184,11 +184,16 @@ Return: List[Subscript]
     ;; <T> to try to extend the previous view.
     (or
      (when (and old-view (eql view t))
-       (make-subscript
-	past-view
-	(and (listp    (force-list old-view))
-	     (eql (car (force-list old-view)) :broadcast))
-	old-view))
+       (if (and (listp (force-list old-view))
+		(eql (car (force-list old-view)) :broadcast))
+	   (make-subscript
+	    past-view
+	    nil
+	    old-view)
+	   (make-subscript
+	    view
+	    nil
+	    (wf/iter:range 0 base-size))))
      (make-subscript
       view
       (and (listp   (force-list view))

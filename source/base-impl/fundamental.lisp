@@ -190,10 +190,17 @@ Output: `Tensor[AbstractTensor]`
 	     ;; (1 1 1)
 	     ;; (0.1 0.2 0.3) <- should be filled with 0
 	     ((self dout dx dy) ;; (viewed-tensor old)
+	      ;; dy.view -> dx
+	      
+	      ;; dy[10, 10][0:3] -> dx[3, 10]
+	      ;; dout[3, 10] -> dy[10, 10][0:3][T, T]
+
+	      ;; dout.shape == dx.shape
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
-		     (res (!move dx (apply #'!view dout inp-sub))))
-		(values nil (->contiguous (apply #'!view res out-sub))))))
+		     (res (!move dx (apply #'!view dout inp-sub)))
+		     (res (->contiguous (apply #'!view res out-sub))))
+		(values nil res))))
 
 (defun !view (tensor &rest subscripts)
   "
@@ -203,9 +210,9 @@ Output: `Tensor[AbstractTensor]`
 (!view tensor &rest subscripts)
 ```
 
-The function !view returns a tensor which is applied lazy-evaluated view.
+Returns a tensor with the visible region modified without making a copy.
 
-For Example, let A be a 4x8 Matrix, and we gonna create a view of A that portrays `A[:, 2]`.
+For Example, let A be a 4x8 Matrix, !view creates a view of A that portrays `A[:, 2]`.
 
 ```
 (!view A 2 t)
@@ -225,15 +232,18 @@ Here,
 
 ### Subscripts
 
-Subscripts are following:
+The visible area is specified by following subscripts:
 
-1. `t` all elements in the axis.
 
-2. `fixnum` points out the specified index.
+- `T` refers to the previous subscript if the tensor is created by `!view`. Otherwise, does nothing.
 
-3. `(start end)` slices the area: `[start, end)`
+- `Fixnum` equivalents to `(Index Index+1)`
 
-4. `(:broadcast N-times)` broadcasts the axis for N-times, the axis to be broadcasted must be 1 or broadcasted-axis.
+- `(start end)` slices the area of `[start, end)`
+
+- `(start end step)` slices the area of `[start, end]` by `step`. Set `step < 0` to reverse the elements.
+
+- `(:broadcast N)` broadcast the axis for `N`.
 
 ### Return
 
