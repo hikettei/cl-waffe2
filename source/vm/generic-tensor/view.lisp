@@ -224,6 +224,5 @@ Computes a shape but broadcasted axis is replaced with 1.
 	if (subscript-broadcast v)
 	  collect 1
 	else
-	  collect
-	s))
+	  collect s))
 

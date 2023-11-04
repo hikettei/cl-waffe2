@@ -120,7 +120,7 @@ butgot ~a."
 		    ;; Initial Offsets		    
 		    ,@(when (eql (aloop-mode subject) :batch)
 			(loop with rank fixnum = (aloop-rank subject)
-			      for tensor in tensors
+			      for tensor   in tensors
 			      for position upfrom 0
 			      collect
 			      (let ((start-idx
@@ -134,7 +134,7 @@ butgot ~a."
 				       (the fixnum (aref ,offsets-place ,position))
 				       (the fixnum
 					    (*
-					     (the fixnum ,start-idx) 
+					     (the fixnum ,start-idx)
 					     ,(nth rank (tensor-stride tensor)))))))))
 		    ;; Exploring remaining loops
 		    ,(if (eql (aloop-mode subject) :batch)
@@ -171,10 +171,13 @@ butgot ~a."
 					     (+ ,offsets
 						,@(unless (subscript-broadcast (nth nth-rank (tensor-view tensor)))
 						    `((the fixnum
-							   (wf/iter:range-nth
-							    ,(subscript-range
-							      (nth nth-rank (tensor-view tensor)))
-							    0))))))
+							   (*
+							    ,(nth nth-rank (tensor-stride tensor))
+							    (the fixnum
+								 (wf/iter:range-nth
+								  ,(subscript-range
+								    (nth nth-rank (tensor-view tensor)))
+								  0))))))))
 				       (if (eql (aloop-mode subject) :apply-flatten)					  
 					   `(the fixnum
 						 ,(maybe-observe-axis1
@@ -202,11 +205,10 @@ butgot ~a."
 				  :initial-contents
 				  (list
 				   ,@(loop for aloop in solved-loop
-					   for n-rank upfrom 0
+					   for rank upfrom 0
 					   collect
 					   `(list
-					     ,@(loop with rank = (aloop-rank aloop)
-						     for tensor in tensors
+					     ,@(loop for tensor in tensors
 						     collect
 						     (let ((view (subscript-range (nth rank (tensor-view tensor)))))
 						       `(the

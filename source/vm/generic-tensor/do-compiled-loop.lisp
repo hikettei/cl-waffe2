@@ -54,7 +54,6 @@ Tensors ... Able to include dynamic shape"
 			    &aux
 			      (views
 			       (nthcdr rank (wtensor-view tensor))))
-	   
 	   (some #'(lambda (v)
 		     (not
 		      (or (eql (force-list v) t)
@@ -263,12 +262,15 @@ Examples:
 				     ;; the offset starts from 5
 				     (if (subscript-broadcast (nth nth-rank (tensor-view tensor)))
 					 0
-					 (wf/iter:range-nth
-					  (subscript-range
-					   (nth
-					    rank
-					    (tensor-view tensor)))
-					  0))))
+					 (the fixnum
+					      (*
+					       (the fixnum (nth rank (tensor-stride tensor)))
+					       (wf/iter:range-nth
+						(subscript-range
+						 (nth
+						  rank
+						  (tensor-view tensor)))
+						0))))))
 				   (if (eql (aloop-mode subject) :apply-flatten)
 				       (cl-waffe2/vm:maybe-observe-axis (aloop-element-n subject))
 				       (cl-waffe2/vm:maybe-observe-axis (nth nth-rank (shape tensor))))
