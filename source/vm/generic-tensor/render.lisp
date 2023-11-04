@@ -48,11 +48,8 @@ The result sequence MUST not over max-length.
 	(view (make-list k :initial-element t)))
     (setf (nth (1- k) view) (car (last (tensor-view orig-tensor))))
     (setf (nth (1- k) sub) index)
-    (apply #'mref
-	   (apply #'view tensor view)
-	   sub)))
+    (apply #'mref tensor sub)))
 
-;; (1 2)
 (defun pprint-1d-vector (stream
 			 dim-indicator
 			 orig-tensor
@@ -88,7 +85,7 @@ The result sequence MUST not over max-length.
 	(write-string ")" stream))))
 
 
-;; More columns in one print
+;; More columns in a single print
 (defun pprint-vector (stream
 		      orig-tensor
 		      tensor
@@ -110,10 +107,11 @@ The result sequence MUST not over max-length.
 	      *matrix-columns-displaying-length*)
 	   ;; Can elements be printed at once?
 	   (let ((first-dim (nth dim-indicator (shape tensor)))
-		 (args      (make-list dim-indicator :initial-element t)))
+		 (args      (make-list dim-indicator :initial-element t))
+		 (range     (subscript-range (nth dim-indicator (tensor-view tensor)))))
 	     (dotimes (i first-dim)
 	       ;; pprint(n-1) and indent
-	       (let ((tensor-view (apply #'view tensor `(,@args ,i))))
+	       (let ((tensor-view (apply #'view tensor `(,@args ,(wf/iter:range-nth range i)))))
 		 (pprint-vector stream orig-tensor tensor-view newline (1+ indent-size) (1+ dim-indicator)))
 	       
 	       (unless (= i (1- first-dim))
@@ -126,7 +124,8 @@ The result sequence MUST not over max-length.
 		     (write-string " " stream))))
 	     (write-string ")" stream))
 	   (let ((args (make-list dim-indicator :initial-element t))
-		 (midpoint (round (/ *matrix-columns-displaying-length* 2))))
+		 (midpoint  (round (/ *matrix-columns-displaying-length* 2)))
+		 (range     (subscript-range (nth dim-indicator (tensor-view tensor)))))
 	     (labels ((render-column (line do-newline)
 			(pprint-vector stream orig-tensor line newline (1+ indent-size) (1+ dim-indicator))
 			(if do-newline
@@ -135,7 +134,7 @@ The result sequence MUST not over max-length.
 				  (write-string " " stream)))))
 		      (display-nth (n newline)
 			(render-column
-			 (apply #'view tensor `(,@args ,n))
+			 (apply #'view tensor `(,@args ,(wf/iter:range-nth range n)))
 			 newline)))
 	       ;; Displays first and last vector
 
@@ -177,22 +176,37 @@ The result sequence MUST not over max-length.
 	(dotimes (i indent) (princ " " str))
 	(format str "~a" (tensor-vec tensor)))))
 
-  ;; [FIXME] Delete this line:
-  ;; ALL LAZY STRIDES SHOULD BE COMPUTED WHEN ADJUST_ALLOCATION! WAS CALLED
-  ;; See also: do-compiled-loop* in do-compiled-loop.lisp
-  (when (some #'listp (tensor-stride tensor))
-    (setf
-     (tensor-stride tensor)
-     (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
-     (tensor-stride tensor)
-     (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))  
-  
-  (with-output-to-string (out)
-    (let ((*matrix-element-displaying-size*
-	    (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (compute-visible-actual-shape tensor))		       
-		       maximize (length (format nil "~a" (vref tensor i)))))))
-      (pprint-vector out tensor tensor t indent)
-      out)))
+  ;; For example:
+  ;; (!view (Randn `(3 3)) `(A B) nil) -> ...
+  ;; The tensor has an allocated vector
+  ;; but the shape remained to be determined?
+  (let ((shape-determined
+	  (not
+	   (some #'(lambda (x)
+		     (and (symbolp x)
+			  (symbolp (read-symbol x))))
+		 (shape tensor)))))
+    (when (null shape-determined)
+      ;; [TODO] Enhance printings of this case:
+      (return-from render-tensor "<Lazy-Shaped>"))
+
+    ;; [FIXME] Delete this line:
+    ;; ALL LAZY STRIDES SHOULD BE COMPUTED WHEN ADJUST_ALLOCATION! WAS CALLED
+    ;; See also: do-compiled-loop* in do-compiled-loop.lisp
+    (when (some #'listp (tensor-stride tensor))
+      (setf
+       (tensor-stride tensor)
+       (calc-strides (translate-adjustable-shape (original-shape tensor)) (order tensor))
+       (tensor-stride tensor)
+       (sync (tensor-stride tensor) (reverse (tensor-permute-order tensor)))))  
+    
+    (with-output-to-string (out)
+      ;; Determining the largest width of elements
+      (let ((*matrix-element-displaying-size*
+	      (+ 3 (loop for i fixnum upfrom 0 below (apply #'* (original-shape tensor))
+			 maximize (length (format nil "~a" (vref tensor i)))))))
+	(pprint-vector out tensor tensor t indent)
+	out))))
 
 
 ;;TO ADD: Table Printer

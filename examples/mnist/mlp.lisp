@@ -18,12 +18,12 @@
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features))
 
-(defmacro with-compile-backend (backend &body body)
+(defmacro with-backend (backend &body body)
   (cond ((eq backend :jit)
 	 `(with-cpu-jit (CPUTensor LispTensor)
 	    (progn
 	      ,@body)))
-	((eq *compile-backend* :cpu)
+	((eq backend :cpu)
 	 `(with-cpu
 	    (progn
 	      ,@body)))
@@ -66,7 +66,7 @@
 
 (defun train-and-valid-mlp (&key (epoch-num 10) (benchmark-p t))
   (multiple-value-bind (compiled-model model)
-      (with-compile-backend :jit
+      (with-backend :jit
 	(build-mlp-model :in-class 784 :out-class 10 :lr 1e-3))
     (let* ((train-img *reshaped-train-img-data*)
 	   (test-img  *reshaped-test-img-data*)
@@ -106,4 +106,4 @@
 	compiled-model))))
 
 ;; (cl-waffe2/vm.generic-tensor::reset-compiled-function-cache!)
-;; (train-and-valid-mlp :epoch-num 23 :benchmark-p nil)
+;; (train-and-valid-mlp :epoch-num 11 :benchmark-p nil)

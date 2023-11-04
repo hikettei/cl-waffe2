@@ -247,3 +247,16 @@
   (is (= (length (log1p-test (randn `(3 3)))) 2)))
 
 
+(defun view-diff-test1 ()
+  (let ((a (parameter (ax+b `(3 3) 0 1))))
+    (proceed-backward
+     (!add
+      (!view a `(0 2) `(0 2))
+      (randn `(2 2))))
+    (grad a)))
+
+(test view-diff-test
+  (is (every #'=
+	     (tensor-vec (view-diff-test1))
+	     #(1 1 1 1 1 1 0 0 0))))
+

@@ -66,3 +66,12 @@
 
 
 ;; testing embody-input
+
+(test flexible-insert-test
+  (is (= 0 (tensor-flexible-p (make-tensor `(~ 3 3)))))
+  (is (= 1 (tensor-flexible-p (make-tensor `(3 ~ 3)))))
+  (is (= 2 (tensor-flexible-p (make-tensor `(3 3 ~)))))
+  (is (= 0 (tensor-flexible-p (make-input `(~ 3 3) nil))))
+  (is (= 1 (tensor-flexible-p (make-input `(3 ~ 3) nil))))
+  (is (= 2 (tensor-flexible-p (make-input `(3 3 ~) nil)))))
+

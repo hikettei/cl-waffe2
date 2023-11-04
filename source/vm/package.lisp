@@ -2,6 +2,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-waffe2/vm
+  (:nicknames #:wf/vm)
   (:use
    :cl
    :cl-waffe2/vm.generic-tensor
@@ -39,7 +40,9 @@
    #:wfop-sv4bw
    #:wfop-args
    #:wfop-loadp
-   #:read-loadp))
+   #:read-loadp
+   #:wfop-comment
+   #:wfop-lut-cache-p))
 
 (in-package :cl-waffe2/vm)
 

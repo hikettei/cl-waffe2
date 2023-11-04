@@ -1,13 +1,29 @@
 
 (in-package :cl-waffe2/backends.jit.cpu)
 
+(defvar *dynamic-shape-envolved*)
+(defun maybe-symbol (value)
+  (if (and value (symbolp value))
+      (if (find value *dynamic-shape-envolved*)
+	  value
+	  (progn
+	    (push value *dynamic-shape-envolved*)
+	    value))
+      value))
+
 (defclass JITCPUTensor (cl-waffe2/backends.cpu:CPUTensor) nil
   (:documentation "
 ## [AbstractTensor] JITCPUTensor
+
+```lisp
+(with-devices (JITCPUTensor CPUTensor LispTensor)
+    ;; Your code follows...
+    )
+```
 "))
 
 (defmethod current-backend-state ((backend-name (eql 'JITCPUTensor)))
-  (format nil "compiler=~a flags=~a viz=~a openMP=~a"
+  (format nil "compiler=~a flags=~a viz=~a OpenMP=~a"
 	  *default-c-compiler*
 	  *compiler-flags*
 	  *viz-compiled-code*
@@ -39,16 +55,16 @@ Declares configurations about JITCPUTensor.
 
 `compiler[string]` a compiler to use. in default set to gcc
 
-`viz-compiled-code[boolean]` set t to display generated C codes.
+`viz-compiled-code[boolean]` Set t to display generated C codes.
 
-`openmp[boolean]` set to use OpenMP
+`openmp[boolean]` Set t to use OpenMP.
 
 `flags[list]` additional compiler flags.
 "
   (setf *default-c-compiler* compiler
-	*viz-compiled-code* viz-compiled-code
-	*use-open-mp* openMP
-	*compiler-flags* flags)
+	*viz-compiled-code*  viz-compiled-code
+	*use-open-mp*        openMP
+	*compiler-flags*     `(,@flags ,(when openMP "-fopenmp")))
   t)
 
 (defmacro with-cpu-jit ((&rest more-devices) &body body)

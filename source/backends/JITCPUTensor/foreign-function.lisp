@@ -64,21 +64,15 @@ Tips: Modify cl-waffe2/backends.jit.cpu:*default-c-compiler* to switch compilers
   (with-slots ((name name) (dynamic-symbols dynamic-symbols) (args args)) jit-compiled-kernel
     `(lambda (,@(map 'list #'tensor-id args))
        (with-tensor-ptrs (,@(loop for arg in args
-				  collect `(,(cPointer arg) ,arg)))
+				  collect `(,(cPointer arg) ,(tensor-id arg))))
 	 (cffi:foreign-funcall
 	  ,name
 	  ,@(loop for symbol in dynamic-symbols
 		  append
-		  `(:uint32 (cl-waffe2/vm.generic-tensor::read-symbol ',symbol)))
+		  `(:uint32 (cl-waffe2/vm:maybe-observe-axis ',symbol)))
 	  ,@(loop for arg in args
 		  append
 		  (append
-		   `(:pointer ,(cPointer arg))
-		   (loop for rank upfrom 0 below (dims arg)
-			 append
-			 `(:uint32
-			   (cl-waffe2/vm.generic-tensor::compute-visible-start-idx
-			    (force-list
-			     (nth ,rank (tensor-view ,(tensor-id arg)))))))))
+		   `(:pointer ,(cPointer arg))))
 	  :void)))))
 
