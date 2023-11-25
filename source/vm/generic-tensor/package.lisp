@@ -27,6 +27,7 @@
   
   (:export
    ;;#:*cache-directory*
+   #:with-empty-cached-function-table
    #:with-memory-pool
    #:make-clone
    #:print-current-memory-pool

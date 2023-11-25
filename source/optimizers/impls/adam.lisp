@@ -98,7 +98,6 @@ See the [original paper](https://arxiv.org/abs/1412.6980) for detailed algorithm
 	 (param (read-parameter optimizer))
 	 (grad  (grad param)))
     (with-no-grad
-      ;; TODO: Cache?
       (apply-adam-step-m
        (adam-m optimizer)
        grad ;; the gradient involved in in-place op

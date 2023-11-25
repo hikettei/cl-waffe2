@@ -439,57 +439,58 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
     (build toplevel :inputs ( ... ) ...)
                               └── :inputs receive a list of keyword indicating the name of tensors created by make-input
                                   Set like `(:A :B) "))
-  
-  (multiple-value-bind (fw-iseq bw-iseq variables dout allocation)
-      (cl-waffe2/vm:compile-forward-and-backward toplevel
-						 :need-backward construct-backward?
-						 :compile-mode compile-mode
-						 :fuse-p fuse-ops
-						 :add1 dout-add1)
-    
-    (let ((forward-f  #'(lambda (model)
-			  (with-adjustable-symbol-scope
-			    (let ((alloc-inst (set-adjustable-symbols model)))
-			      (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-				(cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
-				(all-embodied? model)
-				(cl-waffe2/vm:accept-instructions fw-iseq))))))
-	  (backward-f   (when construct-backward?
-			  #'(lambda (model)
-			      (with-adjustable-symbol-scope
-				(let ((alloc-inst (set-adjustable-symbols model)))
-				  (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
-				    (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
-				    (cl-waffe2/vm:accept-instructions bw-iseq)))))))
-	  (table        (construct-variables-table variables)))
+
+  (with-empty-cached-function-table
+    (multiple-value-bind (fw-iseq bw-iseq variables dout allocation)
+	(cl-waffe2/vm:compile-forward-and-backward toplevel
+						   :need-backward construct-backward?
+						   :compile-mode compile-mode
+						   :fuse-p fuse-ops
+						   :add1 dout-add1)
+      
+      (let ((forward-f  #'(lambda (model)
+			    (with-adjustable-symbol-scope
+			      (let ((alloc-inst (set-adjustable-symbols model)))
+				(cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+				  (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
+				  (all-embodied? model)
+				  (cl-waffe2/vm:accept-instructions fw-iseq))))))
+	    (backward-f   (when construct-backward?
+			    #'(lambda (model)
+				(with-adjustable-symbol-scope
+				  (let ((alloc-inst (set-adjustable-symbols model)))
+				    (cl-waffe2/vm::with-static-allocation ((compiled-allocation model))
+				      (cl-waffe2/vm::adjust-allocation! (compiled-allocation model) alloc-inst)
+				      (cl-waffe2/vm:accept-instructions bw-iseq)))))))
+	    (table        (construct-variables-table variables)))
 
 
-      ;; Check all arguments are valid as an argument
-      (when inputs
-	(let ((input-names (alexandria:hash-table-keys (nodevariables-variables table))))
-	  (mapc
-	   #'(lambda (x)
-	       (when (not (find x input-names))
-		 (error "~abuild: Can't compile the tensor because the argument ~a didn't appear in the computation node.
+	;; Check all arguments are valid as an argument
+	(when inputs
+	  (let ((input-names (alexandria:hash-table-keys (nodevariables-variables table))))
+	    (mapc
+	     #'(lambda (x)
+		 (when (not (find x input-names))
+		   (error "~abuild: Can't compile the tensor because the argument ~a didn't appear in the computation node.
         (build toplevel :inputs ~a)
                                 └── Choose from: ~a
 Or, your network may be disconnected at a certain position."
-			(if defmodel-as-from
-			    (format nil "~%defmodel-as: Attempted to compile the function ~(~a~) but failed due to:~%" defmodel-as-from)
-			    "")
-			x
-			inputs
-			input-names)))
-	   inputs)))
+			  (if defmodel-as-from
+			      (format nil "~%defmodel-as: Attempted to compile the function ~(~a~) but failed due to:~%" defmodel-as-from)
+			      "")
+			  x
+			  inputs
+			  input-names)))
+	     inputs)))
 
-      (make-instance 'Compiled-Composite
-		     :allocation allocation
-		     :compiled-forward  forward-f
-		     :compiled-backward backward-f
-		     :out               toplevel
-		     :dout              dout
-		     :inputs            inputs
-		     :variables         table))))
+	(make-instance 'Compiled-Composite
+		       :allocation allocation
+		       :compiled-forward  forward-f
+		       :compiled-backward backward-f
+		       :out               toplevel
+		       :dout              dout
+		       :inputs            inputs
+		       :variables         table)))))
 
 (defmethod copy-compiled-model ((model Compiled-Composite))
   (let* ((allocation (cl-waffe2/vm::copy-allocate (compiled-allocation model)))

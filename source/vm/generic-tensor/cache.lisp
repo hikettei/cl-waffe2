@@ -55,15 +55,19 @@
 
 
 (defparameter *compiled-function-cache* (make-hash-table :test #'equal))
-(defparameter *compiled-jit-function-cache* (make-hash-table))
 
 (defun reset-compiled-function-cache! ()
   "
 ## [function] reset-compiled-function-cache!
 "
   (setf *compiled-function-cache* (make-hash-table :test #'equal))
-  (setf *compiled-jit-function-cache* (make-hash-table))
   t)
+
+(defmacro with-empty-cached-function-table (&body body)
+  "Under the body execution, this macro sets *compiled-function-cache* = nil indicating no previous compiled functions before this macro are reused during `build` and `proceed` compilation."
+  `(let ((*compiled-function-cache*
+	   (make-hash-table :test #'equal)))
+     ,@body))
 
 (defstruct Compiled-Kernel
   "All forward method must return this structure. Compiled-Kernel is an blueprint (or stores compiled functions) to generate cl-waffe2 IR"
