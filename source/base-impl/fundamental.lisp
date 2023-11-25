@@ -742,8 +742,8 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
       (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
     (declare (ignore leaves dout))
     (let ((cl-waffe2/vm.generic-tensor::*runtime-mode-p* t))
-      (cl-waffe2/vm.generic-tensor::with-adjustable-symbol-scope
-	(cl-waffe2/vm::with-static-allocation (allocation)
+      (wf/t:with-adjustable-symbol-scope
+	(wf/vm::with-static-allocation (allocation)
 	  (let ((result))
 	    (setq result
 		  (cl-waffe2/vm:benchmark-accept-instructions fw-iseq

@@ -163,7 +163,6 @@ expected: AbstractTensor"
 								:fuse-ops t
 								:defmodel-as-from named
 								:dout-add1 nil))) ;; <- Embodied by AbstractNode
-	
 	(values compiled-model trace-tensors)))))
 
 (defun expand-define->function-form (composite where defun-p named

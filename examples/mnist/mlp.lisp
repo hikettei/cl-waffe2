@@ -66,7 +66,7 @@
 
 (defun train-and-valid-mlp (&key (epoch-num 10) (benchmark-p t))
   (multiple-value-bind (compiled-model model)
-      (with-backend :jit
+      (with-backend :cpu
 	(build-mlp-model :in-class 784 :out-class 10 :lr 1e-3))
     (let* ((train-img *reshaped-train-img-data*)
 	   (test-img  *reshaped-test-img-data*)
