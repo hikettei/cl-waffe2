@@ -1,6 +1,20 @@
 
 (in-package :cl-user)
 
+(defpackage :cl-waffe2-metal-asd
+  (:use :cl :asdf :uiop))
+
+(in-package :cl-waffe2-metal-asd)
+
+(defsystem :cl-waffe2/metal-extension
+  :author "hikettei"
+  :licence "MIT"
+  :description ""
+  :pathname "cl-waffe2-metal"
+  :serial t
+  :depends-on (:cl-metal)
+  :components ((:file "package")
+	       (:file "tensor")))
 
 (defpackage :cl-waffe2-simd-asd
   (:use :cl :asdf :uiop))
@@ -17,7 +31,6 @@
   :components ((:file "package")
 	       (:file "shared-object")
 	       (:file "api")))
-
 
 (defpackage :cl-waffe2-asd
   (:use :cl :asdf :uiop))
@@ -42,16 +55,13 @@
 	       :closer-mop
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension
-
 	       :cl-environments
 	       :numpy-file-format
 	       :jonathan)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
-	       
 	       (:file "vm/generic-tensor/package")	       
 	       (:file "vm/generic-tensor/conditions")
-	       
 	       
 	       (:file "vm/generic-tensor/default-impls")
 

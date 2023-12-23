@@ -23,11 +23,14 @@
     #+metal(progn t)
     #-metal(progn nil)))
 
+;; memo
+;; CPUTensor MetalTensor interop is possible or not?
+;; LispTensor -> CPUTensor?
 (defclass MetalTensor (cl-waffe2/backends.lisp:LispTensor)
   nil
   (:documentation
-   "## [class] MetalTensor
-Provides an Metal-enabled accelerator for Tensor computations.
+   "## [AbstractTensor] MetalTensor
+Provides Metal-Accelerated Operations
 "))
 
 (defmethod wf/t:current-backend-state ((backend-name (eql 'MetalTensor)))
