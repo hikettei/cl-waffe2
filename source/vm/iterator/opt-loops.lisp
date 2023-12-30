@@ -18,6 +18,23 @@
   (sources nil :type list)
   (targets nil :type list))
 
+(defmethod print-object ((invc Invocation) stream)
+  (flet ((helper (x)
+	   (with-output-to-string (out)
+	     (dolist (a x)
+	       (format out "~a[~a + ~a] "
+		       (action-tid a)
+		       (if (= (reference-stride (action-ref a)) 0)
+			   "0"
+			   (format nil "~a*idx" (reference-stride (action-ref a))))
+		       (reference-offset (action-ref a)))))))
+    (format stream "Invocation ~a[size=~a]: ~a <- ~a~%"
+	    (invocation-op invc)
+	    (reference-size (action-ref (car (invocation-sources invc))))
+	    (helper (invocation-targets invc))
+	    (helper (invocation-sources invc)))))
+			      
+
 (defun trace-invocation (op source-tensors target-tensors &key (kernel-rank 1) (collapse t))
   "call-with-view -> invocation
 Assertion: Shapes are already determined."
@@ -121,7 +138,7 @@ Assertion: Shapes are already determined."
 (defun initialize-session (invocation)
   (make-session
    :invocation invocation
-   :ops (list invocation)))
+   :ops nil))
 
 (defun equivalent-invocations-p (inv1 inv2)
   "Sizes does not matter; Returns T if Invocation is produced from the equivalent operations."

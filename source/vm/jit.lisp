@@ -7,6 +7,7 @@
 ;;  - 3. acceptor.lisp からinvoke-jit-compiler
 
 (defun unroll-save-for-backward (iseq)
+  "Unrolls SV4BW into a sequence of instructions"
   (declare (type list iseq))
   (flet ((ensure-no-sv4bw (iseq)
 	   (loop for inst in iseq do	     
@@ -33,27 +34,46 @@
 			(setf (detach-p arg) nil)))
 	      (list inst))))))))
 
+
 (defun invoke-jit-compiler (iseq
 			    &aux
-			      (iseq (unroll-save-for-backward iseq))
-			      )
+			      ;; Unrolls save for backward in order to fuse them
+			      (iseq (unroll-save-for-backward iseq)))
   (declare (type list iseq))
-
+  
   (let ((invocations-stored)
-	(jit-compiled-irs))
-
-    (loop for instruction in iseq do
-      (let ((invocations (get-invocations-from-node (wfop-node instruction) (wfop-args instruction))))
-	(if invocations
-	    (setq invocations-stored `(,@invocations-stored ,@invocations))
+	(jit-compiled-irs)
+	(loadp-table (make-hash-table)))
+    (flet ((read-tensor (tensor)
+	     (or
+	      (gethash (tensor-id tensor) loadp-table)
+	      tensor))
+	   (omit (sessions)
+	     ;; produce a jit-compiled kernel
+	     ))
+      (loop for instruction in iseq do
+	(if (wfop-loadp instruction)
+	    (multiple-value-bind (x y) (read-loadp instruction)
+	      (declare (ignore x y))
+	      ;(setf (gethash (tensor-id x) loadp-table) y)
+	      )
 	    (progn
-	      ;; Apply a jit compiling
-	      (print (time (wf/iter:solve-invocations invocations-stored)))
-	      
-	      ;; Push a new WfInst
-	      (setq invocations-stored nil)))))
+	      (macrolet ((update (place)
+			   `(setf ,place (map 'list #'read-tensor ,place))))
+		(update (wfop-args instruction))
+		(update (wfop-out-to instruction)))
+	      (let ((invocations (when (typep (wfop-node instruction) 'AbstractNode)
+				   (get-invocations-from-node (wfop-node instruction) (wfop-args instruction)))))
+		(if invocations
+		    (setq invocations-stored `(,@invocations-stored ,@invocations))
+		    (progn
+		      ;; Apply a jit compiling
+		      (print (time (wf/iter:solve-invocations invocations-stored)))
+		      ;; Push a new WfInst
+		      (setq invocations-stored nil)))))))
 
-    ;; The result is cached by the status of dynamic-shape at that time
-    jit-compiled-irs
-    iseq))
+      (print (time (wf/iter:solve-invocations invocations-stored)))
+      ;; The result is cached by the status of dynamic-shape at that time
+      jit-compiled-irs
+      iseq)))
 
