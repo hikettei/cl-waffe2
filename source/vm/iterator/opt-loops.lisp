@@ -79,6 +79,7 @@ Assertion: Shapes are already determined."
      (map 'list #'reading (invocation-sources invocation))
      (map 'list #'reading (invocation-targets invocation)))))	    
 
+;; WorkLoad v 下を実装する
 ;; !! topi的な命令と並行してJITをする。 (Dynamic Shape)
 ;; (Forward ...)ってやると，Dynamic Shapeが全部決定してるから，Sessionのリスト作ってJITしてcacheができる
 
@@ -120,7 +121,7 @@ Assertion: Shapes are already determined."
 (defun initialize-session (invocation)
   (make-session
    :invocation invocation
-   :ops nil))
+   :ops (list invocation)))
 
 (defun equivalent-invocations-p (inv1 inv2)
   "Sizes does not matter; Returns T if Invocation is produced from the equivalent operations."
@@ -204,7 +205,5 @@ Output: (list Session)
 		    (progn
 		      (push (initialize-session invc) sessions))))))
 	  (setf latest-key (car (last key-order))))))
-    (print (length sessions))
-    (print sessions)
     (reverse sessions)))
 

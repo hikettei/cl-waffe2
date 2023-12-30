@@ -253,12 +253,12 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 	  (return-from findout-origin last-ref)
 	  (setq last-ref (gethash last-ref table))))))
 
-(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t))
+(defun disassemble-waffe2-ir (toplevel &key (backward t) (stream t) (fuse-p t) (jit nil))
   "
 ## [function] disassemble-waffe2-ir
 
 ```lisp
-(disassemble-waffe2-ir toplevel &key (backward t) (stream t) (fuse-p t))
+(disassemble-waffe2-ir toplevel &key (backward t) (stream t) (fuse-p t) (jit nil))
 ```
 
 Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `stream`. If `backward` was set to t, `backward` is also displayed.
@@ -283,6 +283,10 @@ Prints out the compiled cl-waffe2 IR from toplevel to each leaf points to `strea
 			 (length iseq)
 			 (length (remove-duplicates tensor-ids))
 			 (length (remove-duplicates scal-ids)))))))
+
+      (when jit
+	(setq iseq-fw (invoke-jit-compiler iseq-fw)
+	      iseq-bw (invoke-jit-compiler iseq-bw)))
       
       (format stream "~%disassemble-waffe2-ir:~% [Forward]: ~%~a~%" (conc-iseq-str iseq-fw))
       (format stream "~% [Pullback]: ~%~a~%" (conc-iseq-str iseq-bw))

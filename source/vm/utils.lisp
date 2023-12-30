@@ -161,3 +161,4 @@
     ;;	     *symbol->lazyaxis*)
     ))
 
+(defun butnil (list) (loop for l in list if l collect l))

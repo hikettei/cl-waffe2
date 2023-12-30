@@ -304,8 +304,8 @@ Expands `defnode` and `define-impl` at the same time.
     (when elwisep
       (wf/iter:trace-invocation
        (class-name (class-of node))
-       source-tensors
-       target-tensors
+       (list source-tensors)
+       (list target-tensors)
        :kernel-rank 1
        :collapse t))))
 

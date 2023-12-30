@@ -16,6 +16,7 @@
    #:.range)
   (:export
    #:trace-invocation
+   #:solve-invocations
    ))
 
 (in-package :cl-waffe2/vm.iterator)

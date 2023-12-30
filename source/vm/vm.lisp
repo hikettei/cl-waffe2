@@ -46,8 +46,6 @@ This parameter is useful for printing how all instructions are performed. If set
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
-	      ;; Intentionally creates the illusion of VM that misunderstands
-	      ;; var is [computed] by deleting tensor-state
 	      (tensor-vec place)
 	      (tensor-vec var)
 	      (%vm-move place var)
