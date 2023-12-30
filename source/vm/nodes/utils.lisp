@@ -273,3 +273,39 @@ Expands `defnode` and `define-impl` at the same time.
 		  :save-for-backward ,save-for-backward
 		  :forward ,forward)))
 
+
+(defun element-wise-p (node variables)
+  "Return T if the node is bidijective: A[~] B[~] -> A[~]"
+  (declare (type AbstractNode node))
+  (multiple-value-bind (in-names out-names in-subs out-subs lets)
+      (parse-subscript (read-where node))
+    (declare (ignore lets))
+    (flet ((helper (x)
+	     (and (= (length x) 1)
+		  (symbol-eq (car x) '~))))
+      (and
+       (= (length in-names)  2)
+       (= (length out-names) 1)
+       (every #'helper in-subs)
+       (every #'helper out-subs)
+       (let ((out-pos (position (car out-names) in-names :test #'symbol-eq)))
+	 (and
+	  out-pos
+	  (values
+	   t
+	   (case out-pos
+	     (0 (nth 1 variables))
+	     (1 (nth 0 variables)))
+	   (nth out-pos variables))))))))
+
+(defun get-invocations-from-node (node variables)
+  (declare (type AbstractNode node))
+  (multiple-value-bind (elwisep source-tensors target-tensors) (element-wise-p node variables)
+    (when elwisep
+      (wf/iter:trace-invocation
+       (class-name (class-of node))
+       source-tensors
+       target-tensors
+       :kernel-rank 1
+       :collapse t))))
+
