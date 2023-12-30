@@ -79,6 +79,7 @@
 	       (:file "vm/generic-tensor/dtype")
 	       (:file "vm/lazy-subscript")
 	       (:file "vm/allocation")
+	       (:file "vm/jit")
 	       
 	       ;; Iterators
 	       (:file "vm/iterator/package")
