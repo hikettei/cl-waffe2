@@ -5,4 +5,4 @@
 ("cl-metal" .
  (:class qlot/source/git:source-git
   :initargs (:remote-url "git@github.com:hikettei/cl-metal.git")
-  :version "git-0091b582f2620634371ac6d088e1030a0cee7d9a"))
+  :version "git-50d776a2b89ba659502ba918ab1131bd5cde951e"))

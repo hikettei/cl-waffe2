@@ -14,7 +14,11 @@
   :serial t
   :depends-on (:cl-metal)
   :components ((:file "package")
-	       (:file "tensor")))
+	       (:file "tensor")
+	       (:file "utils")
+	       (:file "topi/topi")
+	       (:file "topi/arithmetic")
+	       (:file "topi/mathematical")))
 
 (defpackage :cl-waffe2-simd-asd
   (:use :cl :asdf :uiop))
