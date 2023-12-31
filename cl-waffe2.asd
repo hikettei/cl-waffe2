@@ -85,8 +85,8 @@
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/iterator/range")
 	       (:file "vm/iterator/opt-loops")
-	       
-
+	       (:file "vm/iterator/dsl")
+	       (:file "vm/iterator/polyhedral")
 	       
 	       (:file "vm/generic-tensor/cache")
 	       (:file "vm/generic-tensor/utils")

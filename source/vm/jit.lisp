@@ -34,11 +34,22 @@
 			(setf (detach-p arg) nil)))
 	      (list inst))))))))
 
+(defun unroll-allocation (iseq)
+  (let* ((allocations)
+	 (out
+	   (loop for inst in iseq
+		 if (eql (wfop-op inst) #'lazy-clone-wreckage)
+		   do (push inst allocations)
+		 else
+		   collect inst)))
+    `(,@allocations
+      ,@out)))
 
 (defun invoke-jit-compiler (iseq
 			    &aux
 			      ;; Unrolls save for backward in order to fuse them
-			      (iseq (unroll-save-for-backward iseq)))
+			      (iseq (unroll-save-for-backward iseq))
+			      (iseq (unroll-allocation        iseq)))
   (declare (type list iseq))
   
   (let ((invocations-stored)
@@ -54,25 +65,38 @@
       (loop for instruction in iseq do
 	(if (wfop-loadp instruction)
 	    (multiple-value-bind (x y) (read-loadp instruction)
-	      (declare (ignore x y))
-	      ;(setf (gethash (tensor-id x) loadp-table) y)
-	      )
+	      ;; funcall ? ignoring ?
+	      ;; TODO: How to deal with reshape/permute/view	      
+	      (setf
+	       (gethash (tensor-id x) loadp-table)
+	       (apply
+		(wfop-op instruction)
+		(wfop-args instruction))))
 	    (progn
 	      (macrolet ((update (place)
 			   `(setf ,place (map 'list #'read-tensor ,place))))
 		(update (wfop-args instruction))
 		(update (wfop-out-to instruction)))
-	      (let ((invocations (when (typep (wfop-node instruction) 'AbstractNode)
-				   (get-invocations-from-node (wfop-node instruction) (wfop-args instruction)))))
+	      (let ((invocations
+		      (when (typep (wfop-node instruction) 'AbstractNode)
+			(get-invocations-from-node
+			 (wfop-node instruction)
+			 (wfop-args instruction)))))
 		(if invocations
-		    (setq invocations-stored `(,@invocations-stored ,@invocations))
+		    (setq
+		     invocations-stored
+		     `(,@invocations-stored ,invocations))
 		    (progn
 		      ;; Apply a jit compiling
-		      (print (time (wf/iter:solve-invocations invocations-stored)))
+		      (print "EMIT")
+		      (print invocations-stored)
+		      ;;(time (wf/iter:solve-invocations invocations-stored))
 		      ;; Push a new WfInst
 		      (setq invocations-stored nil)))))))
 
-      (print (time (wf/iter:solve-invocations invocations-stored)))
+      (print "EMIT")
+      (print invocations-stored)
+      ;;(time (wf/iter:solve-invocations invocations-stored))
       ;; The result is cached by the status of dynamic-shape at that time
       jit-compiled-irs
       iseq)))
