@@ -17,8 +17,18 @@
   "Indicates the list of types that can be arguments of functions."
   `(or AbstractTensor number symbol cl-waffe2/vm:LazyAxis))
 
-;; Numbers to Tensors
-(defun number->stensor (scalar tensor)
+;;  ~ Utils ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+(defun scalar-prune-p (tensor)
+  "Returns T if the tensor is independent constant"
+  (and
+   (equal (tensor-facet tensor) :exist)
+   (not (requires-grad tensor))
+   (scalar-p tensor)
+   (null (tensor-variables tensor))
+   (null (tensor-backward  tensor))
+   (numberp (cl-waffe2/vm.generic-tensor::vec tensor))))
+
+(defun infer-scalar-type (scalar tensor)
   "This function always returns ScalarTensor, whenever scalar is number or ScalarTensor. tensor[number or AbstractTensor] is used in order to determine the dtype of scalar."
   (if (numberp scalar)
       (make-tensor scalar :dtype (if (numberp tensor)
@@ -29,6 +39,28 @@
       (if (typep scalar 'AbstractTensor)
 	  scalar
 	  (make-tensor scalar :dtype :uint32))))
+
+(defun infer-scalar-tensor (scalar tensor &key (rank 1))
+  "This function always returns ScalarTensor, whenever scalar is number or ScalarTensor. tensor[number or AbstractTensor] is used in order to determine the dtype of scalar."
+  (if (numberp scalar)
+      (make-tensor (make-list rank :initial-element 1)
+		   :dtype (if (numberp tensor)
+			      (dtype-of tensor)
+			      (if (typep tensor 'AbstractTensor)
+				  (dtype tensor)
+				  (dtype-of scalar)))
+		   :initial-element scalar)
+      (if (typep scalar 'AbstractTensor)
+	  (if (scalar-p scalar)
+	      (if (scalar-prune-p scalar)
+		  (make-tensor (make-list rank :initial-element 1)
+			       :dtype (dtype scalar)
+			       :initial-element (tensor-vec scalar))
+		  (!rankup scalar (1- rank)))
+	      scalar)
+	  (make-tensor (make-list rank :initial-element 1)
+		       :dtype :uint32
+		       :initial-element scalar))))
 
 ;; ===============================================================
 ;; Defnode Parts
@@ -81,6 +113,7 @@ X\\gets{X ~a Y}
       (!div (!mul dx (!mul -1 dout))
 	    (!mul dy dy))))))
 
+;; TODO: Remove this node in the future release
 (defnode (InverseTensorNode (myself dtype)
 	  :where (A[~] -> A[~])
 	  :save-for-backward (t)
@@ -101,6 +134,7 @@ A\\gets{1 / A}
 `dtype` indicates dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
 "))
 
+;; TODO: Remove this node in the future release
 (macrolet ((define-scalar-mat-node (name document1 document2 sv4bw &optional backward)
 	     `(progn
 		(export ',name)
@@ -180,23 +214,22 @@ X\\gets{X ~a scalar}
 ;; Defun Parts
 ;; ===============================================================
 
-(declaim (ftype (function (AbstractTensor AbstractTensor) (values AbstractTensor &optional))
+(declaim (ftype (function (AbstractTensor AbstractTensor &key (:in-place boolean)) (values AbstractTensor &optional))
 		!matrix-add
 		!matrix-sub
 		!matrix-mul
 		!matrix-div))
-	       
 (macrolet ((define-arithmetic-node-caller (name node-name ops prep f)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defun ,name (x y)
+		(defun ,name (x y &key (in-place nil))
 		  (declare (ftype (function (AbstractNode AbstractTensor AbstractTensor) (values AbstractTensor &optional))
 				  forward))
 		  ,(format nil "
 ## [function] ~(~a~)
 
 ```lisp
-(~(~a~) x y)
+(~(~a~) x y &key (in-place nil))
 ```
 
 The function `~(~a~)` calls `~a` and ~a X ~a Y element-wise, returning a new tensor.
@@ -221,7 +254,7 @@ None.
 			   prep
 			   f)
 		  (forward (,node-name (dtype x))
-			   (!copy x) ;; Later, In-place mutation should work if unnecessary
+			   (if in-place x (!copy x))			       
 			   y)))))
   
   (define-arithmetic-node-caller
@@ -233,7 +266,7 @@ None.
   (define-arithmetic-node-caller
       !matrix-sub
     SubNode
-    "substracts"
+    "subtracts"
     "by"
     "-")
   (define-arithmetic-node-caller
@@ -249,6 +282,7 @@ None.
     "by"
     "/"))
 
+;; TODO: Replace with !reciprocal
 (declaim (ftype (function (function-args-t) (values AbstractTensor &optional)) !inverse))
 (with-export !inverse
   (defun !inverse (tensor)
@@ -258,7 +292,9 @@ None.
 (!inverse tensor)
 ```
 
-The function `!inverse` calls `InverseTensorNode`, and finds the inverse of the received Tensor/Scalar, returning a new tensor.
+The function `!inverse` calls `InverseTensorNode`, and finds the reciprocal of the received Tensor/Scalar, returning a new tensor.
+
+See also: `reciprocal`
 
 ```math
 X_{copy}\\gets{1 / X}
@@ -273,23 +309,32 @@ tensor[ScalarTensor/AbstractTensor/Number]
 		  tensor)))
       (if (scalar-p X)
 	  (!sas-div 1 X)
-	  (forward (InverseTensorNode (dtype X)) (!copy X))))))
+	  (!div
+	   (->contiguous
+	    (!view
+	     (infer-scalar-tensor 1 x :rank (dims x))
+	     (broadcast-to x)))
+	   X)))))
 
-(declaim (ftype (function (function-args-t AbstractTensor) (values AbstractTensor &optional))
+(with-export !reciprocal
+  (defun !reciprocal (tensor)
+    "An alias for !inverse"
+    (!inverse tensor)))
+
+(declaim (ftype (function (function-args-t AbstractTensor &key (:in-place boolean)) (values AbstractTensor &optional))
 		!scalar-add
 		!scalar-sub
 		!scalar-mul
 		!scalar-div))
-		
 (macrolet ((define-scalar-mat-node-caller (name node-name document)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defun ,name (scalar x)
+		(defun ,name (scalar x &key (in-place nil))
 		  ,(format nil "
 ## [function] ~(~a~)
 
 ```lisp
-(~(~a~) scalar x)
+(~(~a~) scalar x &key (in-place nil))
 ```
 
 The function ~a computes following operation with calling `~a`, returning a new tensor.
@@ -310,19 +355,23 @@ The function ~a computes following operation with calling `~a`, returning a new 
 			   (symbol-name node-name)
 			   document)
 		  (forward (,node-name (dtype x))
-			   (!copy x)
-			   (number->stensor scalar x))))))
+			   (if in-place
+			       x
+			       (!copy x))
+			   (!view
+			    (infer-scalar-tensor scalar x :rank (dims x))
+			    (broadcast-to x)))))))
   (define-scalar-mat-node-caller
-      !scalar-add ScalarAdd
+      !scalar-add AddNode
     "X_{copy}\\gets{X + scalar}")
   (define-scalar-mat-node-caller
-      !scalar-sub ScalarSub
+      !scalar-sub SubNode
     "X_{copy}\\gets{X - scalar}")
   (define-scalar-mat-node-caller
-      !scalar-mul ScalarMul
+      !scalar-mul MulNode
     "X_{copy}\\gets{X * scalar}")
   (define-scalar-mat-node-caller
-      !scalar-div ScalarDiv
+      !scalar-div DivNode
     "X_{copy}\\gets{X / scalar}"))
 
 ;; ===============================================================
@@ -403,12 +452,12 @@ The function ~a computes following operation with calling `~a`, returning a new 
 				    (the ,t2 (tensor-vec ,y))))
 			   ,x))))
 
-(declaim (ftype (function (function-args-t function-args-t) (values AbstractTensor &optional))
+(declaim (ftype (function (function-args-t function-args-t &key (:in-place boolean)) (values AbstractTensor &optional))
 		!sas-add !sas-sub !sas-mul !sas-div))
-(macrolet ((define-sas-op (name node-name op)
+(macrolet ((define-sas-op (name node-name op lisp-op)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defun ,name (x y)
+		(defun ,name (x y &key (in-place nil))
 		  ,(format nil "
 ## [function] ~(~a~)
 
@@ -429,25 +478,37 @@ x_{copy}\\gets{x ~a y}
 			   (symbol-name name)
 			   (symbol-name node-name)
 			   op)
-		  (forward (,node-name)
-			   (!copy (number->stensor x y))  ;; Returns X
-			   (number->stensor y x)) ;; Returns Y
-		  ))))
-  (define-sas-op !sas-add ScalarAndScalarAdd "+")
-  (define-sas-op !sas-sub ScalarAndScalarSub "-")
-  (define-sas-op !sas-mul ScalarAndScalarMul "*")
-  (define-sas-op !sas-div ScalarAndScalarDiv "/"))
+		  (let ((x (infer-scalar-type x y))
+			(y (infer-scalar-type y x)))
+		    (when (and (scalar-prune-p x)
+			       (scalar-prune-p y))
+		      (return-from ,name
+			(make-tensor
+			 (,lisp-op (tensor-vec x) (tensor-vec y))
+			 :dtype (dtype x)
+			 :order (order x))))
+		    
+		    (forward (,node-name)
+			     (if in-place
+				 x
+				 (!copy x))  ;; Returns X
+			     y)))))) ;; Returns Y
+  (define-sas-op !sas-add ScalarAndScalarAdd "+" +)
+  (define-sas-op !sas-sub ScalarAndScalarSub "-" -)
+  (define-sas-op !sas-mul ScalarAndScalarMul "*" *)
+  (define-sas-op !sas-div ScalarAndScalarDiv "/" /))
 
 ;; ===============================================================
 ;; Defines general-purpose functions.
 ;; ===============================================================
 
 (defun scalartensor-p (tensor)
-  (scalar-p tensor))
+  (if (typep tensor 'AbstractTensor)
+      (scalar-p tensor)
+      t))
 
-(declaim (ftype (function (function-args-t function-args-t) (values AbstractTensor &optional))
+(declaim (ftype (function (function-args-t function-args-t &key (:in-place boolean)) (values AbstractTensor &optional))
 		!add !sub !mul !div))
-
 (macrolet ((define-arith-function (name
 				   invertor
 				   broadcast-op
@@ -456,7 +517,7 @@ x_{copy}\\gets{x ~a y}
 				   matrix-operation)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defun ,name (x y)
+		(defun ,name (x y &key (in-place t))
 		  ,(format nil
 			   "
 ## [function] ~(~a~)
@@ -488,28 +549,26 @@ None
 			   (symbol-name scalar-and-scalar-operation)
 			   (symbol-name scalar-operation)
 			   (symbol-name matrix-operation))
-		  (let ((x (number->stensor x y))  ;; Returns X
-			(y (number->stensor y x))) ;; Returns Y
-		    (cond
-		      ((and (scalar-p x)
-			    (scalar-p y))
-		       (,scalar-and-scalar-operation x y))
-		      ((scalar-p x)
-		       ;; X is scalar, Y is matrix.
-		       ;; (!sub 1.0 (10 10))
-		       ;; (!div 1.0 (10 10))
-		       ;; Transform ->
-		       ;; -> (!add (- (10 10)) 1.0)
-		       ;; -> (!mul (/ (10 10)) 1.0)
-		       ,(if broadcast-op
-			    `(,broadcast-op x (,@invertor y))
-			    `(,scalar-operation x y)))
-		      ((scalar-p y)
-		       ;; (!sub (10 10) 1.0)
-		       ;; (!div (10 10) 1.0)
-		       (,scalar-operation y x))
-		      (T
-		       (,matrix-operation x y))))))))
+		  (cond
+		    ((and (scalartensor-p x)
+			  (scalartensor-p y))
+		     (,scalar-and-scalar-operation x y :in-place in-place))
+		    ((scalartensor-p x)
+		     ;; X is scalar, Y is matrix.
+		     ;; (!sub 1.0 (10 10))
+		     ;; (!div 1.0 (10 10))
+		     ;; Transform ->
+		     ;; -> (!add (- (10 10)) 1.0)
+		     ;; -> (!mul (/ (10 10)) 1.0)
+		     ,(if broadcast-op
+			  `(,broadcast-op x (,@invertor y) :in-place in-place)
+			  `(,scalar-operation x y :in-place in-place)))
+		    ((scalartensor-p y)
+		     ;; (!sub (10 10) 1.0)
+		     ;; (!div (10 10) 1.0)
+		     (,scalar-operation y x :in-place in-place))
+		    (T
+		     (,matrix-operation x y :in-place in-place)))))))
   (define-arith-function
       !add (progn)           nil !sas-add !scalar-add !matrix-add)
   (define-arith-function
@@ -518,7 +577,6 @@ None
       !mul (progn)          nil  !sas-mul !scalar-mul !matrix-mul)
   (define-arith-function
       !div (!inverse)       !mul !sas-div !scalar-div !matrix-div))
-
 
 ;; ===============================================================
 ;; Destructive Functions Family: A+=B A-=B A*=B A/=B
@@ -558,15 +616,11 @@ A\\gets{A ~a B}
 			   (symbol-name matrix-operation)
 			   op)
 		  (declare (type AbstractTensor A B))
-		  (assert (or (not (scalar-p A))
-			      (not (scalar-p B)))
-			  nil
-			  "Assertion Failed with A and B both aren't scalar.")
-		  (forward (,matrix-operation (dtype A)) A B)))))
-  (define-darith-function A+=B AddNode "+")
-  (define-darith-function A-=B SubNode "-")
-  (define-darith-function A*=B MulNode "*")
-  (define-darith-function A/=B DivNode "/"))
+		  (,matrix-operation A B :in-place t)))))
+  (define-darith-function A+=B !add "+")
+  (define-darith-function A-=B !sub "-")
+  (define-darith-function A*=B !mul "*")
+  (define-darith-function A/=B !div "/"))
 
 ;; ===============================================================
 ;; Destructive Functions Family: A+=scal A-=scal A*=scal A/=scal
@@ -606,41 +660,11 @@ A\\gets{A ~a scalar}
 			   (symbol-name name)
 			   (symbol-name matrix-operation)
 			   op)
-		  (if (numberp scalar)
-		      (forward (,matrix-operation (dtype A)) A (make-tensor scalar :dtype (dtype A)))
-		      (forward (,matrix-operation (dtype A)) A scalar)))))
-	   (define-darith-function1 (name broadcast op op1 arg op-name)
-	     `(eval-when (:compile-toplevel :load-toplevel :execute)
-		(export ',name)
-		(defun ,name (A scalar)
-		  ,(format nil "
-## [function] ~(~a~)
-
-```
-(~(~a~) A scalar)
-```
-
-The function provides destructive scalar-matrix operation which computes:
-
-```math
-A\\gets{A ~a scalar}
-```
-
-### Inputs
-
-`A` AbstractTensor
-
-`scalar` could be one of `number` or `AbstractTensor`"
-			   (symbol-name name)
-			   (symbol-name name)
-			   op-name)
-		  (if (numberp scalar)
-		      (,broadcast A (,op  (number->stensor scalar A)))
-		      (,broadcast A (,op1 ,arg (number->stensor scalar A))))))))
-  (define-darith-function  A+=scal ScalarAdd "+")
-  (define-darith-function1 A-=scal A+=scal - !mul -1 "-")
-  (define-darith-function  A*=scal ScalarMul "*")
-  (define-darith-function1 A/=scal A*=scal / !div 1 "*"))
+		  (,matrix-operation A scalar :in-place t)))))
+  (define-darith-function A+=scal !add "+")
+  (define-darith-function A-=scal !sub "-")
+  (define-darith-function A*=scal !mul "*")
+  (define-darith-function A/=scal !div "/"))
 
 (declaim (ftype (function (&rest function-args-t) (values AbstractTensor &optional))
 		!+ !- !* !/))
