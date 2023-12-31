@@ -17,7 +17,7 @@
   "Indicates the list of types that can be arguments of functions."
   `(or AbstractTensor number symbol cl-waffe2/vm:LazyAxis))
 
-;;  ~ Utils ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;;  ~ Utils for inferencing types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (defun scalar-prune-p (tensor)
   "Returns T if the tensor is independent constant"
   (and
@@ -61,6 +61,7 @@
 	  (make-tensor (make-list rank :initial-element 1)
 		       :dtype :uint32
 		       :initial-element scalar))))
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ;; ===============================================================
 ;; Defnode Parts
@@ -113,103 +114,6 @@ X\\gets{X ~a Y}
       (!div (!mul dx (!mul -1 dout))
 	    (!mul dy dy))))))
 
-;; TODO: Remove this node in the future release
-(defnode (InverseTensorNode (myself dtype)
-	  :where (A[~] -> A[~])
-	  :save-for-backward (t)
-	  :backward ((self dout dx)
-		     (values (!div (!mul -1 dout) (!mul dx dx))))
-	  :documentation "InverseTensorNode is a node which computes following operation element-wise
-
-```math
-A\\gets{1 / A}
-```
-
-### Constructor
-
-```
-(InverseTensorNode dtype)
-```
-
-`dtype` indicates dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
-"))
-
-;; TODO: Remove this node in the future release
-(macrolet ((define-scalar-mat-node (name document1 document2 sv4bw &optional backward)
-	     `(progn
-		(export ',name)
-		(defnode (,name (myself dtype)
-			  :where (A[~] Scalar[scal] -> A[~] where scal = 1)
-			  :save-for-backward ,sv4bw
-			  :backward ,backward
-			  :documentation ,(format nil
-						  "~a is a node which computes following operation element-wise.
-
-Let X be a given matrix and S be a given scalar.
-
-```math
-X\\gets{X ~a scalar}
-```
-
-### Constructor
-
-```
-(~a dtype)
-```
-
-`dtype` dtype to use, being used to dispatch backends. (e.g.: `:float` `:uint8`)
-" document1 document2 document1))))))
-  (define-scalar-mat-node
-      ScalarAdd
-    "ScalarAdd"
-    "+"
-    nil
-    ((self dout dx dy)
-     ;; dx <- matrix
-     ;; dy <- scalar
-     ;; A+=scal.view(A.shape),
-     (declare (ignore dx dy))
-     (values
-      dout
-      (->scal (!mean dout)))))
-  
-  (define-scalar-mat-node
-      ScalarSub
-    "ScalarSub"
-    "-"
-    nil
-    ((self dout dx dy)
-     (declare (ignore dx dy))
-     (values
-      dout
-      (->scal (!mul -1.0 (!mean dout))))))
-
-  (define-scalar-mat-node
-      ScalarMul
-    "ScalarMul"
-    "*"
-    (t t)
-    ((self dout dx dy)
-     ;; dx ... matrix
-     ;; dy ... scalar
-
-     (values
-      (!mul dout dy)
-      (->scal (!mean (!mul dx dout))))))
-  
-  (define-scalar-mat-node
-      ScalarDiv
-    "ScalarDiv"
-    "/"
-    (t t)
-    ((self dout dx dy)
-     ;; dx ... scalar
-     ;; dy ... matrix
-     ;; out = 1/dx * dy
-     (values
-      (!div dout dy)
-      (->scal (!mean (!div (!mul dx (!mul -1 dout)) (!mul dy dy))))))))
-
 ;; ===============================================================
 ;; Defun Parts
 ;; ===============================================================
@@ -241,6 +145,8 @@ X_{copy}\\gets{X ~a Y}
 ### Inputs
 
 `X` and `Y` must be a AbstractTensor (not a ScalarTensor), with the same shape.
+
+`in-place` set T to make it in-place
 
 ### SideEffects
 
@@ -283,18 +189,16 @@ None.
     "/"))
 
 ;; TODO: Replace with !reciprocal
-(declaim (ftype (function (function-args-t) (values AbstractTensor &optional)) !inverse))
-(with-export !inverse
-  (defun !inverse (tensor)
-    "## [function] !inverse
+(declaim (ftype (function (function-args-t) (values AbstractTensor &optional)) !reciprocal))
+(with-export !reciprocal
+  (defun !reciprocal (tensor)
+    "## [function] !reciprocal
 
 ```lisp
-(!inverse tensor)
+(!reciprocal tensor)
 ```
 
-The function `!inverse` calls `InverseTensorNode`, and finds the reciprocal of the received Tensor/Scalar, returning a new tensor.
-
-See also: `reciprocal`
+Finds the reciprocal of tensor.
 
 ```math
 X_{copy}\\gets{1 / X}
@@ -315,11 +219,6 @@ tensor[ScalarTensor/AbstractTensor/Number]
 	     (infer-scalar-tensor 1 x :rank (dims x))
 	     (broadcast-to x)))
 	   X)))))
-
-(with-export !reciprocal
-  (defun !reciprocal (tensor)
-    "An alias for !inverse"
-    (!inverse tensor)))
 
 (declaim (ftype (function (function-args-t AbstractTensor &key (:in-place boolean)) (values AbstractTensor &optional))
 		!scalar-add
@@ -378,29 +277,39 @@ The function ~a computes following operation with calling `~a`, returning a new 
 ;; Scalar-And-Scalar Defnode And Functions.
 ;; ===============================================================
 
-(macrolet ((define-sas-node (name sv4bw backward)
-	     `(defnode (,name (myself)
-			:out-scalar-p t
-			:save-for-backward ,sv4bw
-			:where (A[scal] B[scal] -> A[scal] where scal = 1)
-			:backward ,backward))))
-  (define-sas-node ScalarAndScalarAdd
-      (nil nil)
+(macrolet ((define-sas-node (name lisp-op sv4bw backward)
+	     `(progn
+		(defnode (,name (myself)
+			  :out-scalar-p t
+			  :save-for-backward ,sv4bw
+			  :where (A[scal] B[scal] -> A[scal] where scal = 1)
+			  :backward ,backward))
+		(define-impl (,name :device ScalarTensor)
+			     :forward ((self x y)
+				       (let ((t1 (dtype->lisp-type (dtype x)))
+					     (t2 (dtype->lisp-type (dtype y))))
+					 `(and
+					   (setf (the ,t1 (tensor-vec ,x))
+						 (,',lisp-op (the ,t1 (tensor-vec ,x))
+							     (the ,t2 (tensor-vec ,y))))
+					   ,x)))))))
+  (define-sas-node ScalarAndScalarAdd +
+    (nil nil)
     ((self dout x y)
      (declare (ignore x y))
      (values dout dout)))
-  (define-sas-node ScalarAndScalarSub
-      (nil nil)
+  (define-sas-node ScalarAndScalarSub -
+    (nil nil)
     ((self dout x y)
      (declare (ignore x y))
      (values dout (!sas-mul -1 dout))))
-  (define-sas-node ScalarAndScalarMul
-      (t t)
+  (define-sas-node ScalarAndScalarMul *
+    (t t)
     ((self dout x y)
      (values (!sas-mul y dout)
 	     (!sas-mul x dout))))
-  (define-sas-node ScalarAndScalarDiv
-      (t t)
+  (define-sas-node ScalarAndScalarDiv /
+    (t t)
     ((self dout dx dy)
      ;; ∂/∂x = 1/y
      ;; ∂/∂y = -x/y^2
@@ -408,49 +317,6 @@ The function ~a computes following operation with calling `~a`, returning a new 
 	     (!sas-div
 	      (!sas-mul dx (!sas-mul -1 dout))
 	      (!mul dy dy))))))
-
-(define-impl (ScalarAndScalarAdd :device ScalarTensor)
-	     :forward ((self x y)
-		       (let ((t1 (dtype->lisp-type (dtype x)))
-			     (t2 (dtype->lisp-type (dtype y))))
-			 `(and
-			   (setf (the ,t1 (tensor-vec ,x))
-				 (+ (the ,t1 (tensor-vec ,x))
-				    (the ,t2 (tensor-vec ,y))))
-			   ,x))))
-
-(define-impl (ScalarAndScalarSub :device ScalarTensor)
-	     :forward ((self x y)
-		       (let ((t1 (dtype->lisp-type (dtype x)))
-			     (t2 (dtype->lisp-type (dtype y))))
-			 `(and
-			   (setf (the ,t1 (tensor-vec ,x))
-				 (- (the ,t1 (tensor-vec ,x))
-				    (the ,t2 (tensor-vec ,y))))
-			   ,x))))
-
-(define-impl (ScalarAndScalarMul :device ScalarTensor)
-	     :save-for-backward (t t)
-	     :forward ((self x y)
-		       (let ((t1 (dtype->lisp-type (dtype x)))
-			     (t2 (dtype->lisp-type (dtype y))))
-			 `(and
-			   (setf (the ,t1 (tensor-vec ,x))
-				 (the ,t1
-				      (* (the ,t1 (tensor-vec ,x))
-					 (the ,t2 (tensor-vec ,y)))))
-			   ,x))))
-
-(define-impl (ScalarAndScalarDiv :device ScalarTensor)
-	     :save-for-backward (t t)
-	     :forward ((self x y)
-		       (let ((t1 (dtype->lisp-type (dtype x)))
-			     (t2 (dtype->lisp-type (dtype y))))
-			 `(and
-			   (setf (the ,t1 (tensor-vec ,x))
-				 (/ (the ,t1 (tensor-vec ,x))
-				    (the ,t2 (tensor-vec ,y))))
-			   ,x))))
 
 (declaim (ftype (function (function-args-t function-args-t &key (:in-place boolean)) (values AbstractTensor &optional))
 		!sas-add !sas-sub !sas-mul !sas-div))
