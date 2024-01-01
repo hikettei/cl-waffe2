@@ -11,10 +11,33 @@
 ;;    IndexSpace(x, ...)
 ;;  - A form is represented as: I_1 = op(I_2)
 
+;;
+;; TODO: Lisp-Like DSL representing an iterator
+;;       Implementing gemm
+;;       Implementing an parallelized and optimized einsum
+;; APIs are like:
+;;
+;; for(i=10)  |
+;;  for(k=10) | <- (make-iterators :x 1 :y 2 :z 3)
+;;    {op}    |
+;;
+;; (! x a b c d) (make-reference)
+;; (! y a b c d) (make-reference)
+;;
+;; (call (Lazy #'!sin :x 10 :y 20 :z 30)
+;;       (! x :x :y :z)
+;;       (! y :z :x :y))
+;;
+;; (%einsum) an alias for it.
+;;
+
+
 (defstruct Action
   "Action: IndexSpace(target) op IndexSpace(source)"
-  (source nil :type IndexSpace)
-  (target nil :type IndexSpace)
+  (rank   0    :type fixnum)
+  (depends nil :type list)
+  (source nil  :type list)
+  (target nil  :type list)
   (op))
 
 (defstruct (IndexSpace
@@ -56,10 +79,34 @@
 	      ""
 	      (format nil "+~a" (iref-offset iref)))))
 
+(defun print-iref (iref stream)
+  (format stream
+	  "~a~a"
+	  (if (= (iref-stride iref) 0)
+	      "0"
+	      (format
+	       nil
+	       "~a*~a"
+	       (iref-index iref)
+	       (iref-stride iref)))
+	  (if (= (iref-offset iref) 0)
+	      ""
+	      (format nil "+~a" (iref-offset iref)))))
+
 (defmethod print-object ((act IndexSpace) stream)
   (format stream "~a[~a]"
 	  (tensor-id (ispace-tensor act))
 	  (ispace-space act)))
+
+(defun find-depends (&rest ispaces)
+  (let ((found))
+    (dolist (ispace ispaces)
+      (dolist (ref (ispace-space ispace))
+	(when (and
+	       (not (= 0 (iref-stride ref)))
+	       (not (= 1 (iref-size   ref))))
+	  (push (iref-index ref) found))))
+    (delete-duplicates found)))
 
 (defun make-indexspace (tensor &key subscripts sizes)
   "Assertion: Symbols are determined"
@@ -95,23 +142,4 @@
 			 stride)))))))
     (%make-indexspace tensor ranges)))
 
-
-;;
-;; TODO: Lisp-Like DSL representing an iterator
-;;       Implementing gemm
-;;       Implementing an parallelized and optimized einsum
-;; APIs are like:
-;;
-;; for(i=10)  |
-;;  for(k=10) | <- (make-iterators :x 1 :y 2 :z 3)
-;;            |
-;;
-;; (! x a b c d) (make-reference)
-;; (! y a b c d) (make-reference)
-;;
-;; (call (Lazy #'!sin :x 10 :y 20 :z 30)
-;;       (! x :x :y :z)
-;;       (! y :z :x :y))
-;;
-;;
-
+;; (defun %einsum-helper)
