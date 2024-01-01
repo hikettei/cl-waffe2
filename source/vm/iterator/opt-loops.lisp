@@ -176,7 +176,7 @@ Assertion: Shapes are already determined."
 				     (not (= rank 0)))
 				(format out "+"))
 			      (print-iref ref out))
-		      (format out "]"))))
+		      (format out "]~%"))))
 	     (fresh-line out)
 	     (mapc #'print-action (iterstage-ops iter))
 	     (when (null (iterstage-ops iter)) (fresh-line out)))))))))
@@ -202,51 +202,58 @@ Schedules that can be fused is defined as:
   (declare (type Scheduler schedule1 schedule2)
 	   ;; optimize
 	   )
-  (symbol-macrolet ((->failed (return-from schedule-fuse nil)))
+  (symbol-macrolet ((->failed (return-from schedule-fuse (values schedule1 schedule2))))
     (let ((sorted1 (sort-stage schedule1))
 	  (sorted2 (sort-stage schedule2)))
 
       ;; Mismatched ranks
       (when (not (= (length sorted1) (length sorted2)))->failed)
-      (loop for stages1 in sorted1
-	    for stages2 in sorted2
-	    for rank upfrom 0
-	    collect
-	    (flet ((fuse-stg (stg1 stg2)
-		     ;; Different iterations cannot be fused
-		     (when (not (= (iterstage-size stg1) (iterstage-size stg2)))->failed)		   
-		     ;; All iterators indicates the same one.
-		     (when (not (eql (iterstage-determines stg1) (iterstage-determines stg2)))->failed)
-		     ;; Here, if stg1 and stg2 are independent
-		     ;; the order can be shuffled
-		     ;; otherwise split the iters
-		     ;; note that stg1 comes first and stg2 follows in the wengert list
-		     ;; If one of src/tgt in stg2 depends on stg2, they cannot be shuffled together
+      (make-scheduler
+       :iters
+       (loop for stages1 in sorted1
+	     for stages2 in sorted2
+	     for rank upfrom 0
+	     collect
+	     (flet ((fuse-stg (stg1 stg2)
+		      ;; Different iterations cannot be fused
+		      (when (not (= (iterstage-size stg1) (iterstage-size stg2)))->failed)		   
+		      ;; All iterators indicates the same one.
+		      (when (not (eql (iterstage-determines stg1) (iterstage-determines stg2)))->failed)
+		      ;; Here, if stg1 and stg2 are independent
+		      ;; the order can be swapped
+		      ;; otherwise split the loops
+		      ;; note that stg1 comes first and stg2 follows in the wengert list
+		      ;; If one of src/tgt in stg2 depends on stg2, they cannot be swapped
 
-		     ;; A   B
-		     ;;  \ /
-		     ;;   C  D  
-		     ;;   \ /
-		     ;;    E
-		     ;; E depends on A, B, C
-		     ;; But with topologically sorted, D could be combined with one of A, B, C, D
-		     ;; C, and E has the equivalent iterator and fused either of one.
-		     ;; 同じサイズのIter同士をFuse
-		     ;; CollapseできるものはCollapseで対処
-		     ;; 線形計画法でSIMD Pack, OpenMP, Memory Locality
-		     
-		     (let ((dependent-p (dependent-p
-					 (car (last (iterstage-ops stg1)))
-					 (car (last (iterstage-ops stg2))))))
-		       ;; Can be fused together?
-		       
+		      ;; A   B
+		      ;;  \ /
+		      ;;   C  D  
+		      ;;   \ /
+		      ;;    E
+		      ;; E depends on A, B, C
+		      ;; But with topologically sorted, D could be combined with one of A, B, C, D
+		      ;; C, and E has the equivalent iterator and fused either of one.
 
-		       )))
+		      ;; [Memo]
+		      ;; 同じサイズのIter同士をFuse
+		      ;; CollapseできるものはCollapseで対処
+		      ;; 線形計画法でSIMD Pack/Unpack, OpenMP, Memory Locality
 
-	      ;; Fusion is performed in the first process of compiling
-	      ;; so it doesnt handle with complicated iterators
-	      (when (or (not (= 1 (length stages1))) (not (= 1 (length stages2))))->failed)
-	      (fuse-stg (car stages1) (car stages2)))))))
+		      ;; TODO: As for independent nodes
+		      ;; we could do more;
+		      ;; Can be fused together?
+		      (make-iterstage
+		       :determines (iterstage-determines stg1)
+		       :size       (iterstage-size stg1)
+		       :rank       (iterstage-rank stg1)
+		       :reduction  (or (iterstage-reduction stg1) (iterstage-reduction stg2))
+		       ;; [TODO]: Fuse MoveTensorNode !!
+		       :ops `(,@(iterstage-ops stg1)
+			      ,@(iterstage-ops stg2)))))
+	       ;; Fusion is performed in the first process of compiling
+	       ;; so it doesnt handle with complicated iterators
+	       (when (or (not (= 1 (length stages1))) (not (= 1 (length stages2))))->failed)
+	       (fuse-stg (car stages1) (car stages2))))))))
 
    
 
@@ -275,6 +282,9 @@ Scheduler whose iterators are shuffled following:
 (defun schedule-unroll! (schedule rank n)
   )
 
+(defun schedule-simdify (schedule stride)
+
+  )
 
 (defun create-schedule (actions)
   (flet ((%make-scheduler (action)
@@ -295,9 +305,16 @@ Scheduler whose iterators are shuffled following:
 			  (list action)))))))
     ;; First, The Compiler is eager to fuse as many ops as possible
     (let ((schedules (map 'list #'%make-scheduler actions)))
-      (when schedules
-	;;(print (reduce #'schedule-fuse schedules)))
-	)
+      (flet ((fuse-helper (&rest args)
+	       (multiple-value-bind (old new) (apply #'values args)
+		 (if (null new)
+		     old
+		     (if (listp old)
+			 `(,@(butlast old)
+			   ,@(multiple-value-list (schedule-fuse (car (last old)) new)))
+			 (multiple-value-list (schedule-fuse old new)))))))
+	(setf schedules (reduce #'fuse-helper schedules)))
+      (print "=========")
       (dolist (s schedules)
 	(format t "~a" s))
       schedules)))
