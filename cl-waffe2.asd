@@ -61,7 +61,8 @@
 	       :cl-waffe2/simd-extension
 	       :cl-environments
 	       :numpy-file-format
-	       :jonathan)
+	       :jonathan
+	       :numcl)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")	       

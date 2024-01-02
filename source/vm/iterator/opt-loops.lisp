@@ -27,6 +27,11 @@
 ;; reduction
 ;; Scheduler -> Lisp-Like AST -> CUDA. GCC, Lisp, Metal etc...
 
+;; [Memo]
+;; 同じサイズのIter同士をFuse
+;; CollapseできるものはCollapseで対処
+;; 線形計画法でSIMD Pack/Unpack, OpenMP, Memory Locality
+
 (defvar *dependency-graph*)
 (defun make-dependency-graph (actions)
   (declare (type list actions)
@@ -116,6 +121,12 @@ Assertion: Shapes are already determined."
 (defstruct Scheduler
   (iters nil :type list)) ;; A list of IterStage
 
+(defun scheduler-name (scheduler)
+  "Returns a string including a list of ops (with shaped). it can be used to reuse compiled function."
+  (declare (type scheduler scheduler))
+
+  )
+
 (defun sort-stage (scheduler)
   (let* ((stages (scheduler-iters scheduler))
 	 (rank   (1+ (apply #'max (map 'list #'iterstage-rank stages))))
@@ -192,7 +203,6 @@ Assertion: Shapes are already determined."
 	     for *indentation* = (1+ (* rank 2)) do
 	       (dolist (stage stages)
 		 (format out "~a" stage)))))))
-	       
 
 (defun schedule-fuse (schedule1 schedule2)
   "Fuses the given two schedules.
@@ -200,19 +210,18 @@ If two schedules can be fused, returns a new schedule otherwise nil.
 Schedules that can be fused is defined as:
 - Iterators, ranks, and sizes are the same."
   (declare (type Scheduler schedule1 schedule2)
-	   ;; optimize
-	   )
+	   (optimize (speed 3)))
   (symbol-macrolet ((->failed (return-from schedule-fuse (values schedule1 schedule2))))
     (let ((sorted1 (sort-stage schedule1))
 	  (sorted2 (sort-stage schedule2)))
-
+      (declare (type list sorted1 sorted2))
       ;; Mismatched ranks
       (when (not (= (length sorted1) (length sorted2)))->failed)
       (make-scheduler
        :iters
-       (loop for stages1 in sorted1
-	     for stages2 in sorted2
-	     for rank upfrom 0
+       (loop for stages1 list in sorted1
+	     for stages2 list in sorted2
+	     for rank fixnum upfrom 0
 	     collect
 	     (flet ((fuse-stg (stg1 stg2)
 		      ;; Different iterations cannot be fused
@@ -234,14 +243,9 @@ Schedules that can be fused is defined as:
 		      ;; But with topologically sorted, D could be combined with one of A, B, C, D
 		      ;; C, and E has the equivalent iterator and fused either of one.
 
-		      ;; [Memo]
-		      ;; 同じサイズのIter同士をFuse
-		      ;; CollapseできるものはCollapseで対処
-		      ;; 線形計画法でSIMD Pack/Unpack, OpenMP, Memory Locality
-
 		      ;; TODO: As for independent nodes
-		      ;; we could do more;
-		      ;; Can be fused together?
+		      ;; I think we can do more;
+		      ;; Can MoveTensorNode be fused together (based on dependency graph)?
 		      (make-iterstage
 		       :determines (iterstage-determines stg1)
 		       :size       (iterstage-size stg1)
@@ -254,9 +258,7 @@ Schedules that can be fused is defined as:
 	       ;; so it doesnt handle with complicated iterators
 	       (when (or (not (= 1 (length stages1))) (not (= 1 (length stages2))))->failed)
 	       (fuse-stg (car stages1) (car stages2))))))))
-
    
-
 (defun schedule-reorder (schedule orders)
   "Shuffles the order of schedule given new-orders
 Returns:
@@ -264,10 +266,56 @@ Scheduler whose iterators are shuffled following:
     new-orders = (schedule[orders_0] schedule[orders_0] schedule[orders_2])"
   (declare (type Scheduler schedule)
 	   (type list orders))
+  (let* ((sorted (sort-stage schedule))
+	 (dims (loop for rank upfrom 0 below (length sorted) collect rank))
+	 (ops  (loop for stages in sorted
+		     append
+		     (loop for stage in stages
+			   append
+			   (iterstage-ops stage))))
+	 (sorted-order
+	   (loop for order in orders
+		 collect
+		 (nth order dims)))
+	 (symbols (loop for rank in sorted
+			collect
+			(iterstage-determines (car rank))))
+	 (last-rank (iterstage-rank (caar (last sorted)))))
+    
+    (assert (= (length orders)
+	       (length sorted))
+	    ()
+	    "Assertion failed, before and after the reordering, the rank should correspond with")
+    
+    (make-scheduler
+     :iters
+     (loop for ref   in orders
+	   for order in sorted-order
+	   for nth upfrom 0
+	   for stages = (nth nth sorted)
+	   append
+	   (loop for stage in stages
+		 collect
+		 (let ((stage (copy-iterstage stage)))
+		   (setf (iterstage-rank stage) ref
+			 (iterstage-ops  stage) nil
+			 (iterstage-determines stage) (nth nth symbols))
+		   (when (= order last-rank)
+		     (setf (iterstage-ops stage) ops))
+		   stage))))))
 
-  )
 
+(defun schedule-parallelize (schedule rank n-threads)
+  (declare (type fixnum rank n-threads)
+	   (type Scheduler schedule))
+
+  ;; Reading the dependency return nil if it is impossible to parallelize
   
+  (let ((sorted (sort-stage schedule)))
+    (mapc
+     #'(lambda (iter)
+	 (setf (iterstage-parallel iter) n-threads))
+     (nth rank sorted))))
 
 (defun schedule-bind! (schedule rank name)
   (declare (type Scheduler schedule)
@@ -276,14 +324,12 @@ Scheduler whose iterators are shuffled following:
   
   )
 
-(defun schedule-tiling! (schedule rank tiles)
-  )
+;;(defun schedule-tiling! (schedule rank tiles))
+;;(defun schedule-unroll! (schedule rank n))
 
-(defun schedule-unroll! (schedule rank n)
-  )
-
-(defun schedule-simdify (schedule stride)
-
+(defun schedule-simdify (schedule rank stride)
+  "Splits the iteration at the rank by `stride`"
+  
   )
 
 (defun create-schedule (actions)
@@ -314,16 +360,14 @@ Scheduler whose iterators are shuffled following:
 			   ,@(multiple-value-list (schedule-fuse (car (last old)) new)))
 			 (multiple-value-list (schedule-fuse old new)))))))
 	(setf schedules (reduce #'fuse-helper schedules)))
-      (print "=========")
-      (dolist (s schedules)
-	(format t "~a" s))
       schedules)))
 
 (defun solve-invocations (invocations)
   "Receives invocations (A set of actions)"
-  (let ((*dependency-graph* (make-dependency-graph invocations)))
-    (print "RECEIVE")
-    (print invocations)
-    (create-schedule invocations)))
+  (let* ((*dependency-graph* (make-dependency-graph invocations))
+	 (schedules (create-schedule invocations)))
+
+    ;; Minimizes the loss
+    (map 'list #'polyhedral-optimize! schedules)))
 
 ;; TODO: Full example of using cl-waffe2 scheduler
