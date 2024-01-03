@@ -39,7 +39,12 @@ The basic workflow is following:
 
 ")
   (:nicknames #:wf/iter)
-  (:use :cl :cl-waffe2/vm :cl-waffe2/vm.generic-tensor :alexandria)
+  (:use
+   :cl
+   :cl-waffe2/vm
+   :cl-waffe2/vm.generic-tensor
+   :alexandria
+   :linear-programming)
   (:export
    #:range
    #:range-size
@@ -65,3 +70,7 @@ The basic workflow is following:
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun symb (&rest inputs)
     (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
+
+(defun range-list (upfrom below &optional (by 1))
+  (loop for i upfrom upfrom below below by by collect i))
+

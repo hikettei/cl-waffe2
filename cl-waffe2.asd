@@ -62,7 +62,7 @@
 	       :cl-environments
 	       :numpy-file-format
 	       :jonathan
-	       :numcl)
+	       :linear-programming)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
 	       (:file "vm/generic-tensor/package")	       

@@ -107,6 +107,15 @@ Assertion: Shapes are already determined."
      :rank (dims source-tensor)
      :depends (find-depends source target))))
 
+(defun make-invocation (op sources targets)
+  "Creates an action manually; sources and targets are given as a list."
+  (make-action
+   :source sources
+   :target targets
+   :op op
+   :rank (dims (ispace-tensor (car sources)))
+   :depends (apply #'find-depends `(,@sources ,@targets))))
+
 (defstruct IterStage ;; Corresponds with dotimes
   (determines nil :type (or symbol keyword)) ;; A list of symbols which this stage determines
   (size       0   :type fixnum)
@@ -121,6 +130,9 @@ Assertion: Shapes are already determined."
 (defstruct Scheduler
   (iters nil :type list)) ;; A list of IterStage
 
+;; TODO:
+;;  Scheduled: 200文字以上の関数が生成されるかも
+;;  HashTable噛ませてGensymでお茶をにごす    
 (defun scheduler-name (scheduler)
   "Returns a string including a list of ops (with shaped). it can be used to reuse compiled function."
   (declare (type scheduler scheduler))
@@ -187,7 +199,7 @@ Assertion: Shapes are already determined."
 				     (not (= rank 0)))
 				(format out "+"))
 			      (print-iref ref out))
-		      (format out "]~%"))))
+		      (format out "] "))))
 	     (fresh-line out)
 	     (mapc #'print-action (iterstage-ops iter))
 	     (when (null (iterstage-ops iter)) (fresh-line out)))))))))
@@ -267,40 +279,31 @@ Scheduler whose iterators are shuffled following:
   (declare (type Scheduler schedule)
 	   (type list orders))
   (let* ((sorted (sort-stage schedule))
-	 (dims (loop for rank upfrom 0 below (length sorted) collect rank))
 	 (ops  (loop for stages in sorted
 		     append
 		     (loop for stage in stages
 			   append
 			   (iterstage-ops stage))))
-	 (sorted-order
-	   (loop for order in orders
-		 collect
-		 (nth order dims)))
-	 (symbols (loop for rank in sorted
-			collect
-			(iterstage-determines (car rank))))
-	 (last-rank (iterstage-rank (caar (last sorted)))))
+	 (ops-place-to-rank (car (last orders))))	   
     
     (assert (= (length orders)
 	       (length sorted))
 	    ()
-	    "Assertion failed, before and after the reordering, the rank should correspond with")
+	    "Assertion failed, before and after the reordering, the rank should correspond with")    
     
     (make-scheduler
      :iters
-     (loop for ref   in orders
-	   for order in sorted-order
+     (loop for ref in orders
 	   for nth upfrom 0
-	   for stages = (nth nth sorted)
+	   for stages = (find ref sorted :key (alexandria:compose #'iterstage-determines #'car) :test #'eql)
 	   append
 	   (loop for stage in stages
 		 collect
 		 (let ((stage (copy-iterstage stage)))
-		   (setf (iterstage-rank stage) ref
+		   (setf (iterstage-rank stage) nth
 			 (iterstage-ops  stage) nil
-			 (iterstage-determines stage) (nth nth symbols))
-		   (when (= order last-rank)
+			 (iterstage-determines stage) ref)
+		   (when (eql ref ops-place-to-rank)
 		     (setf (iterstage-ops stage) ops))
 		   stage))))))
 
@@ -333,21 +336,35 @@ Scheduler whose iterators are shuffled following:
   )
 
 (defun create-schedule (actions)
-  (flet ((%make-scheduler (action)
+  (flet ((%make-scheduler (action
+			   &aux
+			     (indices
+			      `(,@(action-source action)
+				,@(action-target action)))
+			     (refs
+			      (apply
+			       #'find-depends
+			       indices)))
 	   (make-scheduler
 	    :iters
-	    (loop for ref in (ispace-space (car (action-target action)))
+	    (loop for ref in refs
+		  for info-tensor = (find ref indices
+					  :test
+					  #'(lambda (index space)
+					      (find index space :test #'eql :key #'iref-index))
+					  :key #'ispace-space)
+		  for info = (find ref (ispace-space info-tensor) :key #'iref-index)
 		  for n upfrom 0
 		  collect
 		  (make-iterstage
-		   :determines (iref-index ref)
-		   :size       (iref-size ref)
-		   :rank n
-		   :parallel nil
-		   :unroll nil
-		   :tiling nil
-		   :reduction (= (iref-stride ref) 0)
-		   :ops (when (= n (1- (action-rank action)))
+		   :determines (iref-index info)
+		   :size       (iref-size info)
+		   :rank       n
+		   :parallel   nil
+		   :unroll     nil
+		   :tiling     nil
+		   :reduction  nil
+		   :ops (when (eql ref (car (last refs)))
 			  (list action)))))))
     ;; First, The Compiler is eager to fuse as many ops as possible
     (let ((schedules (map 'list #'%make-scheduler actions)))
@@ -359,7 +376,8 @@ Scheduler whose iterators are shuffled following:
 			 `(,@(butlast old)
 			   ,@(multiple-value-list (schedule-fuse (car (last old)) new)))
 			 (multiple-value-list (schedule-fuse old new)))))))
-	(setf schedules (reduce #'fuse-helper schedules)))
+	(when (> (length schedules) 1)
+	  (setf schedules (reduce #'fuse-helper schedules))))
       schedules)))
 
 (defun solve-invocations (invocations)

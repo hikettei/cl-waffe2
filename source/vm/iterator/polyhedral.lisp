@@ -28,70 +28,273 @@
 ;;  |------------- j
 ;; => find out the combination of (i, j) * f minimizing the loss.
 
-(defstruct (Timestamp
-	    (:conc-name ts-)
-	    (:constructor make-timestamp (indices constraints)))
-  "Indices     = a list of iterators e.g.: (i, j, k)
-   Constraints = a list of maxsize of eatch indices
-   Transform   = a list of lambda function which represents the transformation"
-  (rank (length indices) :type fixnum)
-  (constraints constraints :type list)
-  (transforms nil :type list))
-
-;; TODO: Optimize
-(defun apply-schedule (timestamp scale &optional bias)
-  (declare (type Timestamp timestamp))
-  (let* ((scale  (numcl:asarray scale :type 'fixnum))
-	 (bias   (when bias (numcl:asarray bias :type 'fixnum))))
-    (push
-     #'(lambda (i)
-	 (declare (type (array fixnum (* * *)) i)
-		  (type (array fixnum (* *)) scale))
-	 (let ((z (numcl:einsum '(ij bjk -> bik) scale i)))
-	   (declare (type (array fixnum (* * *)) z))
-	   (if bias
-	       (locally
-		   (declare (type (array fixnum (*)) bias))
-		 (numcl:+ z bias))
-	       z)))
-     (ts-transforms timestamp))
-    timestamp))
-
-(defun realize (timestamp)
-  (declare (type Timestamp timestamp))
-  (let* ((coords
-	   (apply
-	    #'alexandria:map-product
-	    #'list
-	    (mapcar #'alexandria:iota (ts-constraints timestamp))))
-	 (dims `(,(apply #'* (ts-constraints timestamp)) ,(ts-rank timestamp)))
-	 (in (make-array
-	      dims
-	      :element-type 'fixnum
-	      :initial-contents
-	      coords))
-	 (in (numcl:asarray in :type 'fixnum))
-	 ;; (60, 1, 3) e.g.:
-	 (in (numcl:reshape in `(,(first dims) ,(second dims) 1))))
-    (loop with gained = in
-	  for transform in (reverse (ts-transforms timestamp)) do
-	    (setf gained (funcall transform gained))
-	  finally (return-from realize gained))))
-
 ;;
 ;; Constraints
 ;; 1. Ranks are the same, upper/lower bounds are determined.
 ;; 2. Iterations must be increased by one.
 ;;
 
-(defun all-permutations (list)
-  (cond ((null list) nil)
-        ((null (cdr list)) (list list))
-        (t (loop for element in list
-		 append (mapcar (lambda (l) (cons element l))
-				(all-permutations (remove element list)))))))
+;; Generalized definition of S(vec_i) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; [Unrolled Table]
+;; S(i j k) =
+;; (0 0 0)      }
+;; (0 0 1)      }
+;;   ...        }
+;; (0 0 k-1)    }
+;; (0 0 k)      }
+;; (0 1 0)      }
+;; (0 1 1)      }
+;;   ...        }
+;; (0 1 k-1)    }
+;; (0 1 k)      }
+;;   ...        }
+;; (0 j-1 k-1)  }
+;;  ...         }
+;; (i j k)      } Shuffling the order of execution; there could be better one which parallelizes it or maximizes the locality of memory.
+;;  | \  \_
+;; ~~~~~~~~~~~~~~
+;;  i  j  k
 
-(defun polyhedral-optimize! (schedule)
+;; e.g.: out[ik] = out[ik] + x[ij] * y[jk]
+;;  in the dimension=0,                                                
+;;    - out[i] reads out[i], x[i], y[j]                                
+;;      - that is, y[j] must be computed at that time.                 
+;;      - <=> In the unrolled table, the transformed order satisfies:
+;;            - | T=n-k | finish computing y[j]   } 
+;;            - | T=n   | finish computing out[i] }
+;;            - Polyhedral Dependence: Forall i, j. coeff1 * i + offset1 > coeff2 * j + offset2
+;;
+;;  in the dimension=1,
+;;    - out[k] reads out[k], x[j], y[k]
+;;      - that is, x[j] must be computed at that time.
+;;      - <=> In the unrolled table, the transformed order satisfied:
+;;            - | as well as dimension=0 |
+;;            - Polyhedral Dependence: Forall k, j. coeff1 * k + offset1 > coeff2 * j + offset2
+;;
+;; dimension=0 and dimension=1 is independent; like the time on a clock.
+;;
+
+;; Constraints作るのわっかんね
+;; 回転行列 @ schedule = new_scheduleだけで十分では？
+;; (C_11 C_12 C_13)
+;;       scale                        offset
+;; ( C_xy ... C_xy ) }                (C_x)
+;;        ...        } d @ S(vec_i) + (C_x) d = S_new(vec_i)
+;; ( C_xy ... C_xy ) }                (C_x)
+;;         m                            1
+
+(defun polyhedral-optimize! (schedule
+			     &aux
+			       (sorted (sort-stage schedule)))
   (declare (type Scheduler schedule))
+  ;; Finds out the best scale
+  (flet ((C (&rest indices) (apply #'symb 'C (loop for i in indices append `(- ,i)))) ;; Coeff
+	 (lazy-matmul-helper (A B n-rank
+			      &aux (out (make-array `(,n-rank) :element-type 'symbol :initial-element nil)))
+	   (dotimes (i n-rank)
+	     (dotimes (j n-rank)
+	       ;; ij, jk -> ik
+	       (let ((read-out (aref out i)))
+		 (setf (aref out i)
+		       `(,@read-out (* ,(aref A i j) ,(nth j B)))))))
+	   out)
+	 (linearlize-subject (s1 s2 c1 c2 offset1 offset2 p0 p1 &aux (b (- offset1 offset2)))
+	   ;; L_n = (s_n - c_n)
+	   ;; b = offset1 - offset2
+	   ;; L_n * i +  L_n * j + L_N * k + ... + b >= 0 ... (1)
+	   ;; <=> (Farkas Lemma)
+	   ;;  exists p0, p1 >= 0, (1) is the equivalent to satisfy:
+	   ;;  - p0 >= 0 and p1 >= 0 and s1c1 - s2c2 - p1 = 0	   
+	   `((>= ,p0 ,b)
+	     (>= ,p1 1)
+	     (=
+	      (-
+	       (* ,s1 ,c1)
+	       (* ,s2 ,c2)
+	       ,p1)
+	      0)))
+	 (make-indices (&aux (sorted (alexandria:flatten sorted)))
+	   (let ((indices
+		   (delete-duplicates
+		    (map
+		     'list
+		     #'iterstage-determines
+		     sorted)))
+		 (table (make-hash-table)))
+	     (dolist (i indices)
+	       (setf (gethash i table)
+		     (iterstage-size (find i sorted :key #'iterstage-determines :test #'eql))))
+	     (values indices table)))
+	 (actions (&aux (sorted (alexandria:flatten sorted)))
+	   (loop for s in sorted
+		 for i = (iterstage-ops s)
+		 append i)))
+    (let* ((constraints (multiple-value-list (make-indices)))
+	   (indices     (first  constraints))
+	   (table       (second constraints))
+	   (scale-to-minimize (make-array
+			       `(,(length indices) ,(length indices))
+			       :element-type 'list
+			       :initial-contents
+			       (loop for x upfrom 0 below (length indices)
+				     collect
+				     (loop for y upfrom 0 below (length indices)
+					   collect (C x y)))))
+	   (constraints-on-c
+	     (loop for x upfrom 0 below (length indices)
+		   append
+		   (loop for y upfrom 0 below (length indices)
+			 append
+			 `((integer ,(C x y))
+			   (>= ,(C x y) 0)
+			   (<= ,(C x y) 1)))))
+	   (constraints-on-c1
+	     (loop for x upfrom 0 below (length indices)
+		   collect
+		   `(=
+		     1
+		     (+
+		      ,@(loop for y upfrom 0 below (length indices)
+			      collect (C x y))))))
+	   (iterator-constraints
+	     (loop for index in indices
+		   append
+		   `((>= ,index 0)
+		     (<=  ,index ,(1- (gethash index table)))
+		     (integer ,index))))
+	   (rotated-schedule (lazy-matmul-helper scale-to-minimize indices (length indices)))
+	   (i2r
+	     (let ((table (make-hash-table)))
+	       (loop for k in indices
+		     for val across rotated-schedule do
+		       (setf (gethash k table) val))
+	       table))
+	   (objects)
+	   (schedule-applied-indices
+	     (loop for action in (actions)
+		   append
+		   (loop for reader in (action-source action)
+			 for r-t = (ispace-tensor reader)
+			 for r-s = (ispace-space reader)
+			 append
+			 ;; target <- reader
+			 (loop for writer in (action-target action)
+			       for w-t = (ispace-tensor writer)
+			       for w-s = (ispace-space writer)
+			       append
+			       (progn
+				 (assert (= (dims r-t) (dims w-t))
+					 ()
+					 "Assertion Failed with (dims r-t) == (dims w-t) This could be an internal bug of polyhedral compiler.")
+				 (loop for reader-dim in r-s
+				       for writer-dim in w-s
+				       for nth upfrom 0
+				       unless (and
+					       (eql (iref-index writer-dim) (iref-index reader-dim)))
+					 
+					 append
+				       ;; Farkas Lemma:
+				       ;; DAG: Writer <- Reader
+				       ;; <=> Writer Depends Reader
+				       ;; <=> Reader sends a data to Writer
+				       ;; <=> for all ReaderIndex <= WriterIndex
+					 (let ((wd (second (nth nth (gethash (iref-index writer-dim) i2r))))
+					       (rd (second (nth nth (gethash (iref-index reader-dim) i2r))))
+					       (p0 (gensym "p0"))
+					       (p1 (gensym "p1")))
+					   ;; Minimize the stride of reading values:
+					   (when (= (1- (length r-s)) nth)
+					     (push
+					      `(* ,(iref-stride writer-dim) ,wd)
+					      objects)
+					     (push
+					      `(* ,(iref-stride reader-dim) ,rd)
+					      objects))
+					   ;; Reader comes the first <-> Reader is smaller
+					   ;; {ax+b} - {ax+b} >= 0
+					   ;;`(>=
+					   ;;  (+ (* ,wd ,(iref-stride writer-dim)) ,(iref-offset writer-dim))
+					   ;;  (+ (* ,rd ,(iref-stride reader-dim)) ,(iref-offset reader-dim)))					   
+					   ;; <=>
+					   (linearlize-subject
+					    (iref-stride writer-dim)
+					    (iref-stride reader-dim)
+					    wd ;; c
+					    rd ;; c
+					    (iref-offset writer-dim)
+					    (iref-offset reader-dim)
+					    p0
+					    p1))))))))
+	   ;; (* a b) is not a ILP
+	   ;; Applying the Farkas Lemma
+	   (objective
+	     ;; Minimizes the locality of the memory?
+	     `(min (+ ,@objects))))
+      ;;(print schedule-applied-indices)
+      ;;(print constraints-on-c)
+      ;;(print iterator-constraints)
+      (let ((solution
+	      (solve-problem
+	       (parse-linear-problem
+		objective
+		`(,@constraints-on-c
+		  ,@constraints-on-c1
+		  ,@schedule-applied-indices
+		  ,@iterator-constraints))))
+	    (scale-solved (make-array `(,(length indices) ,(length indices)) :initial-element 0 :element-type 'fixnum)))
+	(dotimes (i (length indices))
+	  (dotimes (j (length indices))
+	    (setf (aref scale-solved i j) (solution-variable solution (aref scale-to-minimize i j)))))
+	(print scale-solved)
+	(format t "~%Indices: ~a~%" indices)
+	(let ((solved-order
+		(loop for column-nth upfrom 0 below (length indices)
+		      for list = (map 'list #'(lambda (x) (aref scale-solved column-nth x)) (range-list 0 (length indices)))
+		      collect
+		      (nth (position 1 list) indices))))
+	  (format t "Solved Order: ~a~%" solved-order)
+	  (print "Before Polyhedral")
+	  (print schedule)
+	  (print "After Polyhedral")
+	  (print (schedule-reorder schedule solved-order))
+	  )))))
 
+;; TODO: Conv2D
+#+(and)
+(let* ((out
+ 	 (make-indexspace
+	  (wf/t:make-input `(10 10) :Z)
+	  :subscripts `(i k)
+	  :sizes (list 10 10)))
+       (actions
+	 (list
+	  ;; ij jk ik
+	  ;; (10 20) (20 10) (10 10)
+	  (make-invocation
+	   :einsum-reduction
+	   (list
+	    (make-indexspace
+	     (wf/t:make-input `(10 20) :X)
+	     :subscripts `(i j)
+	     :sizes (list 10 20))
+	    (make-indexspace
+	     (wf/t:make-input `(20 10) :Y)
+	     :subscripts `(j k)
+	     :sizes (list 20 10))
+	    out)
+	   (list out)))))
+  (time (solve-invocations actions))
+  ;; Write: O[10*i+0, k+0]
+  ;; Read:  X[10*i+0,  j+0]
+  ;;        Y[10*j+0,  k+0]
+  ;;        O[10*i-1,  k+0]
+  ;; i.e.:
+  ;; Pair(A, B) A sends a data to B <=> satisfies all A <= B in the constraints
+  ;;  - (10*i+0, 10*i+0) k=0~10
+  ;;  - (10*i+0, 10*j+0)
+  ;;  - (k+0, j+0)
+  ;;  - (k+0, k+0)
+  ;;  - 10i-1 -> 10i 10i-1 < 10i
+ 
   )
+

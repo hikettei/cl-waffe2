@@ -99,6 +99,7 @@
 	  (ispace-space act)))
 
 (defun find-depends (&rest ispaces)
+  "List up all subscripts used in ispaces"
   (let ((found))
     (dolist (ispace ispaces)
       (dolist (ref (ispace-space ispace))

@@ -65,6 +65,7 @@
       (loop for instruction in iseq do
 	(if (wfop-loadp instruction)
 	    (multiple-value-bind (x y) (read-loadp instruction)
+	      (declare (ignore y))
 	      ;; funcall ? ignoring ?
 	      ;; TODO: How to deal with reshape/permute/view	      
 	      (setf
@@ -88,15 +89,11 @@
 		     `(,@invocations-stored ,invocations))
 		    (progn
 		      ;; Apply a jit compiling
-		      (print "EMIT")
-		      (print invocations-stored)
-		      ;;(time (wf/iter:solve-invocations invocations-stored))
+		      (time (wf/iter:solve-invocations invocations-stored))
 		      ;; Push a new WfInst
 		      (setq invocations-stored nil)))))))
 
-      (print "EMIT")
-      (print invocations-stored)
-      ;;(time (wf/iter:solve-invocations invocations-stored))
+      (time (wf/iter:solve-invocations invocations-stored))
       ;; The result is cached by the status of dynamic-shape at that time
       jit-compiled-irs
       iseq)))
