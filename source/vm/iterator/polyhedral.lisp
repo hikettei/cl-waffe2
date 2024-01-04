@@ -74,8 +74,6 @@
 ;; dimension=0 and dimension=1 is independent; like the time on a clock.
 ;;
 
-;; Constraints作るのわっかんね
-;; 回転行列 @ schedule = new_scheduleだけで十分では？
 ;; (C_11 C_12 C_13)
 ;;       scale                        offset
 ;; ( C_xy ... C_xy ) }                (C_x)
@@ -83,7 +81,8 @@
 ;; ( C_xy ... C_xy ) }                (C_x)
 ;;         m                            1
 
-(defun polyhedral-optimize! (schedule
+;; [TODO]: Somebody help me with understanding and improving this stupid implementation T_T.
+(defun polyhedral-optimize (schedule n-threads
 			     &aux
 			       (sorted (sort-stage schedule)))
   (declare (type Scheduler schedule))
@@ -225,14 +224,9 @@
 					    (iref-offset reader-dim)
 					    p0
 					    p1))))))))
-	   ;; (* a b) is not a ILP
-	   ;; Applying the Farkas Lemma
 	   (objective
-	     ;; Minimizes the locality of the memory?
+	     ;; Object: Minimize the locality of the memory
 	     `(min (+ ,@objects))))
-      ;;(print schedule-applied-indices)
-      ;;(print constraints-on-c)
-      ;;(print iterator-constraints)
       (let ((solution
 	      (solve-problem
 	       (parse-linear-problem
@@ -245,56 +239,121 @@
 	(dotimes (i (length indices))
 	  (dotimes (j (length indices))
 	    (setf (aref scale-solved i j) (solution-variable solution (aref scale-to-minimize i j)))))
-	(print scale-solved)
-	(format t "~%Indices: ~a~%" indices)
-	(let ((solved-order
-		(loop for column-nth upfrom 0 below (length indices)
-		      for list = (map 'list #'(lambda (x) (aref scale-solved column-nth x)) (range-list 0 (length indices)))
-		      collect
-		      (nth (position 1 list) indices))))
-	  (format t "Solved Order: ~a~%" solved-order)
-	  (print "Before Polyhedral")
-	  (print schedule)
-	  (print "After Polyhedral")
-	  (print (schedule-reorder schedule solved-order))
-	  )))))
+	;; (print scale-solved)
+	;; (format t "~%Indices: ~a~%" indices)
+	(let* ((solved-order
+		 (loop for column-nth upfrom 0 below (length indices)
+		       for list = (map 'list #'(lambda (x) (aref scale-solved column-nth x)) (range-list 0 (length indices)))
+		       collect
+		       (nth (position 1 list) indices)))
+	       (solved-order
+		 (remove-duplicates `(,@indices ,@(remove-duplicates solved-order)))))
+	  ;; (format t "Solved Order: ~a~%" solved-order)
+	  (when (not (= (length (remove-duplicates solved-order))
+			(length (remove-duplicates indices))))
+	    (return-from polyhedral-optimize schedule))
+	  ;; (format t "Solved Order: ~a~%" solved-order)
+	  ;; (print "Before Polyhedral")
+	  ;; (print schedule)
+	  ;; (print "After Polyhedral")
+	  ;; (print (schedule-reorder schedule solved-order))
 
-;; TODO: Conv2D
-#+(and)
+	  (let ((new-schedule (schedule-reorder schedule solved-order)))
+	    (schedule-parallelize! new-schedule 0 n-threads)
+	    new-schedule))))))
+
+(defun schedule-collapse! (schedule)
+  (declare (type Scheduler schedule))
+  ;;
+  ;; (C0)
+  ;; (C1) @ (i j k) == (i j k)
+  ;; (C2)
+  ;;
+  ;; I think it is beyond me ¯\_(ツ)_/¯
+  ;; Let's think in the next PR
+  schedule)
+
+;; Usage Example
+;; Einsum (matmul)
+#+(or)
 (let* ((out
  	 (make-indexspace
-	  (wf/t:make-input `(10 10) :Z)
+	  (wf/t:make-input `(1024 1024) :Z)
 	  :subscripts `(i k)
-	  :sizes (list 10 10)))
+	  :sizes (list 1024 1024)))
        (actions
 	 (list
 	  ;; ij jk ik
 	  ;; (10 20) (20 10) (10 10)
 	  (make-invocation
-	   :einsum-reduction
+	   :einsum
 	   (list
 	    (make-indexspace
-	     (wf/t:make-input `(10 20) :X)
+	     (wf/t:make-input `(1024 1024) :X)
 	     :subscripts `(i j)
-	     :sizes (list 10 20))
+	     :sizes (list 1024 1024))
 	    (make-indexspace
-	     (wf/t:make-input `(20 10) :Y)
+	     (wf/t:make-input `(1024 1024) :Y)
 	     :subscripts `(j k)
-	     :sizes (list 20 10))
+	     :sizes (list 1024 1024))
 	    out)
 	   (list out)))))
-  (time (solve-invocations actions))
-  ;; Write: O[10*i+0, k+0]
-  ;; Read:  X[10*i+0,  j+0]
-  ;;        Y[10*j+0,  k+0]
-  ;;        O[10*i-1,  k+0]
-  ;; i.e.:
-  ;; Pair(A, B) A sends a data to B <=> satisfies all A <= B in the constraints
-  ;;  - (10*i+0, 10*i+0) k=0~10
-  ;;  - (10*i+0, 10*j+0)
-  ;;  - (k+0, j+0)
-  ;;  - (k+0, k+0)
-  ;;  - 10i-1 -> 10i 10i-1 < 10i
- 
+  (time (print (solve-invocations actions))))
+
+;;for (n in 0..batch)
+;;for (fout in 0..out_features)
+;;for (y in 1..H-1)
+;;for (x in 1..W-1)
+;;for (fin in 0..in_features)
+;;for (k0 in 0..3)
+;;for (k1 in 0..3)
+;;conv[n, fout, y, x] += weigths[fout, fin, y, x] * input[n, fin, y+k0, x+k1];
+
+;; Conv2D
+;; TODO: x + y index referencing...
+#+(or)
+(let* ((batch 10)
+       (img-x 128)
+       (img-y 128)
+       (in-features 32)
+       (out-features 32)
+       (k-h 25)
+       (k-w 25)
+       (target
+ 	 (make-indexspace
+	  (wf/t:make-input `(,batch ,out-features ,img-y ,img-x) :OUT)
+	  :subscripts `(batch out-features img-y img-x)
+	  :sizes `(,batch ,out-features ,img-y ,img-x)))
+       (actions
+	 (list
+	  (make-invocation
+	   :einsum ;; += *
+	   (list
+	    (make-indexspace
+	     (wf/t:make-input `(,out-features ,in-features ,img-y ,img-x) :W)
+	     :subscripts `(out-features in-features img-y img-x)
+	     :sizes `(,out-features ,in-features ,img-y ,img-x))
+	    (make-indexspace
+	     (wf/t:make-input `(,batch ,in-features ,k-h ,img-y) :IN)
+	     :subscripts `(batch in-features img-y img-x)
+	     :sizes `(,batch ,in-features ,k-h ,k-w)
+	     ;;:additional-offsets `(nil nil k0 k1)
+	     )
+	    target)
+	   (list target))))
+       (schedule (create-schedule-helper
+		  `((batch . ,batch)
+		    (out-features . ,out-features)
+		    (img-y . ,(1- img-y))
+		    (img-x . ,(1- img-x))
+		    (in-features . ,in-features)
+		    (k-w . ,k-h)
+		    (k-h . ,k-w))
+		  actions)))
+  (print schedule)
+  ;; SIMDifiy
+  ;;(print (polyhedral-optimize schedule))
+		  
+  ;(time (solve-invocations actions))
   )
 

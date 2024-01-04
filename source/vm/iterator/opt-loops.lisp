@@ -27,11 +27,6 @@
 ;; reduction
 ;; Scheduler -> Lisp-Like AST -> CUDA. GCC, Lisp, Metal etc...
 
-;; [Memo]
-;; 同じサイズのIter同士をFuse
-;; CollapseできるものはCollapseで対処
-;; 線形計画法でSIMD Pack/Unpack, OpenMP, Memory Locality
-
 (defvar *dependency-graph*)
 (defun make-dependency-graph (actions)
   (declare (type list actions)
@@ -124,20 +119,83 @@ Assertion: Shapes are already determined."
 
   (parallel    nil :type (or null fixnum))
   (tiling      nil :type list)
+  (simd-unroll nil :type (or null fixnum))   ;; simd-unroll * stride + reminder = size
+  (simd-reminder nil :type (or null fixnum)) ;; 
   (unroll      nil :type (or null fixnum))
   (reduction   nil :type boolean))
 
 (defstruct Scheduler
+  "args ... ((:in or :out or :io tensor) (:in or :out or :io tensor) ...)"
+  (name  :plain  :type keyword)
+  (args  nil :type list)
   (iters nil :type list)) ;; A list of IterStage
 
-;; TODO:
-;;  Scheduled: 200文字以上の関数が生成されるかも
-;;  HashTable噛ませてGensymでお茶をにごす    
-(defun scheduler-name (scheduler)
+(defun schedule-name! (scheduler)
   "Returns a string including a list of ops (with shaped). it can be used to reuse compiled function."
   (declare (type scheduler scheduler))
+  (setf (scheduler-name scheduler)
+	(intern
+	 (with-output-to-string (out)
+	   (format out "fused_")
+	   (let ((stages (sort-stage scheduler)))
+	     (dolist (stgs stages)
+	       (dolist (stg stgs)
+		 (dolist (op (iterstage-ops stg))
+		   (format out "~(~a~)_"
+			   (car (cl-ppcre:split "-" (format nil "~a" (action-op op)))))
+		   (dolist (src (action-source op))
+		     (format out "~(~a~)_" (dtype (ispace-tensor src)))
+		     (dolist (s (shape (ispace-tensor src)))
+		       (format out "~a_" s)))
+		   (dolist (tgt (action-target op))
+		     (format out "~(~a~)_" (dtype (ispace-tensor tgt)))
+		     (dolist (s (shape (ispace-tensor tgt)))
+		       (format out "~a_" s)))))))
+	   (format out "wf"))
+	 "KEYWORD")))
 
-  )
+(defun schedule-solve-tensor-dependencies! (scheduler &aux (sorted (sort-stage scheduler)))
+  (declare (type Scheduler scheduler))
+  (let* ((ops  (loop for stages in sorted
+		     append
+		     (loop for stage in stages
+			   append
+			   (iterstage-ops stage))))
+	 (all-tensors
+	   (loop for op in ops
+		 append
+		 `(
+		   ,@(loop for src in (action-source op)
+			   append
+			   (list (ispace-tensor src)))
+		   ,@(loop for tgt in (action-target op)
+			   append
+			   (list (ispace-tensor tgt))))))
+	 (all-tensors
+	   (remove-duplicates all-tensors :test #'eql :key #'tensor-id))
+	 (deps (make-hash-table :test #'eql)))
+
+    (loop for op in ops do
+      (flet ((apply-helper (list default not)
+	       (loop for src in list
+		     for id = (tensor-id (ispace-tensor src)) do
+		       (when (and
+			      (gethash id deps)
+			      (eql (gethash id deps) default))
+			 (setf (gethash id deps) :io))
+		       (alexandria:ensure-gethash
+			id
+			deps
+			not))))
+	(apply-helper (action-source op) :out :in)
+	(apply-helper (action-target op) :in :out)))
+    
+    (setf (scheduler-args scheduler)
+	  (map
+	   'list
+	   #'(lambda (tensor)
+	       (cons (gethash (tensor-id tensor) deps) tensor))
+	   all-tensors))))
 
 (defun sort-stage (scheduler)
   (let* ((stages (scheduler-iters scheduler))
@@ -166,6 +224,12 @@ Assertion: Shapes are already determined."
 	 (when (of unroll)
 	   (indent out)
 	   (format out "@unroll~a~%" (of unroll)))
+	 (when (of simd-unroll)
+	   (indent out)
+	   (format out "@SIMDified(~a*~a + ~a)~%"
+		   (of simd-unroll)
+		   (floor (/ (of size) (of simd-unroll)))
+		   (of simd-reminder)))
 	 (when (of reduction)
 	   (indent out)
 	   (format out "@reduction~%"))
@@ -174,7 +238,6 @@ Assertion: Shapes are already determined."
 		 (of determines)
 		 (of size))
 	 (let ((*indentation* (+ *indentation* 2)))
-	   (indent out)
 	   (flet ((print-action (action
 				 &aux (rank (action-rank action)))
 		    (indent out)
@@ -199,8 +262,8 @@ Assertion: Shapes are already determined."
 				     (not (= rank 0)))
 				(format out "+"))
 			      (print-iref ref out))
-		      (format out "] "))))
-	     (fresh-line out)
+		      (format out "] "))
+		    (fresh-line out)))
 	     (mapc #'print-action (iterstage-ops iter))
 	     (when (null (iterstage-ops iter)) (fresh-line out)))))))))
 
@@ -208,7 +271,17 @@ Assertion: Shapes are already determined."
   (let ((sorted (sort-stage scheduler)))
     (format
      stream
-     "Scheduler:~%~a"
+     "Scheduler: ~a~%  (~a)~%~a"
+     (scheduler-name scheduler)
+     (with-output-to-string (out)
+       (loop for (io . arg) in (scheduler-args scheduler)
+	     for nth upfrom 0
+	     for lastp = (= nth (1- (length (scheduler-args scheduler)))) do
+	       (format out "(~a ~(~a~) ~a)~a"
+		       io
+		       (dtype arg)
+		       (tensor-id arg)
+		       (if lastp "" " "))))
      (with-output-to-string (out)
        (loop for stages in sorted
 	     for rank upfrom 0
@@ -270,7 +343,7 @@ Schedules that can be fused is defined as:
 	       ;; so it doesnt handle with complicated iterators
 	       (when (or (not (= 1 (length stages1))) (not (= 1 (length stages2))))->failed)
 	       (fuse-stg (car stages1) (car stages2))))))))
-   
+
 (defun schedule-reorder (schedule orders)
   "Shuffles the order of schedule given new-orders
 Returns:
@@ -308,32 +381,41 @@ Scheduler whose iterators are shuffled following:
 		   stage))))))
 
 
-(defun schedule-parallelize (schedule rank n-threads)
+(defun schedule-parallelize! (schedule rank n-threads)
   (declare (type fixnum rank n-threads)
 	   (type Scheduler schedule))
 
   ;; Reading the dependency return nil if it is impossible to parallelize
-  
   (let ((sorted (sort-stage schedule)))
     (mapc
      #'(lambda (iter)
-	 (setf (iterstage-parallel iter) n-threads))
+	 (when (> (iterstage-size iter) n-threads)
+	   (setf (iterstage-parallel iter) n-threads)))
      (nth rank sorted))))
 
 (defun schedule-bind! (schedule rank name)
   (declare (type Scheduler schedule)
 	   (type fixnum rank)
 	   (type string name))
-  
+  (error "not implemented")
   )
 
 ;;(defun schedule-tiling! (schedule rank tiles))
 ;;(defun schedule-unroll! (schedule rank n))
 
-(defun schedule-simdify (schedule rank stride)
-  "Splits the iteration at the rank by `stride`"
-  
-  )
+(defun schedule-simdify! (schedule stride)
+  "Inserts the simdified operations in the last axis"
+  ;; pack unpack
+  (declare (type Scheduler schedule)
+	   (type fixnum stride))
+  (let* ((sorted (sort-stage schedule)))
+    (let ((last-stages (car (last sorted))))
+      (mapc
+       #'(lambda (stage)
+	   (when (>= (iterstage-size stage) stride)
+	     (setf (iterstage-simd-unroll stage) stride
+		   (iterstage-simd-reminder stage) (mod (iterstage-size stage) stride))))
+       last-stages))))
 
 (defun create-schedule (actions)
   (flet ((%make-scheduler (action
@@ -343,7 +425,7 @@ Scheduler whose iterators are shuffled following:
 				,@(action-target action)))
 			     (refs
 			      (apply
-			       #'find-depends
+			       #'find-depends-symbol
 			       indices)))
 	   (make-scheduler
 	    :iters
@@ -380,12 +462,46 @@ Scheduler whose iterators are shuffled following:
 	  (setf schedules (reduce #'fuse-helper schedules))))
       schedules)))
 
-(defun solve-invocations (invocations)
+(defun solve-actions (actions
+		      &key
+			(n-threads 16)
+			(simd-stride nil) ;; <- should be nil in default
+			)
   "Receives invocations (A set of actions)"
-  (let* ((*dependency-graph* (make-dependency-graph invocations))
-	 (schedules (create-schedule invocations)))
-
+  (let* ((schedules (create-schedule actions)))
     ;; Minimizes the loss
-    (map 'list #'polyhedral-optimize! schedules)))
+    (flet ((optimize-helper (schedule)
+	     ;; Simdifiy . Collapse . Optimize
+	     (let ((parallelized (polyhedral-optimize schedule n-threads)))
+	       ;; Loop Collapse
+	       (schedule-collapse! parallelized)
+	       (when simd-stride
+		 (schedule-simdify! parallelized simd-stride))
+	       (schedule-name! parallelized)
+	       (schedule-solve-tensor-dependencies! parallelized)
+	       parallelized)))
+      (print (map 'list #'optimize-helper schedules)))))
+
+(defgeneric schedule-codegen (backend-indicator Schedulers)
+  (:documentation
+   "
+## [generic] schedule-codegen
+
+```lisp
+(schedule-codegen backend-indicator Schedulers)
+```
+
+"))
+
+(defgeneric schedule-config (backend-indicator)
+  (:documentation
+   "
+## [generic] schedule-config
+
+```lisp
+(schedule-config backend-indicator)
+;; -> (values SIMD-Stride, N-Threads)
+```
+"))
 
 ;; TODO: Full example of using cl-waffe2 scheduler

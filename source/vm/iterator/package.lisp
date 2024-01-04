@@ -56,12 +56,52 @@ The basic workflow is following:
    #:do-range
    #:.range)
   (:export
-   ;; TODO: Export features related to scheduling
-   )
+   #:schedule-codegen
+   #:schedule-config
+   
+   #:schedule-simdify!
+   #:schedule-bind!
+   #:schedule-parallelize!
+   #:schedule-reorder
+   #:schedule-fuse
+   #:sort-stage
+
+   #:Scheduler
+   #:scheduler-name
+   #:scheduler-args
+   #:scheduler-iters
+
+   #:IterStage
+   #:iterstage-determines
+   #:iterstage-size
+   #:iterstage-rank
+   #:iterstage-ops
+   #:iterstage-parallel
+   #:iterstage-tiling
+   #:iterstage-simd-unroll
+   #:iterstage-simd-reminder
+   #:iterstage-unroll
+   #:iterstage-reduction
+
+   #:Action
+   #:action-rank
+   #:action-depends
+   #:action-source
+   #:action-target
+   #:action-op
+
+   #:IndexSpace
+   #:ispace-tensor
+   #:ispace-space
+
+   #:IndexRef
+   #:iref-index
+   #:iref-size
+   #:iref-stride
+   #:iref-offset)
   (:export
    #:trace-invocation
-   #:solve-invocations
-   ))
+   #:solve-actions))
 
 (in-package :cl-waffe2/vm.iterator)
 

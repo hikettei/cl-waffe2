@@ -52,7 +52,7 @@
 	    (:conc-name iref-))
   (index nil :type (or keyword symbol))
   (size   0 :type fixnum)
-  (offset 0 :type fixnum)
+  (offset 0 :type (or symbol list fixnum))
   (stride 0 :type fixnum))
 
 (defmethod print-object ((act action) stream)
@@ -99,7 +99,7 @@
 	  (ispace-space act)))
 
 (defun find-depends (&rest ispaces)
-  "List up all subscripts used in ispaces"
+  "List up all subscripts used in ispaces."
   (let ((found))
     (dolist (ispace ispaces)
       (dolist (ref (ispace-space ispace))
@@ -109,7 +109,15 @@
 	  (push (iref-index ref) found))))
     (delete-duplicates found)))
 
-(defun make-indexspace (tensor &key subscripts sizes)
+(defun find-depends-symbol (&rest ispaces)
+  "List up all subscripts used in ispaces. size=1, stride=0 isn't ignored."
+  (let ((found))
+    (dolist (ispace ispaces)
+      (dolist (ref (ispace-space ispace))
+	(push (iref-index ref) found)))
+    (delete-duplicates found)))
+
+(defun make-indexspace (tensor &key subscripts sizes additional-offsets)
   "Assertion: Symbols are determined"
   (when (some #'listp (tensor-stride tensor))
     (setf
@@ -124,8 +132,8 @@
   (let* ((n-dim (dims tensor))
 	 (ranges
 	   (loop for rank upfrom 0 below n-dim
-		 for index in subscripts
-		 for view in (tensor-view tensor)
+		 for index  in subscripts
+		 for view   in (tensor-view tensor)
 		 for stride in (tensor-stride tensor)
 		 for size   in sizes
 		 collect
@@ -134,7 +142,9 @@
 		   (make-indexref
 		    :index index
 		    :size  size
-		    :offset (range-nth range 0)
+		    :offset (if (nth rank additional-offsets)
+				`(+ ,(nth rank additional-offsets) ,(range-nth range 0))
+				(range-nth range 0))
 		    :stride
 		    (if (wf/t::subscript-broadcast view)
 			0
@@ -142,5 +152,18 @@
 			 (- (range-nth range 1) (range-nth range 0))
 			 stride)))))))
     (%make-indexspace tensor ranges)))
+
+(defun create-schedule-helper (iterators actions)
+  "Iterators = a list of `((bind-to1 .  upto1) (bind-to2 . upto2) ...)"
+  (make-scheduler
+   :iters
+   (loop for (bind-to . upto) in iterators
+	 for rank upfrom 0
+	 collect
+	 (make-iterstage
+	  :determines bind-to
+	  :size upto
+	  :rank rank
+	  :ops (when (= rank (1- (length iterators))) actions)))))
 
 ;; (defun %einsum-helper)

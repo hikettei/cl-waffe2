@@ -54,12 +54,13 @@
   
   (let ((invocations-stored)
 	(jit-compiled-irs)
-	(loadp-table (make-hash-table)))
+	(loadp-table (make-hash-table))
+	(cached-jit-kernel (make-hash-table :test #'eql)))
     (flet ((read-tensor (tensor)
 	     (or
 	      (gethash (tensor-id tensor) loadp-table)
 	      tensor))
-	   (omit (sessions)
+	   (produce (schedule)
 	     ;; produce a jit-compiled kernel
 	     ))
       (loop for instruction in iseq do
@@ -89,11 +90,11 @@
 		     `(,@invocations-stored ,invocations))
 		    (progn
 		      ;; Apply a jit compiling
-		      (time (wf/iter:solve-invocations invocations-stored))
+		      (time (wf/iter:solve-actions invocations-stored))
 		      ;; Push a new WfInst
 		      (setq invocations-stored nil)))))))
 
-      (time (wf/iter:solve-invocations invocations-stored))
+      (time (wf/iter:solve-actions invocations-stored))
       ;; The result is cached by the status of dynamic-shape at that time
       jit-compiled-irs
       iseq)))
