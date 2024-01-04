@@ -145,7 +145,7 @@
 	       (:file "backends/lisp/logical")
 	       (:file "backends/lisp/matrix-ops")
 	       (:file "backends/lisp/lazy")
-	      
+	       (:file "backends/lisp/codegen")	      
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")

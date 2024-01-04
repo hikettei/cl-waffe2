@@ -298,12 +298,17 @@ Expands `defnode` and `define-impl` at the same time.
 	     (1 (nth 0 variables)))
 	   (nth out-pos variables))))))))
 
+(defun node-remove-backends (&optional from)
+  (let ((classes (c2mop:class-direct-superclasses (class-of from))))
+    (class-name (car classes))))
+
 (defun get-invocations-from-node (node variables)
   (declare (type AbstractNode node))
   (multiple-value-bind (elwisep source-tensors target-tensors) (element-wise-p node variables)
     (when elwisep
       (wf/iter:trace-invocation
-       (class-name (class-of node))
+       ;; AddNode-LispTensor -> AddNode
+       (node-remove-backends node)
        source-tensors
        target-tensors
        :kernel-rank 1

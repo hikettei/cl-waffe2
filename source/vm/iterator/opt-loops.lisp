@@ -76,7 +76,7 @@
   (declare (type fixnum n-rank))
   (loop for n upfrom 0 below n-rank
 	collect
-	(intern (format nil "GID~a" n) "KEYWORD")))
+	(intern (format nil "GID~a" n))))
 
 (defun trace-invocation (op source-tensor target-tensor &key (kernel-rank 1) (collapse t))
   "call-with-view -> invocation
@@ -382,8 +382,9 @@ Scheduler whose iterators are shuffled following:
 
 
 (defun schedule-parallelize! (schedule rank n-threads)
-  (declare (type fixnum rank n-threads)
+  (declare (type fixnum rank)
 	   (type Scheduler schedule))
+  (when (null n-threads) (return-from schedule-parallelize!))
 
   ;; Reading the dependency return nil if it is impossible to parallelize
   (let ((sorted (sort-stage schedule)))
@@ -448,7 +449,7 @@ Scheduler whose iterators are shuffled following:
 		   :reduction  nil
 		   :ops (when (eql ref (car (last refs)))
 			  (list action)))))))
-    ;; First, The Compiler is eager to fuse as many ops as possible
+    ;; First, The Compiler is eager tog fuse as many ops as possible
     (let ((schedules (map 'list #'%make-scheduler actions)))
       (flet ((fuse-helper (&rest args)
 	       (multiple-value-bind (old new) (apply #'values args)
@@ -464,7 +465,7 @@ Scheduler whose iterators are shuffled following:
 
 (defun solve-actions (actions
 		      &key
-			(n-threads 16)
+			(n-threads nil)
 			(simd-stride nil) ;; <- should be nil in default
 			)
   "Receives invocations (A set of actions)"
@@ -480,15 +481,15 @@ Scheduler whose iterators are shuffled following:
 	       (schedule-name! parallelized)
 	       (schedule-solve-tensor-dependencies! parallelized)
 	       parallelized)))
-      (print (map 'list #'optimize-helper schedules)))))
+      (map 'list #'optimize-helper schedules))))
 
-(defgeneric schedule-codegen (backend-indicator Schedulers)
+(defgeneric schedule-codegen (backend-indicator Scheduler)
   (:documentation
    "
 ## [generic] schedule-codegen
 
 ```lisp
-(schedule-codegen backend-indicator Schedulers)
+(schedule-codegen backend-indicator Scheduler)
 ```
 
 "))
@@ -503,5 +504,7 @@ Scheduler whose iterators are shuffled following:
 ;; -> (values SIMD-Stride, N-Threads)
 ```
 "))
+
+(defmethod schedule-config (backend-indicator) (values nil nil))
 
 ;; TODO: Full example of using cl-waffe2 scheduler

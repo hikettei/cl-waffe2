@@ -88,13 +88,23 @@
 		    (setq
 		     invocations-stored
 		     `(,@invocations-stored ,invocations))
-		    (progn
-		      ;; Apply a jit compiling
-		      (time (wf/iter:solve-actions invocations-stored))
+		    (let ((schedules (wf/iter:solve-actions invocations-stored)))
+		      (print
+		       (map
+			'list
+			#'(lambda (x)
+			    (wf/iter:schedule-codegen 'cl-waffe2/backends.lisp:LispTensor x))
+			schedules))
 		      ;; Push a new WfInst
 		      (setq invocations-stored nil)))))))
 
-      (time (wf/iter:solve-actions invocations-stored))
+      (let ((schedules (wf/iter:solve-actions invocations-stored)))
+	(print
+	 (map
+	  'list
+	  #'(lambda (x)
+	      (wf/iter:schedule-codegen 'cl-waffe2/backends.lisp:LispTensor x))
+	  schedules)))
       ;; The result is cached by the status of dynamic-shape at that time
       jit-compiled-irs
       iseq)))
