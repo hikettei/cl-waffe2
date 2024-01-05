@@ -136,7 +136,7 @@ Assertion: Shapes are already determined."
   (setf (scheduler-name scheduler)
 	(intern
 	 (with-output-to-string (out)
-	   (format out "fused_")
+	   (format out "~(~a~)_" (car wf/t:*using-backend*))
 	   (let ((stages (sort-stage scheduler)))
 	     (dolist (stgs stages)
 	       (dolist (stg stgs)
@@ -151,7 +151,7 @@ Assertion: Shapes are already determined."
 		     (format out "~(~a~)_" (dtype (ispace-tensor tgt)))
 		     (dolist (s (shape (ispace-tensor tgt)))
 		       (format out "~a_" s)))))))
-	   (format out "wf"))
+	   (format out "fused"))
 	 "KEYWORD")))
 
 (defun schedule-solve-tensor-dependencies! (scheduler &aux (sorted (sort-stage scheduler)))

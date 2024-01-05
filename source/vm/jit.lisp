@@ -1,11 +1,6 @@
 
 (in-package :cl-waffe2/vm)
 
-;; TODO:
-;;  - 1. SaveForBackwardをIRに混ぜる 
-;;  - 2. load-pointerを除外する (Moveにする？)
-;;  - 3. acceptor.lisp からinvoke-jit-compiler
-
 (defun unroll-save-for-backward (iseq)
   "Unrolls SV4BW into a sequence of instructions"
   (declare (type list iseq))
@@ -45,30 +40,47 @@
     `(,@allocations
       ,@out)))
 
+;; TODO: Adjustable Shapeが決定されていないとコンパイルが走らない
+;; acceptor.lispレベルで管理する <The Shapes> -> Compiled
 (defun invoke-jit-compiler (iseq
 			    &aux
 			      ;; Unrolls save for backward in order to fuse them
 			      (iseq (unroll-save-for-backward iseq))
 			      (iseq (unroll-allocation        iseq)))
-  (declare (type list iseq))
-  
+  (declare (type list iseq))  
   (let ((invocations-stored)
-	(jit-compiled-irs)
+	(result)
 	(loadp-table (make-hash-table))
 	(cached-jit-kernel (make-hash-table :test #'eql)))
-    (flet ((read-tensor (tensor)
-	     (or
-	      (gethash (tensor-id tensor) loadp-table)
-	      tensor))
-	   (produce (schedule)
-	     ;; produce a jit-compiled kernel
-	     ))
+    (labels ((read-tensor (tensor)
+	       (or
+		(gethash (tensor-id tensor) loadp-table)
+		tensor))
+	     (produce (schedule)
+	       ;; Produces a fused and jit-compiled Lambda expressions
+	       (or
+		(gethash (wf/iter:scheduler-name schedule) cached-jit-kernel)
+		(let ((out-to (reverse
+			       (loop for (io . tensor) in (wf/iter:scheduler-args schedule)
+				     if (or (eql io :io) (eql io :out))
+				       collect (read-tensor tensor)))))
+		  (setf
+		   (gethash (wf/iter:scheduler-name schedule) cached-jit-kernel)
+		   (make-wfop
+		    (let ((f (wf/iter:schedule-codegen (car *using-backend*) schedule)))
+		      #'(lambda (&rest args)
+			  (apply f args)
+			  (apply #'values out-to)))
+		    (cdr (car (wf/iter:scheduler-args schedule)))
+		    #'(lambda () (wf/iter:scheduler-name schedule))
+		    (map 'list (compose #'read-tensor #'cdr) (wf/iter:scheduler-args schedule))
+		    :out-to out-to))))))
       (loop for instruction in iseq do
 	(if (wfop-loadp instruction)
 	    (multiple-value-bind (x y) (read-loadp instruction)
 	      (declare (ignore y))
 	      ;; funcall ? ignoring ?
-	      ;; TODO: How to deal with reshape/permute/view	      
+	      ;; TODO: How to deal with reshape/permute/view
 	      (setf
 	       (gethash (tensor-id x) loadp-table)
 	       (apply
@@ -89,23 +101,12 @@
 		     invocations-stored
 		     `(,@invocations-stored ,invocations))
 		    (let ((schedules (wf/iter:solve-actions invocations-stored)))
-		      (print
-		       (map
-			'list
-			#'(lambda (x)
-			    (wf/iter:schedule-codegen 'cl-waffe2/backends.lisp:LispTensor x))
-			schedules))
+		      (setf result `(,@result ,@(map 'list #'produce schedules) ,instruction))
 		      ;; Push a new WfInst
 		      (setq invocations-stored nil)))))))
-
-      (let ((schedules (wf/iter:solve-actions invocations-stored)))
-	(print
-	 (map
-	  'list
-	  #'(lambda (x)
-	      (wf/iter:schedule-codegen 'cl-waffe2/backends.lisp:LispTensor x))
-	  schedules)))
+      
+      (let ((schedules (wf/iter:solve-actions invocations-stored)))	  
+	(setf result `(,@result ,@(map 'list #'produce schedules))))
       ;; The result is cached by the status of dynamic-shape at that time
-      jit-compiled-irs
-      iseq)))
+      result)))
 

@@ -310,7 +310,7 @@
 ;;conv[n, fout, y, x] += weigths[fout, fin, y, x] * input[n, fin, y+k0, x+k1];
 
 ;; Conv2D
-;; TODO: x + y index referencing...
+;; TODO: x + y indexing rule...
 #+(or)
 (let* ((batch 10)
        (img-x 128)

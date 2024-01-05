@@ -13,14 +13,17 @@
 
 (defun parse-aref (ispace)
   `(aref ,(tensor-id (wf/iter:ispace-tensor ispace))
-	 ,@(loop for dim in (wf/iter:ispace-space ispace)
-		 collect
-		 `(+
-		   ,(wf/iter:iref-offset dim)
-		   (the (signed-byte 32)
-			(*
-			 (the (signed-byte 32) ,(wf/iter:iref-stride dim))
-			 (the (signed-byte 32) ,(wf/iter:iref-index dim))))))))
+	 (+
+	  ,@(loop for dim in (wf/iter:ispace-space ispace)
+		  collect
+		  `(+ 
+		    ,(wf/iter:iref-offset dim)
+		    ,(if (= 0 (wf/iter:iref-stride dim)) ;; == reduction
+			 0
+			 `(the (signed-byte 32)
+			       (*
+				(the (signed-byte 32) ,(wf/iter:iref-stride dim))
+				(the (signed-byte 32) ,(wf/iter:iref-index dim))))))))))
 
 (defun render-op (action)
   (declare (type wf/iter:Action action))
@@ -52,22 +55,30 @@
   (let ((source
 	  `(lambda (,@(loop for (io . tensor) in (wf/iter:scheduler-args scheduler)
 			    collect (tensor-id tensor)))
-	     (declare
-	      (optimize (speed 3) (safety 0))
-	      ,(loop for (io . tensor) in (wf/iter:scheduler-args scheduler)
-		     collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-id tensor))))
-	     
-	     ,@(labels ((expand-helper (rest-stages)
-			  (when (not (null (car rest-stages)))
-			    (loop for stage in (car rest-stages)
-				  collect
-				  `(dotimes (,(wf/iter:iterstage-determines stage)
-					     ,(wf/iter:iterstage-size stage))
-				     ,@(loop for op in (wf/iter:iterstage-ops stage)
-					     collect
-					     (render-op op))
-				     ,@(expand-helper (cdr rest-stages)))))))	 
-		 (expand-helper (wf/iter:sort-stage scheduler))))))
-    ;;(disassemble (compile nil source))
-    source))
+	     ,(format nil "~a" (wf/iter:scheduler-name scheduler))
+	     (let (,@(loop for (io . tensor) in (wf/iter:scheduler-args scheduler)
+			   collect
+			   `(,(tensor-id tensor) (tensor-vec ,(tensor-id tensor)))))
+	       (declare
+		;;(optimize (speed 3) (safety 0))
+		,@(loop for (io . tensor) in (wf/iter:scheduler-args scheduler)
+			collect `(type (simple-array ,(dtype->lisp-type (dtype tensor)) (*)) ,(tensor-id tensor))))
+	       ,@(loop for (io . tensor) in (wf/iter:scheduler-args scheduler)
+		       collect
+		       (format nil "~a: Shape -> ~a Stride -> ~a" (tensor-id tensor) (shape tensor) (tensor-stride tensor)))
+	       
+	       ,@(labels ((expand-helper (rest-stages)
+			    (when (not (null (car rest-stages)))
+			      (loop for stage in (car rest-stages)
+				    collect
+				    `(dotimes (,(wf/iter:iterstage-determines stage)
+					       ,(wf/iter:iterstage-size stage))
+				       ,@(loop for op in (wf/iter:iterstage-ops stage)
+					       collect
+					       (render-op op))
+				       ,@(expand-helper (cdr rest-stages)))))))
+		   (expand-helper (wf/iter:sort-stage scheduler)))))))
+    ;; (disassemble (compile nil source))
+    (print source)
+    (compile nil source)))
 
