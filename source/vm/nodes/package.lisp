@@ -52,6 +52,9 @@
    #:define-symbolic-path
    #:define-bypass
    #:*enable-symbolic-path*)
+
+  (:export
+   #:get-invocations-from-node)
   
   (:export
    ;; External JIT

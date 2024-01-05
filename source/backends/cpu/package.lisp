@@ -24,7 +24,10 @@
       (setf (gethash (car element) hash) (cdr element)))
     hash))
 
-(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor))
+;; If MetalTensor Backend is available on the environment,
+;; cl-waffe2 prefers to use metal instead of CPUTensor
+
+#-metal(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor))
 
 ;; TODO: Delete this alert with *cl-waffe-never-use-blas* = t
 (defun could-not-find ()
@@ -43,7 +46,7 @@ For example:
 ```
 ")
 
-  (setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.lisp:LispTensor)))
+  #-metal(setf cl-waffe2/vm.generic-tensor:*using-backend* `(cl-waffe2/backends.lisp:LispTensor)))
 
 (cffi:define-foreign-library blas-lib
   (t (:default "libblas")))

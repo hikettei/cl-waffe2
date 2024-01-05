@@ -41,7 +41,7 @@
   ;; Non Linear Functions
   (:export
    #:!relu
-   #:!leakey-relu
+   #:!leaky-relu
    #:!sigmoid
    #:!gelu
    #:!elu

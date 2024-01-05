@@ -3,12 +3,9 @@
 
 (in-package :cl-waffe2/nn)
 
-(declaim (ftype (function (AbstractTensor) AbstractTensor)
-		!relu
-		!sigmoid
-		!gelu))
 
-(defun !relu (x)
+(defgeneric !relu (x))
+(defmethod !relu ((x AbstractTensor))
   "
 ## [function] !relu
 
@@ -25,7 +22,9 @@ ReLU(x) = max(x, 0)
   (declare (type AbstractTensor x))
   (!mul x (A>scal x 0.0)))
 
-(defun !sigmoid (x)
+
+(defgeneric !sigmoid (x))
+(defmethod !sigmoid ((x AbstractTensor))
   "
 ## [function] !sigmoid
 
@@ -42,7 +41,9 @@ Sigmoid(x) = \\frac{1}{1 + exp(-x)}
   (declare (type AbstractTensor x))
   (!div 1 (!add 1 (!exp (!mul -1 x)))))
 
-(defun !gelu (x)
+
+(defgeneric !gelu (x))
+(defmethod !gelu ((x AbstractTensor))
   "
 ## [function] !gelu
 
@@ -65,8 +66,8 @@ GeLU(x) = 0.5\\times{x}\\times{(1 + Tanh(\\sqrt{\\frac{2}{π}}\\times{(x + 0.447
 	       (!+ x
 		   (!* 0.044715 (!expt x 3))))))))
 
-(declaim (ftype (function (AbstractTensor &key (:negative-slope single-float)) AbstractTensor) !leakey-relu))
-(defun !leakey-relu (x &key (negative-slope 0.01))
+(defgeneric !leaky-relu (x &key negative-slope))
+(defmethod !leaky-relu ((x AbstractTensor) &key (negative-slope 0.01))
   "
 ## [function] !leakey-relu
 
@@ -94,8 +95,8 @@ LeakeyReLU(x) = max(x, 0) + negative-slope\\times{min(0, x)}
 		       :false-then negative-slope)))
     (!mul x mask)))
 
-(declaim (ftype (function (AbstractTensor &key (:alpha single-float)) AbstractTensor) !elu))
-(defun !elu (x &key (alpha 1.0))
+(defgeneric !elu (x &key alpha))
+(defmethod !elu ((x AbstractTensor) &key (alpha 1.0))
   "
 ## [function] !elu
 
@@ -122,8 +123,8 @@ Applies the Expotential Linear Units Function (ELUs) element-wise as described i
 	 (out2  (!* mask2 x)))
     (!add out1 out2)))
 
-
-(defun !softmax (x &key (avoid-overflow t) (axis 1))
+(defgeneric !softmax (x &key avoid-overflow axis))
+(defmethod !softmax ((x AbstractTensor) &key (avoid-overflow t) (axis 1))
   "
 ## [function] !softmax
 

@@ -29,6 +29,7 @@
    #:*logging-vm-execution*   
    #:accept-instructions
    #:compile-forward-and-backward
+   #:invoke-jit-compiler
    #:disassemble-waffe2-ir
    #:benchmark-accept-instructions)
   (:export

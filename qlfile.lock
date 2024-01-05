@@ -1,0 +1,8 @@
+("quicklisp" .
+ (:class qlot/source/dist:source-dist
+  :initargs (:distribution "https://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
+  :version "2023-10-21"))
+("cl-metal" .
+ (:class qlot/source/git:source-git
+  :initargs (:remote-url "git@github.com:hikettei/cl-metal.git")
+  :version "git-50d776a2b89ba659502ba918ab1131bd5cde951e"))

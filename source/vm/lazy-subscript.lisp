@@ -169,6 +169,8 @@ e.g.: A is = compared to 2
 	    _)
      (make-lazyir :number
 		  exp nil))
+    ((list* 'the _ form)
+     (parse-lazy-exp form))
     ((list* (type symbol) _)     
      (multiple-value-bind (ident) (cl-environments:function-information (car exp))
        (when (or
