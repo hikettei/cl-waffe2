@@ -1,7 +1,9 @@
+ROSWELL             := ros
 SBCL                := sbcl
 # Avoid loading system-wide libraries (--no-sysinit)
 SBCL_OPTIONS        := --noinform --no-sysinit
-QUICKLOAD_WAFFE2    := --load cl-waffe2.asd --eval '(ql:quickload :cl-waffe2)'
+ROSWELL_OPTIONS     := dynamic-space-size=4096
+QUICKLOAD_WAFFE2    := --eval '(load "cl-waffe2.asd")' --eval '(ql:quickload :cl-waffe2)'
 MKTEMP              := mktemp
 RLWRAP              := rlwrap
 LOGFILE             := $(shell mktemp)
@@ -26,7 +28,7 @@ compile: ## Compiles the whole project
 
 .PHONY: test
 test: ## Running a test harness
-	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
+	$(ROSWELL) run $(ROSWELL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(asdf:test-system :cl-waffe2)' \
 		--quit
 
@@ -34,24 +36,24 @@ test: ## Running a test harness
 recordtest: ## Running a test harness with recording logs
 	$(warning This session will be recorded in $(LOGFILE))
 	$(RLWRAP) --logfile $(LOGFILE) \
-	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
+	$(ROSWELL) run $(ROSWELL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(asdf:test-system :cl-waffe2)' \
 		--quit
 	@printf 'This session has been recorded in %s\n' $(LOGFILE)
 
 .PHONY: repl
 repl: ## Launch REPL with loading cl-waffe2
-	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
+	$(ROSWELL) run $(ROSWELL_OPTIONS) $(QUICKLOAD_WAFFE2)
 
 .PHONY: rlrepl
 rlrepl: ## Launch REPL with rlwrap
-	$(RLWRAP) $(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
+	$(RLWRAP) $(ROSWELL) run $(ROSWELL_OPTIONS) $(QUICKLOAD_WAFFE2)
 
 .PHONY: record
 record: ## Launch REPL with logging
 	$(warning This session will be recorded in $(LOGFILE))
 	$(RLWRAP) --logfile $(LOGFILE) \
-		$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2)
+		$(ROSWELL) run $(ROSWELL_OPTIONS) $(QUICKLOAD_WAFFE2)
 	@printf 'This session has been recorded in %s\n' $(LOGFILE)
 
 .PHONY: slynk
@@ -68,7 +70,7 @@ swank: ## Launch Swank server
 
 .PHONY: docs
 docs: ## Generate documents
-	$(SBCL) $(SBCL_OPTIONS) $(QUICKLOAD_WAFFE2) \
+	$(ROSWELL) run $(ROSWELL_OPTIONS) $(QUICKLOAD_WAFFE2) \
 		--eval '(ql:quickload :cl-waffe2/docs)' \
 		--eval '(cl-waffe2.docs:generate)' \
 		--quit
@@ -139,14 +141,14 @@ download_assets: ## Downloads training data sample codes use.
 
 .PHONY: example_mnist
 example_mnist: ## Start MNIST Example and Benchmarking. (download_assets must be called in advance)
-	$(SBCL) $(SBCL_OPTIONS) \
+	$(ROSWELL) run $(ROSWELL_OPTIONS) \
 		--load ./cl-waffe2.asd --load ./examples/mnist/mnist.asd \
 		--eval '(ql:quickload :mnist-sample)' \
 		--eval '(mnist-sample::train-and-valid-mlp :epoch-num 10)'
 
 .PHONY: example_gpt
 example_gpt: ## Launch GPT2 Inference (download_assets must be called in advance)
-	$(SBCL) --dynamic-space-size 4096 $(SBCL_OPTIONS) \
+	$(ROSWELL) run $(ROSWELL_OPTIONS) \
 		--load ./cl-waffe2.asd --load ./examples/gpt-2/gpt-2.asd \
 		--eval '(ql:quickload :gpt-2-example)' \
 		--eval '(gpt-2-example:launch-repl)'

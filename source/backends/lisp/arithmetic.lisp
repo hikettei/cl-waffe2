@@ -16,30 +16,6 @@
   (define-arith-func matrix-mul *)
   (define-arith-func matrix-div /))
 
-(macrolet ((define-scalar-func (name f)
-	     `(define-with-typevar (,name u) (x scalar offsetx size incx)
-		(declare (optimize (speed 3))
-			 (type (simple-array u (*)) x)
-			 (type u scalar)
-			 (type fixnum offsetx size incx))
-		(dotimes (i size)
-		  (setf (aref x (+ offsetx (the fixnum (* incx i))))
-			(,f (aref x (+ offsetx (the fixnum (* incx i))))
-			    scalar))))))
-  (define-scalar-func scalar-add +)
-  (define-scalar-func scalar-sub -)
-  (define-scalar-func scalar-mul *)
-  (define-scalar-func scalar-div /))
-
-(define-with-typevar (matrix-inv u) (x offsetx size incx)
-  (declare (optimize (speed 3))
-	   (type (simple-array u (*)) x)
-	   (type fixnum offsetx size incx))
-  
-  (dotimes (i size)
-    (setf (aref x (+ offsetx (the fixnum (* incx i))))
-	  (/ 1 (aref x (+ offsetx (the fixnum (* incx i))))))))
-
 ;; Even on SBCL:
 ;; (disassemble (add-matrix :uint8)) <- Fails to SIMDify
 ;; (disassemble (add-matrix :float)) <- using addss (AVX2 Only?)
@@ -119,90 +95,6 @@
 					    ,(stride-of y-view 0)))
 			      `(,x ,y))
 			   ,x))))
-
-
-(define-impl (InverseTensorNode :device LispTensor)
-	     :save-for-backward (t)
-	     :forward
-	     ((self x)
-	      (let ((inver (matrix-inv (dtype x))))
-		`(,@(call-with-view
-		     #'(lambda (x-view)
-			 `(funcall
-			   ,inver
-			   (tensor-vec ,x)
-			   ,(offset-of x-view 0)
-			   ,(size-of x-view 0)
-			   ,(stride-of x-view 0)))
-		     `(,x))
-		  ,x))))
-
-(define-impl (ScalarAdd :device LispTensor)
-	     :forward
-	     ((self x scalar)
-	      (let ((adder (scalar-add (dtype x))))
-		`(,@(call-with-view
-		     #'(lambda (x-view)
-			 `(funcall
-			   ,adder
-			   (tensor-vec ,x)
-			   (tensor-vec ,scalar)
-			   ,(offset-of x-view 0)
-			   ,(size-of x-view 0)
-			   ,(stride-of x-view 0)))
-		     `(,x))
-		  ,x))))
-
-(define-impl (ScalarSub :device LispTensor)
-	     :forward
-	     ((self x scalar)
-	      (let ((subber (scalar-sub (dtype x))))
-		`(,@(call-with-view
-		     #'(lambda (x-view)
-			 `(funcall
-			   ,subber
-			   (tensor-vec ,x)
-			   (tensor-vec ,scalar)
-			   ,(offset-of x-view 0)
-			   ,(size-of x-view 0)
-			   ,(stride-of x-view 0)))
-		     `(,x))
-		  ,x))))
-
-
-(define-impl (ScalarMul :device LispTensor)
-	     :save-for-backward (t t)
-	     :forward
-	     ((self x scalar)
-	      (let ((multiplier (scalar-mul (dtype x))))
-		`(,@(call-with-view
-		     #'(lambda (x-view)
-			 `(funcall
-			   ,multiplier
-			   (tensor-vec ,x)
-			   (tensor-vec ,scalar)
-			   ,(offset-of x-view 0)
-			   ,(size-of x-view 0)
-			   ,(stride-of x-view 0)))
-		     `(,x))
-		  ,x))))
-
-(define-impl (ScalarDiv :device LispTensor)
-	     :save-for-backward (t t)
-	     :forward
-	     ((self x scalar)
-	      (let ((divider (scalar-div (dtype x))))
-		`(,@(call-with-view
-		     #'(lambda (x-view)
-			 `(funcall
-			   ,divider
-			   (tensor-vec ,x)
-			   (tensor-vec ,scalar)
-			   ,(offset-of x-view 0)
-			   ,(size-of x-view 0)
-			   ,(stride-of x-view 0)))
-		     `(,x))
-		  ,x))))
 
 (define-with-typevar (matrix-move u) (out x offseto offsetx inco incx size)
   (declare (optimize (speed 3))
