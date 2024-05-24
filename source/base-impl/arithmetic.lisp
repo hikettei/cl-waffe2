@@ -430,7 +430,7 @@ None
   (define-arith-function
       !mul (progn)          nil  !sas-mul !scalar-mul !matrix-mul)
   (define-arith-function
-      !div (!inverse)       !mul !sas-div !scalar-div !matrix-div))
+      !div (!reciprocal)    !mul !sas-div !scalar-div !matrix-div))
 
 ;; ===============================================================
 ;; Destructive Functions Family: A+=B A-=B A*=B A/=B
