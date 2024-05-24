@@ -557,11 +557,13 @@ The function ->scal receives `matrix-tensor` with total-size = 1, returning a Sc
 ```
 
 The function ->mat receives `ScalarTensor`, returning a matrix with the number of axis=dims."
-    (let ((out-shape (make-list dims :initial-element 1)))
-      (forward (Scalar->MatNode out-shape)
-	       scalar-tensor
-	       (make-input out-shape nil
-			   :dtype (dtype scalar-tensor))))))
+    (if (scalar-p scalar-tensor)
+	(let ((out-shape (make-list dims :initial-element 1)))
+	  (forward (Scalar->MatNode out-shape)
+		   scalar-tensor
+		   (make-input out-shape nil
+			       :dtype (dtype scalar-tensor))))
+	scalar-tensor)))
 
 		       
 

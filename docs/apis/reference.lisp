@@ -51,13 +51,6 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (nodedoc SubNode)
     (nodedoc MulNode)
     (nodedoc DivNode)
-    
-    (nodedoc InverseTensorNode)
-    
-    (nodedoc ScalarAdd)
-    (nodedoc ScalarSub)
-    (nodedoc ScalarMul)
-    (nodedoc ScalarDiv)
 
     (nodedoc MoveTensorNode)
 
@@ -158,7 +151,7 @@ The package `cl-waffe2/vm` is the central of system, and features are focused on
     (caller-doc !matrix-mul)
     (caller-doc !matrix-div)
     
-    (caller-doc !inverse)
+    (caller-doc !reciprocal)
     (caller-doc !scalar-add)
     (caller-doc !scalar-sub)
     (caller-doc !scalar-mul)

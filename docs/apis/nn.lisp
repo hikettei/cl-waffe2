@@ -20,9 +20,9 @@
       (with-example
 	"(proceed (!sigmoid (randn `(10 10))))"))
 
-    (with-nn-doc '!leakey-relu 'function
+    (with-nn-doc '!leaky-relu 'function
       (with-example
-	"(proceed (!leakey-relu (randn `(10 10))))"))
+	"(proceed (!leaky-relu (randn `(10 10))))"))
 
     (with-nn-doc '!elu 'function
       (with-example
