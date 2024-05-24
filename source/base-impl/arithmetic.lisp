@@ -44,7 +44,7 @@
 		  (make-tensor (make-list rank :initial-element 1)
 			       :dtype (dtype scalar)
 			       :initial-element (tensor-vec scalar))
-		  (!rankup scalar (1- rank)))
+		  (!rankup (->mat scalar) (1- rank)))
 	      scalar)
 	  (make-tensor (make-list rank :initial-element 1)
 		       :dtype :uint32
@@ -87,19 +87,19 @@ X\\gets{X ~a Y}
   (define-arithmetic-node SubNode "SubNode" "-" nil
     ((self dout dx dy)
      (declare (ignore dx dy))
-     (values dout (!mul -1 dout))))
+     (values (!copy dout) (!mul -1 dout))))
   (define-arithmetic-node MulNode "MulNode" "*" (t t)
     ((self dout dx dy)
      (values
-      (!mul dout dy)
+      (!mul (!copy dout) dy)
       (!mul dout dx))))
   (define-arithmetic-node DivNode "DivNode" "/" (t t)
     ((self dout dx dy)
      ;; ∂/∂x = 1/x
      ;; ∂/∂y = -x/y^2
      (values
-      (!div dout dy)
-      (!div (!mul dx (!mul -1 dout))
+      (!div (!copy dout) dy)
+      (!div (!mul dx (!mul dout -1))
 	    (!mul dy dy))))))
 
 ;; ===============================================================
@@ -334,13 +334,14 @@ x_{copy}\\gets{x ~a y}
 			   op)
 		  (let ((x (infer-scalar-type x y))
 			(y (infer-scalar-type y x)))
-		    (when (and (fold-constant-scalar-p x)
-			       (fold-constant-scalar-p y))
-		      (return-from ,name
-			(make-tensor
-			 (,lisp-op (tensor-vec x) (tensor-vec y))
-			 :dtype (dtype x)
-			 :order (order x))))
+		    ;; forgetting about constant folding for a now.
+;;		    (when (and (fold-constant-scalar-p x)
+;;			       (fold-constant-scalar-p y))
+;;		      (return-from ,name
+;;			(make-tensor
+;;			 (,lisp-op (tensor-vec x) (tensor-vec y))
+;;			 :dtype (dtype x)
+;;			 :order (order x))))
 		    
 		    (forward (,node-name)
 			     (if in-place

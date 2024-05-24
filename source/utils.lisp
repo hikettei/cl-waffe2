@@ -182,6 +182,6 @@ Priority: Higher <───────────────────>Lowe
 		  (princ (symbol-name name) out)
 		  (princ " " out))
 
-		(format out "~%~%(use with-devices macro or set-devices-toplevel function to change this parameter.)~%"))))))
+		(format out "~%"))))))
 
 ;; (defmacro with-experiment ((:fusion ...))

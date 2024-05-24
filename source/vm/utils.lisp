@@ -130,7 +130,7 @@
 			      :save-for-backward
 			      t)
 			     (grad tensor)
-			     grad)))			 
+			     grad)))
 			 (progn
 			   (node-compile-into-vm
 			    (forward

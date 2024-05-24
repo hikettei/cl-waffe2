@@ -19,7 +19,7 @@ In default, set to 2.
 
 (declaim (type (integer 0 3) *opt-level*))
 
-(defparameter *logging-vm-execution* NIL "
+(defparameter *logging-vm-execution* nil "
 ## [parameter] `*logging-vm-execution*`
 
 This parameter is useful for printing how all instructions are performed. If set to T, all results and arguments produced by executing `cl-waffe2 IR` is displayed into the terminal. In default, set to nil.
@@ -50,11 +50,10 @@ This parameter is useful for printing how all instructions are performed. If set
 	      ;; var is [computed] by deleting tensor-state
 	      (tensor-vec place)
 	      (tensor-vec var)
-	      (%vm-move place var)
-	      
-	      ;; FixME: Delete this line:
-	      (when (scalar-p place)
-		(setf (tensor-vec place) (tensor-vec var))))))
+
+	      (if (or (scalar-p place) (scalar-p var) (every #'(lambda (x) (and (numberp x) (= 0 (the fixnum x)))) (tensor-stride place)))
+		  (setf (tensor-vec place) (tensor-vec var))
+		  (%vm-move place var)))))
   nil)
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))

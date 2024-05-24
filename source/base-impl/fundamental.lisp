@@ -198,6 +198,7 @@ Output: `Tensor[AbstractTensor]`
 	      ;; dout.shape == dx.shape
 	      (let* ((out-sub (tensor-view dy))
 		     (inp-sub (slot-value self 'subscripts))
+		     ;; [TODO] Optimize
 		     (res (!move dx (apply #'!view dout inp-sub)))
 		     (res (->contiguous (apply #'!view res out-sub))))
 		(values nil res))))
@@ -598,7 +599,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (let ((compiled-model (proceed-compiled-model self)))			 
+		       (let ((compiled-model (proceed-compiled-model self)))
 			 (if (measure-time-p self)
 			     (progn
 			       (format t "[proceed-time] With allocation time:~%")

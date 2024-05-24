@@ -6,7 +6,7 @@ exec ros -Q -- $0 "$@"
 (progn ;;init forms
   (ros:ensure-asdf)
   (load #p"./cl-waffe2.asd")
-  #+quicklisp(ql:quickload '(:cl-waffe2 :cl-waffe2/docs) :silent t)
+  #+quicklisp(ql:quickload :cl-waffe2 :silent t)
   )
 
 (defpackage :ros.script.cl-waffe2-test.3893644947
@@ -16,26 +16,17 @@ exec ros -Q -- $0 "$@"
 ;; delete it in the future.
 #+sbcl(declaim (sb-ext:muffle-conditions cl:style-warning))
 (defun main (&rest argv)
+  ;; Usage ./cl-waffe2-test.ros <command> <backend>
   (cond
     ((equal (car argv) "gendoc")
-     (cl-waffe2.docs:generate))
-    (T
-     ;; Calling all tests depending on *force-use-build*
-     (let ((cl-waffe2/vm.generic-tensor::*force-use-build*
-	     (if (and (car argv)
-		      (equal (car argv) "vm-test"))
-		 t
-		 nil)))
-       (if cl-waffe2/vm.generic-tensor::*force-use-build*
-	   (format t "[INFO] Now the test is operating under *force-use-build* is t, that is, all interpreters are replaced with VM.")
-	   (format t "[INFO] Now the test is operation under *force-use-build* is nil, that is, proceed is working as an interpreter."))
-       
-       (asdf:load-system :cl-waffe2/test)
-       (asdf:test-system :cl-waffe2))
-     
-     ;;(format t "[INFO] Testing under *force-use-build* = t (i.e.: vm-build is available)")
-     ;;(let ((cl-waffe2/vm.generic-tensor::*force-use-build* t))
-     ;;  (asdf:load-system :cl-waffe2/test)
-     ;;  (asdf:test-system :cl-waffe2))
+     #+quicklisp(ql:quickload :cl-waffe2/docs :silent t)
+     (cl-waffe2:set-devices-toplevel 'cl-waffe2/backends.lisp:LispTensor)
+     (uiop:symbol-call :cl-waffe2.docs :generate))
+    ;; [TODO] compile
+    ((equal (car argv) "test")
+     (cl-waffe2:set-devices-toplevel 'cl-waffe2/backends.lisp:LispTensor)
+     (asdf:load-system :cl-waffe2/test)
+     (apply #'uiop:symbol-call :cl-waffe2/tester :running-test (cdr argv))
+
      )))
 ;;; vim: set ft=lisp lisp:

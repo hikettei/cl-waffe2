@@ -26,7 +26,7 @@
 
     (with-nn-doc '!elu 'function
       (with-example
-	"(proceed (!leakey-relu (randn `(10 10))))"))
+	"(proceed (!elu (randn `(10 10))))"))
 
     (with-nn-doc '!softmax 'function
       (with-example

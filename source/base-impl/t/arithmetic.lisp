@@ -23,8 +23,6 @@
 ;; Composite several nodes -> testing will be done at generic-tensor/t
 
 
-(in-suite :base-impl-test)
-
 (macrolet ((define-arith-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
 		(let ((a (make-tensor `(100 100) :initial-element 10))
@@ -51,6 +49,7 @@
   (define-arith-tester mul-tester  !mul  10 1 10)
   (define-arith-tester div-tester  !div  10 1 -10)
   (define-arith-tester move-tester !move 1 0 1))
+
 
 (macrolet ((define-scalar-mat-tester (name op result grad1 grad2)
 	     `(define-tester ,name :all
@@ -102,7 +101,18 @@
   (define-ss-tester ss-sub-tester !sub - 1 -1)
   (define-ss-tester ss-mul-tester !mul * 1 1)
   (define-ss-tester ss-div-tester !div / 1 -1))
-  
+
+
+;; A.grad = (!matmul dout db.t)
+;; B.grad = (!matmul da.t dout)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun matmul-dx (dout y)
+    (proceed (!matmul dout (!t y))))
+
+  (defun matmul-dy (dout x)
+    (proceed (!matmul (!t x) dout))))
+
 (define-tester matmul-tester :dense
   (let* ((a (ax+b `(3 3) 1 0 :order :column))
  	 (b (ax+b `(3 3) 1 0 :order :column))
@@ -138,17 +148,6 @@
     (when (every #'= (tensor-vec result) #(15.0 42.0 69.0 18.0 54.0 90.0 21.0 66.0 111.0))
       t)))
 
-;; A.grad = (!matmul dout db.t)
-;; B.grad = (!matmul da.t dout)
-
-(defun matmul-dx (dout y)
-  (proceed (!matmul dout (!t y))))
-  
-
-(defun matmul-dy (dout x)
-  (proceed (!matmul (!t x) dout)))
-
-
 (define-tester matmul-backward-test-square-sparse :dense
   (let ((a (parameter (ax+b `(3 3) 1 0 :order :column)))
 	(b (parameter (ax+b `(3 3) 2 0 :order :column)))
@@ -178,8 +177,8 @@
        (M= (grad a) (matmul-dx dout b))
        (M= (grad b) (matmul-dy dout a))))))
 
-(test matmul-3x4-4x3-test
-  (is (matmul-3x4-4x3-test)))
+(deftest matmul-3x4-4x3-test
+  (ok (matmul-3x4-4x3-test)))
 
 ;; Continue...
 (macrolet ((define-matmul-test-form (name matmul-form size1 size2)
@@ -207,8 +206,8 @@
 ;; 9 12 15 
 ;; 9 12 15
 
-(test adding-gradients-with-permution-shuffled-test
-  (is (let ((a (parameter (randn `(4 3)))))
+(deftest adding-gradients-with-permution-shuffled-test
+  (ok (let ((a (parameter (randn `(4 3)))))
 	(proceed-backward (!matmul (ax+b `(3 3) 1 0) (!t a)))
         (every #'= (tensor-vec (grad a))
 	       #(9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0 9.0 12.0 15.0)))))
@@ -389,3 +388,19 @@
      (seq-tester ,backend)
 
      ))
+
+(add-tester LispTensor)
+(sub-tester LispTensor)
+(mul-tester LispTensor)
+(div-tester LispTensor)
+(move-tester LispTensor)
+(matmul-test-set LispTensor)
+(scalar-add-tester LispTensor)
+(scalar-sub-tester LispTensor)
+(scalar-mul-tester LispTensor)
+(scalar-div-tester LispTensor)
+(comparison-test-set LispTensor)
+
+(max-tester LispTensor)
+(min-tester LispTensor)
+

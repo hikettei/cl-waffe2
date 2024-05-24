@@ -160,5 +160,6 @@
      (logE-tester ,@backend)
      ;; add: expt
      ))
-	       	
-;; ScalarTest here.
+
+
+(mathematical-test-set LispTensor)

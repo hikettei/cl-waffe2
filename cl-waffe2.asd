@@ -223,7 +223,7 @@
   :description "Tests for cl-waffe2"
   :serial t
   :pathname "source"
-  :depends-on (:cl-waffe2 :fiveam)
+  :depends-on (:cl-waffe2 :fiveam :rove)
   :components ((:file "vm/iterator/test-suites")
 	       (:file "vm/t/package")
 	       (:file "vm/t/lazy-axis")
@@ -259,9 +259,13 @@
 	       (:file "nn/t/conv")
 	       (:file "nn/t/activation")
 	       (:file "nn/t/criterion")
-	       (:file "nn/t/regression")	       
+	       (:file "nn/t/regression")
+
+	       (:file "test-suites")
 	       )
   :perform (test-op (o s)
+		    ;;(symbol-call :cl-waffe2/tester :running-test (find-symbol "LispTensor"))
+		    #|
 		    (symbol-call :fiveam :run! :iterator-test)
 		    (symbol-call :fiveam :run! :test-nodes)
 		    (symbol-call :fiveam :run! :test-tensor)
@@ -274,7 +278,9 @@
 		    (symbol-call :fiveam :run! :jit-cpu-test)
 		    
 		    (symbol-call :fiveam :run! :nn-test)
-		    (symbol-call :fiveam :run! :vm-test)))
+		    (symbol-call :fiveam :run! :vm-test)
+		    |#
+		    ))
 
 
 (defpackage :cl-waffe2-docs-asdf

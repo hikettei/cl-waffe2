@@ -202,7 +202,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 							    :order (order toplevel))))
 			       (if add1
 				   (cl-waffe2/base-impl:A+=B
-				    dout-tensor					    
+				    dout-tensor
 				    (make-tensor 1 :dtype (dtype toplevel)))
 				   dout-tensor))
 			     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))))
