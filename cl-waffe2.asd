@@ -1,6 +1,24 @@
 
 (in-package :cl-user)
 
+(defpackage :cl-waffe2-metal-asd
+  (:use :cl :asdf :uiop))
+
+(in-package :cl-waffe2-metal-asd)
+
+(defsystem :cl-waffe2/metal-extension
+  :author "hikettei"
+  :licence "MIT"
+  :description ""
+  :pathname "cl-waffe2-metal"
+  :serial t
+  :depends-on (:cl-metal)
+  :components ((:file "package")
+	       (:file "tensor")
+	       (:file "utils")
+	       (:file "topi/topi")
+	       (:file "topi/arithmetic")
+	       (:file "topi/mathematical")))
 
 (defpackage :cl-waffe2-simd-asd
   (:use :cl :asdf :uiop))
@@ -17,7 +35,6 @@
   :components ((:file "package")
 	       (:file "shared-object")
 	       (:file "api")))
-
 
 (defpackage :cl-waffe2-asd
   (:use :cl :asdf :uiop))
@@ -42,16 +59,14 @@
 	       :closer-mop
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension
-
 	       :cl-environments
 	       :numpy-file-format
-	       :jonathan)
+	       :jonathan
+	       :linear-programming)
   ;; TODO: Use components and split dependencies.
   :components ((:file "threads")
-	       
 	       (:file "vm/generic-tensor/package")	       
 	       (:file "vm/generic-tensor/conditions")
-	       
 	       
 	       (:file "vm/generic-tensor/default-impls")
 
@@ -65,14 +80,14 @@
 	       (:file "vm/generic-tensor/dtype")
 	       (:file "vm/lazy-subscript")
 	       (:file "vm/allocation")
-	       
 	       ;; Iterators
 	       (:file "vm/iterator/package")
+	       (:file "vm/jit")
 	       (:file "vm/generic-tensor/render")
 	       (:file "vm/iterator/range")
 	       (:file "vm/iterator/opt-loops")
-	       
-
+	       (:file "vm/iterator/dsl")
+	       (:file "vm/iterator/polyhedral")
 	       
 	       (:file "vm/generic-tensor/cache")
 	       (:file "vm/generic-tensor/utils")
@@ -130,7 +145,7 @@
 	       (:file "backends/lisp/logical")
 	       (:file "backends/lisp/matrix-ops")
 	       (:file "backends/lisp/lazy")
-	      
+	       (:file "backends/lisp/codegen")	      
 	       
 	       (:file "backends/cpu/package")
 	       (:file "backends/cpu/tensor")

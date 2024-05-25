@@ -46,8 +46,6 @@ This parameter is useful for printing how all instructions are performed. If set
       (loop for var   in variables
 	    for place in places
 	    if (and place var) do
-	      ;; Intentionally creates the illusion of VM that misunderstands
-	      ;; var is [computed] by deleting tensor-state
 	      (tensor-vec place)
 	      (tensor-vec var)
 	      (%vm-move place var)
@@ -69,9 +67,10 @@ This parameter is useful for printing how all instructions are performed. If set
 	  tensor
 	  (let* ((state (tensor-state tensor))
 		 (res
-		   (or (when state
-			 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
-		       tensor)))
+		   (or
+		    (when state
+		      (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
+		    tensor)))
 	    (the AbstractTensor res)))))
 
 (declaim (ftype (function (list list) t) write-result))
@@ -101,7 +100,9 @@ This parameter is useful for printing how all instructions are performed. If set
 	      (if (scalar-p tensor)
 		  (setf (tensor-vec tensor) (tensor-vec result))
 		  (let* ((state (tensor-state tensor)))
-		    (setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result))))))
+		    (if state
+			(setf (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state) result)
+			(setf (tensor-vec tensor) (tensor-vec result))))))))
 
 (declaim (ftype (function (WFInstruction) list) apply-instruction))
 (defun apply-instruction (instruction)
@@ -334,14 +335,14 @@ See also: `proceed-bench`
 		   (apply-inst-sv4bw inst)
 		   (let ((end-time (get-internal-real-time)))
 		     (incf sv4bw-time (/ (- end-time start-time) internal-time-units-per-second))))
-		     
+		 
 		 (let ((start-time (get-internal-real-time)))
 		   (handler-bind
 		       ((error
 			  (lambda (c)
 			    (runtime-error position c iseq))))
 		     (write-result (wfop-out-to inst) (apply-instruction inst)))
-		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
+		   (progn
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)
 		     (let* ((end-time (get-internal-real-time))
 			    (executing-time (/ (- end-time start-time) internal-time-units-per-second))
@@ -354,7 +355,7 @@ See also: `proceed-bench`
 			       `(,@(gethash id profiled-result)
 				 ,executing-time))))))
 	      finally
-		 (setq result (maybe-read-result (wfop-self inst))))))
+		 (setq result (maybe-read-result (car (wfop-out-to inst)))))))
 
     ;; If the execution is originated from another process
     ;; just merging the result and returns the result
@@ -407,7 +408,7 @@ See also: `proceed-bench`
 			   (length iseq)
 			   (length (remove-duplicates tensor-ids))
 			   (float (/ sv4bw-time n-sample))))))))
-      
+	       
       (format stream "~a~% Total Time: ~a sec~%~%" (conc-iseq-str iseq) total)
 
       ;; Displays top-k node

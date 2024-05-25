@@ -16,12 +16,8 @@
   "Keywords indicating the option to reduct"
   `(member :mean :sum t))
 
-(declaim (ftype (function
-		 (AbstractTensor AbstractTensor &key (:reduction reduction-opt-t))
-		 (values AbstractTensor &optional))
-		L1Norm
-		MSE))
-(defun L1Norm (x y &key (reduction t))
+(defgeneric L1Norm (x y &key reduction))
+(defmethod L1Norm (x y &key (reduction t))
   "
 ## [function] L1Norm
 
@@ -50,7 +46,8 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
        (!mean (!abs l)))
       (T (!abs l)))))
 
-(defun mse (x y &key (reduction t))
+(defgeneric mse (x y &key reduction))
+(defmethod mse (x y &key (reduction t))
   "
 ## [function] mse
 ```
@@ -86,7 +83,6 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 	 (dx (!div (!mul dy z) batch-size)))
     dx))
 
-
 (define-op (Softmax-Cross-Entropy-Node (self &key (axis 1) (delta 1e-7) (avoid-overflow t))
 	    :slots ((softmax       :initform nil :accessor softmax-of)
 		    (cross-entropy :initform nil :accessor celoss-of))
@@ -115,9 +111,8 @@ In addition, reading the value of a `:reduction` keyword (one of `:mean` `:sum` 
 	  (celoss-of  self) celoss)))
 	    
 
-(declaim (ftype (function (AbstractTensor AbstractTensor &key (:delta single-float) (:reduction reduction-opt-t)) (values AbstractTensor &optional))
-		cross-entropy-loss))
-(defun cross-entropy-loss (x labels &key (delta 1e-7) (reduction t))
+(defgeneric cross-entropy-loss (x labels &key delta reduction))
+(defmethod cross-entropy-loss (x labels &key (delta 1e-7) (reduction t))
   "
 ## [fucntion] cross-entropy-loss
 
@@ -160,7 +155,8 @@ L_i = -p_ilog(x_i + delta)
       (:mean (!mean z))
       (T     z))))
 
-(defun softmax-cross-entropy (x labels &key (axis 1) (delta 1e-7) (avoid-overflow nil) (reduction t))
+(defgeneric softmax-cross-entropy (x labels &key axis delta avoid-overflow reduction))
+(defmethod softmax-cross-entropy (x labels &key (axis 1) (delta 1e-7) (avoid-overflow nil) (reduction t))
   "
 ## [function] softmax-cross-entropy
 
@@ -187,7 +183,8 @@ out = CrossEntropyLoss(Softmax(x), labels)
       (:mean (!mean out))
       (T out))))
 
-(defun ->one-hot (x)
+(defgeneric ->one-hot (x))
+(defmethod ->one-hot (x)
   "
 ## [function] ->one-hot
 

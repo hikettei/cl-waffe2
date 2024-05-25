@@ -181,11 +181,11 @@ Return: List[Subscript]
 			(view->range base-size (force-list past-view))))
 	 (composed-range (wf/iter:.range latest-view old-view)))
     
-    ;; <T> to try to extend the previous view.
     (or
+     ;; <T> to try to extend the previous view.
      (when (and old-view (eql view t))
-       (if (and (listp (force-list old-view))
-		(eql (car (force-list old-view)) :broadcast))
+       (if (and (listp (force-list past-view))
+		(eql (car (force-list past-view)) :broadcast))
 	   (make-subscript
 	    past-view
 	    nil
@@ -196,7 +196,7 @@ Return: List[Subscript]
 	    (wf/iter:range 0 base-size))))
      (make-subscript
       view
-      (and (listp   (force-list view))
+      (and (listp    (force-list view))
 	   (eql (car (force-list view)) :broadcast))
       composed-range))))
 

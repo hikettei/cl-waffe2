@@ -35,7 +35,6 @@
    #:SubNode
    #:MulNode
    #:DivNode
-   #:ScalarMul
    #:ScalarAndScalarAdd
    #:ScalarAndScalarSub
    #:ScalarAndScalarMul

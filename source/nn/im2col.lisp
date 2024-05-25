@@ -48,7 +48,8 @@ stride-x stride-y - stride[0], stride[1] respectively.
 	    (asnode #'!permute (torch-order 0 4 5 1 2 3))
 	    (asnode #'!reshape (~ N H-out W-out C K-h K-w -> (* N H-out W-out) (* C K-h K-w))))))
 
-(defun unfold (input dilation kernel-size stride padding)
+(defgeneric unfold (input dilation kernel-size stride padding))
+(defmethod unfold (input dilation kernel-size stride padding)
   "
 ## [function] unfold
 

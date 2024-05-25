@@ -7,7 +7,7 @@
 "))
 
 (defmethod current-backend-state ((backend-name (eql 'LispTensor)))
-  "Common Lisp implementation on matrix operations")
+  "Portable Common Lisp implementation of matrix operations")
 
 (defmethod initialize-instance :before ((tensor LispTensor)
 					&rest initargs
