@@ -3,21 +3,6 @@
 
 (in-suite :test-backends-cpu)
 
-;(eval-when (:compile-toplevel :load-toplevel :execute)
-  
-(add-tester CPUTensor)
-(sub-tester CPUTensor)
-(move-tester CPUTensor)
-
-(matmul-test-set CPUTensor)
-
-(max-tester CPUTensor)
-(min-tester CPUTensor)
-(comparison-test-set CPUTensor)
-
-(mathematical-test-set CPUTensor)
-;)
-
 (defun max-diff-test ()
   (let ((a (parameter (cl-waffe2/distributions:ax+b `(16 16) 1 0))))
     (proceed-backward
@@ -45,7 +30,6 @@
 (test maxmin-diff-test
   (is (max-diff-test))
   (is (min-diff-test)))
-
 
 (defun matmul-form-1 ()
   (proceed (!matmul (ax+b `(10 10) 1 0) (ax+b `(10 10) 1 0))))

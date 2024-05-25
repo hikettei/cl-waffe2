@@ -185,7 +185,6 @@
 	   3.0))
 	 0.000001))))
 
-
 (deftest permute-test
   (testing "Compose(LazyReshape, LazyPermute) without creating an additional allocation"
     (ok (equal `(5 1 5) (shape (proceed (!t (!reshape (ax+b `(5 5) 1 0) 5 5 1))))))

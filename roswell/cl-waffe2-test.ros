@@ -13,6 +13,13 @@ exec ros -Q -- $0 "$@"
   (:use :cl))
 (in-package :ros.script.cl-waffe2-test.3893644947)
 
+(defun str->backend (name)
+  (let ((available-backends (map 'list #'class-name (alexandria:flatten (cl-waffe2:find-available-backends)))))
+    (loop for candidate in available-backends
+	  if (equalp (symbol-name candidate) name)
+	    do (return-from str->backend candidate))
+    (error "Unknown backend: ~a~%Available List: ~a" name available-backends)))
+
 ;; delete it in the future.
 #+sbcl(declaim (sb-ext:muffle-conditions cl:style-warning))
 (defun main (&rest argv)
@@ -20,13 +27,13 @@ exec ros -Q -- $0 "$@"
   (cond
     ((equal (car argv) "gendoc")
      #+quicklisp(ql:quickload :cl-waffe2/docs :silent t)
-     (cl-waffe2:set-devices-toplevel 'cl-waffe2/backends.lisp:LispTensor)
+    ;; (cl-waffe2:set-devices-toplevel 'cl-waffe2/backends.lisp:LispTensor)
      (uiop:symbol-call :cl-waffe2.docs :generate))
     ;; [TODO] compile
     ((equal (car argv) "test")
-     (cl-waffe2:set-devices-toplevel 'cl-waffe2/backends.lisp:LispTensor)
+     (apply #'cl-waffe2:set-devices-toplevel (map 'list #'str->backend (cdr argv)))
      (asdf:load-system :cl-waffe2/test)
-     (apply #'uiop:symbol-call :cl-waffe2/tester :running-test (cdr argv))
+     (uiop:symbol-call :cl-waffe2/tester :running-test)
 
      )))
 ;;; vim: set ft=lisp lisp:

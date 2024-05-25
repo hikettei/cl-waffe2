@@ -168,14 +168,13 @@
      (M= (grad b) (matmul-dy dout a)))))
 
 (defun matmul-3x4-4x3-test ()
-  (with-devices (cl-waffe2/backends.cpu:CPUTensor cl-waffe2/backends.lisp:LispTensor)
-    (let ((a (parameter (randn `(3 4) :order :column)))
-	  (b (parameter (randn `(4 3) :order :column)))
-	  (dout         (ax+b `(3 3) 0 1 :order :column)))
-      (proceed-backward (!matmul a b))
-      (and
-       (M= (grad a) (matmul-dx dout b))
-       (M= (grad b) (matmul-dy dout a))))))
+  (let ((a (parameter (randn `(3 4) :order :column)))
+	(b (parameter (randn `(4 3) :order :column)))
+	(dout         (ax+b `(3 3) 0 1 :order :column)))
+    (proceed-backward (!matmul a b))
+    (and
+     (M= (grad a) (matmul-dx dout b))
+     (M= (grad b) (matmul-dy dout a)))))
 
 (deftest matmul-3x4-4x3-test
   (ok (matmul-3x4-4x3-test)))
@@ -215,7 +214,7 @@
 ;;(eval-when (:compile-toplevel :load-toplevel :execute)
 (export 'matmul-test-set)
 (defmacro matmul-test-set (backend)
-  `(progn;;eval-when (:compile-toplevel :load-toplevel :execute)
+  `(progn
      (matmul-tester ,backend)
      (transpose-matmul-tester ,backend)
      (matmul-tester-mnk ,backend)
@@ -394,7 +393,7 @@
 (mul-tester LispTensor)
 (div-tester LispTensor)
 (move-tester LispTensor)
-(matmul-test-set LispTensor)
+(matmul-test-set CPUTensor)
 (scalar-add-tester LispTensor)
 (scalar-sub-tester LispTensor)
 (scalar-mul-tester LispTensor)

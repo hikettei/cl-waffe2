@@ -1,61 +1,6 @@
 
 (in-package :cl-waffe2/backends.lisp)
 
-(define-with-typevar (gemm-kernel u) (m n k a-offset a lda b-offset b ldb c-offset c ldc)
-  "Computes 1.0 * A[M K] @ B[K N] + 0.0 * C[M N] -> C[M N]"
-  (declare (type (simple-array u (*)) a b c)
-           (type (unsigned-byte 32) m n k a-offset b-offset c-offset lda ldb ldc)
-           ;;(optimize (speed 3) (safety 0))
-	   )
-  (dotimes (mi m)
-    (dotimes (ni n)
-      (let ((sum 0.0))
-        (dotimes (ki k)
-          (incf sum (* (aref a (+ a-offset (* mi lda) ki))
-                       (aref b (+ b-offset (* ki ldb) ni)))))
-        (setf (aref c (+ c-offset (* mi ldc) ni)) sum)))))
-
-(define-impl (MatmulNode :device LispTensor)
-	     :forward ((self a1 b1 c)
-		       (let* ((f (gemm-kernel (dtype c)))
-			      (transa? (trans-a? self))
-			      (transb? (trans-b? self))
-			      (a (if transa?
-				     (read-untransposed a1)
-				     a1))
-			      (b (if transb?
-				     (read-untransposed b1)
-				     b1)))
-			 
-			 `(,@(call-with-view
-			      #'(lambda (a-view b-view c-view)
-				  (let* ((m (size-of c-view 0))
-					 (n (size-of c-view 1))
-					 (k (second (last (shape a1) 2)))
-					 (k (if (symbolp k)
-						`(cl-waffe2/vm.generic-tensor::read-symbol ',k)
-						k))
-					 (lda (size-of a-view 0))
-					 (ldb (size-of b-view 0))
-					 (ldc (size-of c-view 0)))
-				    `(funcall
-				     ,f
-				     ,m
-				     ,n
-				     ,k
-				     ,(offset-of a-view 0)
-				     (tensor-vec ,a1)
-				     ,lda
-				     ,(offset-of b-view 0)
-				     (tensor-vec ,b1)
-				     ,ldb
-				     ,(offset-of c-view 0)
-				     (tensor-vec ,c)
-				     ,ldc)))
-			      `(,a ,b ,c)
-			      :at-least-dim 2)
-			   ,c))))
-
 ;; ArgMax
 (define-with-typevar (max-kernel u) (x out
 				     offset size incx
