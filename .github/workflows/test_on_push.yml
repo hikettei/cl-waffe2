@@ -45,8 +45,8 @@ jobs:
       - name: Installing Extensions
         run: |
           git submodule update --init --recursive
-          make build_sleef
-          make build_simd_extension
+          sudo make build_sleef
+          sudo make build_simd_extension
           
       - name: Unittest (CPU+Lisp)
         run: |
@@ -123,8 +123,8 @@ jobs:
       - name: Installing Extensions
         run: |
           git submodule update --init --recursive
-          make build_sleef
-          make build_simd_extension
+          sudo make build_sleef
+          sudo make build_simd_extension
       
       - name: Training (CPUTensor)
         run: |
