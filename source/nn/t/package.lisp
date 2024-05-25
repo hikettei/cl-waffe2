@@ -10,13 +10,8 @@
         :cl-waffe2/backends.cpu
         :cl-waffe2/backends.jit.cpu
         :cl-waffe2/base-impl
-        :fiveam
+        :rove
         :cl-waffe2/distributions))
 
 (in-package :cl-waffe2/nn.test)
-
-(def-suite :nn-test)
-
-(in-suite :nn-test)
-
 

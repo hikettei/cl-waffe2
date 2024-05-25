@@ -2,8 +2,6 @@
 (in-package :cl-waffe2/nn.test)
 
 
-(in-suite :nn-test)
-
 (defun conv-2d-forward-test ()
   (let ((model (Conv2D 3 6 `(2 2))))
     (equal `(3 6 9 9) (shape (proceed (call model (randn `(3 3 10 10))))))))
@@ -57,14 +55,16 @@
 	   #(0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0)
 	   (tensor-vec (grad img)))))
 
-(test conv2d-fw-bw-test
-  (is (conv-2d-forward-test))
-  (is (conv-2d-fw-bw-test))
-  (is (conv-2d-fw-bw-test-1)))
+(deftest conv2d-fw-bw-test
+  (testing "Testing Conv2D Function"
+    (ok (conv-2d-forward-test))
+    (ok (conv-2d-fw-bw-test))
+    (ok (conv-2d-fw-bw-test-1))))
 
-(test im2col-test
-  (is (unfold-test-forward))
-  (is (unfold-test-backward)))
+(deftest im2col-test
+  (testing "Testing im2col"
+    (ok (unfold-test-forward))
+    (ok (unfold-test-backward))))
 
 
 ;; MaxPoolTest
@@ -101,14 +101,10 @@
     
     f))
 
-(test 2d-pool-test
-  (is (2d-pool-test nil))
-  (is (2d-pool-test t))
+(deftest 2d-pool-test
+  (testing "Testing 2DPool"
+    (ok (2d-pool-test nil))
+    (ok (2d-pool-test t))
+    (ok (2d-pool-test t))
+    (ok (2d-pool-test nil))))
 
-  ;; Do they work even when cached?
-  (is (2d-pool-test t))
-  (is (2d-pool-test nil)))
-
-;; Add: CNN/MLP Train tests
-
-;; Paddings

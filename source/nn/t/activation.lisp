@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/nn.test)
 
-(in-suite :nn-test)
-
 (defun relu-test ()
   (let ((a (randn `(10 10))))
     (let ((out (proceed (!relu a))))
@@ -14,7 +12,8 @@
       (< (abs (- 10.0 (tensor-vec out))) 0.0001))))
 
 
-(test activation-test
-  (is (relu-test))
-  (is (softmax-test)))
+(deftest activation-test
+  (testing "Testing activation functions."
+    (ok (relu-test))
+    (ok (softmax-test))))
 

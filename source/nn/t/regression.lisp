@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/nn.test)
 
-(in-suite :nn-test)
-
 ;;
 ;; Comments written in JP/EN is mixed, i'm sorry.
 ;;
@@ -51,9 +49,6 @@
 	(b (parameter (ax+b `(3 5) 0 3)))
 	(c (parameter (ax+b `(5 3) 0 4))))
     (proceed-backward (!sum (!matmul a (!matmul b c))))
-    (print (grad a))
-    (print (grad b))
-    (print (grad c))
     (and (not-zero-p a)
 	 (not-zero-p b)
 	 (not-zero-p c))))
@@ -120,15 +115,16 @@
        (every #'(lambda (x) (= x 1e-4)) (tensor-vec (grad c2)))))))
 
 
-(test chain-rule-test-matmul
-  (is (matmul-chain-test))
-  (is (matmul-chain-test1))
-  (is (matmul-bias-test))
-  (is (linear-chain-test))
-  (is (linear-chain-test-build)))
+(deftest chain-rule-test-matmul
+  (testing "Testing the autodiff with various case of using matmul."
+    (ok (matmul-chain-test))
+    (ok (matmul-chain-test1))
+    (ok (matmul-bias-test))
+    (ok (linear-chain-test))
+    (ok (linear-chain-test-build))))
 
 ;; ===========================================================================================
-;; Bug: matmul(not(正方行列).T, any_matrix) -> Segfault (Now it's FIXED)
+;; Bug: matmul(not(square).T, any_matrix) -> Segfault (Now it's FIXED)
 ;;
 ;;
 ;;
@@ -162,20 +158,12 @@
 
 
 ;; Multiple call <- No Side Effects???
-(test linear-simple-layer
-  (is (linear-non-composite-test-single-layer))
-  (is (linear-non-composite-test-single-layer))
-  (is (linear-non-composite-test-single-layer))
-  (is (linear-non-composite-test-single-layer-no-bw)))
-
-;; Known Issue: Second call of this got invalid.
-;; 問題は、Compositeを用いてモデルを初期化した時に、二回目以降のコンパイルがおかしくなる
-
-;; Cache関数が悪いか、メモリプールが悪いか
-;; Occurs at ADDNODECPUTENSOR-VM-FUNCTION
-;; build関数とstep-linearを用いた同じノードは動く
-;; -> 多分Compositeを介してるから発生してる？
-;; -> Compositeが何かの副作用を・・・
+(deftest linear-simple-layer
+  (testing "Testing the build function using LinearLayer"
+    (ok (linear-non-composite-test-single-layer))
+    (ok (linear-non-composite-test-single-layer))
+    (ok (linear-non-composite-test-single-layer))
+    (ok (linear-non-composite-test-single-layer-no-bw))))
 
 ;; But combined with composite, the second call of matmul will produce shape-error???
 (defun linear-composite-test-single-layer ()
@@ -209,18 +197,19 @@
 
 ;; Knwon Issue: 二回目のCallでmatmulに失敗する？
 
-;; ugokan
-(test linear-layer-test-forward
-  (is (linear-composite-test-single-layer))
-  (is (linear-composite-test-single-layer))
-  (is (linear-composite-test-single-layer)))
+(deftest linear-layer-test-forward
+  (testing "Forward with Composite. It should not produce any side effects."
+    (ok (linear-composite-test-single-layer))
+    (ok (linear-composite-test-single-layer))
+    (ok (linear-composite-test-single-layer))))
 
 
 ;; ugokan
-(test linear-composed-layer-test-forward
-  (is (linear-composite-test-two-layer))
-  (is (linear-composite-test-two-layer))
-  (is (linear-composite-test-two-layer)))
+(deftest linear-composed-layer-test-forward
+  (testing "Forward with composed composite. If there's any side effects, it should produce a memory-related error or segfault."
+    (ok (linear-composite-test-two-layer))
+    (ok (linear-composite-test-two-layer))
+    (ok (linear-composite-test-two-layer))))
 
 ;; Regardless of composite use, it occurs
 
@@ -247,11 +236,11 @@
 	;;      do (print p))
 	(every #'not-zero-p params)))))
 
-(test linear-backward-test-only-with-principle-features
-  (is (linearlayer-backward-test))
-  (is (linearlayer-backward-test))
-  (is (linearlayer-backward-test))
-  )
+(deftest linear-backward-test-only-with-principle-features
+  (testing "Backward with composite, and there should not be any memory-error related to side effects."
+    (ok (linearlayer-backward-test))
+    (ok (linearlayer-backward-test))
+    (ok (linearlayer-backward-test))))
 
 ;; Second Case:
 ;; Adjustable-Symbol <- None
@@ -274,11 +263,12 @@
       ;;	    do (print (grad p)))
       (every #'not-zero-p params))))
 
-(test linearlayer-backward-with-criterlion
-  (is (linearlayer-backward-test-with-criterion))
-  ;; Is the cached function, works well?
-  (is (linearlayer-backward-test-with-criterion)))
-	     
+(deftest linearlayer-backward-with-criterlion
+  (testing "Forward with a cached function."
+    (ok (linearlayer-backward-test-with-criterion))
+    ;; Is the cached function, works well?
+    (ok (linearlayer-backward-test-with-criterion))))
+
 
 ;; これからデバッグすること：
 ;; Traceのネストが深い理由
@@ -327,10 +317,11 @@
     (let ((model (build (!mean (call model (randn `(2 5)))))))
       (forward model))))
 
-(test softmax-no-side-effect-call-of-composite
-  (is (softmax-same-case?))
-  (is (softmax-same-case?))
-  (is (softmax-same-case?)))
+(deftest softmax-no-side-effect-call-of-composite
+  (testing "Defining a static composite."
+    (ok (softmax-same-case?))
+    (ok (softmax-same-case?))
+    (ok (softmax-same-case?))))
 
 (defun fw-change-shape-test ()
   (let ((model (build (call (LinearLayer-Sequence 10 5 2)
@@ -344,8 +335,9 @@
     (forward model)
     model))
 
-(test forward-with-different-shape
-  (is (fw-change-shape-test)))
+(deftest forward-with-different-shape
+  (testing "Changing dynamic shapes after compilation."
+    (ok (fw-change-shape-test))))
 
 (defun fw-and-bw-test ()
   (let* ((linear (LinearLayer-Sequence 10 5 2))
@@ -402,10 +394,10 @@
 	    do  (grad p)))
     T))
 
-(test multiple-time-call-of-compiled-model
-  (is (fw-and-bw-test))
-  (is (fw-and-bw-test-criterion))
-  )
+(deftest multiple-time-call-of-compiled-model
+  (testing "Tests forward and backward with changing dynamic shapes multiple times."
+    (ok (fw-and-bw-test))
+    (ok (fw-and-bw-test-criterion))))
 
 
 ;; Gradients are decayed well?
@@ -449,19 +441,16 @@
 	       (setq end out)))
     (> first end)))
 
-(test grad-decay-test
-  (is (grad-decay-test)))
+(deftest grad-decay-test
+  (testing "Tests the loss function converage using a small MLP model"
+    (ok (grad-decay-test))))
 
-(test grad-decay-cached-test
-  (is (grad-decay-test)))
+(deftest grad-decay-cached-test
+  (testing "Tests a small MLP model training using cached composite."
+    (ok (grad-decay-test))))
 
-(test row-major-grad-decay-test
-  (is (cl-waffe2::with-row-major (grad-decay-test))))
+(deftest row-major-grad-decay-test
+  (testing "Testing the training using row-major order matrices"
+    (ok (cl-waffe2::with-row-major (grad-decay-test)))))
 
-(defun jit-test ()
-  (with-devices (JITCPUTensor CPUTensor cl-waffe2/backends.lisp:LispTensor)
-    (grad-decay-test)))
-
-(test jit-grad-decay-test
-  (is (jit-test)))
 

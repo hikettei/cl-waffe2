@@ -3,8 +3,6 @@
 
 (in-package :cl-waffe2/vm.nodes.generic-tensor.test)
 
-(in-suite :test-tensor)
-
 (defun chain-test1 ()
   (let ((a (make-tensor `(15 15) :initial-element 1.0 :requires-grad t)))
     (proceed-backward (!mul (!sum a) 1.0))
@@ -93,18 +91,18 @@
      
      
 
-(test chain-rule-test
-  (is (chain-test1))
-  (is (chain-test2))
-  (is (chain-test3))
-  (is (chain-test4))
-  (is (chain-test5))
-  (is (chain-test6))
-  (is (chain-test7))
-  (is (chain-test8))
-  (is (chain-test9)))
+(deftest chain-rule-test
+  (ok (chain-test1))
+  (ok (chain-test2))
+  (ok (chain-test3))
+  (ok (chain-test4))
+  (ok (chain-test5))
+  (ok (chain-test6))
+  (ok (chain-test7))
+  (ok (chain-test8))
+  (ok (chain-test9)))
 
-(test backward-side-effect-test
-  (is (backward-being-not-destructed)))
+(deftest backward-side-effect-test
+  (ok (backward-being-not-destructed)))
   
 ;; save-for-backward test

@@ -524,7 +524,7 @@ CL-WAFFE2-REPL>
 	     :forward ((self scalar matrix)
 		       `(progn
 			  (tensor-vec ,matrix) ;; Call Lazy-Allocate of matrix
-			  (setf (vref ,matrix 0) (tensor-vec ,scalar))
+			  (setf (vref ,matrix 0) (coerce (tensor-vec ,scalar) (dtype->lisp-type (dtype ,matrix))))
 			  ,matrix)))
 
 ;; Add: Docstring

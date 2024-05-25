@@ -11,26 +11,15 @@
 
 (in-package :cl-waffe2/tester)
 
-(defun running-test ()
+;; [TODO] Roveで全部書き直す
+;; [TODO] unittest
+;; [TODO] Colorred timestamp
+(defun running-test (&key (style :dot))
+  ;; timestamp
   (cl-waffe2:show-backends)
 
   ;; Test all ops defined in base-impl
-  (rove:run-suite :cl-waffe2/base-impl.test)
-  
-  ;;(fiveam:run! :iterator-test)
-  ;;(fiveam:run! :test-nodes)
-
-  ;;(fiveam:run! :test-tensor)
-;;  (fiveam:run! :base-impl-test)
-;;  (fiveam:run! :jit-lisp-test)
-		    
-  ;;(fiveam:run! :lisp-backend-test)
-  ;;(fiveam:run! :test-backends-cpu)
-  ;;(fiveam:run! :jit-cpu-test)
-		    
-  ;;(fiveam:run! :nn-test)
-  ;;(fiveam:run! :vm-test)
-  )
+  (rove:run :cl-waffe2/test :style style))
 
 
 
