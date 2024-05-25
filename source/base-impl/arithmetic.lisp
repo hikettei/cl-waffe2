@@ -99,7 +99,7 @@ X\\gets{X ~a Y}
      ;; ∂/∂y = -x/y^2
      (values
       (!div dout dy)
-      (!div (!mul dx (!mul dout -1))
+      (!div (!mul (!mul dout -1) dx)
 	    (!mul dy dy))))))
 
 ;; ===============================================================
@@ -335,13 +335,13 @@ x_{copy}\\gets{x ~a y}
 		  (let ((x (infer-scalar-type x y))
 			(y (infer-scalar-type y x)))
 		    ;; forgetting about constant folding for a now.
-;;		    (when (and (fold-constant-scalar-p x)
-;;			       (fold-constant-scalar-p y))
-;;		      (return-from ,name
-;;			(make-tensor
-;;			 (,lisp-op (tensor-vec x) (tensor-vec y))
-;;			 :dtype (dtype x)
-;;			 :order (order x))))
+		    (when (and (fold-constant-scalar-p x)
+			       (fold-constant-scalar-p y))
+		      (return-from ,name
+			(make-tensor
+			 (,lisp-op (tensor-vec x) (tensor-vec y))
+			 :dtype (dtype x)
+			 :order (order x))))
 		    
 		    (forward (,node-name)
 			     (if in-place

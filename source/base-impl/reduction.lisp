@@ -101,10 +101,20 @@ The function !mean return a node which computes the average of tensor along the 
 ### Return
 
 `->`[AbstractTensor] the result."
-  (let* (;;(result (!sum tensor :axis axis :-> -> :keepdims keepdims))
-	 (dims   (length (shape tensor)))
+  (let* ((dims   (length (shape tensor)))
 	 (reducted-elements (make-tensor 1 :dtype (dtype tensor))))
-    
+    ;; [FIXME]
+    ;;
+    ;;             A     B 
+    ;;    X ( A B ) \   /
+    ;;    |           * <- We have to explicit they should have ancestor-param-p=t
+    ;;    |           |
+    ;;     \         /
+    ;;       \     /
+    ;;         (/)
+    ;;          |
+    ;;         ...
+    ;;
     (typecase axis
       (fixnum
        (if (< axis 0)

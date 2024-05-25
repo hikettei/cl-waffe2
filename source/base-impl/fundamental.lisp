@@ -506,13 +506,13 @@ CL-WAFFE2-REPL>
 		     (declare (ignore dm ds))
 		     (values
 		      (->mat dout)
-		      nil))))
+		      (->mat dout)))))
 
 (defnode (Scalar->MatNode (myself out-shape)
 	  :where (Scalar[scal] Matrix[~ scal] -> Matrix[scal] where scal = out-shape)
 	  :backward ((self dout ds dm)
 		     (declare (ignore dm ds))
-		     (values (->scal dout) nil))))
+		     (values (->scal dout) (->scal dout)))))
 
 (define-impl (Mat->ScalarNode :device t)
 	     :forward ((self matrix scalar)
@@ -650,10 +650,12 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 
 `compile-mode` is a keyword, type of `compile-mode-t`.
 "
+  (when (null (tensor-variables tensor))
+    (return-from proceed tensor))
+  
   (let* ((node (ProceedNode tensor :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out  (forward node tensor)))
-    
     ;; Out is still unallocated, so set the result.
     (if (scalar-p out)
 	(setf (tensor-vec out) (tensor-vec (proceed-result node)))
