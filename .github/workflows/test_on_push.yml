@@ -129,7 +129,7 @@ jobs:
       - name: Training (LispTensor)
         run: |
           ros config set dynamic-space-size 4gb
-          ./roswell/waffe2.ros demo --example mnist -b LispTensor -b CPUTensor
+          ./roswell/waffe2.ros demo --example mnist -b LispTensor -b CPUTensor --config epoch-num=2
 
       - name: Accuracy Check (> 0.90)
         run: |
