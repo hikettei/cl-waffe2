@@ -4,13 +4,40 @@
 (progn ;;init forms
   (ros:ensure-asdf)
   #+quicklisp(cl:push (cl:pathname "./") ql:*local-project-directories*)
-  #+quicklisp(ql:quickload '(:cl-waffe2 :clingon) :silent t))
+  #+quicklisp(ql:quickload '(:cl-waffe2 :clingon :cl-ansi-text) :silent t))
 
 (defpackage :waffe2
-  (:use :cl)
+  (:use :cl :cl-ansi-text)
   (:export :main))
 
 (in-package :waffe2)
+
+(defparameter *use-ansi-color* t)
+
+(defmacro maybe-ansi (op &rest args)
+  `(if *use-ansi-color*
+       (,op ,@args)
+       ,@args))
+
+(defun timestamp ()
+  (multiple-value-bind
+        (second minute hour day month year day-of-week dst-p tz)
+      (get-decoded-time)
+    (declare (ignore day-of-week dst-p))
+
+    (maybe-ansi
+     blue
+     (format nil "[~2,'0d:~2,'0d:~2,'0d, ~d/~2,'0d/~d (GMT~@d)]"
+	     hour
+	     minute
+	     second
+	     month
+	     day
+	     year
+	     (- tz)))))
+
+(defun print-info (content)
+  (format t "~a : ~a~%" (timestamp) content))
 
 (defun parse-test-config (config)
   (let ((args (uiop:split-string config :separator ",")))
@@ -32,26 +59,32 @@
 		 `(equalp model ,name)))
       (cond
 	((of "mnist")
+	 (print-info "Loading the example project...")
 	 (load "./examples/mnist/mnist.asd")
 	 (ql:quickload :mnist-sample :silent t)
+	 (print-info "Starting the demonstration...")
 	 (uiop:symbol-call :mnist-sample :train-and-valid-mlp :epoch-num 10))
 	(T
 	 (error "--example ~a is not available." model))))))
 
 (defun waffe2/handler (cmd)
-  (let* ((backends (or (clingon:getopt cmd :backends) `("LispTensor"))))
+  (let* ((backends (or (clingon:getopt cmd :backends) `("LispTensor")))
+	 (*use-ansi-color* (clingon:getopt cmd :ansi-color t)))
     ;; Configure runtimes toplevel
     (apply #'cl-waffe2:set-devices-toplevel (map 'list #'str->backend backends))
     (macrolet ((of (name)
 		 `(equalp *mode* ,name)))
       (cond
 	((of "test")
+	 (print-info "Running the test...")
 	 (asdf:load-system :cl-waffe2/test)
 	 (uiop:symbol-call :cl-waffe2/tester :running-test :style (intern (string-upcase (clingon:getopt cmd :style "dot")) "KEYWORD"))
 	 t)
 	((of "gendoc")
+	 (print-info "Generating the documents...")
 	 (ql:quickload :cl-waffe2/docs :silent t)
 	 (uiop:symbol-call :cl-waffe2.docs :generate)
+	 (print-info "Completed")
 	 t)
 	((of "demo")
 	 (waffe2/demo cmd))
@@ -80,7 +113,13 @@
     :description "Example Project to use for demonstration."
     :short-name #\e
     :long-name "example"
-    :key :example)))
+    :key :example)
+   (clingon:make-option
+    :boolean
+    :description "Enables/Disables the cl-ansi-color"
+    :short-name #\a
+    :long-name "ansi-color"
+    :key :ansi-color)))
 
 (defun waffe2/command ()
   (clingon:make-command

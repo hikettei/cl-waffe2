@@ -2,5 +2,5 @@
   :author "hikettei"
   :description "Command Line Tool for cl-waffe2"
   :licence "MIT"
-  :depends-on ("cl-waffe2" "clingon" "asdf")
+  :depends-on ("cl-waffe2" "clingon" "asdf" "cl-ansi-text")
   :components ((:file "waffe2")))
