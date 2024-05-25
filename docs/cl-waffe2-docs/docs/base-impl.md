@@ -4,7 +4,7 @@
 ## [function] !matrix-add
 
 ```lisp
-(!matrix-add x y)
+(!matrix-add x y &key (in-place nil))
 ```
 
 The function `!matrix-add` calls `ADDNODE` and adds X and Y element-wise, returning a new tensor.
@@ -17,6 +17,8 @@ X_{copy}\gets{X + Y}
 
 `X` and `Y` must be a AbstractTensor (not a ScalarTensor), with the same shape.
 
+`in-place` set T to make it in-place
+
 ### SideEffects
 
 None.
@@ -24,10 +26,10 @@ None.
 ## [function] !matrix-sub
 
 ```lisp
-(!matrix-sub x y)
+(!matrix-sub x y &key (in-place nil))
 ```
 
-The function `!matrix-sub` calls `SUBNODE` and substracts X by Y element-wise, returning a new tensor.
+The function `!matrix-sub` calls `SUBNODE` and subtracts X by Y element-wise, returning a new tensor.
 
 ```math
 X_{copy}\gets{X - Y}
@@ -37,6 +39,8 @@ X_{copy}\gets{X - Y}
 
 `X` and `Y` must be a AbstractTensor (not a ScalarTensor), with the same shape.
 
+`in-place` set T to make it in-place
+
 ### SideEffects
 
 None.
@@ -44,7 +48,7 @@ None.
 ## [function] !matrix-mul
 
 ```lisp
-(!matrix-mul x y)
+(!matrix-mul x y &key (in-place nil))
 ```
 
 The function `!matrix-mul` calls `MULNODE` and multiplies X and Y element-wise, returning a new tensor.
@@ -57,6 +61,8 @@ X_{copy}\gets{X * Y}
 
 `X` and `Y` must be a AbstractTensor (not a ScalarTensor), with the same shape.
 
+`in-place` set T to make it in-place
+
 ### SideEffects
 
 None.
@@ -64,7 +70,7 @@ None.
 ## [function] !matrix-div
 
 ```lisp
-(!matrix-div x y)
+(!matrix-div x y &key (in-place nil))
 ```
 
 The function `!matrix-div` calls `DIVNODE` and divides X by Y element-wise, returning a new tensor.
@@ -77,16 +83,18 @@ X_{copy}\gets{X / Y}
 
 `X` and `Y` must be a AbstractTensor (not a ScalarTensor), with the same shape.
 
+`in-place` set T to make it in-place
+
 ### SideEffects
 
 None.
-## [function] !inverse
+## [function] !reciprocal
 
 ```lisp
-(!inverse tensor)
+(!reciprocal tensor)
 ```
 
-The function `!inverse` calls `InverseTensorNode`, and finds the inverse of the received Tensor/Scalar, returning a new tensor.
+Finds the reciprocal of tensor.
 
 ```math
 X_{copy}\gets{1 / X}
@@ -99,10 +107,10 @@ tensor[ScalarTensor/AbstractTensor/Number]
 ## [function] !scalar-add
 
 ```lisp
-(!scalar-add scalar x)
+(!scalar-add scalar x &key (in-place nil))
 ```
 
-The function !SCALAR-ADD computes following operation with calling `SCALARADD`, returning a new tensor.
+The function !SCALAR-ADD computes following operation with calling `ADDNODE`, returning a new tensor.
 
 ```math
 X_{copy}\gets{X + scalar}
@@ -117,10 +125,10 @@ X_{copy}\gets{X + scalar}
 ## [function] !scalar-sub
 
 ```lisp
-(!scalar-sub scalar x)
+(!scalar-sub scalar x &key (in-place nil))
 ```
 
-The function !SCALAR-SUB computes following operation with calling `SCALARSUB`, returning a new tensor.
+The function !SCALAR-SUB computes following operation with calling `SUBNODE`, returning a new tensor.
 
 ```math
 X_{copy}\gets{X - scalar}
@@ -135,10 +143,10 @@ X_{copy}\gets{X - scalar}
 ## [function] !scalar-mul
 
 ```lisp
-(!scalar-mul scalar x)
+(!scalar-mul scalar x &key (in-place nil))
 ```
 
-The function !SCALAR-MUL computes following operation with calling `SCALARMUL`, returning a new tensor.
+The function !SCALAR-MUL computes following operation with calling `MULNODE`, returning a new tensor.
 
 ```math
 X_{copy}\gets{X * scalar}
@@ -153,10 +161,10 @@ X_{copy}\gets{X * scalar}
 ## [function] !scalar-div
 
 ```lisp
-(!scalar-div scalar x)
+(!scalar-div scalar x &key (in-place nil))
 ```
 
-The function !SCALAR-DIV computes following operation with calling `SCALARDIV`, returning a new tensor.
+The function !SCALAR-DIV computes following operation with calling `DIVNODE`, returning a new tensor.
 
 ```math
 X_{copy}\gets{X / scalar}
@@ -479,7 +487,7 @@ Tips: `(!permute tensor (torch-order 2 1 0))` to use the same notation to pytorc
 (!reshape tensor &rest shapes)
 ```
 
-Returns a InputTensor with the same number of elements bu with the specified `shapes`.
+Returns an InputTensor with the same number of elements but with the specified `shapes`.
 
 ### Inputs
 

@@ -69,12 +69,10 @@
    :authors '("hikettei <ichndm@gmail.com>")
    :license "MIT"
    :options (waffe2/options)
-   :usage "[ unittest | test | gendoc | gencode ] [options]
+   :usage "[ test | gendoc | gencode ] [options]
 
 COMMANDS:
-  - unittest       Tests if all principle abstractnode works given backends.
-  - test           Run all tests under the given backends.
-  - test[package]  Run all tests
+  - test           Tests all principle abstractnode operations work with the provided backends.
   - gendoc         Generates the cl-waffe2 documentation.
   - gencode        [WIP] Mimimum C runtime generator (from ONNX)"
    :handler #'waffe2/handler))
