@@ -17,15 +17,15 @@ Tips: Use the `proceed-bench` function to know the bottleneck; if `MoveTensorNod
 
 ## [parameter] `*default-c-compiler*`
 
-Specify the command to compile the generated c codes. In default, "gcc".
+Specify the command to compile the generated c codes. Defaults to: "gcc".
 
 ## [parameter] `*compiler-flags*`
 
-In default, `*compielr-flags*` = `'("-fPIC" "-O3" "-march=native")`
+By default, `*compiler-flags*` = `'("-fPIC" "-O3" "-march=native")`
 
 ## [parameter] `*viz-compiled-code*`
 
-Set t to display the compiled c code to terminal. In default, `nil`
+Set to T in order to display the compiled c code in the terminal. Defaults to: `nil`
 
 ## [AbstractTensor] JITCPUTensor
 

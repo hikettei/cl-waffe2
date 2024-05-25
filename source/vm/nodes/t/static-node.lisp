@@ -1,9 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes.test)
 
-(in-suite :test-nodes)
-
-
 (defmodel (SinModel1 (self)
 	   :where (A[~] -> B[~])
 	   :on-call-> ((self x)
@@ -77,8 +74,8 @@
       (and f1
 	   (~= (vref (grad a) 0) (+ grad grad))))))
 
-(test composite-static-function-diff-test
-  (is (test-composite-diff))
-  (is (composite-with-build))
-  (is (composite-with-build1)))
+(deftest composite-static-function-diff-test
+  (ok (test-composite-diff))
+  (ok (composite-with-build))
+  (ok (composite-with-build1)))
 

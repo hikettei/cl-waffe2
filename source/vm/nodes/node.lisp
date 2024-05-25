@@ -107,7 +107,6 @@ And backward: `(backward node prev-gradient arg1 arg2 ...)`
   ;;  2. Records the computation node lazily
   ;;  3. Detects Shapeing-Error
   ;;  4. Adds save4bw
-  
   (assert (every #'(lambda (x) (typep x 'AbstractTensor)) inputs)
       nil
       "(forward node &rest inputs)

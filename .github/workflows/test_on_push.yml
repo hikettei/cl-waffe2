@@ -12,7 +12,7 @@ jobs:
   # TODO: Metal/CUDA Runtime
   UnitTest-CPUTensor:
     # TODO: Metal/CUDA Runtime
-    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    name: (${{ matrix.os }} on ${{ matrix.lisp }}) | Unittest-CPUTensor
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -41,12 +41,19 @@ jobs:
       - name: Installing OpenBLAS
         run: |
           sudo apt install libblas-dev
+          
+      #- name: Installing Extensions
+      #  run: |
+      #    git submodule update --init --recursive
+      #    sudo make build_sleef
+      #    sudo make build_simd_extension
+          
       - name: Unittest (CPU+Lisp)
         run: |
           ros config set dynamic-space-size 4gb
           ./roswell/waffe2.ros test -b CPUTensor -b LispTensor
   UnitTest-LispTensor:
-    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    name: (${{ matrix.os }} on ${{ matrix.lisp }}) | Unittest-LispTensor
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -73,39 +80,55 @@ jobs:
           ros config set dynamic-space-size 4gb
           ./roswell/waffe2.ros test -b LispTensor -b CPUTensor
   Test-Classification-CPU:
-    - uses: actions/checkout@v1
-    - name: Setting up environments
-      env:
-        LISP: ${{ matrix.lisp }}
-      run: |
-        curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
-    - name: Update $PATH
-      run: |
-        echo $PATH
-        echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
-    - name: Check $PATH
-      run: echo $PATH
-
-    - name: Installing OpenBLAS
-      run: |
-        sudo apt install libblas-dev
-
-    - name: Set up Python
-      id: set_up_python_python_ci
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.8"
-            
-    - name: Downloading assets
-      run: |
-        pip install torch torchvision numpy
-        cd ./examples/mnist 
-        python train_data.py
-        cd ../../
-    
-    - name: Training (CPUTensor)
-      run: |
-        ros config set dynamic-space-size 4gb
-        ./roswell/waffe2.ros demo --example mnist -b CPUTensor -b LispTensor
+    name: (${{ matrix.os }} on ${{ matrix.lisp }}) | Test-Classification-CPU
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin/2.3.9]
+        os: [ubuntu-latest]
+        target:
+        - normal
+        archcpu:
+        - AVX2
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setting up environments
+        env:
+          LISP: ${{ matrix.lisp }}
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Update $PATH
+        run: |
+          echo $PATH
+          echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
+      - name: Check $PATH
+        run: echo $PATH
+      - name: Installing OpenBLAS
+        run: |
+          sudo apt install libblas-dev
   
+      - name: Set up Python
+        id: set_up_python_python_ci
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+              
+      - name: Downloading assets
+        run: |
+          pip install torch torchvision numpy
+          cd ./examples/mnist 
+          python train_data.py
+          cd ../../
+      
+      #- name: Installing Extensions
+      #  run: |
+      #    git submodule update --init --recursive
+      #    sudo make build_sleef
+      #    sudo make build_simd_extension
+      
+      - name: Training w/ LispTensor
+        run: |
+          ros config set dynamic-space-size 4gb
+          ./roswell/waffe2.ros demo --example mnist -b LispTensor -b CPUTensor --config epoch-num=2
+
   

@@ -1,0 +1,16 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp(cl:push (cl:pathname "./") ql:*local-project-directories*)
+  #+quicklisp(ql:quickload '(:waffe2) :silent t)
+  )
+
+(defpackage :ros.script.waffe2.3925623120
+  (:use :cl :waffe2))
+(in-package :ros.script.waffe2.3925623120)
+
+;;; vim: set ft=lisp lisp:

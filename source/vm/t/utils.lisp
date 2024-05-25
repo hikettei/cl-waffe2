@@ -2,9 +2,6 @@
 (in-package :cl-waffe2/vm.test)
 
 ;; Testing Utils (change-facet ...)
-
-(in-suite :vm-test)
-
 ;; change-facet
 ;; asnode
 ;; node->defun
@@ -28,7 +25,7 @@
     (let ((result (forward model (ax+b `(1 20) 1 0))))
       (save-weights model "./assets/model_weight_restore_tester.wf2model" :wf2model)
       (tensor-vec result))))
-  
+
 (defun restore-model-test (compare-to)
   (let ((model (build
 		(call (LazyLinear 20 10 5) (make-input `(batch-size 20) :X))
@@ -40,7 +37,7 @@
   (let ((res (save-model-test)))
     (restore-model-test res)))
 
-(test save-and-restore-model-test
-  (is (save-and-restore)))
+(deftest save-and-restore-model-test
+  (ok (save-and-restore)))
 
-  
+

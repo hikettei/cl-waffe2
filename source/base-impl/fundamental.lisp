@@ -197,7 +197,7 @@ Output: `Tensor[AbstractTensor]`
 
 	      ;; dout.shape == dx.shape
 	      (let* ((out-sub (tensor-view dy))
-		     (inp-sub (slot-value self 'subscripts))
+		     (inp-sub (slot-value self 'subscripts))		     
 		     (res (!move dx (apply #'!view dout inp-sub)))
 		     (res (->contiguous (apply #'!view res out-sub))))
 		(values nil res))))
@@ -506,13 +506,13 @@ CL-WAFFE2-REPL>
 		     (declare (ignore dm ds))
 		     (values
 		      (->mat dout)
-		      nil))))
+		      (->mat dout)))))
 
 (defnode (Scalar->MatNode (myself out-shape)
 	  :where (Scalar[scal] Matrix[~ scal] -> Matrix[scal] where scal = out-shape)
 	  :backward ((self dout ds dm)
 		     (declare (ignore dm ds))
-		     (values (->scal dout) nil))))
+		     (values (->scal dout) (->scal dout)))))
 
 (define-impl (Mat->ScalarNode :device t)
 	     :forward ((self matrix scalar)
@@ -524,7 +524,7 @@ CL-WAFFE2-REPL>
 	     :forward ((self scalar matrix)
 		       `(progn
 			  (tensor-vec ,matrix) ;; Call Lazy-Allocate of matrix
-			  (setf (vref ,matrix 0) (tensor-vec ,scalar))
+			  (setf (vref ,matrix 0) (coerce (tensor-vec ,scalar) (dtype->lisp-type (dtype ,matrix))))
 			  ,matrix)))
 
 ;; Add: Docstring
@@ -557,11 +557,13 @@ The function ->scal receives `matrix-tensor` with total-size = 1, returning a Sc
 ```
 
 The function ->mat receives `ScalarTensor`, returning a matrix with the number of axis=dims."
-    (let ((out-shape (make-list dims :initial-element 1)))
-      (forward (Scalar->MatNode out-shape)
-	       scalar-tensor
-	       (make-input out-shape nil
-			   :dtype (dtype scalar-tensor))))))
+    (if (scalar-p scalar-tensor)
+	(let ((out-shape (make-list dims :initial-element 1)))
+	  (forward (Scalar->MatNode out-shape)
+		   scalar-tensor
+		   (make-input out-shape nil
+			       :dtype (dtype scalar-tensor))))
+	scalar-tensor)))
 
 		       
 
@@ -596,7 +598,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (let ((compiled-model (proceed-compiled-model self)))			 
+		       (let ((compiled-model (proceed-compiled-model self)))
 			 (if (measure-time-p self)
 			     (progn
 			       (format t "[proceed-time] With allocation time:~%")
@@ -648,10 +650,12 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 
 `compile-mode` is a keyword, type of `compile-mode-t`.
 "
+  (when (null (tensor-variables tensor))
+    (return-from proceed tensor))
+  
   (let* ((node (ProceedNode tensor :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out  (forward node tensor)))
-    
     ;; Out is still unallocated, so set the result.
     (if (scalar-p out)
 	(setf (tensor-vec out) (tensor-vec (proceed-result node)))

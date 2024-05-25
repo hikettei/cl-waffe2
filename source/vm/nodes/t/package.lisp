@@ -8,13 +8,10 @@
 	:cl-waffe2/vm.nodes
         :cl-waffe2/backends.cpu
         :cl-waffe2/base-impl
-        :fiveam
+        :rove
         :cl-waffe2/distributions))
 
 (in-package :cl-waffe2/vm.nodes.test)
-
-(def-suite :test-nodes)
-(in-suite :test-nodes)
 
 (defun ~= (x y)
   (< (- x y) 0.00001))

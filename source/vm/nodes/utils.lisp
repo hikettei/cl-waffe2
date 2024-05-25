@@ -273,3 +273,11 @@ Expands `defnode` and `define-impl` at the same time.
 		  :save-for-backward ,save-for-backward
 		  :forward ,forward)))
 
+(defun shallow-copy-object (original)
+  (let* ((class (class-of original))
+         (copy (allocate-instance class)))
+    (dolist (slot (mapcar #'c2mop:slot-definition-name (c2mop:class-slots class)))
+      (when (slot-boundp original slot)
+        (setf (slot-value copy slot)
+              (slot-value original slot))))
+    copy))

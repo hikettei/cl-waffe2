@@ -46,10 +46,6 @@
 	    t
 	    :backward)))))
 
-;;(sum-tester cl-waffe2/backends.lisp:LispTensor)
 
-(in-suite :base-impl-test)
-
-;; Working on LispTensor is enough for testing !mean
-(mean-tester cl-waffe2/backends.lisp:LispTensor)
-
+(sum-tester LispTensor)
+(mean-tester LispTensor)

@@ -65,10 +65,10 @@ GeLU(x) = 0.5\\times{x}\\times{(1 + Tanh(\\sqrt{\\frac{2}{π}}\\times{(x + 0.447
 	       (!+ x
 		   (!* 0.044715 (!expt x 3))))))))
 
-(declaim (ftype (function (AbstractTensor &key (:negative-slope single-float)) AbstractTensor) !leakey-relu))
-(defun !leakey-relu (x &key (negative-slope 0.01))
+(declaim (ftype (function (AbstractTensor &key (:negative-slope single-float)) AbstractTensor) !leaky-relu))
+(defun !leaky-relu (x &key (negative-slope 0.01))
   "
-## [function] !leakey-relu
+## [function] !leaky-relu
 
 ```lisp
 (!leakey-relu x &key (negative-slope 0.01))
@@ -77,7 +77,7 @@ GeLU(x) = 0.5\\times{x}\\times{(1 + Tanh(\\sqrt{\\frac{2}{π}}\\times{(x + 0.447
 Applies the element-wise function:
 
 ```math
-LeakeyReLU(x) = max(x, 0) + negative-slope\\times{min(0, x)}
+LeakyReLU(x) = max(x, 0) + negative-slope\\times{min(0, x)}
 ```
 
 ### Inputs

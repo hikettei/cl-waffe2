@@ -19,27 +19,6 @@
 (in-suite  :lisp-backend-test)
 
 ;;(eval-when (:compile-toplevel :load-toplevel :execute)
-  
-(add-tester LispTensor)
-(sub-tester LispTensor)
-(mul-tester LispTensor)
-(div-tester LispTensor)
-(move-tester LispTensor)
-
-(scalar-add-tester LispTensor)
-(scalar-sub-tester LispTensor)
-(scalar-mul-tester LispTensor)
-(scalar-div-tester LispTensor)
-
-(sum-tester LispTensor)
-
-(mathematical-test-set LispTensor)
-
-(max-tester LispTensor)
-(min-tester LispTensor)
-
-(comparison-test-set LispTensor)
-;;)
 
 (defun ~= (x y)
   (- (abs (- x y)) 0.00001))

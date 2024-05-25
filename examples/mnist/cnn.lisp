@@ -16,15 +16,14 @@
 	     (LinearLayer (* 16 4 4) 10))
 
 (defun build-cnn (N &key (lr 1e-3))
-  (with-cpu-jit (CPUTensor LispTensor)
-    (let* ((model (MNIST-CNN))
-	   (lazy-loss (criterion #'softmax-cross-entropy
-				 (call model (make-input `(,N 1 28 28) :X))
-				 (make-input `(,N 10) :Y)
-				 :reductions (list #'!sum #'->scal)))
-	   (compiled-model (build lazy-loss :inputs `(:X :Y))))
-      (mapc (hooker x (Adam x :lr lr)) (model-parameters compiled-model))
-      (values compiled-model model))))
+  (let* ((model (MNIST-CNN))
+	 (lazy-loss (criterion #'softmax-cross-entropy
+			       (call model (make-input `(,N 1 28 28) :X))
+			       (make-input `(,N 10) :Y)
+			       :reductions (list #'!sum #'->scal)))
+	 (compiled-model (build lazy-loss :inputs `(:X :Y))))
+    (mapc (hooker x (Adam x :lr lr)) (model-parameters compiled-model))
+    (values compiled-model model)))
 
 ;;(with-cpu-jit (CPUTensor LispTensor)
 ;;  (format t "[INFO] Doing CNN benchmark...~%")
@@ -60,10 +59,10 @@
 	   
 	   ;; :X = Train[batch:batch+100, :]
 	   (incf total-loss
-		  (step-cnn compiled-model
-			    ;; Instead, can't we increase offset?
-			    (tensor-displace-to train-img batch)
-			    (tensor-displace-to train-label batch)))))
+		 (step-cnn compiled-model
+			   ;; Instead, can't we increase offset?
+			   (tensor-displace-to train-img batch)
+			   (tensor-displace-to train-label batch)))))
 	(format t "Training Loss: ~a~%" (/ total-loss 600))
 	(setq total-loss 0.0))
       (format t "Validating...~%")
