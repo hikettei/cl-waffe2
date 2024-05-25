@@ -12,7 +12,7 @@ jobs:
   # TODO: Metal/CUDA Runtime
   UnitTest-CPUTensor:
     # TODO: Metal/CUDA Runtime
-    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    name: (${{ matrix.os }} on ${{ matrix.lisp }}) | Unittest-CPUTensor
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -41,12 +41,19 @@ jobs:
       - name: Installing OpenBLAS
         run: |
           sudo apt install libblas-dev
+          
+      - name: Installing Extensions
+        run: |
+          git submodule update --init --recursive
+          make build_sleef
+          make build_simd_extension
+          
       - name: Unittest (CPU+Lisp)
         run: |
           ros config set dynamic-space-size 4gb
           ./roswell/waffe2.ros test -b CPUTensor -b LispTensor
   UnitTest-LispTensor:
-    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    name: (${{ matrix.os }} on ${{ matrix.lisp }}) | Unittest-LispTensor
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -73,7 +80,7 @@ jobs:
           ros config set dynamic-space-size 4gb
           ./roswell/waffe2.ros test -b LispTensor -b CPUTensor
   Test-Classification-CPU:
-    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    name: (${{ matrix.os }} on ${{ matrix.lisp }}) | Test-Classification-CPU
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -113,9 +120,23 @@ jobs:
           python train_data.py
           cd ../../
       
+      - name: Installing Extensions
+        run: |
+          git submodule update --init --recursive
+          make build_sleef
+          make build_simd_extension
+      
       - name: Training (CPUTensor)
         run: |
           ros config set dynamic-space-size 4gb
           ./roswell/waffe2.ros demo --example mnist -b CPUTensor -b LispTensor
+
+      - name: Accuracy Check (> 0.90)
+        run: |
+          if grep -qE '^(0\.[9-9][0-9]*)|^(1\.0)$' report.txt; then
+            echo "At least the accuracy is 0.90 or higher"
+          else
+            echo "Insufficient accuracy." >&2
+            exit 1
   
   
