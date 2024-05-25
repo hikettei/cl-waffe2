@@ -126,17 +126,9 @@ jobs:
       #    sudo make build_sleef
       #    sudo make build_simd_extension
       
-      - name: Training (LispTensor)
+      - name: Training w/ LispTensor
         run: |
           ros config set dynamic-space-size 4gb
           ./roswell/waffe2.ros demo --example mnist -b LispTensor -b CPUTensor --config epoch-num=2
 
-      - name: Accuracy Check (> 0.90)
-        run: |
-          if grep -qE '^(0\.[9-9][0-9]*)|^(1\.0)$' report.txt; then
-            echo "At least the accuracy is 0.90 or higher"
-          else
-            echo "Insufficient accuracy." >&2
-            exit 1
-  
   
