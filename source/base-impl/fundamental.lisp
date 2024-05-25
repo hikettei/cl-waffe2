@@ -197,8 +197,7 @@ Output: `Tensor[AbstractTensor]`
 
 	      ;; dout.shape == dx.shape
 	      (let* ((out-sub (tensor-view dy))
-		     (inp-sub (slot-value self 'subscripts))
-		     ;; [TODO] Optimize
+		     (inp-sub (slot-value self 'subscripts))		     
 		     (res (!move dx (apply #'!view dout inp-sub)))
 		     (res (->contiguous (apply #'!view res out-sub))))
 		(values nil res))))

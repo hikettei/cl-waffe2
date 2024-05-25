@@ -87,18 +87,18 @@ X\\gets{X ~a Y}
   (define-arithmetic-node SubNode "SubNode" "-" nil
     ((self dout dx dy)
      (declare (ignore dx dy))
-     (values (!copy dout) (!mul -1 dout))))
+     (values dout (!mul -1 dout))))
   (define-arithmetic-node MulNode "MulNode" "*" (t t)
     ((self dout dx dy)
      (values
-      (!mul (!copy dout) dy)
+      (!mul dout dy)
       (!mul dout dx))))
   (define-arithmetic-node DivNode "DivNode" "/" (t t)
     ((self dout dx dy)
      ;; ∂/∂x = 1/x
      ;; ∂/∂y = -x/y^2
      (values
-      (!div (!copy dout) dy)
+      (!div dout dy)
       (!div (!mul dx (!mul dout -1))
 	    (!mul dy dy))))))
 
@@ -148,7 +148,7 @@ None.
 			   prep
 			   f)
 		  (forward (,node-name (dtype x))
-			   (if in-place x (!copy x))			       
+			   (if in-place x (!copy x))	       
 			   y)))))
   
   (define-arithmetic-node-caller
@@ -372,7 +372,7 @@ x_{copy}\\gets{x ~a y}
 				   matrix-operation)
 	     `(eval-when (:compile-toplevel :load-toplevel :execute)
 		(export ',name)
-		(defun ,name (x y &key (in-place t))
+		(defun ,name (x y &key (in-place nil))
 		  ,(format nil
 			   "
 ## [function] ~(~a~)

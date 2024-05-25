@@ -232,7 +232,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		  (iseq-bw (or bw backward)))
 
 	      (when optimize-locality
-		(setq iseq-fw (simplify-iseq iseq-fw)
+		(setf iseq-fw (simplify-iseq iseq-fw)
 		      iseq-bw (simplify-iseq iseq-bw))
 		(dolist (device-name *using-backend*)
 		  (multiple-value-setq (iseq-fw iseq-bw) (on-finalizing-compiling device-name iseq-fw iseq-bw))))
