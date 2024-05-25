@@ -78,7 +78,16 @@
 
       (format t "Validating...~%")
       (with-no-grad
-	(format t "Validation Accuracy: ~a~%~%" (accuracy model test-img test-label)))
+	(let ((acc (accuracy model test-img test-label)))
+	  (format t "Validation Accuracy: ~a~%~%" acc)
+
+	  ;; For github workflow
+	  (with-open-file (str "./report.txt"
+			       :direction :output
+			       :if-exists :supersede
+			       :if-does-not-exist :create)
+	    ;; 
+	    (format str "~a" acc))))
 
       (when benchmark-p
 	(format t "Benchmarking (Forward Step, 1Epoch, n-sample=600)...~%")

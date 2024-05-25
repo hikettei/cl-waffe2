@@ -4,7 +4,7 @@
 (progn ;;init forms
   (ros:ensure-asdf)
   #+quicklisp(cl:push (cl:pathname "./") ql:*local-project-directories*)
-  #+quicklisp(ql:quickload '(:cl-waffe2 :clingon :cl-ansi-text) :silent t))
+  #+quicklisp(ql:quickload '(:cl-waffe2 :clingon :rove :cl-ansi-text) :silent t))
 
 (defpackage :waffe2
   (:use :cl :cl-ansi-text)
@@ -44,7 +44,13 @@
     (loop for arg in args
 	  for parsed = (uiop:split-string arg :separator "=")
 	  collect (cons (symbol-name (read-from-string (car parsed))) (read-from-string (second parsed))))))
-#+(or)(print (parse-test-config "M=1, K=2"))
+
+(defun parse-test-config-kwargs (config)
+  (let ((args (uiop:split-string config :separator ",")))
+    (loop for arg in args
+	  for parsed = (uiop:split-string arg :separator "=")
+	  append (list (intern (symbol-name (read-from-string (car parsed))) "KEYWORD") (read-from-string (second parsed))))))
+#+(or)(print (parse-test-config-kwargs ""))
 
 (defun str->backend (name)
   (let ((available-backends (map 'list #'class-name (alexandria:flatten (cl-waffe2:find-available-backends)))))
@@ -59,11 +65,13 @@
 		 `(equalp model ,name)))
       (cond
 	((of "mnist")
+	 ;; ros config set dynamic-space-size 4gb
 	 (print-info "Loading the example project...")
 	 (load "./examples/mnist/mnist.asd")
 	 (ql:quickload :mnist-sample :silent t)
 	 (print-info "Starting the demonstration...")
-	 (uiop:symbol-call :mnist-sample :train-and-valid-mlp :epoch-num 10))
+	 (apply #'uiop:symbol-call :mnist-sample :train-and-valid-mlp (parse-test-config-kwargs (clingon:getopt cmd :config "")))
+	 (print-info "Completed"))
 	(T
 	 (error "--example ~a is not available." model))))))
 
@@ -79,6 +87,7 @@
 	 (print-info "Running the test...")
 	 (asdf:load-system :cl-waffe2/test)
 	 (uiop:symbol-call :cl-waffe2/tester :running-test :style (intern (string-upcase (clingon:getopt cmd :style "dot")) "KEYWORD"))
+	 (print-info "Completed")
 	 t)
 	((of "gendoc")
 	 (print-info "Generating the documents...")
@@ -119,7 +128,13 @@
     :description "Enables/Disables the cl-ansi-color"
     :short-name #\a
     :long-name "ansi-color"
-    :key :ansi-color)))
+    :key :ansi-color)
+   (clingon:make-option
+    :string
+    :description "Additional configurations. (e.g.: epoch=10,batch=1)"
+    :short-name #\c
+    :long-name "config"
+    :key :config)))
 
 (defun waffe2/command ()
   (clingon:make-command
