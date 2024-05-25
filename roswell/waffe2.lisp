@@ -26,12 +26,24 @@
 	    do (return-from str->backend candidate))
     (error "Unknown backend: ~a~%Available List: ~a" name available-backends)))
 
+(defun waffe2/demo (cmd)
+  (let ((model (or (clingon:getopt cmd :example) "")))
+    (macrolet ((of (name)
+		 `(equalp model ,name)))
+      (cond
+	((of "mnist")
+	 (load "./examples/mnist/mnist.asd")
+	 (ql:quickload :mnist-sample :silent t)
+	 (uiop:symbol-call :mnist-sample :train-and-valid-mlp :epoch-num 10))
+	(T
+	 (error "--example ~a is not available." model))))))
+
 (defun waffe2/handler (cmd)
   (let* ((backends (or (clingon:getopt cmd :backends) `("LispTensor"))))
     ;; Configure runtimes toplevel
     (apply #'cl-waffe2:set-devices-toplevel (map 'list #'str->backend backends))
     (macrolet ((of (name)
-		 `(string= *mode* ,name)))
+		 `(equalp *mode* ,name)))
       (cond
 	((of "test")
 	 (asdf:load-system :cl-waffe2/test)
@@ -41,6 +53,8 @@
 	 (ql:quickload :cl-waffe2/docs :silent t)
 	 (uiop:symbol-call :cl-waffe2.docs :generate)
 	 t)
+	((of "demo")
+	 (waffe2/demo cmd))
 	((of "gencode")
 	 ;; WIP From ONNX -> C/C++/CUDA Code Generator + Mimimun C Interpreter
 	 (error "Export2Clang Mode is not yet ready.")
@@ -60,7 +74,13 @@
     :description "Style for the testing tool. One of dot, spec, none. (conform to rove)"
     :short-name #\s
     :long-name "style"
-    :key :style)))
+    :key :style)
+   (clingon:make-option
+    :string
+    :description "Example Project to use for demonstration."
+    :short-name #\e
+    :long-name "example"
+    :key :example)))
 
 (defun waffe2/command ()
   (clingon:make-command
@@ -69,7 +89,7 @@
    :authors '("hikettei <ichndm@gmail.com>")
    :license "MIT"
    :options (waffe2/options)
-   :usage "[ test | gendoc | gencode ] [options]
+   :usage "[ test | gendoc | gencode | demo ] [options]
 
 COMMANDS:
   - test           Tests all principle abstractnode operations work with the provided backends.
