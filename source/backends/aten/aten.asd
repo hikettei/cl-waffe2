@@ -8,4 +8,5 @@
   :components ((:file "package")
 	       (:file "tensor")
 	       (:file "codegen")
-	       (:file "arithmetic")))
+	       (:file "arithmetic")
+	       (:file "unary")))

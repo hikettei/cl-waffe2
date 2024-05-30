@@ -54,6 +54,8 @@ Base class for various aten backends.
   (clang::set-clang-runtime);; tmp
   
   (aten/engine:initialize-runtime (aten/engine::runtimeconfig-name aten/engine::*runtime*) nil)
+  (setf (aten/engine::runtimeconfig-indexing-rule aten/engine::*runtime*) :ndarray
+	(aten/engine::runtimeconfig-vectorize-strategy aten/engine::*runtime*) :disabled)
   (flet ((process (x)
 	   (dolist (wfir x)
 	     (when (typep (wf/vm:wfop-node wfir) 'AtenOp)
