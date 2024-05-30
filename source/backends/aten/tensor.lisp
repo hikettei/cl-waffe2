@@ -15,15 +15,29 @@
 Base class for various aten backends.
 "))
 
-;; define-symbol-macro suru
-(defclass Aten[Clang] (Aten cl-waffe2/backends.lisp:LispTensor)
-  nil)
+(defun rest->alist (rest)
+  (loop for i upfrom 0 below (length rest) by 2
+	if (not (find (nth i rest) `(:debug)))
+	  collect (cons (symbol-name (nth i rest)) (nth (1+ i) rest))))
 
-(defclass Aten[Metal] (Aten cl-waffe2/backends.lisp:LispTensor)
-  nil)
+(macrolet ((define-aten-backend (name initializer &rest slots)
+	     `(progn	       
+		(define-symbol-macro ,name `(,',name Aten))
+		(defmacro ,name (&rest configs &key (debug 0) &allow-other-keys)
+		  "(with-devices ((Aten[Clang] :debug 3)) ...)"
+		  `(progn
+		     (,',initializer)
+		     (aten/engine:initialize-runtime
+		      (aten/engine::runtimeconfig-name aten/engine::*runtime*)
+		      (rest->alist ',configs))
+		     (setf (aten/engine::runtimeconfig-debug aten/engine::*runtime*) ,debug)
+		     ,',name))
+		
+		(defclass ,name (Aten cl-waffe2/backends.lisp:LispTensor) ,slots))))
+  (define-aten-backend
+      Aten[Clang]
+    clang::set-clang-runtime))
 
-;; [MEMO] How to implement cuda backend?
-;; (defclass Aten[CUDA])
 
 ;; [TO ADD] Cast, Ax+BNode
 ;; [TODO] Remove ./JITCPUTensor
