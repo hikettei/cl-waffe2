@@ -31,8 +31,7 @@ Base class for various aten backends.
 		      (aten/engine::runtimeconfig-name aten/engine::*runtime*)
 		      (rest->alist ',configs))
 		     (setf (aten/engine::runtimeconfig-debug aten/engine::*runtime*) ,debug)
-		     ,',name))
-		
+		     ,',name))		
 		(defclass ,name (Aten cl-waffe2/backends.lisp:LispTensor) ,slots))))
   (define-aten-backend
       Aten[Clang]
@@ -65,9 +64,9 @@ Base class for various aten backends.
 	  (aten-compiled-code self) code)))
 
 (defmethod on-finalizing-compiling ((device-name (eql 'Aten)) iseq-fw iseq-bw)
-  (clang::set-clang-runtime);; tmp
-  
-  (aten/engine:initialize-runtime (aten/engine::runtimeconfig-name aten/engine::*runtime*) nil)
+  (when (null aten/engine::*runtime*)
+    (error "First, initialize the runtime using (Aten[Backend] ...) macro."))
+
   (setf (aten/engine::runtimeconfig-indexing-rule aten/engine::*runtime*) :ndarray
 	(aten/engine::runtimeconfig-vectorize-strategy aten/engine::*runtime*) :disabled)
   (flet ((process (x)
