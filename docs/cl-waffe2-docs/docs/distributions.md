@@ -16,11 +16,11 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 (normal `(10 10) 0.0 1.0 :requires-grad t)
 
 {LISPTENSOR[float] :shape (10 10)  
-  ((0.09241722   -1.8139324   0.33998385   ~ -1.7448716   -0.11915433  1.2616262)                    
-   (0.034676224  0.31745166   0.8633344    ~ -0.14157301  -0.9596394   -0.52192944)   
+  ((0.2188695    -0.6865164   -0.7096969   ~ 0.5221619    -1.0098034   0.8181761)                    
+   (-0.32395983  -1.7448716   -0.11915433  ~ 1.0900652    -1.8854977   -0.1889971)   
                  ...
-   (-0.018849093 0.10730301   0.7192831    ~ 0.7583118    1.3229972    -1.2871348)
-   (-0.69942784  0.88236964   -0.6999107   ~ -0.3676781   -2.0036936   0.67751735))
+   (-0.7269606   -0.031115573 0.14158817   ~ -1.3815284   0.1739938    1.9703826)
+   (-0.096768215 0.7583118    1.3229972    ~ 0.8591301    -0.56368643  1.4221152))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -146,9 +146,9 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 (beta `(3 3) 5.0 1.0)
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((0.76956904 0.8549012  0.4545031)
-   (0.914095   0.54855245 0.93831366)
-   (0.7510813  0.45294034 0.9096131))
+  ((0.7730661  0.7142378  0.84765464)
+   (0.9686189  0.76956904 0.8549012)
+   (0.4545031  0.914095   0.54855245))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -170,9 +170,9 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 (bernoulli `(3 3) 0.3)
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((0.0 1.0 0.0)
-   (0.0 0.0 0.0)
-   (0.0 0.0 0.0))
+  ((0.0 0.0 0.0)
+   (1.0 0.0 0.0)
+   (1.0 1.0 0.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -198,9 +198,9 @@ df - degree of freedom.
 (chisquare `(3 3) 1.0)
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((0.4950697    1.3176446    0.97631454)
-   (0.17928894   0.7067763    0.06370751)
-   (0.0054754415 0.1824935    1.639507))
+  ((1.2326496   0.8483967   0.011596402)
+   (0.4021547   0.027511619 0.08436891)
+   (0.5057191   0.011141564 0.017833697))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -227,9 +227,9 @@ The function exponential is a family of initializer functions, and samples the e
 (exponential `(3 3))
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((1.1214623   2.3461883   0.6938687)
-   (0.08668403  0.46339378  0.18236026)
-   (0.074848704 2.148749    1.5031147))
+  ((0.47960132 5.64849    0.29346126)
+   (0.2325543  0.06230082 0.83188677)
+   (3.1640477  1.1214623  2.3461883))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -252,9 +252,9 @@ The function gamma is a family of initializer functions, and samples matrices fr
 (gamma `(3 3) 1.0)
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((0.20066561  1.0735147   1.0844046)
-   (0.115611516 2.299866    0.2878098)
-   (3.3350327   0.7665806   0.8527828))
+  ((0.66520137  0.52452326  1.8498352)
+   (2.4886518   1.0235898   1.0265534)
+   (2.005943    1.0844046   0.115611516))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -309,9 +309,9 @@ Input:
 (uniform-random `(3 3) 2 4)
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((2.3659306 2.2203517 2.9010468)
-   (2.0084918 2.673732  2.288423)
-   (2.6262066 3.993234  3.0970056))
+  ((3.5922756 3.226882  2.4872847)
+   (2.952711  3.6584299 3.6804876)
+   (2.5902324 3.003483  3.9570756))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -339,9 +339,9 @@ The function randn is a family of initializer functions, and samples the gaussia
 (randn `(3 3))
 
 {LISPTENSOR[float] :shape (3 3)  
-  ((1.6019585    -0.715621    -0.015199781)
-   (-0.3570089   0.028855132  -0.67624414)
-   (0.003321576  0.093405314  0.43108767))
+  ((-0.79764336 0.3408451   0.31103113)
+   (-1.7451742  0.6599348   0.05832184)
+   (-0.44232148 -0.81750864 -0.496161))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
