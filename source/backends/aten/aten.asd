@@ -9,4 +9,5 @@
 	       (:file "tensor")
 	       (:file "codegen")
 	       (:file "arithmetic")
-	       (:file "unary")))
+	       (:file "unary")
+	       (:file "nn")))

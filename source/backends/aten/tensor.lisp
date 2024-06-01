@@ -58,7 +58,7 @@ Base class for various aten backends.
 	      (append
 	       (map
 		'list
-		(alexandria:compose #'aten/ir:parse-aten #'tensor->shape-tracker)
+		(alexandria:compose #'aten/ir::%parse-aten #'tensor->shape-tracker)
 		(aten-inputs op))
 	       (loop for name in scalars
 		     collect (aten/ir::%parse-aten (coerce (format nil "~a{Int}[]<>()" name) '(simple-array character (*))))))
