@@ -18,7 +18,7 @@
       `(aref ,(intern (symbol-name (tensor-id tensor)))
 	     (+
 	      ,@(loop for dim upfrom 0 below (dims tensor)
-		      for stride in (tensor-actual-stride tensor)
+		      for stride in (tensor-stride tensor)
 		      for view   in (tensor-view tensor)
 		      for index in indices
 		      collect
@@ -31,8 +31,9 @@
 			      ,index))))))))
 
 (defun unary->aten-code (tensors rank op)
-  (let ((compiled-loops (solve-loop-order tensors rank nil :mode :heuristic))
-	(ids))
+  (let* ((compiled-loops (solve-loop-order tensors rank nil))
+	 (ids)
+	 (collapsed-p (not (= (length compiled-loops) (dims (car tensors))))))
     (labels ((expand (nth)
 	       (let ((subject (nth nth compiled-loops)))
 		 (when subject
@@ -40,11 +41,11 @@
 		       (progn
 			 (push (gid nth) ids)
 			 `(loop (,(gid nth) 0 ,(aloop-size subject) ,(aloop-by subject))
-			       ,(expand (1+ nth))))
+				,(expand (1+ nth))))
 		       (progn
 			 (push (gid nth) ids)
-			 (let ((args (map 'list #'(lambda (x) (lazy-aref-form x (reverse ids) (eql (aloop-mode subject) :apply-flatten))) tensors)))
+			 (let ((args (map 'list #'(lambda (x) (lazy-aref-form x (reverse ids) collapsed-p)) tensors)))
 			   `(loop (,(gid nth) 0 ,(aloop-size subject) ,(aloop-by subject))
-				 ,@(apply op args)))))))))
+				  ,@(apply op args)))))))))
       (format nil "~a" (expand 0)))))
 

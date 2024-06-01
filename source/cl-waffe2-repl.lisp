@@ -17,10 +17,15 @@
    :cl-waffe2/backends.cpu
    :cl-waffe2/backends.lisp
    :cl-waffe2/backends.jit.cpu
-   :cl-waffe2/backends.aten
    :cl-waffe2/threads
    :cl-waffe2/nn
    :cl-waffe2/optimizers))
+
+(in-package :cl-waffe2-repl)
+
+(defun use-aten ()
+  (asdf:load-system "aten")
+  (use-package :cl-waffe2/backends.aten))
 
 
 

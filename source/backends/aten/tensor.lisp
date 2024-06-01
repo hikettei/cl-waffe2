@@ -57,9 +57,9 @@ Base class for various aten backends.
       (values cmp code))))
 
 (defmethod %compile ((self AtenOp))
+  (aten/engine::with-debug-level (1)
+    (format t "[Aten] Compiling: ~a~%" self))
   (multiple-value-bind (cmp code) (compile-composite (->composite self))
-    (format t "Compiling: ~a~%" self)
-    (print code)
     (setf (aten-composite self) cmp
 	  (aten-compiled-code self) code)))
 
