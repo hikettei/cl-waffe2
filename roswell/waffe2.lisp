@@ -52,12 +52,38 @@
 	  append (list (intern (symbol-name (read-from-string (car parsed))) "KEYWORD") (read-from-string (second parsed))))))
 #+(or)(print (parse-test-config-kwargs ""))
 
+(defun find-backends (name candidate)
+  (loop for c in candidate
+	if (equalp (format nil "~a" c) (format nil "~a" name))
+	  do (return-from find-backends c))
+  (error "Unknown backend: ~a~%Available List: ~a" name candidate))
+
 (defun str->backend (name)
-  (let ((available-backends (map 'list #'class-name (alexandria:flatten (cl-waffe2:find-available-backends)))))
-    (loop for candidate in available-backends
-	  if (equalp (symbol-name candidate) name)
-	    do (return-from str->backend candidate))
-    (error "Unknown backend: ~a~%Available List: ~a" name available-backends)))
+  (let* ((available-backends (map 'list #'class-name (alexandria:flatten (cl-waffe2:find-available-backends))))
+	 (name-config (read-from-string name))
+	 (parameterized-p (listp name-config)))
+    (when parameterized-p
+      (flet ((valid (x)
+	       (or (symbolp x) (numberp x) (keywordp x) (stringp x))))
+	(let* ((pos (or (position #\( (subseq name 1)) 0))
+	       (indent (with-output-to-string (o) (dotimes (i pos) (princ " " o)))))
+	  (assert (every #'valid name-config)
+		  ()
+		  "~a Malformed Configuration
+~a
+~a^
+~aLists cannot be used as the arguments of parameterized backend configurations."
+		  (maybe-ansi red "[ERROR]")
+		  name
+		  indent
+		  indent))))
+    (let* ((name (if parameterized-p (car name-config) name))
+	   (class (find-backends name available-backends)))
+      (when parameterized-p
+	(let ((*package* (symbol-package class)))
+	  ;; Only after confirmed name is a valid backend, we evaluate configurations
+	  (eval name-config)))
+      class)))
 
 (defun waffe2/demo (cmd)
   (let ((model (or (clingon:getopt cmd :example) "")))
@@ -79,6 +105,13 @@
   (let* ((backends (or (clingon:getopt cmd :backends) `("LispTensor")))
 	 (*use-ansi-color* (clingon:getopt cmd :ansi-color t)))
     ;; Configure runtimes toplevel
+
+    ;; qlot exec ./roswell/waffe2.ros [command] -b "Aten[Clang]" -b Aten ... to enable Aten backend.
+    (when (or
+	   (find "Aten" backends :test #'equalp :key #'(lambda (x) (if (>= (length x) 4) (subseq x 0 4) x)))
+	   (find "Aten" backends :test #'equalp :key #'(lambda (x) (if (>= (length x) 5) (subseq x 1 5) x))))
+      (cl-waffe2-user::use-aten))
+    
     (apply #'cl-waffe2:set-devices-toplevel (map 'list #'str->backend backends))
     (macrolet ((of (name)
 		 `(equalp *mode* ,name)))
