@@ -44,8 +44,13 @@
 				,(expand (1+ nth))))
 		       (progn
 			 (push (gid nth) ids)
-			 (let ((args (map 'list #'(lambda (x) (lazy-aref-form x (reverse ids) collapsed-p)) tensors)))
-			   `(loop (,(gid nth) 0 ,(aloop-size subject) ,(aloop-by subject))
+			 (let ((args (map 'list #'(lambda (x) (lazy-aref-form x (reverse ids) (and (eql (aloop-mode subject) :apply-flatten) collapsed-p))) tensors)))
+			   `(loop (,(gid nth)
+				   0
+				   ,(if (eql (aloop-mode subject) :apply)
+					(aloop-element-n subject)
+					(aloop-size subject))
+				   ,(aloop-by subject))
 				  ,@(apply op args)))))))))
       (format nil "~a" (expand 0)))))
 

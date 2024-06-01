@@ -68,7 +68,7 @@ Base class for various aten backends.
     (error "First, initialize the runtime using (Aten[Backend] ...) macro."))
 
   (setf (aten/engine::runtimeconfig-indexing-rule aten/engine::*runtime*) :ndarray
-	(aten/engine::runtimeconfig-vectorize-strategy aten/engine::*runtime*) :disabled)
+        (aten/engine::runtimeconfig-vectorize-strategy aten/engine::*runtime*) :disabled)
   (flet ((process (x)
 	   (dolist (wfir x)
 	     (when (typep (wf/vm:wfop-node wfir) 'AtenOp)
