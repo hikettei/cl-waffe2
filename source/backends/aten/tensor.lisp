@@ -114,7 +114,8 @@ Base class for various aten backends.
 			     (map 'list #'tensor-vec args)
 			     (map 'list #'cl-waffe2/vm::maybe-observe-axis inputs)))
 			   (apply #'values (wf/vm:wfop-out-to wfir)))))))))
-    (process iseq-fw)
-    (process iseq-bw))
+    (aten/engine:with-lazy-compilation-mode
+	(process iseq-fw)
+        (process iseq-bw)))
   (values iseq-fw iseq-bw))
 
