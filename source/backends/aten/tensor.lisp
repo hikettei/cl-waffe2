@@ -41,7 +41,10 @@ Base class for various aten backends.
 
 ;; [TO ADD] Cast, Ax+BNode
 ;; [TODO] Remove ./JITCPUTensor
-(defun idkey (x) (format nil "~(~a~)" x))
+(defun cName (string)
+  (cl-ppcre:regex-replace-all "-" string "_"))
+
+(defun idkey (x) (cName (format nil "~(~a~)" x)))
 
 (defmethod ->composite ((op AtenOp))
   (let ((scalars (loop with declared = (apply #'append (map 'list #'shape (aten-inputs op)))
@@ -102,7 +105,7 @@ Base class for various aten backends.
 	       (%compile (wf/vm:wfop-node wfir))
 	       (let* ((inputs   (map 'list #'aten/ir:aten-id (composite-inputs (aten-composite (wf/vm:wfop-node wfir)))))
 		      (id2table (aten-scalars (wf/vm:wfop-node wfir)))
-		      (inputs   (map 'list #'(lambda (x) (gethash (idkey x) id2table)) inputs)))
+		      (inputs   (map 'list #'(lambda (x) (or (gethash (idkey x) id2table) (error "~a seems not to be registered as a proper dynamic axis?" x))) inputs)))
 		 (setf (wf/vm:wfop-op wfir)
 		       #'(lambda (&rest args)
 			   (apply
