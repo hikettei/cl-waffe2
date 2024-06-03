@@ -59,7 +59,7 @@ This parameter is useful for printing how all instructions are performed. If set
 			 (s2a (actual-shape var)))
 		    (setf (cl-waffe2/vm.generic-tensor::tensor-visible-shape place) s1a
 			  (cl-waffe2/vm.generic-tensor::tensor-visible-shape var) s2a)
-		    (unwind-protect (%vm-move place var)		      
+		    (unwind-protect (%vm-move place var)
 		      (setf (cl-waffe2/vm.generic-tensor::tensor-visible-shape place) s1
 			    (cl-waffe2/vm.generic-tensor::tensor-visible-shape var) s2)))))))
   nil)
@@ -79,6 +79,7 @@ This parameter is useful for printing how all instructions are performed. If set
 		   (or (when state
 			 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
 		       tensor)))
+	    ;;(setf (tensor-initial-offset res) (tensor-initial-offset tensor))
 	    (the AbstractTensor res)))))
 
 (declaim (ftype (function (list list) t) write-result))

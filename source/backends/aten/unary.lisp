@@ -32,7 +32,8 @@
   (impl log2Node log2)
   (impl log10Node log10)
   (impl logeNode log)
-  (impl Log1pNode log1p))
+  (impl Log1pNode log1p)
+  )
 
 (define-impl (ExptNode :device Aten :extends (AtenOp))
 	     :forward ((self x out n)

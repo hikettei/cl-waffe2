@@ -56,6 +56,7 @@
       (intern (symbol-name (tensor-id tensor)))
       `(aref ,(intern (symbol-name (tensor-id tensor)))
 	     (+
+	      ,(intern (tensor-initial-offset-name tensor))
 	      ,@(loop for dim upfrom 0 below (dims tensor)
 		      for view   in (tensor-view tensor)
 		      for index in indices

@@ -16,6 +16,9 @@
 Base class for various aten backends.
 "))
 
+(defun tensor-initial-offset-name (tensor)
+  (format nil "_~a_offset" (tensor-id tensor)))
+
 (defun rest->alist (rest)
   (loop for i upfrom 0 below (length rest) by 2
 	if (not (find (nth i rest) `(:debug)))
@@ -55,6 +58,9 @@ Base class for various aten backends.
     (let ((id2table (make-hash-table :test #'equal)))
       (loop for name in (bp-deps (aten-bp op))
 	    do (setf (gethash (idkey name) id2table) name))
+      (loop for tensor in (aten-inputs op)
+	    for name = (idkey (tensor-initial-offset-name tensor))
+	    do (setf (gethash name id2table) #'(lambda () (tensor-initial-offset tensor))))
       (setf (aten-scalars op) id2table))
     (aten/ir::make-composite
      :inputs (remove-duplicates
@@ -63,6 +69,9 @@ Base class for various aten backends.
 		'list
 		(alexandria:compose #'aten/ir::%parse-aten #'tensor->shape-tracker)
 		(aten-inputs op))
+	       (loop for tensor in (aten-inputs op)
+		     collect
+		     (aten/ir::%parse-aten (format nil "~a{Int}[]<>()" (tensor-initial-offset-name tensor))))
 	       (loop for name in scalars
 		     collect (aten/ir::%parse-aten (coerce (format nil "~a{Int}[]<>()" name) '(simple-array character (*))))))
 	      :test #'equal)
@@ -110,15 +119,18 @@ Base class for various aten backends.
 					   collect (position out (aten-inputs (wf/vm:wfop-node wfir)) :test #'equal))))
 		 (setf (wf/vm:wfop-op wfir)
 		       #'(lambda (&rest args)
-			   ;;(print "++++++")
-			   ;;(print (map 'list #'cl-waffe2/vm::maybe-observe-axis inputs))
-			   ;;(print (map 'list #'tensor-vec args))
-			   ;;(print (aten/ir:composite-code (aten/engine::cc-base-composite (aten-composite (wf/vm:wfop-node wfir)))))
 			   (apply
 			    (aten/engine::cc-caller (aten-composite (wf/vm:wfop-node wfir)))
 			    (append
 			     (map 'list #'tensor-vec args)
-			     (map 'list #'cl-waffe2/vm::maybe-observe-axis inputs)))
+			     (loop with c fixnum = 0
+			           for val in inputs
+				   if (functionp val)
+				     collect (prog1
+						 (tensor-initial-offset (nth c args))
+					       (incf c))
+				   else
+				     collect (cl-waffe2/vm::maybe-observe-axis val))))
 			   (apply
 			    #'values
 			    (loop for o in out-positions

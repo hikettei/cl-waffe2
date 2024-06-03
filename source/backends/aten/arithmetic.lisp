@@ -14,7 +14,9 @@
   (impl AddNode +)
   (impl SubNode -)
   (impl MulNode *)
-  (impl DivNode /))
+  (impl DivNode /)
+  )
+
 
 (define-impl (MoveTensorNode :device Aten :extends (AtenOp))
 	     :forward
@@ -24,3 +26,5 @@
 		(setf (aten-bp self) (unary->aten-code (list x y) 1 #'(lambda (x y) `((setf ,x ,y))))
 		      (aten-inputs self) (list x y)
 		      (aten-outputs self) (list x)))))
+
+
