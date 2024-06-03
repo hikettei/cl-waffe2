@@ -51,9 +51,17 @@ This parameter is useful for printing how all instructions are performed. If set
 	      (tensor-vec place)
 	      (tensor-vec var)
 
-	      (if (or (scalar-p place) (scalar-p var) (every #'(lambda (x) (and (numberp x) (= 0 (the fixnum x)))) (tensor-stride place)))
+	      (if (or (scalar-p place) (scalar-p var))
 		  (setf (tensor-vec place) (tensor-vec var))
-		  (%vm-move place var)))))
+		  (let* ((s1  (shape place))
+			 (s2  (shape var))
+			 (s1a (actual-shape place))
+			 (s2a (actual-shape var)))
+		    (setf (cl-waffe2/vm.generic-tensor::tensor-visible-shape place) s1a
+			  (cl-waffe2/vm.generic-tensor::tensor-visible-shape var) s2a)
+		    (unwind-protect (%vm-move place var)
+		      (setf (cl-waffe2/vm.generic-tensor::tensor-visible-shape place) s1
+			    (cl-waffe2/vm.generic-tensor::tensor-visible-shape var) s2)))))))
   nil)
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
@@ -71,6 +79,7 @@ This parameter is useful for printing how all instructions are performed. If set
 		   (or (when state
 			 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
 		       tensor)))
+	    ;;(setf (tensor-initial-offset res) (tensor-initial-offset tensor))
 	    (the AbstractTensor res)))))
 
 (declaim (ftype (function (list list) t) write-result))

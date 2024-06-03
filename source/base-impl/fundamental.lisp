@@ -288,10 +288,10 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 			  ;;  Has Changed.
 
 			  ;; [TODO] Detect This Error Before Execution.
-			  (assert (= (total x) (total y))
-				  nil
-				  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering the dynamic shape do not match:
-~a and ~a" x y)
+			  ;;(assert (= (total x) (total y))
+			;;	  nil
+			;;	  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering the dynamic shape do not match:
+;;~a and ~a" x y)
 			  ;; Shares the storage:
 			  (setf (tensor-vec y) (tensor-vec x))
 			  y))

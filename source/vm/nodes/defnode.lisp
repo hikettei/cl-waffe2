@@ -173,8 +173,16 @@ If the priority 1 backend does not have an implementation of the specified opera
 
 The order of priority would be `(,@backend-priority ScalarTensor t). (t is a special name, and it implys the implement works for all the backends.)
 "
-  `(let ((*using-backend* ',backend-priority))
-     (declare (type list *using-backend*))
+  `(let ((*using-backend*
+	   (list
+	    ,@(map 'list
+		   #'(lambda (x)
+		       (multiple-value-bind (form p) (macroexpand x)
+			 (if p
+			     form
+			     `(quote ,x))))
+		   backend-priority))))
+     (setf *using-backend* (alexandria:flatten *using-backend*))
      (mapc
       #'(lambda (x)
 	  (unless (subtypep x 'cl-waffe2/vm.generic-tensor:AbstractTensor)

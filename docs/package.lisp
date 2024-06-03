@@ -12,7 +12,6 @@
    :cl-waffe2/base-impl
    :cl-waffe2/backends.lisp
    :cl-waffe2/backends.cpu
-   :cl-waffe2/backends.jit.cpu
    :cl-waffe2/nn
    :cl-waffe2/optimizers
    :cl-ppcre)
@@ -105,7 +104,6 @@
 
 (defparameter *lisp-tensor-backend* "")
 (defparameter *cpu-tensor-backend* "")
-(defparameter *cpu-jit-tensor-backend* "")
 
 (defun generate ()
   (write-scr "generic-tensor" *generic-tensor*)
@@ -123,7 +121,6 @@
   
   (write-scr "lisp-tensor-backend"     *lisp-tensor-backend*)
   (write-scr "cpu-tensor-backend"      *cpu-tensor-backend*)
-  (write-scr "cpu-jit-tensor-backend"  *cpu-jit-tensor-backend*)
 
   (format t "Completed~%")
   )

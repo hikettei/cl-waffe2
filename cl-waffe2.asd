@@ -42,7 +42,6 @@
 	       :closer-mop
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension
-
 	       :cl-environments
 	       :numpy-file-format
 	       :jonathan)
@@ -158,20 +157,7 @@
 	       (:file "package")
 	       
 	       
-	       (:file "backends/lisp/wf2model")
-	       (:file "backends/JITCPUTensor/package")
-	       (:file "backends/JITCPUTensor/tensor")
-	       (:file "backends/JITCPUTensor/compiler")
-	       (:file "backends/JITCPUTensor/blueprint")	       
-	       (:file "backends/JITCPUTensor/ir")
-	       (:file "backends/JITCPUTensor/on-finalizing")
-	       (:file "backends/JITCPUTensor/dtype")
-	       (:file "backends/JITCPUTensor/foreign-function")
-	       
-
-	       (:file "backends/JITCPUTensor/impls/arithmetic")
-	       (:file "backends/JITCPUTensor/impls/math")
-	       
+	       (:file "backends/lisp/wf2model")	       
 	       (:file "optimizers/defoptimizer")
 	       
 	       (:file "array-converter")
@@ -251,9 +237,6 @@
 	       (:file "backends/cpu/t/arithmetic")
 
 	       (:file "backends/lisp/t/package")
-
-	       (:file "backends/JITCPUTensor/t/package")
-	       (:file "backends/JITCPUTensor/t/jit")
 	       
 	       (:file "nn/t/package")
 	       (:file "nn/t/conv")

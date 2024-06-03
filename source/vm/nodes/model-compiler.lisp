@@ -113,17 +113,17 @@ Note that this function isn't subject to lazy-evaluation, and all arguments need
 				for batch-size in batch-lengths
 				collect
 				(make-input (loop for decl-size in in-size
-								for position upfrom 0
-								if (symbol-eq decl-size '~)
-								  append
-								  (loop for b upfrom 0 below batch-size
-									collect (nth (+ position b) batch-symbols))
-								else
-								  append `(,decl-size))
-							  (intern (symbol-name name) "KEYWORD")
-							  :scalar-p (scalar-p arg)
-							  :dtype    (dtype arg)
-							  :order    (order arg))))
+						  for position upfrom 0
+						  if (symbol-eq decl-size '~)
+						    append
+						    (loop for b upfrom 0 below batch-size
+							  collect (nth (+ position b) batch-symbols))
+						  else
+						    append `(,decl-size))
+					    (intern (symbol-name name) "KEYWORD")
+					    :scalar-p (scalar-p arg)
+					    :dtype    (dtype arg)
+					    :order    (order arg))))
 	   (trace-tensors (loop for tensor in trace-tensors
 				for arg    in args
 				do (setf (cl-waffe2/vm.generic-tensor:ancestor-param-p tensor)
@@ -183,7 +183,7 @@ expected: AbstractTensor"
 			  ;; Dispatching compiled methods by, :DTYPE, DEVICE, RANK, REQUIRES_GRAD_P
 			  (map 'list #'(lambda (tensor)
 					 ;; This condition is more restrict than ./generic-tensor/lut.lisp
-					 (list (dtype tensor) (order tensor) (class-of tensor)
+					 (list (dtype tensor) (order tensor) (class-name (class-of tensor))
 					       ;;(if cl-waffe2/vm::*static-alloc-state*
 					        ;;   (tensor-id tensor)
 						 ;;  nil)
@@ -232,6 +232,7 @@ And manages its allocation not to cause conflicts in the threads."))
 (defun expand-define->abstractnode (differentiable-p target-model where named)
   (let* (;;(composite-name (car target-model))
 	 (node-name      (symb named '-asnode)))
+    
     (multiple-value-bind (in-names out-names in-states out-states let-bindings) (parse-subscript where)
       (declare (ignore let-bindings out-names in-states out-states))
       (with-gensyms (self dy)

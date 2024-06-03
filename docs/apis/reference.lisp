@@ -330,35 +330,3 @@ To get further performance on CPU, SIMD Extension must be installed on your devi
 		  ,@body)))
     (with-op-doc (find-class 'CPUTensor) 't)))
 
-(with-page *cpu-jit-tensor-backend* "[backend] :cl-waffe2/backends.jit.cpu"
-  (insert "
-Those backends without JIT, relies on `do-compiled-loop` or `call-with-view` to calculate only part of matrices: complicated offsets and permution (i.e: `!view` and `!permute`). However, under certain circumstances this can be difficult to parallelise by simply calling a CFFI function; and this backend is intended to solve the problem.
-
-This package provides a `JITCPUTensor` backend which works by jit-compiling whole code to vectorized C, and is only for the purpose of optimising memory layout, so currently only four arithmetic operations and copying are implemented. (OpFusion is remained to be implemented; but it is definitely possible to fuse several ops)
-
-Optimise the memory layout by enclosing the code you want to optimise the layout in:
-
-```lisp
-(with-cpu-jit (CPUTensor LispTensor)
-    ;; body
-    )
-```
-
-Tips: Use the `proceed-bench` function to know the bottleneck; if `MoveTensorNode` combined with `PermuteNode` is slow compared to other nodes, the memory layout is remained to be optimized for example.
-")
-  
-  (macrolet ((with-op-doc (name type &body body)
-	       `(progn
-		  (placedoc ,name ,type)
-		  ,@body)))
-    (with-op-doc '*default-c-compiler* 'variable)
-    (with-op-doc '*compiler-flags* 'variable)
-    (with-op-doc '*viz-compiled-code* 'variable)
-
-    (with-op-doc (find-class 'JITCPUTensor) 't)
-
-    (with-op-doc #'cpujit-set-config 'function)
-    (with-op-doc (macro-function 'with-cpu-jit) 'function)
-    
-    ))
-
