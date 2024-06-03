@@ -5,9 +5,9 @@
   :description "Aten Backend for cl-waffe2"
   :serial t
   :depends-on ("flexi-streams" "abstracttensor")
-  :components ((:file "package")
-	       (:file "tensor")
+  :components ((:file "package")	       
 	       (:file "codegen")
+	       (:file "tensor")
 	       (:file "arithmetic")
 	       (:file "unary")
 	       (:file "nn")))

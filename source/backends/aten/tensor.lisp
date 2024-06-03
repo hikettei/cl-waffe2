@@ -105,17 +105,26 @@ Base class for various aten backends.
 	       (%compile (wf/vm:wfop-node wfir))
 	       (let* ((inputs   (map 'list #'aten/ir:aten-id (composite-inputs (aten-composite (wf/vm:wfop-node wfir)))))
 		      (id2table (aten-scalars (wf/vm:wfop-node wfir)))
-		      (inputs   (map 'list #'(lambda (x) (or (gethash (idkey x) id2table) (error "~a seems not to be registered as a proper dynamic axis?" x))) inputs)))
+		      (inputs   (map 'list #'(lambda (x) (or (gethash (idkey x) id2table) (error "~a seems not to be registered as a proper dynamic axis?" x))) inputs))
+		      (out-positions (loop for out in (aten-outputs (wf/vm:wfop-node wfir))
+					   collect (position out (aten-inputs (wf/vm:wfop-node wfir)) :test #'equal))))
 		 (setf (wf/vm:wfop-op wfir)
 		       #'(lambda (&rest args)
+			   ;;(print "++++++")
+			   ;;(print (map 'list #'cl-waffe2/vm::maybe-observe-axis inputs))
+			   ;;(print (map 'list #'tensor-vec args))
+			   ;;(print (aten/ir:composite-code (aten/engine::cc-base-composite (aten-composite (wf/vm:wfop-node wfir)))))
 			   (apply
 			    (aten/engine::cc-caller (aten-composite (wf/vm:wfop-node wfir)))
 			    (append
 			     (map 'list #'tensor-vec args)
 			     (map 'list #'cl-waffe2/vm::maybe-observe-axis inputs)))
-			   (apply #'values (wf/vm:wfop-out-to wfir)))))))))
+			   (apply
+			    #'values
+			    (loop for o in out-positions
+			   	  collect (nth o args))))))))))
     (aten/engine:with-lazy-compilation-mode
-	(process iseq-fw)
-        (process iseq-bw)))
+      (process iseq-fw)
+      (process iseq-bw)))
   (values iseq-fw iseq-bw))
 
