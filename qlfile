@@ -1,1 +1,4 @@
 github hikettei/AbstractTensor.lisp
+github hikettei/cl-onnx
+github hikettei/cl-easel
+github qitab/cl-protobufs

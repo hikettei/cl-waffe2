@@ -123,6 +123,18 @@ We provide these symbols as a `direction` in standard.
      (array-dimensions from) (dtype-of (aref storage-vec 0)) ;; TODO: Fix it. If array-element-type=t, keep doing this, otherwise use it.
      storage-vec)))
 
+(defmethod convert-tensor-facet ((from array) (to (eql 'AbstractTensor)))
+  (let ((storage-vec (or
+		      (array-displacement from)
+		      (progn
+			#+sbcl(sb-ext:array-storage-vector from)
+			#-sbcl(make-array (apply #'* (array-dimensions from))
+					  :element-type (array-element-type from)
+					  :displaced-to from)))))
+    (cl-waffe2/vm.generic-tensor::make-tensor-from-vec
+     (array-dimensions from) (dtype-of (aref storage-vec 0)) ;; TODO: Fix it. If array-element-type=t, keep doing this, otherwise use it.
+     storage-vec)))
+
 ;; [SLOW] AbstractTensor <-> AbstractTensor
 (defmethod convert-tensor-facet ((from AbstractTensor) to)
 
