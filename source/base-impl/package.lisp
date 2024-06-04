@@ -67,6 +67,7 @@
    #:proceed-backward
    #:proceed-bench
    #:lazy-print
+   #:lazy-values
    #:logical-compiler-info)
   (:export
    :node-x

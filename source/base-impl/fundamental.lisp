@@ -650,6 +650,9 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 
 `compile-mode` is a keyword, type of `compile-mode-t`.
 "
+  (when (listp tensor)
+    (setf tensor (apply #'lazy-values tensor)))
+  
   (when (null (tensor-variables tensor))
     (return-from proceed tensor))
   
@@ -741,6 +744,9 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
   :backward NIL}
 ```
 "
+
+  (when (listp tensor)
+    (setf tensor (apply #'lazy-values tensor)))
 
   (multiple-value-bind (fw-iseq bw-iseq leaves dout allocation)
       (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
@@ -1094,4 +1100,15 @@ A memory-layout of returned copies are arranged into the same array as the array
 					   :order (order tensor))))
 	(!move contiguous-place tensor :force t))
       tensor))
+
+(defun lazy-values (&rest values)
+  "
+## [function] lazy-values
+```
+(lazy-values &rest args)
+```
+
+The equivalent to doing `(values &rest values)` in Common Lisp. From the compiler's POV, this means merging several independent DAGs into a single compiled result. And no new nodes (SYSTEM-LAZY-CONS-NODE) are added at compile time.
+"
+  (reduce #'cl-waffe2/vm.nodes::!system-lazy-cons values))
 
