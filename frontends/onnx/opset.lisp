@@ -25,8 +25,33 @@
 		  ((gph inputs attrs)
 		    (declare (ignore attrs))
 		    (,op (car inputs))))))
-  (def-unary "Sqrt" 1 wf:!sqrt))
-		    
+  (def-unary "Sqrt" 1 wf:!sqrt)
+  (def-unary "Relu" 1 wf/nn:!relu))
+
+(defop ("Gemm" 1)
+    ((cls inputs attrs)
+      (assert (or (= (length inputs) 2) (= (length inputs) 3))
+	      ()
+	      "Assertion failed. Gemm should take two or three inputs but got: ~a" inputs)
+
+      (let ((alpha (gethash "alpha" attrs))
+	    (beta  (gethash "beta" attrs))
+	    (transA (gethash "transA" attrs 0))
+	    (transB (gethash "trabsB" attrs 0)))
+
+	(let* ((a (if alpha (wf:!mul (car inputs) alpha) (car inputs)))
+	       (b (second inputs))
+	       ;; A/B has an inifinite-rank
+	       (a (wf:!flexible a))
+	       (b (wf:!flexible b))
+	       (a (if (= 1 transA) (wf:!t a) a))
+	       (b (if (= 1 transB) (wf:!t b) b))
+	       (out (wf:!matmul a b))
+	       (out (if (= (length inputs) 3)
+			(wf:!add out (wf:!flexible (wf:!mul beta (third inputs))))
+			out)))
+	  out))))
+
 (defop ("Reduce" 1)
     ((gph inputs attrs &key (reduce #'wf:!sum))
       (let ((axis (gethash "axes" attrs 0)))

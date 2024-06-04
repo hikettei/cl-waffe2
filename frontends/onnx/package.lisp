@@ -38,4 +38,4 @@ From ONNX to cl-waffe2 IR Converter.
 (cl:in-package :cl-waffe2.frontends/onnx)
 
 ;; Turn off visualization features for larger models.
-(setf cl-onnx::*visualize* nil)
+(setf cl-onnx::*visualize* t)
