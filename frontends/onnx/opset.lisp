@@ -42,32 +42,34 @@
 	
 	(setf (gethash "channels" attrs) (car (gethash "kernel_shapes" attrs)))
 
-	(flet ((confirm (list operation)
-		 (if (and (listp list) (= (length list) ndim))
-		     (progn
-		       (assert (and (= 0 (car list)) (= 0 (second list)))
-			       ()
-			       "Assertion failed: ~a for N, C is ignored." operation)
-		       (cddr list))
-		     list)))
-	  (let ((model (wf/nn:Conv2D
-			(nth 1 (wf/t:shape data))
-			(nth 0 (wf/t:shape kernel))
-			(gethash "kernel_shapes" attrs)
-			:stride   (gethash "strides" attrs 1)
-			:padding  (confirm (gethash "pads" attrs 0) "padding")
-			:dilation (gethash "dilations" attrs 1)
-			:groups   (gethash "group" attrs 1)
-			:bias     (= (length inputs) 3))))
-	    (setf (wf/nn:weight-of model) kernel)
-	    (when (= (length inputs) 3)
-	      (setf (wf/nn:bias-of model) (third inputs)))
-	    (wf/nodes:call model data))))))
+	(when (listp (gethash "pads" attrs))
+	  (assert (= (mod (length (gethash "pads" attrs)) 2) 0))
+	  
+	  (let* ((pads (loop with size = (length (gethash "pads" attrs))
+			     with mid = (/ size 2)
+			     for i upfrom 0 below size by 2
+			     for j = (+ mid i)
+			     collect (list (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs))))))
+	    (setf data (wf:padding data `(t t ,@pads)))))
+
+	(let ((model (wf/nn:Conv2D
+		      (nth 1 (wf/t:shape data))
+		      (nth 0 (wf/t:shape kernel))
+		      (gethash "kernel_shapes" attrs)
+		      :stride   (gethash "strides" attrs 1)
+		      :padding  0
+		      :dilation (gethash "dilations" attrs 1)
+		      :groups   (gethash "group" attrs 1)
+		      :bias     (= (length inputs) 3))))
+	  (setf (wf/nn:weight-of model) kernel)
+	  (when (= (length inputs) 3)
+	    (setf (wf/nn:bias-of model) (third inputs)))
+	  (wf/nodes:call model data)))))
 
 
-(macrolet ((def-unary (name version op)
-	     `(defop (,name ,version)
-		  ((gph inputs attrs)
+    (macrolet ((def-unary (name version op)
+		 `(defop (,name ,version)
+		      ((gph inputs attrs)
 		    (declare (ignore attrs))
 		    (,op (car inputs))))))
   (def-unary "Sqrt" 1 wf:!sqrt)

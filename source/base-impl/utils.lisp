@@ -94,21 +94,21 @@ If the shapes does not change before/after padding, returns the given tensor as 
 	  nil
 	  "padding: Assertion Failed because the rank of tensor and the length of pad-width does not match.")
 
-  (let ((padded-sizes (loop for width in pad-width
-			    for shape in (shape tensor)
-			    do (assert (or (eql width t) (= (length width) 2))
-				       nil
-				       "padding: Assertion Failed because pad-width should be given as: `((before_n after_n) ...) but got: ~a`" width)
-			    if (eql width t)
-			      collect shape
-			    else
-			      collect (+ (car width) (second width) shape)))
-	(padding-view (loop for width in pad-width
-			    for shape in (shape tensor)
-			    if (eql width t)
-			      collect t
-			    else
-			      collect `(,(car width) ,(+ (car width) shape)))))
+  (let* ((padded-sizes (loop for width in pad-width
+			     for shape in (shape tensor)
+			     do (assert (or (eql width t) (= (length width) 2))
+					nil
+					"padding: Assertion Failed because pad-width should be given as: `((before_n after_n) ...) but got: ~a`" width)
+			     if (eql width t)
+			       collect shape
+			     else
+			       collect (wf/vm:make-lazyaxis `(+ ,(car width) ,(second width) ,shape))))
+	 (padding-view (loop for width in pad-width
+			     for shape in (shape tensor)
+			     if (eql width t)
+			       collect t
+			     else
+			       collect `(,(car width) ,(wf/vm:make-lazyaxis `(+ ,(car width) ,shape))))))
 
     ;; If there's no padding, return the tensor as it is.
     (when (equal padded-sizes (shape tensor))
@@ -119,6 +119,7 @@ If the shapes does not change before/after padding, returns the given tensor as 
 			       :dtype ,(dtype tensor)
 			       :order ,(order tensor)))))
       (multiple-value-bind (new-tensor* reverser) (apply #'!view new-tensor padding-view)
+	(setf (wf/t::tensor-visible-shape new-tensor*) (shape tensor))
 	(apply #'!view (!move new-tensor* tensor :force t) reverser)))))
 
 
