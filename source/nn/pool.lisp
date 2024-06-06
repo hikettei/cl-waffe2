@@ -83,8 +83,8 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 (defmethod apply-maxpool2d ((self MaxPool2D) input)
   (with-slots ((stride stride) (kernel-size kernel-size) (padding padding)) self
     (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
-      (let ((H-out (pool-out-size H-in (first padding)  (first kernel-size)  (first stride)))
-	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
+      (let ((H-out (wf/vm:make-lazyaxis `(pool-out-size ,H-in ,(first padding)  ,(first kernel-size)  ,(first stride))))
+	    (W-out (wf/vm:make-lazyaxis `(pool-out-size ,W-in ,(second padding) ,(second kernel-size) ,(second stride)))))
 	(call-> input
 		(asnode #'unfold  `(1 1) kernel-size stride padding)
 		(asnode #'!reshape t `(* ,@kernel-size))
@@ -95,8 +95,8 @@ Likewise `Conv2D`, these parameters can be set for both X and Y axis directions.
 (defmethod apply-avgpool2d ((self AvgPool2D) input)
   (with-slots ((stride stride) (kernel-size kernel-size) (padding padding)) self
     (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
-      (let ((H-out (pool-out-size H-in (first padding)  (first kernel-size)  (first stride)))
-	    (W-out (pool-out-size W-in (second padding) (second kernel-size) (second stride))))
+      (let ((H-out (wf/vm:make-lazyaxis `(pool-out-size ,H-in ,(first padding)  ,(first kernel-size)  ,(first stride))))
+	    (W-out (wf/vm:make-lazyaxis `(pool-out-size ,W-in ,(second padding) ,(second kernel-size) ,(second stride)))))
 	(call-> input
 		(asnode #'unfold  `(1 1) kernel-size stride padding)
 		(asnode #'!reshape t `(* ,@kernel-size))
