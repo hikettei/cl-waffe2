@@ -459,3 +459,17 @@ Otherwise                 -> Return as it is."
   (gethash symbol *symbol->lazyaxis*))
 
 
+(defparameter *lazy-asserts* nil)
+(defun lazy-assert (A B &key (test '=))
+  (when *lazy-asserts*
+    (when (not (equal A B))
+      (push (make-lazyaxis `(,test ,A ,B)) *lazy-asserts*))))
+
+(defun node-realize-assertions (op)
+  (when (typep op 'AbstractNode)
+    (let ((vals (cl-waffe2/vm.nodes::node-lazy-asserts op)))
+      (dolist (val vals)
+	(when (not (eql val t))
+	  (assert (wf/vm::maybe-observe-axis val) () "LazyAssertion Failed: ~a. ~%The shapes does not match." val))))))
+
+

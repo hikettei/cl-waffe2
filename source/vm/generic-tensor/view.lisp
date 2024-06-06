@@ -33,9 +33,14 @@ a=1, b=2 => NIL
       (= a b)
       (if (and (symbolp a)
 	       (symbolp b))
-	  (eql a b)
-	  ;; Symbol + Number or Number + Symbol
-	  t)))
+	  ;; Proceeds with asserting that A is determined to the symbol B.
+	  (progn
+	    (wf/vm::lazy-assert A B)
+	    t)
+	  ;; Proceeds with asserting that A is determined to number B.
+	  (progn
+	    (wf/vm::lazy-assert A B)
+	    t))))
 
 (defun shape-equal-list (list1 list2)
   (every #'shape-equal list1 list2))

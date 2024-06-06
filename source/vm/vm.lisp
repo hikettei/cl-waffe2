@@ -115,6 +115,10 @@ This parameter is useful for printing how all instructions are performed. If set
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
+
+  ;; [TODO] Bring it to the toplevel?
+  (when (<= *opt-level* 2)
+    (node-realize-assertions (wfop-node instruction)))
   
   (when *logging-vm-execution*
     (let* ((inst (format nil "~a" instruction))
