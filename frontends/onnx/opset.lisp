@@ -20,6 +20,51 @@
   (def-elwise "Mul" 1 wf:!mul)
   (def-elwise "Div" 1 wf:!div))
 
+(defop ("Conv" 1)
+    ((cls inputs attrs)
+      (let* ((data   (first inputs))
+	     (kernel (second inputs))
+	     (ndim   (length (cl-waffe2/vm.generic-tensor:shape data))))
+
+	(when (null (gethash "kernel_shapes" attrs))
+	  (setf (gethash "kernel_shapes" attrs) (cddr (cl-waffe2/vm.generic-tensor:shape kernel))))
+	
+	(when (gethash "auto_pad" attrs) ;; [WIP] we've not tested for the string attributes.
+	  (cond
+	    ((or (string= "SAME_UPPER" (gethash "auto_pad" attrs))
+		 (string= "SAME_LOWER" (gethash "auto_pad" attrs)))
+	     (error "NOT READY"))
+	    ((string= "VALID" (gethash "auto_pad" attrs))
+	     (setf (gethash "pads" attrs) (range 0 (- ndim 2))))
+	    ((string= "NOTSET" (gethash "auto_pad" attrs)))
+	    (T
+	     (error "Value ~a in attribute \"auto_pad\" of operator Conv is invaild." (gethash "auto_pad" attrs)))))
+	
+	(setf (gethash "channels" attrs) (car (gethash "kernel_shapes" attrs)))
+
+	(flet ((confirm (list operation)
+		 (if (and (listp list) (= (length list) ndim))
+		     (progn
+		       (assert (and (= 0 (car list)) (= 0 (second list)))
+			       ()
+			       "Assertion failed: ~a for N, C is ignored." operation)
+		       (cddr list))
+		     list)))
+	  (let ((model (wf/nn:Conv2D
+			(nth 1 (wf/t:shape data))
+			(nth 0 (wf/t:shape kernel))
+			(gethash "kernel_shapes" attrs)
+			:stride   (gethash "strides" attrs 1)
+			:padding  (confirm (gethash "pads" attrs 0) "padding")
+			:dilation (gethash "dilations" attrs 1)
+			:groups   (gethash "group" attrs 1)
+			:bias     (= (length inputs) 3))))
+	    (setf (wf/nn:weight-of model) kernel)
+	    (when (= (length inputs) 3)
+	      (setf (wf/nn:bias-of model) (third inputs)))
+	    (wf/nodes:call model data))))))
+
+
 (macrolet ((def-unary (name version op)
 	     `(defop (,name ,version)
 		  ((gph inputs attrs)
@@ -27,6 +72,11 @@
 		    (,op (car inputs))))))
   (def-unary "Sqrt" 1 wf:!sqrt)
   (def-unary "Relu" 1 wf/nn:!relu))
+
+(defop ("LeakyRelu" 6)
+    ((cls inputs attrs)
+      (let ((alpha (gethash "alpha" attrs)))
+	(wf/nn:!leaky-relu (car inputs) :negative-slope alpha))))
 
 (defop ("Gemm" 1)
     ((cls inputs attrs)

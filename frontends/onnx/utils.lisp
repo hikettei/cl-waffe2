@@ -169,3 +169,6 @@
 	  (car results)
 	  (apply #'cl-waffe2/base-impl:lazy-values results)))))
 
+(defmacro range (from to &optional (by 1))
+  `(loop for i from ,from to ,to by ,by collect i))
+

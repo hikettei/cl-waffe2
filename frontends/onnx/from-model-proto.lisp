@@ -1,7 +1,7 @@
 
 (in-package :cl-waffe2.frontends/onnx)
 
-(defun from-model-proto (model-proto &key (opset) &aux (cl-onnx::*visualize* t))
+(defun from-model-proto (model-proto &key (opset) (disassemble nil) &aux (cl-onnx::*visualize* t))
   "
 ## [function] from-model-proto
 
@@ -39,6 +39,8 @@ Converts a cl-onnx model proto into an equivalent cl-waffe2 IR.
 		       (map 'list #'(lambda (x) (intern (value-info-proto-name x) "KEYWORD"))
 			    (graph-proto-input (model-proto-graph model-proto))))))
       (declare (type AbstractTensor toplevel))
+      (when disassemble
+	(cl-waffe2/vm:disassemble-waffe2-ir toplevel))
       composite)))
 
 
