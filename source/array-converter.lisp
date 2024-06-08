@@ -123,6 +123,20 @@ We provide these symbols as a `direction` in standard.
      (array-dimensions from) (dtype-of (aref storage-vec 0)) ;; TODO: Fix it. If array-element-type=t, keep doing this, otherwise use it.
      storage-vec)))
 
+(defmethod convert-tensor-facet ((from list) (to (eql 'AbstractTensor)))
+  (labels ((list-dimensions (list depth)
+	     (loop repeat depth
+		   collect (length list)
+		   do (setf list (car list))))
+	   (list-to-array (list depth)
+	     (make-array (list-dimensions list depth)
+			 :initial-contents list))
+	   (get-dimensions (x &optional (n 1))
+	     (if (some #'listp x)
+		 (get-dimensions (car x) (1+ n))
+		 n)))
+    (convert-tensor-facet (list-to-array from (get-dimensions from)) to)))
+
 (defmethod convert-tensor-facet ((from array) (to (eql 'AbstractTensor)))
   (let ((storage-vec (or
 		      (array-displacement from)

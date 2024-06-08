@@ -59,6 +59,13 @@ An abstract computation node that dynamically compile the given kernel specified
 		     (values (!mul dout (lazy (backward-of self) x)) nil)))
   (setf (node-save-for-backward self) (list sv4bw nil)))
 
+;; [TODO] Remove with LazyArangeNode
+(defnode (Lazy-Index-Components-Node (self forward)
+	  :slots ((forward   :initarg :forward  :initform nil :accessor forward-of)
+		  (backward  :initform nil :accessor backward-of)
+		  (reduced-to :initform nil :accessor reduced-of))
+	  :where (X[~] OUT[~] -> OUT[~])))
+
 (defnode (Lazy-Reduce-Node (self forward &key (backward nil) (sv4bw nil) (reduced 1))
 	  :slots ((forward  :initarg :forward  :initform nil :accessor forward-of)
 		  (backward :initarg :backward :initform nil :accessor backward-of)
@@ -118,15 +125,18 @@ Invokes AbstractNode `Lazy-Function-Node` that dynamically compile the given ker
     ;; Returning the first of returned tensors
     out))
 
+(defun lazy-index-components (op tensor)
+  (call (Lazy-Index-Components-Node op) tensor (!copy tensor :maybe-in-place t)))
 
 (declaim (ftype (function (lazy-computable-t
 			   AbstractTensor
 			   &key
-			   (:reduce-to fixnum)
+			   (:reduce-to t)
+			   (:axis fixnum)
 			   (:diff (or null lazy-computable-t)))
 			  AbstractTensor)
 		lazy-reduce))
-(defun lazy-reduce (op tensor &key (reduce-to 1) (diff nil))
+(defun lazy-reduce (op tensor &key (reduce-to 1) (axis -1) (diff nil) &aux (base-permute (wf/t::tensor-permute-order tensor)))
   "
 ## [function] lazy-reduce
 
@@ -176,18 +186,33 @@ As well as `lazy`, this function dynamically compiles the given kernel specified
 "
   (declare (type AbstractTensor tensor))
 
-  (assert (null diff)
-	  nil
-	  "Assertion Failed: As of this writing, lazy-reduce isn't differentiable... (TODO)
+  (let ((axis (if (< axis 0)
+		  (+ axis (length (shape tensor)))
+		  axis)))
+
+    (when (not (= axis (1- (length (shape tensor)))))
+      (let ((last  (1- (length (shape tensor))))
+	    (order (copy-list base-permute)))
+	(rotatef (nth last order) (nth axis order))
+	(setf tensor (apply #'!permute tensor order)))))
+
+    (assert (null diff)
+	    nil
+	    "Assertion Failed: As of this writing, lazy-reduce isn't differentiable... (TODO)
 Set :diff = nil to ignore this assertion")
-  
-  (let* ((reduced (make-input `(,@(butlast (shape tensor)) ,reduce-to) nil
-			      :dtype (dtype tensor)
-			      :order (order tensor)))
-	 (out
-	   (call (Lazy-Reduce-Node op :backward diff :sv4bw (when diff t) :reduced reduce-to)
-		 reduced
-		 tensor)))
-    ;; Returning the first of returned tensors
-    out))
+    
+    (let* ((reduced (make-input `(,@(butlast (shape tensor)) ,(wf/vm:make-lazyaxis reduce-to)) nil
+				:dtype (dtype tensor)
+				:order (order tensor)))
+	   (out
+	     (call (Lazy-Reduce-Node op :backward diff :sv4bw (when diff t) :reduced (wf/vm:make-lazyaxis reduce-to))
+		   reduced
+		   tensor)))
+      ;; Returning the first of returned tensors
+      (when (not (= axis (1- (length (shape tensor)))))
+	(let ((last  (1- (length (shape tensor))))
+	      (order (copy-list base-permute)))
+	  (rotatef (nth last order) (nth axis order))
+	  (setf out (apply #'!permute out order))))
+      out))
 

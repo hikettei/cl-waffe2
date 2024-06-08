@@ -104,6 +104,56 @@
 			out)))
 	  out))))
 
+(defop ("Shape" 1)
+    ((cls inputs attrs)
+      (declare (ignore attrs))
+      (wf/t:shape (car inputs))))
+
+(defop ("Shape" 15)
+    ((cls inputs attrs)
+      (multiple-value-bind (start end)
+	  (values (gethash "start" attrs) (gethash "end" attrs))
+	(subseq (wf/t:shape (car inputs)) start end))))
+
+(defop ("Unsqueeze" 1)
+    ((cls inputs attrs)
+      (let ((x (wf:->mat (car inputs))))
+	(dolist (axis (gethash "axes" attrs))
+	  (print "AXIS")
+	  (print x)
+	  (print axis)
+	  (setf x (wf:!rankup x 1 :at axis)))
+	x)))
+
+(defop ("Concat" 1)
+    ((cls inputs attrs)
+      (car (multiple-value-list (apply #'wf:!concatenate (gethash "axis" attrs) (map 'list #'wf:!flexible inputs))))))
+       
+(defop ("Gather" 1)
+    ((cls inputs attrs)
+      (let* ((axis (gethash "axis" attrs 0))
+	     (data    (nth 0 inputs))
+	     (indices (nth 1 inputs)))
+	;; WIP
+	(warn "Gather implementation may not be complete")
+	(print axis)
+	(print (wf/t:tensor-vec indices))
+	(print data)
+	(wf/t:make-tensor (nth (round (wf/t:tensor-vec indices)) data)))))
+
+(defop ("Cast" 1)
+    ((cls inputs attrs)
+      (warn "Cast implementation may not be complete")
+      (car inputs)))
+
+(defop ("Range" 1)
+    ((cls inputs attrs)
+      (declare (ignore attrs))
+      (let ((out (make-input `((- (wf/t:tensor-vec ,(nth 1 inputs)) (wf/t:tensor-vec ,(nth 0 inputs)))) nil)))
+	(wf:lazy-index-components
+	 #'(lambda (i) (* i (wf/t:tensor-vec (nth 2 inputs))))
+	 out))))
+
 (defop ("Reduce" 1)
     ((gph inputs attrs &key (reduce #'wf:!sum))
       (let ((axis (gethash "axes" attrs 0)))
@@ -151,5 +201,27 @@
 			val)
 		  (change-facet val :direction 'AbstractTensor)))))))
 
+(defop ("ConstantOfShape" 9)
+    ((cls inputs attrs)
+      (let* ((value (or (and (gethash "value" attrs) (change-facet (gethash "value" attrs) :direction 'AbstractTensor)) (make-tensor 0.0)))
+	     (input (if (typep (car inputs) 'AbstractTensor)
+			(car inputs)
+			(change-facet (car inputs) :direction 'AbstractTensor)))
+	     (value (wf:!view value `(:broadcast ,(wf/vm:make-lazyaxis (nth 0 (wf/t:shape input)))))))
+	(wf:!add (wf:!mul 0 input) value))))
 
 
+(defop ("Expand" 8)
+    ((cls inputs attrs)      
+      (wf:!flexible (wf:->mat (car inputs)))))
+
+(defop ("Tile" 6)
+    ((cls inputs attrs)
+      (print "debug: tile")
+      (print (second inputs))
+      (wf:!tile (car inputs) (second inputs))))
+
+(defop ("Reshape" 1)
+    ((cls inputs attrs)
+      (print "RESHAPE")
+      (apply #'wf:!reshape (car inputs) (print (gethash "shape" attrs)))))

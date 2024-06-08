@@ -94,17 +94,28 @@ e.g.: A is = compared to 2
     (:function     `(,(lazyir-car lazyir) ,@(map 'list #'ir->list (lazyir-cdr lazyir))))))
 
 (defun interpret-lazy (lazyir)
-  (declare (type LazyIR lazyir))  
+  (declare (type LazyIR lazyir))
   (ecase (lazyir-type lazyir)
     (:number
      (let ((out (lazyir-car lazyir)))
-       (if (or (numberp out)
-	       (eql out t)
-	       (null out))
-	   out
-	   (progn
-	     (setf (lazyaxis-read-as out) nil)
-	     (observe-axis out)))))
+       (if (typep out 'AbstractTensor)
+	   (if (or
+		(null (tensor-state out))
+		(and
+		 (tensor-state out)
+		 (eql :computed (wf/t::state-name out (tensor-state out)))))
+	       out
+	       (or
+		(when *static-alloc-state*
+		  (gethash (tensor-id out) (vmalloc-id2pool *static-alloc-state*)))
+		(error "interpret-lazy: ~a is not yet determined." out)))
+	   (if (or (numberp out)
+		   (eql out t)
+		   (null out))
+	       out
+	       (progn
+		 (setf (lazyaxis-read-as out) nil)
+		 (observe-axis out))))))
     (:dynamic-shape
      (let ((out (observe-variable (cadr (cadr (lazyir-car lazyir))))))
        (if (numberp out)
@@ -123,12 +134,16 @@ e.g.: A is = compared to 2
 		      (setf (lazyaxis-read-as out) nil)
 		      (observe-axis out)))
     (:arithmetic (apply (the symbol (lazyir-car lazyir)) (map 'list #'interpret-lazy (lazyir-cdr lazyir))))
-    (:function   (apply (the symbol (lazyir-car lazyir)) (map 'list #'interpret-lazy (lazyir-cdr lazyir))))))
+    (:function
+     (apply (the symbol (lazyir-car lazyir)) (map 'list #'interpret-lazy (lazyir-cdr lazyir))))))
 
 (defmethod print-object ((lazyir LazyIR) stream)
   (format stream "~a"
 	  (ecase (lazyir-type lazyir)
-	    (:number        (lazyir-car lazyir))
+	    (:number
+	     (if (typep (lazyir-car lazyir) 'AbstractTensor)
+		 (format nil "~a{size=~a}" (tensor-id (lazyir-car lazyir)) (shape (lazyir-car lazyir)))
+		 (lazyir-car lazyir)))
 	    (:dynamic-shape
 	     ;; (READ_SYMBOL 'A) -> 'A
 	     (let ((sym (cadadr (lazyir-car lazyir))))
@@ -146,13 +161,15 @@ e.g.: A is = compared to 2
 		   (format out "~a" (lazyir-car lazyir))))
 	       (format out "")))
 	    (:function
-	     (with-output-to-string (out)
-	       (format out "~(~a~)(" (lazyir-car lazyir))
-	       (dotimes (nth (length (lazyir-cdr lazyir)))
-		 (format out "~a" (nth nth (lazyir-cdr lazyir)))
-		 (unless (= nth (1- (length (lazyir-cdr lazyir))))
-		   (format out ", ")))
-	       (format out ")"))))))
+	     (if (eql (lazyir-car lazyir) 'wf/t::vref)
+		 (format nil "~a[~a]" (car (lazyir-cdr lazyir)) (second (lazyir-cdr lazyir)))
+		 (with-output-to-string (out)
+		   (format out "~(~a~)(" (lazyir-car lazyir))
+		   (dotimes (nth (length (lazyir-cdr lazyir)))
+		     (format out "~a" (nth nth (lazyir-cdr lazyir)))
+		     (unless (= nth (1- (length (lazyir-cdr lazyir))))
+		       (format out ", ")))
+		   (format out ")")))))))
 
 (defparameter *local-variable-table* nil)
 (defun observe-variable (symbol)
@@ -409,19 +426,29 @@ If this parameter is set to nil, maybe-observe-axis can return LazyAxis.")
       (observe-axis axis)))
   nil)
 
-(declaim (inline maybe-observe-axis))
+;;(declaim (inline maybe-observe-axis))
 (defun maybe-observe-axis (value)
   "Reads the given value as a fixnum.
 value is expected as: LazyAxis, Symbol, Fixnum, rest...
 If value is dynamic-shape -> observe it and returns as a fixnum
 Otherwise                 -> Return as it is."
   (if (typep value 'LazyAxis)
-      (if (every (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value)) ;; Can be determined?
+      ;; Can be determined?
+      (if (let ((shape
+		  (map 'list (compose #'numberp #'cl-waffe2/vm.generic-tensor::read-symbol) (lazyaxis-arguments value))))
+	    (and
+	     (every #'numberp shape)
+	     (not (some #'(lambda (x) (= -1 x)) shape))))
 	  (observe-axis value)
 	  value)
       (if (symbolp value)
 	  (if (symbol-lazyaxis value)
-	      (observe-axis (symbol-lazyaxis value))
+	      (if (= -1 (cl-waffe2/vm.generic-tensor::read-adjustable-symbol value))
+		  (block try-make-it-static
+		    (handler-bind
+			((error #'(lambda (c) (declare (ignore c)) (return-from try-make-it-static -1))))
+		      (observe-axis (symbol-lazyaxis value))))
+		  (observe-axis (symbol-lazyaxis value)))
 	      (cl-waffe2/vm.generic-tensor::read-adjustable-symbol value))
 	  value)))
 

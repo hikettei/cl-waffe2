@@ -122,4 +122,60 @@ If the shapes does not change before/after padding, returns the given tensor as 
 	(setf (wf/t::tensor-visible-shape new-tensor*) (shape tensor))
 	(apply #'!view (!move new-tensor* tensor :force t) reverser)))))
 
+(defun !concatenate (axis &rest tensors)
+  (let* ((shape (shape
+		 (or
+		  (car
+		   (loop with m = (apply #'max (map 'list (alexandria:compose #'length #'shape) tensors))
+
+			 for tensor in tensors
+			 if (= (length (shape tensor)))
+			   collect tensor))
+		  (car tensors))))
+	 (concatenated-shape
+	   (loop for s in shape
+		 for nth upfrom 0
+		 if (= nth axis)
+		   collect (wf/vm:make-lazyaxis `(+ ,@(map 'list #'(lambda (x) (nth axis (shape x))) tensors)))
+		 else
+		   collect s))
+	 (out (make-input concatenated-shape nil :dtype (dtype (car tensors)))))
+
+    (flet ((nth-view (total size)
+	     (loop for s in concatenated-shape
+		   for nth upfrom 0
+		   if (= nth axis)
+		     collect `(,total ,(wf/vm:make-lazyaxis `(+ ,total ,size)))
+		   else
+		     collect t)))
+      (loop with total = 0
+	    for tensor in tensors
+	    do (setf out (!move (apply #'!view (!view out) (nth-view total (nth axis (shape tensor)))) tensor :force t)
+		     total (wf/vm:make-lazyaxis `(+ ,total ,(nth axis (shape tensor))))))
+      (apply #'!view out (make-list (length concatenated-shape) :initial-element t)))))
+
+(defun !tile (tensor repeats)
+  (when (typep repeats 'AbstractTensor)
+    (setf tensor (lazy-values tensor repeats)
+          repeats (loop for s in (shape tensor)
+			for axis upfrom 0
+			collect `(round (vref ,repeats ,axis)))))
+  (loop for s in (shape tensor)
+	for axis upfrom 0
+	do (setf tensor (!repeat tensor axis (nth axis repeats))))
+  tensor)
+
+(defun !repeat (tensor dim n)
+  (let* ((shape (shape tensor))
+	 (repeated-shape
+	   (loop for s in shape
+		 for nth upfrom 0
+		 if (= nth dim)
+		   collect (wf/vm:make-lazyaxis `(* ,s ,n))
+		 else
+		   collect s)))
+    (flet ((repeat (list n)
+	     (loop repeat (round (/ n (length list)))
+		   append list)))
+      (lazy-reduce #'(lambda (&rest i) (apply #'values (repeat i (wf/vm:maybe-observe-axis (nth dim repeated-shape))))) tensor :reduce-to (nth dim repeated-shape) :axis dim))))
 

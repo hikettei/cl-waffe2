@@ -290,7 +290,12 @@ Before calling the forward method, set any value to these InputTensors first.
     ;; Given symbols ignoring LazyAxis, determine the result of LazyAxis
     (dolist (lazyaxis lazyaxis-list)
       (let* ((axis (cl-waffe2/vm:symbol-lazyaxis lazyaxis))
-	     (val  (cl-waffe2/vm:observe-axis axis)))
+	     (val  (block try-make-it-static
+		     (handler-bind
+			 ((error #'(lambda (cond)
+				     (format t "The axis ~a cannot be inferred as a static shape because of ~a. Proceed with interpreting as a dynamic tensor.~%" axis cond)
+				     (return-from try-make-it-static -1))))
+		       (cl-waffe2/vm:observe-axis axis)))))
 	
 	(when (null val)
 	  (error "set-adjustable-symbols: the adjustable symbol ~a wasn't registered well?" axis))

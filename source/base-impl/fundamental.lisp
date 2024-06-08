@@ -524,8 +524,11 @@ CL-WAFFE2-REPL>
 	     :forward ((self scalar matrix)
 		       `(progn
 			  (tensor-vec ,matrix) ;; Call Lazy-Allocate of matrix
-			  (setf (vref ,matrix 0) (coerce (tensor-vec ,scalar) (dtype->lisp-type (dtype ,matrix))))
-			  ,matrix)))
+			  (let ((val (if (symbolp (tensor-vec ,scalar))
+					 (wf/vm:maybe-observe-axis (tensor-vec ,scalar))
+					 (tensor-vec ,scalar))))
+			    (setf (vref ,matrix 0) (coerce val (dtype->lisp-type (dtype ,matrix))))
+			    ,matrix))))
 
 ;; Add: Docstring
 ;; Add: Shape Check

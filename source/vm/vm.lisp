@@ -116,7 +116,7 @@ This parameter is useful for printing how all instructions are performed. If set
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
 
-  ;; [TODO] Bring it to the toplevel?
+  ;; [TODO] Bring it to the toplevel
   (when (<= *opt-level* 2)
     (node-realize-assertions (wfop-node instruction)))
   
@@ -141,7 +141,6 @@ Instruction: ~a
 	       (apply
 		(the function (wfop-op instruction))
 		(map 'list #'maybe-read-result (wfop-args instruction))))))
-
     (when (or (null outs)
 	      (not (every #'(lambda (x) (typep x 'AbstractTensor)) outs)))
       (error "cl-waffe2 VM: Runtime Error.
@@ -228,8 +227,9 @@ outs:
 		  outs)))
     outs))
 
-(defun runtime-error (position condition iseq)
-  (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
+(defun runtime-error (position condition iseq &key (full nil))
+  (restart-case
+      (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
 disassemble:
 ~a
 
@@ -237,20 +237,24 @@ condition:
   ~a
 
 ~a"
-	 position
-	 (with-output-to-string (out)
-	   (let* ((start (max 0 (- position 3)))
-		  (end   (min (length iseq) (+ position 3)))
-		  (iseqs  (loop for nth upfrom start below end collect (nth nth iseq))))
-	     (with-indent-to iseqs
-	       (loop with *no-newline* = t
-		     for nth upfrom start below end
-		     if (= nth position)
-		       do (format out "~a*: ~a~%" nth (nth nth iseq))
-		     else
-		       do (format out "~a : ~a~%" nth (nth nth iseq))))))
-	 condition
-	 (render-debug-info)))
+       position
+       (with-output-to-string (out)
+	 (let* ((start (if full 0 (max 0 (- position 3))))
+		(end   (if full (length iseq) (min (length iseq) (+ position 3))))
+		(iseqs  (loop for nth upfrom start below end collect (nth nth iseq))))
+	   (with-indent-to iseqs
+	     (loop with *no-newline* = t
+		   for nth upfrom start below end
+		   if (= nth position)
+		     do (format out "~a*: ~a~%" nth (nth nth iseq))
+		   else
+		     do (format out "~a : ~a~%" nth (nth nth iseq))))))
+       condition
+       (render-debug-info :shape full))
+    (full-report ()
+      :report "Render a end-to-end graph and all debug info."
+      (runtime-error position condition iseq :full t))))
+
 
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)
@@ -273,9 +277,7 @@ Evaluates generated cl-waffe2 IR sequence.
 	  for position fixnum upfrom 0
 	  do (apply-inst-sv4bw inst)
 	     (handler-bind
-		 ((error
-		    (lambda (c)
-		      (runtime-error position c iseq))))
+		 ((error #'(lambda (c) (runtime-error position c iseq))))
 	       (write-result (wfop-out-to inst) (apply-instruction inst)))
 	  finally
 	     (return-from accept-instructions
