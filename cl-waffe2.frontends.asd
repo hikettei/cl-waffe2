@@ -17,7 +17,7 @@
   :author      "hikettei <ichndm@gmail.com>"
   :licence     "MIT"
   :pathname   "frontends/onnx"
-  :depends-on ("cl-onnx")
+  :depends-on ("cl-onnx" "alexandria")
   :components ((:file "package")
 	       (:file "utils")
 	       (:file "opset")

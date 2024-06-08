@@ -482,7 +482,7 @@ CL-WAFFE2-REPL>
 ```
 "
   (declare (type AbstractTensor tensor)
-	   (type fixnum ntimes at))
+	   (type fixnum at))
   (let* ((at (if (>= at 0)
 		 at
 		 (+ (dims tensor) at)))
@@ -491,9 +491,11 @@ CL-WAFFE2-REPL>
 	 (shape         (nthcdr at (copy-list (shape tensor)))))
     (if (< ntimes 0)
 	(loop for i fixnum upfrom 0 below (abs ntimes)
-	      do (if (= (car shape) 1)
+	      do (if (equal (car shape) 1)
 		     (pop shape)
-		     (error "!rankup failed because it encountered a dimension which is not the equivalent to 1.")))
+		     (progn
+		       (setf shape (remove 1 shape))
+		       (warn "!rankup failed because it encountered a dimension which is not the equivalent to 1."))))
 	(loop for i fixnum upfrom 0 below ntimes
 	      do (push 1 shape)))
     ;; TODO: view broadcast

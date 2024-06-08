@@ -383,13 +383,21 @@ A is a target to find a minimum value, and OUT is a place to set the index.
 `out-size` the reducted shape of `out`.")
   (setf (ignore-shape-error myself) t))
 
+(defun keepdims (result base-tensor)
+  (let ((views (loop for s1 in (shape result)
+		     for s2 in (shape base-tensor)
+		     if (and (numberp s1) (= s1 1) (not (eql s2 1)))
+		       collect `(:broadcast ,s2)
+		     else
+		       collect t)))
+    (apply #'!view result views)))
 
-(defun !max (tensor &key (axis -1) (out nil))
+(defun !max (tensor &key (axis -1) (out nil) (keepdims nil))
   "
 ## [function] !max
 
 ```
-(!max tensor &key (axis -1) (out nil))
+(!max tensor &key (axis -1) (out nil) (keepdims nil))
 ```
 
 The function `!max` finds largest values of all elements below the **axis** rank in the given tensor.
@@ -406,8 +414,10 @@ The function `!max` finds largest values of all elements below the **axis** rank
 
 `AbstractTensor` with dimensions behind `axis` is replaced with 1.
 "
-  (declare (type AbstractTensor tensor)
-	   (type fixnum axis))
+  (declare (type AbstractTensor tensor))
+  (when (listp axis)
+    (assert (= (length axis) 1))
+    (setf axis (car axis)))
   (let* ((axis (if (< axis 0)
 		   (+ (length (shape tensor)) axis)
 		   axis))
@@ -415,15 +425,18 @@ The function `!max` finds largest values of all elements below the **axis** rank
 	 (x   (apply #'!reshape tensor `(,@out-shape t)))
 	 (out (or out (make-input `(,@out-shape 1) nil
 				  :dtype (dtype tensor)
-				  :order (order tensor)))))
-    (forward (MaxValue-Node (shape out)) x out)))
+				  :order (order tensor))))
+	 (out (forward (MaxValue-Node (shape out)) x out)))
+    (if keepdims
+	(keepdims out tensor)
+	out)))
 
-(defun !min (tensor &key (axis -1) (out nil))
+(defun !min (tensor &key (axis -1) (out nil) (keepdims nil))
   "
 ## [function] !min
 
 ```
-(!min tensor &key (axis -1) (out nil))
+(!min tensor &key (axis -1) (out nil) (keepdims nil))
 ```
 
 The function `!min` finds the smallest values of all elements below the **axis** rank in the given tensor.
@@ -440,8 +453,10 @@ The function `!min` finds the smallest values of all elements below the **axis**
 
 `AbstractTensor` with dimensions behind `axis` is replaced with 1.
 "
-  (declare (type AbstractTensor tensor)
-	   (type fixnum axis))
+  (declare (type AbstractTensor tensor))
+  (when (listp axis)
+    (assert (= (length axis) 1))
+    (setf axis (car axis)))
   (let* ((axis (if (< axis 0)
 		   (+ (length (shape tensor)) axis)
 		   axis))
@@ -449,7 +464,10 @@ The function `!min` finds the smallest values of all elements below the **axis**
 	 (x   (apply #'!reshape tensor `(,@out-shape t)))
 	 (out (or out (make-input `(,@out-shape 1) nil
 				  :dtype (dtype tensor)
-				  :order (order tensor)))))
-    (forward (MinValue-Node (shape out)) x out)))
+				  :order (order tensor))))
+	 (out (forward (MinValue-Node (shape out)) x out)))
+    (if keepdims
+	(keepdims out tensor)
+	out)))
 
 

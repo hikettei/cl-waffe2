@@ -1,12 +1,16 @@
 
 (in-package :cl-waffe2.frontends/onnx)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun symb (&rest inputs)
+    (intern (with-output-to-string (out) (dolist (sym inputs) (princ sym out))))))
+
 ;; ~~ Converter ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (defparameter *converter-features* (make-hash-table :test #'equal))
 (defmacro defop ((opset-name min-opset-version) ((gph inputs attrs &rest more) &body body))
   "Defines a converter"
   (let ((tmp (gensym)))
-    `(let ((,tmp #'(lambda (,gph ,inputs ,attrs ,@more) (declare (ignorable ,gph)) ,@body)))
+    `(let ((,tmp (alexandria:named-lambda ,(intern (format nil "~a_~a" opset-name min-opset-version)) (,gph ,inputs ,attrs ,@more) (declare (ignorable ,gph)) ,@body)))
        (if (gethash ,opset-name *converter-features*)
 	   (let ((values (gethash ,opset-name *converter-features*)))
 	     (let ((position (position ,min-opset-version values :test #'= :key #'cdr)))
@@ -19,18 +23,22 @@
   (declare (type string op-type)
 	   (type fixnum opset-version))
 
-  (let ((candidates (gethash op-type *converter-features*)))
-    (when (null candidates)
-      (error "get-converter: Convertion pattern for ~a is not defined yet." op-type))
+  (restart-case (progn
+		  (let ((candidates (gethash op-type *converter-features*)))
+		    (when (null candidates)
+		      (error "get-converter: Convertion pattern for ~a(version=~a) is not defined yet." op-type opset-version))
 
-    (let ((candidates (sort candidates #'> :key #'cdr)))
-      (loop for (impl . version) in candidates
-	    if (<= version opset-version)
-	      do (return-from get-converter impl)))
-    (error "get-converter: there's no implementation for ~a satisfying opset=~a.~%Candidates:~a"
-	   op-type
-	   opset-version
-	   candidates)))
+		    (let ((candidates (sort candidates #'> :key #'cdr)))
+		      (loop for (impl . version) in candidates
+			    if (<= version opset-version)
+			      do (return-from get-converter impl)))
+		    (error "get-converter: there's no implementation for ~a satisfying opset=~a.~%Candidates:~a"
+			   op-type
+			   opset-version
+			   candidates)))
+    (reload-and-retry-defop ()
+      :report "Reload the (expected to be updated on REPL) converter and restart from the point in the error."
+      (get-converter op-type opset-version))))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 (defstruct (Graph-Proto-Helper
@@ -50,9 +58,13 @@
 
 (defun tensor-proto->aten (tensor-proto)
   (declare (type tensor-proto tensor-proto))
-  (let ((array (raw->array tensor-proto)))
-    ;; [TODO] Add change-facet function when adding a support for CUDA.
-    (change-facet array :direction 'AbstractTensor)))
+  (restart-case
+      (let ((array (raw->array tensor-proto)))
+	;; [TODO] Add change-facet function when adding a support for CUDA.
+	(change-facet array :direction 'AbstractTensor))
+    (update-configuration-and-retry ()
+      :report "Retry the operation"
+      (tensor-proto->aten tensor-proto))))
 
 (defun value-info-proto->aten (value-info-proto)
   (declare (type Value-Info-Proto value-info-proto))
@@ -90,10 +102,24 @@
 (defun (setf gp-name->value) (value graph-proto-helper name)
   (setf (gethash name (gp-name2value graph-proto-helper)) value))
 
+(defun call-converter (converter node-proto graph-proto-helper input attrs)
+  (restart-case
+      (handler-bind
+	  ((error #'(lambda (c) (error "An error was occured during the translation:~%Position:~a(version=~a)~%Error:~%    ~a" (node-proto-name node-proto) (gp-opset-version graph-proto-helper) c))))
+	(multiple-value-list (funcall converter graph-proto-helper input attrs)))
+    (reload-and-retry-defop ()
+      :report "Reload the (expected to be updated on REPL) converter and restart from the point in the error."
+      (call-converter
+       (get-converter (node-proto-op-type node-proto) (gp-opset-version graph-proto-helper))
+       node-proto
+       graph-proto-helper
+       input
+       attrs))))
+
 (defun node-proto->aten (graph-proto-helper node-proto)
   (declare (type graph-proto-helper graph-proto-helper)
 	   (type node-proto node-proto))
-  
+
   (dolist (input (node-proto-input node-proto))
     (when (null (gethash input (gp-name2value graph-proto-helper)))
       (let ((values (user->values (gp-graph-proto graph-proto-helper) input)))
@@ -106,7 +132,7 @@
 	    'list
 	    #'(lambda (x)
 		(let ((value (gp-name->value graph-proto-helper x)))
-		  (when (null value) (error "node-proto->aten: ~a is not declared?" x))
+		  ;;(when (null value) (error "node-proto->aten: ~a is not declared?" x))
 		  value))
 	    (node-proto-input node-proto)))
 	 (attrs (make-hash-table :test #'equal)))
@@ -115,8 +141,7 @@
       (setf (gethash (attribute-proto-name attr) attrs)
 	    (cl-onnx::read-attr attr)))
 
-    (let ((out-in-tensors
-	    (multiple-value-list (funcall converter graph-proto-helper input attrs))) ;; attrs params
+    (let ((out-in-tensors (call-converter converter node-proto graph-proto-helper input attrs))
 	  (output
 	    (node-proto-output node-proto)))
       

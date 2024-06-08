@@ -127,11 +127,13 @@ If the shapes does not change before/after padding, returns the given tensor as 
 		 (or
 		  (car
 		   (loop with m = (apply #'max (map 'list (alexandria:compose #'length #'shape) tensors))
-
 			 for tensor in tensors
 			 if (= (length (shape tensor)))
 			   collect tensor))
 		  (car tensors))))
+	 (axis (if (>= axis 0)
+		   axis
+		   (+ 1 (length shape) axis)))
 	 (concatenated-shape
 	   (loop for s in shape
 		 for nth upfrom 0
