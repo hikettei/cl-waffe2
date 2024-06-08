@@ -84,6 +84,20 @@
 	    (setf (wf/nn:bias-of model) (third inputs)))
 	  (wf/nodes:call model data)))))
 
+(defop ("MaxPool" 1)
+    ((cls inputs attrs)
+      (let ((pads
+	      (when (listp (gethash "pads" attrs))
+		(assert (= (mod (length (gethash "pads" attrs)) 2) 0))
+		(loop with size = (length (gethash "pads" attrs))
+		      with mid = (/ size 2)
+		      for i upfrom 0 below size by 2
+		      for j = (+ mid 1)
+		      collect (list (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs)))))))
+	(when pads
+	  (setf (first inputs) (wf:padding (first inputs) `(t t ,@pads))))
+	(wf/nodes:call (wf/nn:MaxPool2D (print (gethash "kernel_shape" attrs)) :padding 0 :stride (gethash "strides" attrs)) (first inputs)))))
+
 (macrolet ((def-unary (name version op)
 	     `(defop (,name ,version)
 		  ((gph inputs attrs)
