@@ -66,7 +66,7 @@
 	  (let* ((pads (loop with size = (length (gethash "pads" attrs))
 			     with mid = (/ size 2)
 			     for i upfrom 0 below size by 2
-			     for j = (+ mid i)
+			     for j = (+ mid 1)
 			     collect (list (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs))))))
 	    (setf data (wf:padding data `(t t ,@pads)))))
 
@@ -452,8 +452,43 @@
 		       (wf:!mul (nth 0 inputs) (wf:!flexible scale)))))
 	(car (multiple-value-list (resize-op-11-13-common cls size inputs attrs))))))
 
-      
+
+#|
+def non_max_suppression(
+   predictions: np.ndarray, iou_threshold: float = 0.5
+) -> np.ndarray:
+    rows, columns = predictions.shape
+
+    sort_index = np.flip(predictions[:, 4].argsort())
+    predictions = predictions[sort_index]
+
+    boxes = predictions[:, :4]
+    categories = predictions[:, 5]
+    ious = box_iou_batch(boxes, boxes)
+    ious = ious - np.eye(rows)
+
+    keep = np.ones(rows, dtype=bool)
+
+    for index, (iou, category) in enumerate(zip(ious, categories)):
+        if not keep[index]:
+            continue
+
+        condition = (iou > iou_threshold) & (categories == category)
+        keep = keep & ~condition
+
+    return keep[sort_index.argsort()]
+|#
 (defop ("NonMaxSuppression" 11)
     ((cls inputs attr)
-      (wf:!add (wf/t:make-input `(10 3) nil) (wf:->scal (wf:!view (car inputs) 0)))
-      ))
+      (let* ((boxes (car inputs))
+	     (scores (second inputs))
+	     (mobpe (third inputs))
+	     (iou-threshold (fourth inputs))
+	     (sth  (fifth inputs)))
+	
+	(print boxes)
+	(print scores)
+	(print mobpe)
+	(print iou-threshold)
+	(print sth)
+	(wf:!add boxes scores))))
