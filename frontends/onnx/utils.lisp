@@ -190,9 +190,15 @@
       (when (some #'null results)
 	(error "Failed to trace the graph: ~a -> ~a" output-names results))
 
-      (if (<= (length results) 1)
-	  (car results)
-	  (apply #'cl-waffe2/base-impl:lazy-values results)))))
+      (apply
+       #'cl-waffe2/base-impl:lazy-values
+       (append
+	(loop for value being each hash-value of (gp-name2value graph-proto-helper)
+	      if (typep value 'AbstractTensor)
+		collect value)
+	(if (<= (length results) 1)
+	    results
+	    (apply #'cl-waffe2/base-impl:lazy-values results)))))))
 
 (defmacro range (from to &optional (by 1))
   `(loop for i from ,from to ,to by ,by collect i))

@@ -67,22 +67,22 @@
 			     with mid = (/ size 2)
 			     for i upfrom 0 below size by 2
 			     for j = (+ mid 1)
+			     do (assert (= (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs))) () "Conv: Pads must be symmetric (WIP).")
 			     collect (list (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs))))))
-	    (setf data (wf:padding data `(t t ,@pads)))))
 
 	(let ((model (wf/nn:Conv2D
 		      (nth 1 (wf/t:shape data))
 		      (nth 0 (wf/t:shape kernel))
 		      (gethash "kernel_shapes" attrs)
 		      :stride   (gethash "strides" attrs 1)
-		      :padding  0
+		      :padding  (map 'list #'car pads)
 		      :dilation (gethash "dilations" attrs 1)
 		      :groups   (gethash "group" attrs 1)
 		      :bias     (= (length inputs) 3))))
 	  (setf (wf/nn:weight-of model) kernel)
 	  (when (= (length inputs) 3)
 	    (setf (wf/nn:bias-of model) (third inputs)))
-	  (wf/nodes:call model data)))))
+	  (wf/nodes:call model data)))))))
 
 (defop ("MaxPool" 1)
     ((cls inputs attrs)
@@ -93,10 +93,9 @@
 		      with mid = (/ size 2)
 		      for i upfrom 0 below size by 2
 		      for j = (+ mid 1)
+		      do (assert (= (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs))) () "Conv: Pads must be symmetric (WIP).")
 		      collect (list (nth i (gethash "pads" attrs)) (nth j (gethash "pads" attrs)))))))
-	(when pads
-	  (setf (first inputs) (wf:padding (first inputs) `(t t ,@pads))))
-	(wf/nodes:call (wf/nn:MaxPool2D (print (gethash "kernel_shape" attrs)) :padding 0 :stride (gethash "strides" attrs)) (first inputs)))))
+	(wf/nodes:call (wf/nn:MaxPool2D (gethash "kernel_shape" attrs) :padding (map 'list #'car pads) :stride (gethash "strides" attrs)) (first inputs)))))
 
 (macrolet ((def-unary (name version op)
 	     `(defop (,name ,version)
@@ -109,10 +108,38 @@
   (def-unary "Relu" 1 wf/nn:!relu)
   (def-unary "Sigmoid" 1 wf/nn:!sigmoid))
 
+(defop ("Softmax" 1)
+    ((cls inputs attrs)
+      (wf/nn:!softmax (car inputs) :axis (gethash "axis" attrs 1))))
+
 (defop ("LeakyRelu" 6)
     ((cls inputs attrs)
       (let ((alpha (gethash "alpha" attrs)))
 	(wf/nn:!leaky-relu (car inputs) :negative-slope alpha))))
+
+(defop ("Erf" 13)
+    ((cls inputs attrs)
+      (declare (ignore attrs))
+      ;; Approximation of error function.
+      ;; x.sign() * (1 - ((((1.061405429 * t + -1.453152027) * t + 1.421413741) * t + -0.284496736) * t + 0.254829592) * t * (-(x.square())).exp())
+      (let ((t1 (wf:!reciprocal (wf:!+ 1 (wf:!* 0.3275911 (wf:!abs (car inputs)))))))
+	(wf:!*
+	 (wf:!sign (car inputs))
+	 (wf:!-
+	  1.0
+	  (wf:!*
+	   (wf:!+
+	    (wf:!+
+	     (wf:!*
+	      t1
+	      (wf:!+
+	       (wf:!* 1.061405429 t1)
+	       -1.453152027))
+	     1.421413741)
+	    t1
+	    -0.284496736)
+	   t1
+	   (wf:!exp (wf:!mul -1 (wf:!square (car inputs))))))))))
 
 (defop ("Gemm" 1)
     ((cls inputs attrs)
@@ -123,7 +150,7 @@
       (let ((alpha (gethash "alpha" attrs))
 	    (beta  (gethash "beta" attrs))
 	    (transA (gethash "transA" attrs 0))
-	    (transB (gethash "trabsB" attrs 0)))
+	    (transB (gethash "transB" attrs 0)))
 
 	(let* ((a (if alpha (wf:!mul (car inputs) alpha) (car inputs)))
 	       (b (second inputs))
@@ -137,6 +164,10 @@
 			(wf:!add out (wf:!flexible (wf:!mul beta (third inputs))))
 			out)))
 	  out))))
+
+(defop ("MatMul" 1)
+    ((cls inputs attrs)
+      (wf:!matmul (wf:!flexible (first inputs)) (wf:!flexible (second inputs)))))
 
 (defop ("Shape" 1)
     ((cls inputs attrs)
@@ -152,7 +183,7 @@
 	(subseq (wf/t:shape (car inputs)) start end))))
 
 (defop ("Unsqueeze" 1)
-    ((cls inputs attrs)3
+    ((cls inputs attrs)
       (let ((x (wf:->mat (car inputs))))
 	(dolist (axis (gethash "axes" attrs))
 	  ;;(print "AXIS")
@@ -176,10 +207,18 @@
 	;;(print axis)
 	;;(print indices)
 	;;(print data)
-	(if (or (listp data) (wf/t::vec data))
-	    (let ((i (wf/t:tensor-vec indices)))
-	      (wf/t:make-tensor (nth (round (if (typep i 'real) i (aref i 0))) data)))
-	    (wf/t:make-tensor (wf/vm:make-lazyaxis `(vref ,data (round (wf/t:tensor-vec ,indices)))))))))
+	(if (and
+	     (typep data 'AbstractTensor)
+	     (not (wf/t:scalar-p data)))
+	    (let ((idx (make-list (wf/t:dims data) :initial-element t)))
+	      (setf (nth axis idx) (round (wf/t:tensor-vec indices)))
+	      (wf:!rankup (apply #'wf:!view data idx) -1 :at axis))
+	    (if (or (listp data) (wf/t::vec data))
+		(let ((i (wf/t:tensor-vec indices)))
+		  (wf/t:make-tensor (nth (round (if (typep i 'real) i (aref i 0))) data)))
+		(wf/nodes::!merge-subgraph
+		 (wf/t:make-tensor (wf/vm:make-lazyaxis `(vref ,data (round (wf/t:tensor-vec ,indices)))))
+		 data))))))
 
 (defop ("Cast" 1)
     ((cls inputs attrs)
@@ -189,7 +228,7 @@
 (defop ("Range" 1)
     ((cls inputs attrs)
       (declare (ignore attrs))
-      (let ((out (make-input `((- (wf/t:tensor-vec ,(nth 1 inputs)) (wf/t:tensor-vec ,(nth 0 inputs)))) nil)))
+      (let ((out (make-input `(,(wf/vm:make-lazyaxis `(- (wf/t:tensor-vec ,(nth 1 inputs)) (wf/t:tensor-vec ,(nth 0 inputs))))) nil)))
 	(wf:lazy-index-components
 	 #'(lambda (i) (* i (wf/t:tensor-vec (nth 2 inputs))))
 	 out))))
@@ -269,7 +308,7 @@
     ((cls inputs attrs)
       (declare (ignore attrs))
       (if (wf/t:scalar-p (second inputs))
-	  (wf:A=B (car inputs) (wf:!flexible (wf:->mat (second inputs))))
+	  (wf:A=scal (car inputs) (second inputs))
 	  (if (wf/t:scalar-p (car inputs))
 	      (wf:A=B (second inputs) (wf:!flexible (wf:->mat (car inputs))))
 	      (wf:A=B (car inputs) (second inputs))))))
@@ -277,10 +316,10 @@
 (defop ("Where" 9)
     ((cls inputs attrs)
       ;; condition: True=1, False=0
-      (let* ((true-mask (car inputs))
-	     (false-mask (wf:!mul -1 (wf:!sub (car inputs) 1))) ;; bitmask
-	     (true-values (wf:!mul (nth 1 inputs) (wf:!flexible (wf:!flatten true-mask))))
-	     (false-values (wf:!mul (nth 2 inputs) (wf:!flexible (wf:!flatten false-mask)))))
+      (let* ((true-mask (wf:!flexible (wf:!flatten (car inputs))))
+	     (false-mask (wf:!flexible (wf:!flatten (wf:!mul -1 (wf:!sub (car inputs) 1))))) ;; bitmask
+	     (true-values (wf:!mul (wf:!view (nth 1 inputs) (wf:broadcast-to true-mask)) true-mask))
+	     (false-values (wf:!mul (wf:!view (nth 2 inputs) (wf:broadcast-to false-mask)) false-mask)))
 	(wf:!add (wf:!flexible true-values) (wf:!flexible false-values)))))
 
 
@@ -304,14 +343,9 @@
 
 (defop ("ConstantOfShape" 9)
     ((cls inputs attrs)
-      (block constantofshape
-	(let* ((value (or (and (gethash "value" attrs) (change-facet (gethash "value" attrs) :direction 'AbstractTensor)) (make-tensor 0.0)))
-	       (input (if (typep (car inputs) 'wf/t::AbstractTensor)
-		          (car inputs)
-			  (if (listp (car inputs))
-			      (return-from ConstantOfShape (car inputs))
-			      (change-facet (car inputs) :direction 'AbstractTensor)))))
-	  (wf:!add (wf:!mul 0 input) (wf:!flexible value))))))
+      (let* ((value (or (and (gethash "value" attrs) (aref (gethash "value" attrs) 0)) 0.0))
+	     (shape (map 'list #'(lambda (i) i) (wf/t:tensor-vec (car inputs)))))
+	(make-tensor shape :initial-element value))))
 
 (defop ("Slice" 10)
     ((cls inputs attrs)
@@ -320,21 +354,34 @@
 	  (values (nth 1 inputs) (nth 2 inputs) (nth 3 inputs) (nth 4 inputs))
 	(assert (wf/t::vec axes) () "[WIP] Slice: Dynamic axes is not implemented yet. got ~a" axes)
 	(let* ((data (nth 0 inputs))
+	       (ndims (if (listp data) (length data) (wf/t::dims data)))
 	       (normalized-axes
 		 (loop for axis across (wf/t::vec axes)
 		       if (>= axis 0)
 			 collect axis
 		       else
-			 collect (+ 1 (wf/t:dims data) axis)))
+			 collect (+ 1 ndims axis)))
 	       (normalized-views
-		 (loop for nth upfrom 0 below (wf/t:dims data)
+		 (loop for nth upfrom 0 below ndims
 		       if (find nth normalized-axes :test #'=)
 			 collect `(,(wf/vm:make-lazyaxis `(wf/t:vref ,start ,nth))
 				   ,(wf/vm:make-lazyaxis `(wf/t:vref ,end ,nth))
 				   ,(wf/vm:make-lazyaxis `(wf/t:vref ,steps ,nth)))
 		       else
 			 collect t)))
-	  (car (multiple-value-list (apply #'wf:!view data normalized-views)))))))	      
+
+	  (when (not (listp data))
+	    (setf data (wf/nodes::!merge-subgraph data start)
+		  data (wf/nodes::!merge-subgraph data end)
+		  data (wf/nodes::!merge-subgraph data axes)
+		  data (wf/nodes::!merge-subgraph data steps)))
+	  
+	  (if (listp data)
+	      (progn
+		(assert (null steps))
+		(let ((out (subseq data (wf/t:vref start 0) (wf/t:vref end 0))))
+		  (change-facet (map 'list #'wf/t:tensor-vec out) :direction 'AbstractTensor)))
+	      (car (multiple-value-list (apply #'wf:!view data normalized-views))))))))
 
 (defop ("Transpose" 1)
     ((cls inputs attrs)
@@ -345,13 +392,19 @@
 (defop ("Expand" 8)
     ((cls inputs attrs)
       ;;(warn "Expand is not complete. ~a" (second inputs))
-      (let* ((out (wf:!rankup (wf:->mat (car inputs)) (- (wf/t:dims (car inputs)) (length (second inputs)))))
+      (let* ((y (second inputs))
+	     (out (wf:!rankup (wf:->mat (car inputs)) (abs (- (wf/t:dims (car inputs)) (if (listp y) (length y) (car (wf/t:shape y)))))))
 	     (s   (loop for o in (wf/t:shape out)
-			for e in (second inputs)
-			if (= 1 (wf/t:tensor-vec e))
+			for e upfrom 0
+			if (and (listp y) (= 1 (wf/t:tensor-vec (nth e y))))
 			  collect t
 			else
-			  collect `(:broadcast ,(wf/t:tensor-vec e)))))
+			  collect
+			  (if (listp y)
+			      `(:broadcast ,(wf/t:tensor-vec (nth e y)))
+			      (progn
+				(setf out (wf/nodes::!merge-subgraph out y))
+				`(:broadcast ,(wf/vm:make-lazyaxis `(wf/t:vref ,y ,e))))))))
 	(car (multiple-value-list (apply #'wf:!view out s))))))
 
 (defop ("Tile" 6)
@@ -367,7 +420,7 @@
       (apply
        #'wf:!reshape
        (car inputs)
-       (loop for nth upfrom 0 below (length (wf/t:shape (second inputs)))
+       (loop for nth upfrom 0 below (car (wf/t:shape (second inputs)))
 	     collect
 	     (wf/vm:make-lazyaxis `(wf/t:vref ,(second inputs) ,nth))))))
 
@@ -386,6 +439,42 @@
 				   collect
 				   (nth i (wf/t:shape (car inputs)))))))))
 	(apply #'wf:!reshape (car inputs) reshaped))))
+
+(wf/nodes:defnode
+    (Resize2DLinear (self in-shape ndims output-shape)
+     :where (data[in-shape] X-out[ndims] Y-out[ndims] out-to[output-shape] -> out-to[output-shape])
+     :slots ((out-shape :initarg :output-shape :initform nil :accessor resize-out-shape-of)))
+   (setf (wf/nodes:ignore-shape-error self) t))
+
+(wf/nodes:define-impl-op
+    (Resize2DLinear)
+    :forward ((self data x-out y-out out-to)
+	      (print "RESIZE2D")
+	      ;; [TODO] Optimize
+	      ;; [TODO] Rewrite this kernel using AbstractTensor
+	      ;; [TODO] Move this operation into wf/nn or wf/base-impl or wf/frontends/externels
+	      (let ((ret))
+		(loop for x across (change-facet x-out :direction 'simple-array) do
+		  (loop for y across (change-facet y-out :direction 'simple-array)
+			for x-floor = (floor x)
+			for y-floor = (floor y)
+			for x-ceil  = (1+ (ceiling x))
+			for y-ceil  = (1+ (ceiling y))
+			for wx = (- (ceiling x) x)
+			for wy = (- (ceiling y) y)
+			if (and (= x x-floor) (= y y-floor))
+			  do (setf ret (append ret (list 0)))
+			else if (= x x-floor)
+			       do (setf ret (append ret (list 0)))
+			else if (= y y-floor)
+			       do (setf ret (append ret (list 0)))
+			else do   (setf ret (append ret (list 0)))))
+		(wf:proceed
+		 (apply
+		  #'wf:!reshape
+		  (change-facet ret :direction 'AbstractTensor)
+		  (map 'list #'wf/vm:maybe-observe-axis (resize-out-shape-of self)))))))
+
 
 (defun resize-op-11-13-common (cls size inputs attrs)
   (let* ((roi (nth 1 inputs))
@@ -415,8 +504,12 @@
 	 (exclude (gethash "exclude_outside" attrs 0))
 	 (extrapolation-value (gethash "extrapolation_value" attrs 0.0))
 	 (roi (when roi (error "resize-op-11-13-common: roi=True is not implemented yet.")))
-	 (out-size (if size size (error "size=nil is not impllemented yet."))))
-				  
+	 (out-size (if size size (error "size=nil is not impllemented yet.")))
+	 (out-size-lazy-list
+	   (loop for i upfrom 0 below ndims
+		 collect
+		 (wf/vm:make-lazyaxis `(wf/t:vref ,out-size ,i)))))
+    (declare (type wf/t:AbstractTensor out-size))
 
     (labels
 	((nearest-gather (X x-out y-out)
@@ -432,29 +525,47 @@
 	 (coordinate-trans (x-out y-out out-shape scales)
 	   (macrolet ((of (value) `(string= coord-trans ,value)))
 	     (multiple-value-bind (x-out y-out)
-		 (values
-		  (cond
-		    ((of "asymmetric")
-		     (values
-		      (wf:!/ x-out (wf:!- (wf:!view scales 0)))
-		      (wf:!/ y-out (wf:!- (wf:!view scales 1)))))
-		    (T
-		     (error "coordinate-trans: ~a is not implemented" coord-trans))))
+		 (cond
+		   ((of "half_pixel")
+		    (values
+		     (wf:!- (wf:!/ (wf:!+ 0.5 x-out) (wf:!view (wf:!view scales 3) (wf:broadcast-to x-out))) 0.5)
+		     (wf:!- (wf:!/ (wf:!+ 0.5 y-out) (wf:!view (wf:!view scales 2) (wf:broadcast-to y-out))) 0.5)))
+		   ((of "asymmetric")
+		    (values
+		     (wf:!/ x-out (wf:!- (wf:!view scales 0)))
+		     (wf:!/ y-out (wf:!- (wf:!view scales 1)))))
+		   (T
+		    (error "coordinate-trans: ~a is not implemented" coord-trans)))
 	       (values x-out y-out)))))
-
-      (let ((x-out (wf:lazy-index-components #'(lambda (i) i) (make-input `(,(wf/vm:make-lazyaxis `(wf/t:vref ,out-size (+ ndim -1)))) nil)))
-	    (y-out (wf:lazy-index-components #'(lambda (i) i) (make-input `(,(wf/vm:make-lazyaxis `(wf/t:vref ,out-size (+ ndim -2)))) nil))))
+      (let ((x-out (wf:lazy-index-components #'(lambda (i) i) (make-input `(,(wf/vm:make-lazyaxis `(wf/t:vref ,out-size ,(+ ndims -1)))) nil)))
+	    (y-out (wf:lazy-index-components #'(lambda (i) i) (make-input `(,(wf/vm:make-lazyaxis `(wf/t:vref ,out-size ,(+ ndims -2)))) nil))))
 	(case ndims
 	  (4
 	   (macrolet ((of (value) `(string= mode ,value)))
 	     (cond
 	       ((of "nearest")
 		(multiple-value-bind (x-out y-out)
-		    (coordinate-trans x-out y-out out-size (nth 2 inputs))
+		    (coordinate-trans x-out y-out out-size size)
 		  (nearest-gather
 		   (car inputs)
 		   (nearest-mode x-out (car (last (wf/t:shape (car inputs)))))
 		   (nearest-mode y-out (car (last (wf/t:shape (car inputs))))))))
+	       ((of "linear")
+		(multiple-value-bind (x-out y-out)
+		    (coordinate-trans x-out y-out out-size size)
+		  ;; x-out/y-out [size] Tensor
+		  ;; lambda f de dounika suru
+		  (wf/nodes:call
+		   (Resize2DLinear
+		    (wf/t:shape (car inputs))
+		    ndims
+		    out-size-lazy-list)
+		   (car inputs)
+		   x-out
+		   y-out
+		   (make-input out-size-lazy-list nil))
+		  ;;(error "")
+		  ))
 	       (T (error "~a is not implemented" mode)))))
 	  (T (error "resize-op-11-13-common: ndims = ~a is not implemented" ndims)))))))
 
@@ -464,6 +575,15 @@
 	     (size (if (= (length inputs) 4)
 		       (nth 3 inputs)
 		       (wf:!mul (nth 0 inputs) (wf:!flexible scale)))))
+	(car (multiple-value-list (resize-op-11-13-common cls size inputs attrs))))))
+
+(defop ("Resize" 13)
+    ((cls inputs attrs)
+      (let* ((scale (nth 2 inputs))
+	     (size  (nth 3 inputs)))
+	(if size
+	    (assert (null scale))
+	    (error "NOT IMPLEMENTED"))
 	(car (multiple-value-list (resize-op-11-13-common cls size inputs attrs))))))
 
 
@@ -494,6 +614,7 @@ def non_max_suppression(
 |#
 (defop ("NonMaxSuppression" 11)
     ((cls inputs attr)
+      (warn "NonMaxSupression is not implemented yet.")
       (let* ((boxes (car inputs))
 	     (scores (second inputs))
 	     (mobpe (third inputs))
@@ -506,3 +627,9 @@ def non_max_suppression(
 	(print iou-threshold)
 	(print sth)
 	(wf:!add boxes scores))))
+
+(defop ("GlobalAveragePool" 1)
+    ((cls inputs attrs)
+      (declare (ignore attrs))
+      (wf/nodes:call (wf/nn:AvgPool2D (last (wf/t:shape (car inputs)) 2)) (car inputs))))
+

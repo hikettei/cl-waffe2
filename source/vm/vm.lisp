@@ -277,7 +277,7 @@ Evaluates generated cl-waffe2 IR sequence.
 	  for position fixnum upfrom 0
 	  do (apply-inst-sv4bw inst)
 	     (handler-bind
-		 ((error #'(lambda (c) (runtime-error position c iseq))))
+		 ((error #'(lambda (cond) (runtime-error position cond iseq))))
 	       (write-result (wfop-out-to inst) (apply-instruction inst)))
 	  finally
 	     (return-from accept-instructions
@@ -352,8 +352,8 @@ See also: `proceed-bench`
 		 (let ((start-time (get-internal-real-time)))
 		   (handler-bind
 		       ((error
-			  (lambda (c)
-			    (runtime-error position c iseq))))
+			  (lambda (cond)
+			    (runtime-error position cond iseq))))
 		     (write-result (wfop-out-to inst) (apply-instruction inst)))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)

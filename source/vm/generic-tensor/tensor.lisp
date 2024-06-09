@@ -405,6 +405,7 @@ This function is setfable and inlined.
   ;;  (error "(setf tensor-vec) Can't set the ="))
   (write-vec new-value tensor))
 
+(defparameter *subgraph-subject* nil)
 ;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p    (getf initargs :scalar-p))

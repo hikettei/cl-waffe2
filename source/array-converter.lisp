@@ -130,7 +130,8 @@ We provide these symbols as a `direction` in standard.
 		   do (setf list (car list))))
 	   (list-to-array (list depth)
 	     (make-array (list-dimensions list depth)
-			 :initial-contents list))
+			 :initial-contents list
+			 :element-type (dtype->lisp-type (dtype-of (car (alexandria:flatten list))))))
 	   (get-dimensions (x &optional (n 1))
 	     (if (some #'listp x)
 		 (get-dimensions (car x) (1+ n))

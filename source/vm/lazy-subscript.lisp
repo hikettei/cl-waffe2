@@ -92,7 +92,7 @@ e.g.: A is = compared to 2
     (:rest          (lazyir-car lazyir))
     (:arithmetic   `(,(lazyir-car lazyir) ,@(map 'list #'ir->list (lazyir-cdr lazyir))))
     (:function     `(,(lazyir-car lazyir) ,@(map 'list #'ir->list (lazyir-cdr lazyir))))))
-
+	   
 (defun interpret-lazy (lazyir)
   (declare (type LazyIR lazyir))
   (ecase (lazyir-type lazyir)
@@ -176,7 +176,7 @@ e.g.: A is = compared to 2
   (or (and *local-variable-table*
 	   (gethash symbol *local-variable-table*))
       (cl-waffe2/vm.generic-tensor::read-symbol symbol)))
-			 
+
 (defun parse-lazy-exp (exp)
   (trivia:ematch exp
     ((list* (or '+ '- '* '/) _)
@@ -307,6 +307,20 @@ No macro usings are allowed; functions and fixnum, list are available.
     (when (eql (lazyir-type lazyir) :dynamic-shape)
       (return-from make-lazyaxis
 	(cadr (second (lazyir-car lazyir)))))
+
+    (when (and
+	   (eql (lazyir-car lazyir) 'vref)
+	   (typep (second (lazyir-cdr lazyir)) 'LazyIR)
+	   (numberp (lazyir-car (second (lazyir-cdr lazyir))))
+	   (let ((tensor (lazyir-car (car (lazyir-cdr lazyir))))
+		 (val    (lazyir-car (second (lazyir-cdr lazyir)))))
+	     (and
+	      (typep tensor 'AbstractTensor)
+	      (wf/t::vec tensor)
+	      (or
+	       (null (tensor-state tensor))
+	       (eql :computed (wf/t::state-name tensor (tensor-state tensor))))
+	      (return-from make-lazyaxis (floor (wf/t:vref tensor val)))))))
     
     (%make-lazyaxis
      args
@@ -446,7 +460,7 @@ Otherwise                 -> Return as it is."
 	      (if (= -1 (cl-waffe2/vm.generic-tensor::read-adjustable-symbol value))
 		  (block try-make-it-static
 		    (handler-bind
-			((error #'(lambda (c) (declare (ignore c)) (return-from try-make-it-static -1))))
+			((error #'(lambda (cond) (declare (ignore cond)) (return-from try-make-it-static -1))))
 		      (observe-axis (symbol-lazyaxis value))))
 		  (observe-axis (symbol-lazyaxis value)))
 	      (cl-waffe2/vm.generic-tensor::read-adjustable-symbol value))
