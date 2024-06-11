@@ -173,6 +173,7 @@ jobs:
       - name: Installing Qlot
         run: |
           curl -L https://qlot.tech/installer | sh
+          export PATH="/home/runner/.qlot/bin:$PATH"
           qlot install
       
       - name: Training w/ Aten[Clang]
