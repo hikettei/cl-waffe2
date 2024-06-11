@@ -16,7 +16,6 @@
 ;; call-with-view utils
 ;; ===============================================
 
-
 (defun update-calling-route (value)
   ;; Utils
   ;; cl-waffe2/vm.nodes can trace the result of *call-with-view-route*
@@ -194,6 +193,7 @@ butgot ~a."
 						(nth nth-rank (tensor-view tensor)))
 					       0
 					       `(the fixnum (aref ,diffs-place ,nth-rank ,position)))))))))))))
+      
       `(let ((,offsets-place (make-array
 			      ,(length tensors)
 			      :element-type 'fixnum

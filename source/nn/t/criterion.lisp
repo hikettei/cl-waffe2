@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/nn.test)
 
-(in-suite :nn-test)
-
 (defun softmax-cross-entropy-test ()
   (let ((a (parameter (randn `(10 10))))
 	(b (parameter (randn `(10 10)))))
@@ -27,9 +25,10 @@
 ;; -> error due to MoveTensorNode was ignored.
 ;; -> self was duplicated in the cached functions.
 
-(test softmax-cross-entropy-and-static-node-backward
-  (is (softmax-cross-entropy-test))
-  (is (softmax-cross-entropy-test1)))
+(deftest softmax-cross-entropy-and-static-node-backward
+  (testing "Testing FusedSoftmaxCrossEntropy"
+    (ok (softmax-cross-entropy-test))
+    (ok (softmax-cross-entropy-test1))))
 
 (defun criterion-with-build ()
   (let ((a (parameter (randn `(10 10))))
@@ -39,13 +38,12 @@
       (forward model)
       (backward model)
 
-      ;;zero-grads! model)
-      (print (grad a))
-      (print (grad b))
+;;      (print (grad a))
+;;      (print (grad b))
 
       (forward model)
       (backward model)
 
-      (print (Grad a))
-      (print (grad b))
+;;      (print (Grad a))
+;;      (print (grad b))
       )))

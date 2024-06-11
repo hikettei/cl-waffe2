@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes.test)
 
-(in-suite :test-nodes)
-
 (defnode (Bijective-Function (myself)
 	  :where (A[x y] B[x y] -> A[x y])
 	  :documentation "Bijective-Function has a one-to-one correspondence."))
@@ -50,10 +48,10 @@
     (typep (Bijective-Function) 'CL-WAFFE2/VM.NODES.FACETS-TMP::BIJECTIVE-FUNCTION-MYBACKEND-WITH-IMPL)))
 
 
-(test heuristic-backend-dispatching-test
-  (is (test-switch-backend1))
-  (is (test-switch-backend2))
-  (is (test-switch-backend3)))
+(deftest heuristic-backend-dispatching-test
+  (ok (test-switch-backend1))
+  (ok (test-switch-backend2))
+  (ok (test-switch-backend3)))
 
 (defun shape-test ()
   (let ((out (forward (Transpose-Function)
@@ -62,8 +60,8 @@
 			       (make-tensor `(10 3))))))
     (equal (shape out) `(3 10))))
 
-(test shape-test
-  (is (shape-test)))
+(deftest shape-test
+  (ok (shape-test)))
 
 
 ;; [Add] defnode, define-impl, define-impl-op
@@ -83,8 +81,8 @@
 			   (declare (ignore x y))
 			   (values dy dy)))
 
-(test define-impl-op-forward-test
-  (is (= 2 (tensor-vec
+(deftest define-impl-op-forward-test
+  (ok (= 2 (tensor-vec
 	    (proceed
 	     (forward
 	      (OpAddTest-Scal)
@@ -136,24 +134,20 @@
      (= (tensor-vec (grad a)) 3)
      (= (tensor-vec (grad b)) 2))))
      
-(test define-op-diff-test
-  (is (= 6
+(deftest define-op-diff-test
+  (ok (= 6
 	 (tensor-vec
 	  (proceed
 	   (call (OpMulTest-Scalar) (make-tensor 2) (make-tensor 3))))))
-  (is (let ((a (parameter (make-tensor 2)))
+  (ok (let ((a (parameter (make-tensor 2)))
 	    (b (parameter (make-tensor 3))))
 	(proceed-backward
 	 (call (OpMulTest-Scalar) a b))
 	(and
 	 (= 3 (tensor-vec (grad a)))
 	 (= 2 (tensor-vec (grad b))))))
-  (is (diff-test-proceed))
-  (is (diff-test-vm)))
-
-;; define-op: 返す引数が複数だと二回も計算しちゃうことになる・・・ (forward backward)
-;; VM      -> 
-;; Proceed ->
+  (ok (diff-test-proceed))
+  (ok (diff-test-vm)))
 
 (define-op (SwapNode (self)
 	    :out-scalar-p t
@@ -191,8 +185,8 @@
   (with-devices (cl-waffe2/backends.cpu:CPUTensor)
     (= x (bypass x))))
 
-(test define-bypass-test
-  (is (bypass-test 10)))
+(deftest define-bypass-test
+  (ok (bypass-test 10)))
 
 
 

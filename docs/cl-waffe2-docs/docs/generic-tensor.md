@@ -289,12 +289,21 @@ Created a new ExistTensor of a device of `(car *using-backend*)`.
 
 6. `device[symbol or null]` If set to symbol, the function returns with making a tensor of device.
 
+## Tips
+
+Inserting `~` allows direct insertion of broadcastable axis at the corresponding position:
+
+```lisp
+(randn `(3 ~ 3))
+(make-tensor `(3 ~ 3))
+```
+
 ### Example
 
 ```lisp
 (make-tensor `(10 10) :initial-element 1.0)
 
-{CPUTENSOR[float] :shape (10 10)  
+{LISPTENSOR[float] :shape (10 10)  
   ((1.0 1.0 1.0 ~ 1.0 1.0 1.0)           
    (1.0 1.0 1.0 ~ 1.0 1.0 1.0)   
         ...
@@ -327,12 +336,20 @@ Creates a new InputTensor. The allocation won't be done until the function `(ten
 
 `create-from[nil or AbstractTensor]` The returned InputTensor will extend Permutions/Strides and so on from `create-from` if any.
 
+## Tips
+
+Inserting `~` allows direct insertion of broadcastable axis at the corresponding position:
+
+```lisp
+(make-input `(~ N C) nil)
+```
+
 ### Example
 
 ```lisp
 (make-input `(a 10) :train-x)
 
-{CPUTENSOR[float] :shape (A 10) :named :TRAIN-X 
+{LISPTENSOR[float] :shape (A 10) :named :TRAIN-X 
     <<Not allocated: size=(A 10)>>
   :facet :input
   :requires-grad NIL
@@ -433,13 +450,13 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 > (setq out (!add (make-input `(a 10) :X) (make-input `(a 10) :Y)))
 ```
 ```
-{CPUTENSOR[float] :shape (A 10) :id TID1622 
+{LISPTENSOR[float] :shape (A 10) :id TID937 
   :vec-state [maybe-not-computed]
     <<Not allocated: size=(A 10)>>
   :facet :input
   :belongs-to :memory-pool
   :requires-grad NIL
-  :backward <Node: ADDNODE-CPUTENSOR (A[~] B[~] -> A[~])>}
+  :backward <Node: ADDNODE-LISPTENSOR (A[~] B[~] -> A[~])>}
 ```
 
 **REPL:**
@@ -448,7 +465,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 ```
 ```
 <Compiled-Composite(allocated-p=NIL)
-    forward     : forward(model X Y) -> CPUTENSOR{FLOAT}(A 10)
+    forward     : forward(model X Y) -> LISPTENSOR{FLOAT}(A 10)
     backward    : nil
     memory-pool : one tensor(s)
                    L {4.0e-5+((A) x 4.0e-6)}MB
@@ -631,10 +648,10 @@ In order to parse the state_dict key, the function `parse-state-dict-key` is ava
 > (make-state-dict (build (call (LinearLayer 10 10) (randn `(10 10)))))
 ```
 ```
-#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {1005210003}>
+#S(STATE-DICT :TABLE #<HASH-TABLE :TEST EQUAL :COUNT 2 {70066EC283}>
  table-key-to-value:
-    param:linearlayer.0.bias    -> CPUTENSOR{FLOAT}(10)
-    param:linearlayer.0.weights -> CPUTENSOR{FLOAT}(10 10)
+    param:linearlayer.0.bias    -> LISPTENSOR{FLOAT}(10)
+    param:linearlayer.0.weights -> LISPTENSOR{FLOAT}(10 10)
 
 )
 ```

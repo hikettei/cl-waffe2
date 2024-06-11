@@ -100,13 +100,22 @@ reject-when=nil, or (apply reject-when inputs)=t"
    #'(lambda (obj)
       (typecase obj
 	 (AbstractTensor
-	  (if (find (tensor-id obj) args :key #'tensor-id :test #'eql)
-	      (tensor-id obj)
+	  (if (find (tensor-var obj) args :key #'tensor-var :test #'eql)
+	      (tensor-var obj)
 	      (progn
 		obj)))
 	 (T
 	  obj)))
    body))
+
+(defun ensure-no-duplicate (tensors)
+  (loop for tens in tensors
+	for n upfrom 0
+	for use = (shallow-copy-object tens)
+	collect
+	(progn
+	  (setf (tensor-count use) n)
+	  use)))
 
 (defun vm-kernel-lambda (dispatch-id traceable? name args self body)
   "Creates A Compiled-Kernel Structure"
@@ -164,8 +173,16 @@ If the priority 1 backend does not have an implementation of the specified opera
 
 The order of priority would be `(,@backend-priority ScalarTensor t). (t is a special name, and it implys the implement works for all the backends.)
 "
-  `(let ((*using-backend* ',backend-priority))
-     (declare (type list *using-backend*))
+  `(let ((*using-backend*
+	   (list
+	    ,@(map 'list
+		   #'(lambda (x)
+		       (multiple-value-bind (form p) (macroexpand x)
+			 (if p
+			     form
+			     `(quote ,x))))
+		   backend-priority))))
+     (setf *using-backend* (alexandria:flatten *using-backend*))
      (mapc
       #'(lambda (x)
 	  (unless (subtypep x 'cl-waffe2/vm.generic-tensor:AbstractTensor)
@@ -508,7 +525,7 @@ The node definitely works, but each time you compile it the function `(compile n
        
        (defclass ,impl-name (,abstract-name ,@extends)
 	 ((save-for-backward-space2 :initform ',save-for-backward :reader node-save-for-backward2))
-	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe."
+	 (:documentation ,(format nil "The node ~a is a one facet of ~a for the device ~a. Automatically defined by cl-waffe2."
 				  impl-name
 				  abstract-name
 				  device)))
@@ -534,14 +551,15 @@ The node definitely works, but each time you compile it the function `(compile n
 			      `(apply ,cache-id ,forward-self-name ,inputs)
 			      nil)
 			 ,cache-when-compiled ',fw-name-vm ,inputs ,forward-self-name
-			 `(lambda ,(map 'list #'tensor-id ,inputs)
-			    (declare (ignorable ,@(map 'list #'tensor-id ,inputs))
-				     (type AbstractTensor ,@(map 'list #'tensor-id ,inputs)))
+			 `(lambda ,(map 'list #'tensor-var ,inputs)
+			    (declare (ignorable ,@(map 'list #'tensor-var ,inputs))
+				     (type AbstractTensor ,@(map 'list #'tensor-var ,inputs)))
 			    ,,@(car forward-body)))))))
 	   ;; (,fw-name ,inputs) => Expanded Forms.
 
 	   ;; Forms: Lambda (args) -> outs
-	   (,fw-name-expand ,inputs)))
+	   (let ((,inputs (ensure-no-duplicate ,inputs)))
+	     (,fw-name-expand ,inputs))))
        
        
        ;; Backward should be defined at either/both of defnode or/and define-impl. (defnode takes the precendence)

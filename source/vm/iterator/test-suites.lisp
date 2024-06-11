@@ -4,22 +4,19 @@
 (defpackage :cl-waffe2/vm.iterator.test
   (:use
    :cl
-   :fiveam
+   :rove
    :cl-waffe2/vm.generic-tensor
    :cl-waffe2/vm.iterator))
 
 (in-package :cl-waffe2/vm.iterator.test)
 
-(def-suite :iterator-test)
-(in-suite  :iterator-test)
-
 ;; Expected to be working as well as for dynamic shapes
-(test range-size-computation
-  (is (= 10 (range-size
+(deftest range-size-computation
+  (ok (= 10 (range-size
 	     (range 0 10 1))))
-  (is (= 5  (range-size
+  (ok (= 5  (range-size
 	     (range 0 10 2))))
-  (is (= 5  (range-size
+  (ok (= 5  (range-size
 	     (range 0 10 -2)))))
 
 ;; Range [A, B)
@@ -68,12 +65,12 @@
 	  (push var count))
 	(equal count `(2 4 6 8))))))
 
-(test dynamic-do-range-test
-  (is (dynamic-do-range-test))
-  (is (dynamic-do-range-test1))
-  (is (all-dynamic-do-range-test))
-  (is (all-dynamic-do-range-test1))
-  (is (rev-dynamic-do-range-test)))
+(deftest dynamic-do-range-test
+  (ok (dynamic-do-range-test))
+  (ok (dynamic-do-range-test1))
+  (ok (all-dynamic-do-range-test))
+  (ok (all-dynamic-do-range-test1))
+  (ok (rev-dynamic-do-range-test)))
 
 (defun fixnum-do-range-test ()
   (let ((count nil))
@@ -104,11 +101,11 @@
     (equal count
 	   (loop for i upfrom 2 below 10 by 2 collect i))))
 
-(test fixed-do-range-test
-  (is (fixnum-do-range-test))
-  (is (range-test-1))
-  (is (range-test-2))
-  (is (range-test-3)))
+(deftest fixed-do-range-test
+  (ok (fixnum-do-range-test))
+  (ok (range-test-1))
+  (ok (range-test-2))
+  (ok (range-test-3)))
 
 (defun compose-test ()
   (let ((a1 (.range
@@ -119,51 +116,51 @@
      (= (range-to   a1) 8)
      (= (range-step a1) 2))))
 
-(test range-compose-test
-  (is (compose-test)))
+(deftest range-compose-test
+  (ok (compose-test)))
 
-(test range-compose-complicated-test
-  (is (progn
+(deftest range-compose-complicated-test
+  (ok (progn
 	(let ((result (.range (range 4)
 			      (range 0 5 -1))))
 	  (and (= (range-step result) 1)
 	       (= (range-from result) 0)
 	       (= (range-to   result) 1)))))
-  (is (progn
+  (ok (progn
 	(let ((result (.range (range 0 5)
 			      (range 0 5 -1))))
 	  (and (= (range-step result) 1)
 	       (= (range-from result) 0)
 	       (= (range-to   result) 5)))))
-  (is (progn
+  (ok (progn
 	(let ((result (.range (range 0 5 -1)
 			      (range 0 5))))
 	  (and (= (range-step result) -1)
 	       (= (range-from result) 0)
 	       (= (range-to   result) 5))))))
 
-(test range-nth-test
-  (is (= 2 (range-nth (range 3 0 -1) 2)))
-  (is (= 1 (range-nth (range 3 0 -1) 1)))
-  (is (= 0 (range-nth (range 3 0 -1) 0)))
+(deftest range-nth-test
+  (ok (= 2 (range-nth (range 3 0 -1) 2)))
+  (ok (= 1 (range-nth (range 3 0 -1) 1)))
+  (ok (= 0 (range-nth (range 3 0 -1) 0)))
 
-  (is (= 2 (range-nth (range 3 0 1) 0)))
-  (is (= 1 (range-nth (range 3 0 1) 1)))
-  (is (= 0 (range-nth (range 3 0 1) 2)))
+  (ok (= 2 (range-nth (range 3 0 1) 0)))
+  (ok (= 1 (range-nth (range 3 0 1) 1)))
+  (ok (= 0 (range-nth (range 3 0 1) 2)))
   
-  (is (= 2 (range-nth (range 0 3 1) 2)))
-  (is (= 1 (range-nth (range 0 3 1) 1)))
-  (is (= 0 (range-nth (range 0 3 1) 0)))
+  (ok (= 2 (range-nth (range 0 3 1) 2)))
+  (ok (= 1 (range-nth (range 0 3 1) 1)))
+  (ok (= 0 (range-nth (range 0 3 1) 0)))
 
-  (is (= 3 (range-nth (range 3 6 1) 0)))
-  (is (= 4 (range-nth (range 3 6 1) 1)))
-  (is (= 5 (range-nth (range 3 6 1) 2)))
+  (ok (= 3 (range-nth (range 3 6 1) 0)))
+  (ok (= 4 (range-nth (range 3 6 1) 1)))
+  (ok (= 5 (range-nth (range 3 6 1) 2)))
 
-  (is (= 5 (range-nth (range 3 6 -1) 0)))
-  (is (= 4 (range-nth (range 3 6 -1) 1)))
-  (is (= 3 (range-nth (range 3 6 -1) 2)))
+  (ok (= 5 (range-nth (range 3 6 -1) 0)))
+  (ok (= 4 (range-nth (range 3 6 -1) 1)))
+  (ok (= 3 (range-nth (range 3 6 -1) 2)))
 
-  (is (= 5 (range-nth (range 6 3 1) 0)))
-  (is (= 4 (range-nth (range 6 3 1) 1)))
-  (is (= 3 (range-nth (range 6 3 1) 2))))
+  (ok (= 5 (range-nth (range 6 3 1) 0)))
+  (ok (= 4 (range-nth (range 6 3 1) 1)))
+  (ok (= 3 (range-nth (range 6 3 1) 2))))
 

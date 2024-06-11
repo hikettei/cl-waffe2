@@ -15,12 +15,12 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 ```lisp
 (normal `(10 10) 0.0 1.0 :requires-grad t)
 
-{CPUTENSOR[float] :shape (10 10)  
-  ((0.019091532   1.077396      -0.17874254   ~ -0.7403823    0.15017667    -0.46685407)                     
-   (0.5039429     0.2985424     -0.5985508    ~ 0.58595663    0.21627972    -0.12598784)   
-                  ...
-   (-1.534469     0.48690832    0.61201316    ~ 0.13288274    -0.96409506   0.3868878)
-   (0.90485555    0.105599456   0.6912249     ~ -0.7889702    -1.148289     -0.050823983))
+{LISPTENSOR[float] :shape (10 10)  
+  ((0.2188695    -0.6865164   -0.7096969   ~ 0.5221619    -1.0098034   0.8181761)                    
+   (-0.32395983  -1.7448716   -0.11915433  ~ 1.0900652    -1.8854977   -0.1889971)   
+                 ...
+   (-0.7269606   -0.031115573 0.14158817   ~ -1.3815284   0.1739938    1.9703826)
+   (-0.096768215 0.7583118    1.3229972    ~ 0.8591301    -0.56368643  1.4221152))
   :facet :exist
   :requires-grad T
   :backward NIL}
@@ -31,7 +31,7 @@ That is, arguments passed to the `make-tensor` function can also be passed direc
 ```lisp
 (ax+b `(10 10) 1 0 :dtype :uint8)
 
-{CPUTENSOR[uint8] :shape (10 10)  
+{LISPTENSOR[uint8] :shape (10 10)  
   ((0  1  2  ~ 7  8  9)          
    (10 11 12 ~ 17 18 19)   
        ...
@@ -113,7 +113,7 @@ Inputs:
 ```lisp
 (ax+b `(3 3) 1.0 0.0)
 
-{CPUTENSOR[float] :shape (3 3)  
+{LISPTENSOR[float] :shape (3 3)  
   ((0.0 1.0 2.0)
    (3.0 4.0 5.0)
    (6.0 7.0 8.0))
@@ -145,10 +145,10 @@ Note: My implementation is unstable, being occurs floating-overflow constantly..
 ```lisp
 (beta `(3 3) 5.0 1.0)
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((0.9526814  0.9772896  0.8532768)
-   (0.7357619  0.92763716 0.8122957)
-   (0.716915   0.900784   0.90241367))
+{LISPTENSOR[float] :shape (3 3)  
+  ((0.7730661  0.7142378  0.84765464)
+   (0.9686189  0.76956904 0.8549012)
+   (0.4545031  0.914095   0.54855245))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -169,10 +169,10 @@ p - Takes 1 with probability p and 0 with probalibity (1-p).
 ```lisp
 (bernoulli `(3 3) 0.3)
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((0.0 0.0 1.0)
+{LISPTENSOR[float] :shape (3 3)  
+  ((0.0 0.0 0.0)
    (1.0 0.0 0.0)
-   (0.0 1.0 0.0))
+   (1.0 1.0 0.0))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -197,10 +197,10 @@ df - degree of freedom.
 ```lisp
 (chisquare `(3 3) 1.0)
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((0.21670008  0.112398714 0.3001082)
-   (0.6785706   0.7514469   0.37084237)
-   (0.72724813  2.9567142   0.1113069))
+{LISPTENSOR[float] :shape (3 3)  
+  ((1.2326496   0.8483967   0.011596402)
+   (0.4021547   0.027511619 0.08436891)
+   (0.5057191   0.011141564 0.017833697))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -226,10 +226,10 @@ The function exponential is a family of initializer functions, and samples the e
 ```lisp
 (exponential `(3 3))
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((0.18444276 1.1665336  0.5280462)
-   (0.41465604 1.4009397  0.671173)
-   (2.6738424  1.2597004  0.17590772))
+{LISPTENSOR[float] :shape (3 3)  
+  ((0.47960132 5.64849    0.29346126)
+   (0.2325543  0.06230082 0.83188677)
+   (3.1640477  1.1214623  2.3461883))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -251,10 +251,10 @@ The function gamma is a family of initializer functions, and samples matrices fr
 ```lisp
 (gamma `(3 3) 1.0)
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((0.25004625  0.066562936 3.1535413)
-   (0.42649975  1.1531353   0.9811732)
-   (1.3254013   0.67709714  0.3043218))
+{LISPTENSOR[float] :shape (3 3)  
+  ((0.66520137  0.52452326  1.8498352)
+   (2.4886518   1.0235898   1.0265534)
+   (2.005943    1.0844046   0.115611516))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -284,7 +284,7 @@ stddev - Standard Deviation, σ.
 ```lisp
 (normal `(3 3) 1.0 0.0)
 
-{CPUTENSOR[float] :shape (3 3)  
+{LISPTENSOR[float] :shape (3 3)  
   ((1.0 1.0 1.0)
    (1.0 1.0 1.0)
    (1.0 1.0 1.0))
@@ -308,10 +308,10 @@ Input:
 ```lisp
 (uniform-random `(3 3) 2 4)
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((3.3453193 3.0378416 2.4349144)
-   (2.584164  2.1954563 3.3052208)
-   (2.4049528 2.1151443 2.4065173))
+{LISPTENSOR[float] :shape (3 3)  
+  ((3.5922756 3.226882  2.4872847)
+   (2.952711  3.6584299 3.6804876)
+   (2.5902324 3.003483  3.9570756))
   :facet :exist
   :requires-grad NIL
   :backward NIL}
@@ -338,10 +338,10 @@ The function randn is a family of initializer functions, and samples the gaussia
 ```lisp
 (randn `(3 3))
 
-{CPUTENSOR[float] :shape (3 3)  
-  ((-0.50962603  0.970088     -0.23391165)
-   (-0.045766525 -1.1019369   0.6617144)
-   (-1.4078823   2.643538     0.81806624))
+{LISPTENSOR[float] :shape (3 3)  
+  ((-0.79764336 0.3408451   0.31103113)
+   (-1.7451742  0.6599348   0.05832184)
+   (-0.44232148 -0.81750864 -0.496161))
   :facet :exist
   :requires-grad NIL
   :backward NIL}

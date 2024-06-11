@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/vm.test)
 
-(in-suite :vm-test)
-
 (defun lazy-axis-net-1 ()
   (let ((out (build
 	      (!add
@@ -25,9 +23,9 @@
      (= 8.0 (vref (forward out (ax+b `(4 4) 0 0)) 0)))))
 
 ;; ScalarTensors with LazyAxis works well?
-(test lazy-axis-scalar-test
-  (is (lazy-axis-net-1))
-  (is (lazy-axis-net-adjust-later)))
+(deftest lazy-axis-scalar-test
+  (ok (lazy-axis-net-1))
+  (ok (lazy-axis-net-adjust-later)))
 
 (defun conv2d-forward-test ()
   (call (Conv2D 3 6 `(5 5)) (make-input `(N 3 25 25) nil)))
@@ -40,10 +38,10 @@
 
 
 ;; Testing just a node construction
-(test dynamic-cnn-node-construction-test
-  (is (conv2d-forward-test))
-  (is (avg-pool2d-forward-test))
-  (is (max-pool2d-forward-test)))
+(deftest dynamic-cnn-node-construction-test
+  (ok (conv2d-forward-test))
+  (ok (avg-pool2d-forward-test))
+  (ok (max-pool2d-forward-test)))
 
 (defsequence LazyCNN (&key
 		      (out-channels1 4)
@@ -57,28 +55,11 @@
 	     (asnode #'!reshape t (* 16 4 4))
 	     (LinearLayer (* 16 4 4) 10))
 
-;; Testing dynamic shape
-(defun cnn-build-test-cpujit ()
-  (with-cpu-jit (CPUTensor LispTensor)
-    (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))))
-
 (defun cnn-build-test-cputensor ()
-  (with-devices (LispTensor CPUTensor)
-    (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X))))
-    
-(test dynamic-shape-build
-  (is (cnn-build-test-cpujit))
-  (is (cnn-build-test-cputensor)))
+  (build (call (LazyCNN) (make-input `(N 1 28 28) :X)) :inputs `(:X)))
 
-(defun cnn-train-test-jit-fw ()
-  (let ((model (cnn-build-test-cpujit)))
-    (forward model (randn `(100 1 28 28)))
-    ;;(backward model)
-    (forward model (randn `(10 1 28 28)))
-    ;;(backward model)
-    (forward model (randn `(121 1 28 28)))
-    ;;(backward model)
-    t))
+(deftest dynamic-shape-build
+  (ok (cnn-build-test-cputensor)))
 
 (defun cnn-train-test-cpu-fw ()
   (let ((model (cnn-build-test-cputensor)))
@@ -88,16 +69,6 @@
     ;;(backward model)
     (forward model (randn `(121 1 28 28)))
     ;;(backward model)
-    t))
-
-(defun cnn-train-test-jit-fwbw ()
-  (let ((model (cnn-build-test-cpujit)))
-    (forward model (randn `(100 1 28 28)))
-    (backward model)
-    (forward model (randn `(10 1 28 28)))
-    (backward model)
-    (forward model (randn `(121 1 28 28)))
-    (backward model)
     t))
 
 (defun cnn-train-test-cpu-fwbw ()
@@ -111,13 +82,11 @@
     t))
 
 ;; Including JITCPUTensor Test...
-(test dynamic-shaped-cnn-build-test
-  (is (cnn-train-test-jit-fw))
-  (is (cnn-train-test-cpu-fw)))
+(deftest dynamic-shaped-cnn-build-test
+  (ok (cnn-train-test-cpu-fw)))
 
-(test dynamic-shaped-cnn-build-test-diff
-  (is (cnn-train-test-jit-fwbw))
-  (is (cnn-train-test-cpu-fwbw)))
+(deftest dynamic-shaped-cnn-build-test-diff
+  (ok (cnn-train-test-cpu-fwbw)))
 
 (defun make-test-tensor ()
   (!reshape (make-input `(N C H W) :X) (~ N C H W -> (* N C H) W)))
@@ -128,8 +97,8 @@
     (let ((a (forward model (ax+b `(3 3 3 3) 0 1))))
       (every #'(lambda (i) (= i (sin 1))) (tensor-vec a)))))
 
-(test dynamic-lazy-tset
-  (is (lazy-feature-test)))
+(deftest dynamic-lazy-tset
+  (ok (lazy-feature-test)))
 
 (defun do-compiled-dynamic-test ()
   (let ((model
@@ -137,27 +106,20 @@
     (let ((a (forward model (ax+b `(3 3 3 3) 0 2))))
       (every #'(lambda (i) (= i (expt 2 2))) (tensor-vec a)))))
 
-(test do-compiled-dynamic-test
-  (is (do-compiled-dynamic-test)))
+(deftest do-compiled-dynamic-test
+  (ok (do-compiled-dynamic-test)))
 
 ;; [TO ADD]: where
 ;; (funcall (where A[i j] B[i j] -> C[i j] where i = (* 2 x))
 ;;  	    (randn `(3 3))
 ;;	    (randn `(3 3)))
 
-(defun rendering-test ()
-  (print (randn `(10 10 10))))
-
-(test rendering-tensor-test
-  (is (rendering-test)))
-
-;; CNN with activation
 
 (defun lazyaxis-and-symbol-comparison ()
   (build (softmax-cross-entropy
 	  (!reshape (call (Conv2D 3 6 `(5 5)) (make-input `(N 3 25 25) :X)) (~ N C H W -> N (* C H W)))
 	  (make-input `(N 2646) :X))))
 
-(test lazyaxis-and-symbol-comparison
-  (is (lazyaxis-and-symbol-comparison)))
+(deftest lazyaxis-and-symbol-comparison
+  (ok (lazyaxis-and-symbol-comparison)))
   

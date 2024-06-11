@@ -197,7 +197,7 @@ Output: `Tensor[AbstractTensor]`
 
 	      ;; dout.shape == dx.shape
 	      (let* ((out-sub (tensor-view dy))
-		     (inp-sub (slot-value self 'subscripts))
+		     (inp-sub (slot-value self 'subscripts))		     
 		     (res (!move dx (apply #'!view dout inp-sub)))
 		     (res (->contiguous (apply #'!view res out-sub))))
 		(values nil res))))
@@ -288,10 +288,10 @@ Tips: If a function is passed as the first element of `subscript`, the subscript
 			  ;;  Has Changed.
 
 			  ;; [TODO] Detect This Error Before Execution.
-			  (assert (= (total x) (total y))
-				  nil
-				  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering the dynamic shape do not match:
-~a and ~a" x y)
+			  ;;(assert (= (total x) (total y))
+			;;	  nil
+			;;	  "ReshapeTensorNode: Attempted to move x to y but failed because the total sizes considering the dynamic shape do not match:
+;;~a and ~a" x y)
 			  ;; Shares the storage:
 			  (setf (tensor-vec y) (tensor-vec x))
 			  y))
@@ -482,7 +482,7 @@ CL-WAFFE2-REPL>
 ```
 "
   (declare (type AbstractTensor tensor)
-	   (type fixnum ntimes at))
+	   (type fixnum at))
   (let* ((at (if (>= at 0)
 		 at
 		 (+ (dims tensor) at)))
@@ -491,9 +491,11 @@ CL-WAFFE2-REPL>
 	 (shape         (nthcdr at (copy-list (shape tensor)))))
     (if (< ntimes 0)
 	(loop for i fixnum upfrom 0 below (abs ntimes)
-	      do (if (= (car shape) 1)
+	      do (if (equal (car shape) 1)
 		     (pop shape)
-		     (error "!rankup failed because it encountered a dimension which is not the equivalent to 1.")))
+		     (progn
+		       (setf shape (remove 1 shape))
+		       (warn "!rankup failed because it encountered a dimension which is not the equivalent to 1."))))
 	(loop for i fixnum upfrom 0 below ntimes
 	      do (push 1 shape)))
     ;; TODO: view broadcast
@@ -506,13 +508,13 @@ CL-WAFFE2-REPL>
 		     (declare (ignore dm ds))
 		     (values
 		      (->mat dout)
-		      nil))))
+		      (->mat dout)))))
 
 (defnode (Scalar->MatNode (myself out-shape)
 	  :where (Scalar[scal] Matrix[~ scal] -> Matrix[scal] where scal = out-shape)
 	  :backward ((self dout ds dm)
 		     (declare (ignore dm ds))
-		     (values (->scal dout) nil))))
+		     (values (->scal dout) (->scal dout)))))
 
 (define-impl (Mat->ScalarNode :device t)
 	     :forward ((self matrix scalar)
@@ -524,8 +526,11 @@ CL-WAFFE2-REPL>
 	     :forward ((self scalar matrix)
 		       `(progn
 			  (tensor-vec ,matrix) ;; Call Lazy-Allocate of matrix
-			  (setf (vref ,matrix 0) (tensor-vec ,scalar))
-			  ,matrix)))
+			  (let ((val (if (symbolp (tensor-vec ,scalar))
+					 (wf/vm:maybe-observe-axis (tensor-vec ,scalar))
+					 (tensor-vec ,scalar))))
+			    (setf (vref ,matrix 0) (coerce val (dtype->lisp-type (dtype ,matrix))))
+			    ,matrix))))
 
 ;; Add: Docstring
 ;; Add: Shape Check
@@ -557,11 +562,13 @@ The function ->scal receives `matrix-tensor` with total-size = 1, returning a Sc
 ```
 
 The function ->mat receives `ScalarTensor`, returning a matrix with the number of axis=dims."
-    (let ((out-shape (make-list dims :initial-element 1)))
-      (forward (Scalar->MatNode out-shape)
-	       scalar-tensor
-	       (make-input out-shape nil
-			   :dtype (dtype scalar-tensor))))))
+    (if (scalar-p scalar-tensor)
+	(let ((out-shape (make-list dims :initial-element 1)))
+	  (forward (Scalar->MatNode out-shape)
+		   scalar-tensor
+		   (make-input out-shape nil
+			       :dtype (dtype scalar-tensor))))
+	scalar-tensor)))
 
 		       
 
@@ -596,7 +603,7 @@ The function ->mat receives `ScalarTensor`, returning a matrix with the number o
 (define-impl (ProceedNode :device t)
 	     :save-for-backward (nil)
 	     :forward ((self x)
-		       (let ((compiled-model (proceed-compiled-model self)))			 
+		       (let ((compiled-model (proceed-compiled-model self)))
 			 (if (measure-time-p self)
 			     (progn
 			       (format t "[proceed-time] With allocation time:~%")
@@ -648,10 +655,15 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 
 `compile-mode` is a keyword, type of `compile-mode-t`.
 "
+  (when (listp tensor)
+    (setf tensor (apply #'lazy-values tensor)))
+  
+  (when (null (tensor-variables tensor))
+    (return-from proceed tensor))
+  
   (let* ((node (ProceedNode tensor :measure-time measure-time :compile-mode compile-mode))
 	 ;; Previous Node is already compiled, so detach tensor from nodes.
 	 (out  (forward node tensor)))
-    
     ;; Out is still unallocated, so set the result.
     (if (scalar-p out)
 	(setf (tensor-vec out) (tensor-vec (proceed-result node)))
@@ -737,6 +749,9 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
   :backward NIL}
 ```
 "
+
+  (when (listp tensor)
+    (setf tensor (apply #'lazy-values tensor)))
 
   (multiple-value-bind (fw-iseq bw-iseq leaves dout allocation)
       (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
@@ -1090,4 +1105,15 @@ A memory-layout of returned copies are arranged into the same array as the array
 					   :order (order tensor))))
 	(!move contiguous-place tensor :force t))
       tensor))
+
+(defun lazy-values (&rest values)
+  "
+## [function] lazy-values
+```
+(lazy-values &rest args)
+```
+
+The equivalent to doing `(values &rest values)` in Common Lisp. From the compiler's POV, this means merging several independent DAGs into a single compiled result. And no new nodes (SYSTEM-LAZY-CONS-NODE) are added at compile time.
+"
+  (reduce #'cl-waffe2/vm.nodes::!system-lazy-cons values))
 

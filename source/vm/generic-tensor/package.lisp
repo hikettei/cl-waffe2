@@ -96,6 +96,8 @@
    #:*with-printing-tensor-omitted*
    #:tensor-id
    #:tensor-iid
+   #:tensor-count
+   #:tensor-var
    #:system-lazy-set-save-for-backward
    #:system-lazy-read-save-for-backward
    #:compile-option-t

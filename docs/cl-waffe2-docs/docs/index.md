@@ -18,7 +18,7 @@
   </p>
 </p>
 
-[![CI](https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml/badge.svg?branch=master)](https://github.com/hikettei/cl-waffe2/actions/workflows/Cl.yml)
+[![CI](https://github.com/hikettei/cl-waffe2/actions/workflows/test_on_push.yml/badge.svg?branch=master)](https://github.com/hikettei/cl-waffe2/actions/workflows/test_on_push.yml)
 
 ## Introduction
 

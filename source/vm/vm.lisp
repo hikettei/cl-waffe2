@@ -19,7 +19,7 @@ In default, set to 2.
 
 (declaim (type (integer 0 3) *opt-level*))
 
-(defparameter *logging-vm-execution* NIL "
+(defparameter *logging-vm-execution* nil "
 ## [parameter] `*logging-vm-execution*`
 
 This parameter is useful for printing how all instructions are performed. If set to T, all results and arguments produced by executing `cl-waffe2 IR` is displayed into the terminal. In default, set to nil.
@@ -50,11 +50,18 @@ This parameter is useful for printing how all instructions are performed. If set
 	      ;; var is [computed] by deleting tensor-state
 	      (tensor-vec place)
 	      (tensor-vec var)
-	      (%vm-move place var)
-	      
-	      ;; FixME: Delete this line:
-	      (when (scalar-p place)
-		(setf (tensor-vec place) (tensor-vec var))))))
+
+	      (if (or (scalar-p place) (scalar-p var))
+		  (setf (tensor-vec place) (tensor-vec var))
+		  (let* ((s1  (shape place))
+			 (s2  (shape var))
+			 (s1a (actual-shape place))
+			 (s2a (actual-shape var)))
+		    (setf (cl-waffe2/vm.generic-tensor::tensor-visible-shape place) s1a
+			  (cl-waffe2/vm.generic-tensor::tensor-visible-shape var) s2a)
+		    (unwind-protect (%vm-move place var)
+		      (setf (cl-waffe2/vm.generic-tensor::tensor-visible-shape place) s1
+			    (cl-waffe2/vm.generic-tensor::tensor-visible-shape var) s2)))))))
   nil)
 
 (declaim (ftype (function (AbstractTensor) AbstractTensor) maybe-read-result))
@@ -72,6 +79,7 @@ This parameter is useful for printing how all instructions are performed. If set
 		   (or (when state
 			 (cl-waffe2/vm.generic-tensor::statecontainer-forward-result state))
 		       tensor)))
+	    ;;(setf (tensor-initial-offset res) (tensor-initial-offset tensor))
 	    (the AbstractTensor res)))))
 
 (declaim (ftype (function (list list) t) write-result))
@@ -107,6 +115,10 @@ This parameter is useful for printing how all instructions are performed. If set
 (defun apply-instruction (instruction)
   (declare (type WFInstruction instruction)
 	   (optimize (speed 3)))
+
+  ;; [TODO] Bring it to the toplevel
+  (when (<= *opt-level* 2)
+    (node-realize-assertions (wfop-node instruction)))
   
   (when *logging-vm-execution*
     (let* ((inst (format nil "~a" instruction))
@@ -129,7 +141,6 @@ Instruction: ~a
 	       (apply
 		(the function (wfop-op instruction))
 		(map 'list #'maybe-read-result (wfop-args instruction))))))
-
     (when (or (null outs)
 	      (not (every #'(lambda (x) (typep x 'AbstractTensor)) outs)))
       (error "cl-waffe2 VM: Runtime Error.
@@ -216,8 +227,9 @@ outs:
 		  outs)))
     outs))
 
-(defun runtime-error (position condition iseq)
-  (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
+(defun runtime-error (position condition iseq &key (full nil))
+  (restart-case
+      (error "cl-waffe2 VM: Encountered Runtime Error at ~ath instruction.
 disassemble:
 ~a
 
@@ -225,20 +237,24 @@ condition:
   ~a
 
 ~a"
-	 position
-	 (with-output-to-string (out)
-	   (let* ((start (max 0 (- position 3)))
-		  (end   (min (length iseq) (+ position 3)))
-		  (iseqs  (loop for nth upfrom start below end collect (nth nth iseq))))
-	     (with-indent-to iseqs
-	       (loop with *no-newline* = t
-		     for nth upfrom start below end
-		     if (= nth position)
-		       do (format out "~a*: ~a~%" nth (nth nth iseq))
-		     else
-		       do (format out "~a : ~a~%" nth (nth nth iseq))))))
-	 condition
-	 (render-debug-info)))
+       position
+       (with-output-to-string (out)
+	 (let* ((start (if full 0 (max 0 (- position 3))))
+		(end   (if full (length iseq) (min (length iseq) (+ position 3))))
+		(iseqs  (loop for nth upfrom start below end collect (nth nth iseq))))
+	   (with-indent-to iseqs
+	     (loop with *no-newline* = t
+		   for nth upfrom start below end
+		   if (= nth position)
+		     do (format out "~a*: ~a~%" nth (nth nth iseq))
+		   else
+		     do (format out "~a : ~a~%" nth (nth nth iseq))))))
+       condition
+       (render-debug-info :shape full))
+    (full-report ()
+      :report "Render a end-to-end graph and all debug info."
+      (runtime-error position condition iseq :full t))))
+
 
 (declaim (ftype (function (list) t) accept-instructions))
 (defun accept-instructions (iseq)
@@ -261,9 +277,7 @@ Evaluates generated cl-waffe2 IR sequence.
 	  for position fixnum upfrom 0
 	  do (apply-inst-sv4bw inst)
 	     (handler-bind
-		 ((error
-		    (lambda (c)
-		      (runtime-error position c iseq))))
+		 ((error #'(lambda (cond) (runtime-error position cond iseq))))
 	       (write-result (wfop-out-to inst) (apply-instruction inst)))
 	  finally
 	     (return-from accept-instructions
@@ -338,8 +352,8 @@ See also: `proceed-bench`
 		 (let ((start-time (get-internal-real-time)))
 		   (handler-bind
 		       ((error
-			  (lambda (c)
-			    (runtime-error position c iseq))))
+			  (lambda (cond)
+			    (runtime-error position cond iseq))))
 		     (write-result (wfop-out-to inst) (apply-instruction inst)))
 		   (when (not (typep (wfop-node inst) 'function)) ;; If the node isn't codeblock...?
 		     (setf (gethash (tensor-iid (wfop-self inst)) inst->node-table) inst)

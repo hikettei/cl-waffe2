@@ -66,7 +66,6 @@
 		   slots))
        slots))
 
-
 (defun set-devices-toplevel (&rest devices)
   "
 ## [function] set-devices-toplevel
@@ -77,6 +76,15 @@
 
 Declares devices to use.
 "
+
+  (setf devices
+	(map 'list #'(lambda (x)
+		       (multiple-value-bind (form expanded) (macroexpand x)
+			 (if expanded
+			     (eval form)
+			     form)))
+	     devices))
+  (setf devices (alexandria:flatten devices))
   (assert (every #'(lambda (x) (subtypep x 'AbstractTensor)) devices)
 	  nil
 	  "set-devices-toplevel: the given device isn't subtype of AbstractTensor: ~a" devices)
@@ -182,6 +190,6 @@ Priority: Higher <───────────────────>Lowe
 		  (princ (symbol-name name) out)
 		  (princ " " out))
 
-		(format out "~%~%(use with-devices macro or set-devices-toplevel function to change this parameter.)~%"))))))
+		(format out "~%"))))))
 
 ;; (defmacro with-experiment ((:fusion ...))

@@ -198,12 +198,12 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 			 (make-tensor 1 :dtype (dtype toplevel) :order (order toplevel))
 			 (if out-symbol-p
 			     (let ((dout-tensor (make-input (shape toplevel) nil
-						  :dtype (dtype toplevel)
-						  :order (order toplevel))))
+							    :dtype (dtype toplevel)
+							    :order (order toplevel))))
 			       (if add1
-				   (forward (cl-waffe2/base-impl:ScalarAdd (dtype toplevel))
-					    dout-tensor					    
-					    (make-tensor 1 :dtype (dtype toplevel)))
+				   (cl-waffe2/base-impl:A+=B
+				    dout-tensor
+				    (make-tensor 1 :dtype (dtype toplevel)))
 				   dout-tensor))
 			     (make-tensor (shape toplevel) :initial-element 1 :dtype (dtype toplevel) :order (order toplevel))))))
 	     (backward-iseq
@@ -232,7 +232,7 @@ Tips: `disassemble-waffe2-ir` to display compiled Instruction Sequence.
 		  (iseq-bw (or bw backward)))
 
 	      (when optimize-locality
-		(setq iseq-fw (simplify-iseq iseq-fw)
+		(setf iseq-fw (simplify-iseq iseq-fw)
 		      iseq-bw (simplify-iseq iseq-bw))
 		(dolist (device-name *using-backend*)
 		  (multiple-value-setq (iseq-fw iseq-bw) (on-finalizing-compiling device-name iseq-fw iseq-bw))))

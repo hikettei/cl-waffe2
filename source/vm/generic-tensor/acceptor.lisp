@@ -290,7 +290,12 @@ Before calling the forward method, set any value to these InputTensors first.
     ;; Given symbols ignoring LazyAxis, determine the result of LazyAxis
     (dolist (lazyaxis lazyaxis-list)
       (let* ((axis (cl-waffe2/vm:symbol-lazyaxis lazyaxis))
-	     (val  (cl-waffe2/vm:observe-axis axis)))
+	     (val  (block try-make-it-static
+		     (handler-bind
+			 ((error #'(lambda (cond)
+				     (format t "The axis ~a cannot be inferred as a static shape because of ~a. Proceed with interpreting as a dynamic tensor.~%" axis cond)
+				     (return-from try-make-it-static -1))))
+		       (cl-waffe2/vm:observe-axis axis)))))
 	
 	(when (null val)
 	  (error "set-adjustable-symbols: the adjustable symbol ~a wasn't registered well?" axis))
@@ -420,7 +425,7 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 
 ### Inputs
 
-`toplevel [AbstractTensor]` The end of node. Any shapes could be OK even when constructing backward.
+`toplevel [AbstractTensor or List]` The end of the computational graph. If a list of abstracttensors is provided, the function uses `cl-waffe2/base-impl:lazy-values` to merge them into a single tensor and starts the compilation.
 
 `inputs[list]` Set a list of argument keywords here so that the method `forward` can receive arguments that have been lazily evaluated. The order is taken into account. (e.g.: Set to `(:A :B)` and forward can receive this: `(forward compiled-model (randn `(3 3)) (randn `(3 3)))`)
 
@@ -430,7 +435,17 @@ Compiles the given computation node starting from `toplevel`. The docstring of `
 
 `fuse-ops[boolean]` Set to enable `FusionOps` declared by `defpath`.
 "
-  (declare (type AbstractTensor toplevel))
+  (declare (type (or list AbstractTensor) toplevel))
+
+  (when (listp toplevel)
+    (assert (every #'(lambda (x) (typep x 'AbstractTensor)) toplevel)
+	    nil
+	    "build: `toplevel` expected AbstractTensor, or a list of abstracttensor.
+    (build toplevel ...)
+             └── butgot: ~a
+"
+	    toplevel)
+    (setf toplevel (apply #'cl-waffe2/base-impl:lazy-values toplevel)))
 
   (when inputs
     (assert (every #'keywordp inputs)

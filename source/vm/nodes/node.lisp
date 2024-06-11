@@ -39,6 +39,7 @@
    
    ;; :save-for-backward
    (sv4bw-places :initform nil :type list :accessor node-sv4bw) ;; (list AbstractTensor ...)
+   (lazy-asserts :initform nil :type list :accessor node-lazy-asserts)
    
    ;; For cl-waffe2 VM
    (out-to    :initform nil :accessor node-out-to)
@@ -98,6 +99,10 @@ And backward: `(backward node prev-gradient arg1 arg2 ...)`
 ;;     (3 3)
 ;;
 
+(defmacro with-lazy-assert (&body body)
+  `(let* ((wf/vm::*lazy-asserts* `(t))
+	  (result (multiple-value-list (progn ,@body))))
+     (values (car result) (second result) wf/vm::*lazy-asserts*)))
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ;;  Forward Mode Network Construction
 ;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~			       
@@ -107,7 +112,6 @@ And backward: `(backward node prev-gradient arg1 arg2 ...)`
   ;;  2. Records the computation node lazily
   ;;  3. Detects Shapeing-Error
   ;;  4. Adds save4bw
-  
   (assert (every #'(lambda (x) (typep x 'AbstractTensor)) inputs)
       nil
       "(forward node &rest inputs)
@@ -140,14 +144,13 @@ butgot: ~a"
 	 (ancestor-param-p (some #'cl-waffe2/vm.generic-tensor:ancestor-param-p inputs)))
     ;; Detecting Shape-Error, And finds combinations that satisfies shape-requirement heuristic.
     ;; Input-State -> Output-State
-    (multiple-value-bind (out-state detected-errors) (funcall transition-function input-states) ;; ... Finishes in < 1e-6 sec
+    (multiple-value-bind (out-state detected-errors asserts) (with-lazy-assert (funcall transition-function input-states)) ;; ... Finishes in < 1e-6 sec
       ;;(setq out-state (delete-broadcast out-state))
       ;; FixME: ~ = nil isn't allowed. [~ x] with (10) is unexpectedly invalid.
-
       (when detected-errors
 	;; If any errors occured, try again with removing ~ from subscripts. (I know this behaviour is ugly.)
 
-	(multiple-value-bind (out-state1 detected-errors-1) (funcall transition-function-sub input-states)
+	(multiple-value-bind (out-state1 detected-errors-1 asserts-1) (with-lazy-assert (funcall transition-function-sub input-states))
 	  ;;(setq out-state1 (delete-broadcast out-state1))
 
 	  ;; Enhancement
@@ -179,7 +182,8 @@ butgot: ~a"
 		    (return-from forward (apply #'forward node inputs-new)))
 		  ;; Otherwise the operation was invalid.
 		  (describe-problems node detected-errors inputs out-state))
-	      (setq out-state out-state1))))
+	      (setf out-state out-state1
+		    asserts asserts-1))))
 
       ;; TODO: When Dynamic-Mode
       ;; Call (construct-forward) and eval it here.
@@ -250,7 +254,8 @@ butgot: ~a"
 			       next-tensor))))
 
 	(setf (node-out-sizes node) (map 'list #'shape next-tensor)
-	      (node-out-to    node) next-tensor)
+	      (node-out-to    node) next-tensor
+	      (node-lazy-asserts node) asserts)
 
 	;; Register what variables should be saved? or to where?
 	(setf (node-sv4bw node)

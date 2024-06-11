@@ -12,6 +12,8 @@
 		#:shape
 		#:tensor-backward
 		#:tensor-id
+		#:tensor-var
+		#:tensor-count
 		#:tensor-variables
 		#:tensor-state
 		#:tensor-name

@@ -142,7 +142,8 @@ OUT_{copy}\\gets{~(~a~)(X)}
      ;; ∂dout/∂dx sqrt(x) = 1 / sqrt(x)
      ;; ∂dout/∂dy sqrt(x) = 0
      (values (!mul dout (!div 1 dx)) nil)))
-  
+
+  ;; [TODO] Deprecated
   (define-elwise-node (square #'(lambda (x) (* x x)))
       (t nil)
     ((self dout x out)

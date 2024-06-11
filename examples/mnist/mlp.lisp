@@ -18,18 +18,6 @@
 	     (asnode activation)
 	     (LinearLayer hidden-dim out-features))
 
-(defmacro with-backend (backend &body body)
-  (cond ((eq backend :jit)
-	 `(with-cpu-jit (CPUTensor LispTensor)
-	    (progn
-	      ,@body)))
-	((eq backend :cpu)
-	 `(with-cpu
-	    (progn
-	      ,@body)))
-	(t
-	 (error (format nil "Unknown backend ~A" backend)))))
-
 (defun build-mlp-model (&key in-class out-class (hidden-size 256) (activation #'!relu) (lr 1e-3))
   (let* ((mlp (MLP-Sequence in-class hidden-size out-class :activation activation))
 	 (lazy-loss (criterion #'softmax-cross-entropy
@@ -66,8 +54,7 @@
 
 (defun train-and-valid-mlp (&key (epoch-num 10) (benchmark-p t))
   (multiple-value-bind (compiled-model model)
-      (with-backend :cpu
-	(build-mlp-model :in-class 784 :out-class 10 :lr 1e-3))
+      (build-mlp-model :in-class 784 :out-class 10 :lr 1e-3)
     (let* ((train-img *reshaped-train-img-data*)
 	   (test-img  *reshaped-test-img-data*)
 	   (train-img-window (view train-img `(0 100) t))
@@ -91,7 +78,16 @@
 
       (format t "Validating...~%")
       (with-no-grad
-	(format t "Validation Accuracy: ~a~%~%" (accuracy model test-img test-label)))
+	(let ((acc (accuracy model test-img test-label)))
+	  (format t "Validation Accuracy: ~a~%~%" acc)
+
+	  ;; For github workflow
+	  (with-open-file (str "./report.txt"
+			       :direction :output
+			       :if-exists :supersede
+			       :if-does-not-exist :create)
+	    ;; 
+	    (format str "~a" acc))))
 
       (when benchmark-p
 	(format t "Benchmarking (Forward Step, 1Epoch, n-sample=600)...~%")

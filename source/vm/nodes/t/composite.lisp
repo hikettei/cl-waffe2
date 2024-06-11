@@ -1,8 +1,6 @@
 
 (in-package :cl-waffe2/vm.nodes.test)
 
-(in-suite :test-nodes)
-
 (defun M= (tensor1 tensor2)
   (every #'= (tensor-vec tensor1) (tensor-vec tensor2)))
 
@@ -41,24 +39,24 @@
 
 (defmodel-as (SinModel) :where (A[~] -> B[~]) :named !sinmodel :asif :node :differentiable t)
 
-(test defmodel->function-reduction-test
-  (is (= 100 (tensor-vec (sumup-static  (ax+b `(10 10) 0 1)))))
-  (is (= 1   (tensor-vec   (meanup-static (ax+b `(10 10) 0 1))))))
+(deftest defmodel->function-reduction-test
+  (ok (= 100 (tensor-vec (sumup-static  (ax+b `(10 10) 0 1)))))
+  (ok (= 1   (tensor-vec   (meanup-static (ax+b `(10 10) 0 1))))))
 
-(test defmodel->function-test
-  (is (M= (proceed (!sin (ax+b `(10 10) 0 1)))
+(deftest defmodel->function-test
+  (ok (M= (proceed (!sin (ax+b `(10 10) 0 1)))
 	  (sin-static1 (ax+b `(10 10) 0 1))))
-  (is (M= (proceed (!softmax (ax+b `(10 10) 0 1)))
+  (ok (M= (proceed (!softmax (ax+b `(10 10) 0 1)))
 	  (softmax-2d-f (ax+b `(10 10) 0 1))))
-  (is (M= (proceed (!sin (ax+b `(10 10 10) 0 1)))
+  (ok (M= (proceed (!sin (ax+b `(10 10 10) 0 1)))
 	  (sin-static1 (ax+b `(10 10 10) 0 1))))
-  (is (M= (proceed (!softmax (ax+b `(10 5) 0 1)))
+  (ok (M= (proceed (!softmax (ax+b `(10 5) 0 1)))
 	  (softmax-2d-f (ax+b `(10 5) 0 1)))))
 
-(test defmodel->node-forward
-  (is (= 100 (tensor-vec (proceed (!sumup-static (ax+b `(10 10) 0 1))))))
-  (is (= 1 (tensor-vec (proceed (!meanup-static (ax+b `(10 10) 0 1))))))
-  (is (M= (proceed (!softmax      (ax+b `(10 10) 0 1)))
+(deftest defmodel->node-forward
+  (ok (= 100 (tensor-vec (proceed (!sumup-static (ax+b `(10 10) 0 1))))))
+  (ok (= 1 (tensor-vec (proceed (!meanup-static (ax+b `(10 10) 0 1))))))
+  (ok (M= (proceed (!softmax      (ax+b `(10 10) 0 1)))
 	  (proceed (!softmax-2d-f (ax+b `(10 10) 0 1))))))
 
 (defun defmodel->node-diff-1 ()
@@ -81,16 +79,16 @@
     (= 1 (vref (grad a) 0))))
 
 ;; Backward tests
-(test defmodel-as-diff-test
-  (is (defmodel->node-diff-1))
-  (is (defmodel->node-diff-1-vm))
-  (is (defmodel->node-diff-2)))
+(deftest defmodel-as-diff-test
+  (ok (defmodel->node-diff-1))
+  (ok (defmodel->node-diff-1-vm))
+  (ok (defmodel->node-diff-2)))
 
 (node->defnode !softmax-jit-lazy (A[~] -> B[~])
   (!softmax a))
 
-(test node->defnode-test
-  (is
+(deftest node->defnode-test
+  (ok
    (M=
     (proceed (!softmax (ax+b `(20 20) 0 2)))
     (proceed (!softmax-jit-lazy (ax+b `(20 20) 0 2))))))
@@ -98,8 +96,8 @@
 (node->defnode !gelu-jit-lazy (A[~] -> B[~])
   (!gelu a))
 
-(test defmodel-as-node-diff-test-GeLU
-  (is
+(deftest defmodel-as-node-diff-test-GeLU
+  (ok
    (let ((a (parameter (ax+b `(10 10) 0.001 2)))
 	 (b (parameter (ax+b `(10 10) 0.001 2))))
      (proceed-backward
@@ -148,10 +146,10 @@
 		 (= (vref out nth) 0.841192))
 	     (loop for i upfrom 0 below 10 collect i)))))
 
-(test meet-with-dynamic-shape
-  (is (meet-with-dynamic-shape-larger))
-  (is (meet-with-dynamic-shape-smaller))
-  (is (meet-with-dynamic-shape-complicated)))
+(deftest meet-with-dynamic-shape
+  (ok (meet-with-dynamic-shape-larger))
+  (ok (meet-with-dynamic-shape-smaller))
+  (ok (meet-with-dynamic-shape-complicated)))
 
 ;; !sin a !sin b was computed at once.
 (node->defnode !arith-test (A[~] B[~] -> C[~])
@@ -162,10 +160,10 @@
   (let ((a (parameter (ax+b `(10 10) 0 2)))
 	(b (parameter (ax+b `(10 10) 0 2))))
     (proceed-backward (!arith-test a b))
-    (cl-waffe2/vm:disassemble-waffe2-ir (!arith-test a b))
+    ;;(cl-waffe2/vm:disassemble-waffe2-ir (!arith-test a b))
     (list (grad a) (grad b))))
 
-(test defmodel-as-backward-route-test
-  (is (backward-route-test)))
+(deftest defmodel-as-backward-route-test
+  (ok (backward-route-test)))
 
 

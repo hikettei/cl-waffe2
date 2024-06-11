@@ -73,6 +73,8 @@ PriorityN must be a subclass of cl-waffe2/vm.generic-tensor:AbstractTensor")
    (lock-id-p :initform nil :accessor tensor-id-lock-p)
    (tensor-id :initform (gensym "TID") :type symbol :accessor tensor-id)         
    (tensor-ident-id :initform (gensym "TIDi") :accessor tensor-iid)
+   ;; This slot is used to distinguish duplicated tensors in a single node.
+   (tensor-count :initform 0 :type fixnum :accessor tensor-count)
    
    (nth-value :initform 0 :accessor tensor-out-n :type fixnum)
 
@@ -316,6 +318,7 @@ If the tensor is a parameter, this slot is set by a composite which the tensor b
 
 "))
 
+(defun tensor-var (tensor) (symb (tensor-id tensor) '- (tensor-count tensor)))
 
 (defgeneric tensor-finalizer (tensor))
 
@@ -402,6 +405,7 @@ This function is setfable and inlined.
   ;;  (error "(setf tensor-vec) Can't set the ="))
   (write-vec new-value tensor))
 
+(defparameter *subgraph-subject* nil)
 ;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p    (getf initargs :scalar-p))
@@ -646,6 +650,8 @@ Inserting `~` allows direct insertion of broadcastable axis at the corresponding
   (declare (type list shape)
 	   (type (or null keyword) named))
 
+  (setf shape (loop for s in shape if (wf/vm::lazyaxis-p s) collect (wf/vm::lazyaxis-symbol s) else collect s))
+  
   (when (null *using-backend*)
     (error "make-input: Can't create AbstractTensor because no devices is registed in *using-backend*."))
 
@@ -836,19 +842,26 @@ Note that view is only created for Tensors, not a Scalar.
 	  (format t ":BROADCAST IS IGNORED for scalar input (TODO)"))
       (return-from view tensor))
 
-    (make-instance (car *using-backend*)
-		   :create-from tensor
-		   :dtype (dtype tensor)
-		   :order (order tensor)
-		   :requires-grad (slot-value tensor 'requires-grad)
-		   :shape         (slot-value tensor 'orig-shape)
-		   :projected-p   t
-		   :past-view (tensor-view tensor)
-		   :view subscripts
-		   :input-shape (tensor-input-shape tensor)
-		   :facet (tensor-facet tensor)
-		   :named (tensor-name tensor)
-		   :vec (vec tensor))))
+    (let ((out
+	    (make-instance (car *using-backend*)
+			   :create-from tensor
+			   :dtype (dtype tensor)
+			   :order (order tensor)
+			   :requires-grad (slot-value tensor 'requires-grad)
+			   :shape         (slot-value tensor 'orig-shape)
+			   :projected-p   t
+			   :past-view (tensor-view tensor)
+			   :view subscripts
+			   :input-shape (tensor-input-shape tensor)
+			   :facet (tensor-facet tensor)
+			   :named (tensor-name tensor)
+			   :vec (vec tensor))))
+      (loop for nth upfrom 0
+	    for view in (tensor-view out)
+	    for v = (force-list view)
+	    if (and (listp v) (equal :broadcast (car v)))
+	      do (setf (nth nth (tensor-stride out)) 0))
+      out)))
 
 (defun detach-and-clone (tensor)
   (make-instance (car *using-backend*)

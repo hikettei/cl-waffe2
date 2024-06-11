@@ -77,3 +77,30 @@
 
   (define-math-impl Log1PNode #'(lambda (x) (log (1+ x))) t)
   )
+
+(define-with-typevar (expt-caller u) (n x y offsetx offsety incx incy size)
+  (declare (optimize (speed 3))
+	   (type (simple-array u (*)) x y)
+	   (type u n)
+	   (type fixnum offsetx offsety incx incy size))
+  (dotimes (i size)
+    (setf (aref y (+ offsety (the fixnum (* incy i))))
+	  (expt (aref x (+ offsetx (the fixnum (* incx i)))) n))))
+
+(define-impl (ExptNode
+	      :device LispTensor)
+	     :forward ((self x out n)
+		       (let ((caller (expt-caller (dtype out))))
+			 `(,@(call-with-view
+			      #'(lambda (x-view o-view)
+				  `(funcall ,caller
+					    (tensor-vec ,n)
+					    (tensor-vec ,x)
+					    (tensor-vec ,out)
+					    ,(offset-of x-view 0)
+					    ,(offset-of o-view 0)
+					    ,(stride-of x-view 0)
+					    ,(stride-of o-view 0)
+					    ,(size-of x-view 0)))
+			      `(,x ,out))
+			   ,out))))

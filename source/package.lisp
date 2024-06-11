@@ -47,6 +47,7 @@
    #:with-row-major
    #:with-cpu
 
+   #:find-available-backends
    #:show-backends
    #:set-devices-toplevel
    ;;#:with-cuda

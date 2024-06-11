@@ -42,7 +42,6 @@
 	       :closer-mop
 	       :trivial-garbage
 	       :cl-waffe2/simd-extension
-
 	       :cl-environments
 	       :numpy-file-format
 	       :jonathan)
@@ -158,20 +157,7 @@
 	       (:file "package")
 	       
 	       
-	       (:file "backends/lisp/wf2model")
-	       (:file "backends/JITCPUTensor/package")
-	       (:file "backends/JITCPUTensor/tensor")
-	       (:file "backends/JITCPUTensor/compiler")
-	       (:file "backends/JITCPUTensor/blueprint")	       
-	       (:file "backends/JITCPUTensor/ir")
-	       (:file "backends/JITCPUTensor/on-finalizing")
-	       (:file "backends/JITCPUTensor/dtype")
-	       (:file "backends/JITCPUTensor/foreign-function")
-	       
-
-	       (:file "backends/JITCPUTensor/impls/arithmetic")
-	       (:file "backends/JITCPUTensor/impls/math")
-	       
+	       (:file "backends/lisp/wf2model")	       
 	       (:file "optimizers/defoptimizer")
 	       
 	       (:file "array-converter")
@@ -223,7 +209,7 @@
   :description "Tests for cl-waffe2"
   :serial t
   :pathname "source"
-  :depends-on (:cl-waffe2 :fiveam)
+  :depends-on (:cl-waffe2 :fiveam :rove)
   :components ((:file "vm/iterator/test-suites")
 	       (:file "vm/t/package")
 	       (:file "vm/t/lazy-axis")
@@ -251,30 +237,16 @@
 	       (:file "backends/cpu/t/arithmetic")
 
 	       (:file "backends/lisp/t/package")
-
-	       (:file "backends/JITCPUTensor/t/package")
-	       (:file "backends/JITCPUTensor/t/jit")
 	       
 	       (:file "nn/t/package")
 	       (:file "nn/t/conv")
 	       (:file "nn/t/activation")
 	       (:file "nn/t/criterion")
-	       (:file "nn/t/regression")	       
+	       (:file "nn/t/regression")
+
+	       (:file "test-suites")
 	       )
-  :perform (test-op (o s)
-		    (symbol-call :fiveam :run! :iterator-test)
-		    (symbol-call :fiveam :run! :test-nodes)
-		    (symbol-call :fiveam :run! :test-tensor)
-		    
-		    (symbol-call :fiveam :run! :base-impl-test)
-		    (symbol-call :fiveam :run! :jit-lisp-test)
-		    
-		    (symbol-call :fiveam :run! :lisp-backend-test)
-		    (symbol-call :fiveam :run! :test-backends-cpu)
-		    (symbol-call :fiveam :run! :jit-cpu-test)
-		    
-		    (symbol-call :fiveam :run! :nn-test)
-		    (symbol-call :fiveam :run! :vm-test)))
+  :perform (test-op (o s) (error "moved to source/test-suites.lisp")))
 
 
 (defpackage :cl-waffe2-docs-asdf

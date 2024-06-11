@@ -19,6 +19,19 @@
 			  :apply nil))
 			out)))
 
+(define-impl (Lazy-Index-Components-Node :device LispTensor :cache-id #'lazy-dispatcher)
+	     :forward ((self x out)
+		       (lazy-call-form
+			(list x out)
+			(list
+			 (make-lli
+			  (forward-of self)
+			  out
+			  (list x)
+			  :apply nil))
+			out
+			:index-components t)))
+
 (define-impl (Lazy-Reduce-Node :device LispTensor :cache-id #'lazy-dispatcher)
 	     :forward ((self reduced x)
 		       (lazy-call-form
