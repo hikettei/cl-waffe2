@@ -482,7 +482,7 @@ CL-WAFFE2-REPL>
 ```
 "
   (declare (type AbstractTensor tensor)
-	   (type fixnum ntimes at))
+	   (type fixnum at))
   (let* ((at (if (>= at 0)
 		 at
 		 (+ (dims tensor) at)))
@@ -491,9 +491,11 @@ CL-WAFFE2-REPL>
 	 (shape         (nthcdr at (copy-list (shape tensor)))))
     (if (< ntimes 0)
 	(loop for i fixnum upfrom 0 below (abs ntimes)
-	      do (if (= (car shape) 1)
+	      do (if (equal (car shape) 1)
 		     (pop shape)
-		     (error "!rankup failed because it encountered a dimension which is not the equivalent to 1.")))
+		     (progn
+		       (setf shape (remove 1 shape))
+		       (warn "!rankup failed because it encountered a dimension which is not the equivalent to 1."))))
 	(loop for i fixnum upfrom 0 below ntimes
 	      do (push 1 shape)))
     ;; TODO: view broadcast
@@ -524,8 +526,11 @@ CL-WAFFE2-REPL>
 	     :forward ((self scalar matrix)
 		       `(progn
 			  (tensor-vec ,matrix) ;; Call Lazy-Allocate of matrix
-			  (setf (vref ,matrix 0) (coerce (tensor-vec ,scalar) (dtype->lisp-type (dtype ,matrix))))
-			  ,matrix)))
+			  (let ((val (if (symbolp (tensor-vec ,scalar))
+					 (wf/vm:maybe-observe-axis (tensor-vec ,scalar))
+					 (tensor-vec ,scalar))))
+			    (setf (vref ,matrix 0) (coerce val (dtype->lisp-type (dtype ,matrix))))
+			    ,matrix))))
 
 ;; Add: Docstring
 ;; Add: Shape Check
@@ -650,6 +655,9 @@ If `measure-time`=t, ProceedNode wraps with time macro when calling **COMPILED**
 
 `compile-mode` is a keyword, type of `compile-mode-t`.
 "
+  (when (listp tensor)
+    (setf tensor (apply #'lazy-values tensor)))
+  
   (when (null (tensor-variables tensor))
     (return-from proceed tensor))
   
@@ -741,6 +749,9 @@ CL-WAFFE2-REPL> (proceed-bench (!sum (randn `(3 3))))
   :backward NIL}
 ```
 "
+
+  (when (listp tensor)
+    (setf tensor (apply #'lazy-values tensor)))
 
   (multiple-value-bind (fw-iseq bw-iseq leaves dout allocation)
       (cl-waffe2/vm:compile-forward-and-backward tensor :compile-mode compile-mode :fuse-p fuse-p)
@@ -1094,4 +1105,15 @@ A memory-layout of returned copies are arranged into the same array as the array
 					   :order (order tensor))))
 	(!move contiguous-place tensor :force t))
       tensor))
+
+(defun lazy-values (&rest values)
+  "
+## [function] lazy-values
+```
+(lazy-values &rest args)
+```
+
+The equivalent to doing `(values &rest values)` in Common Lisp. From the compiler's POV, this means merging several independent DAGs into a single compiled result. And no new nodes (SYSTEM-LAZY-CONS-NODE) are added at compile time.
+"
+  (reduce #'cl-waffe2/vm.nodes::!system-lazy-cons values))
 

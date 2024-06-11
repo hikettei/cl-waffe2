@@ -44,10 +44,12 @@
 	       ((type symbol) (list stride))
 	       ((list 'the 'fixnum form)
 		(expand-helper form))
+	       ((list* '* _)
+		(map 'list #'expand-helper (cdr stride)))
 	       ((type list)
 		(if (eql (car stride) 'cl-waffe2/vm::maybe-observe-axis)
 		    (expand-helper (second (second stride)))
-		    (map 'list #'expand-helper stride))))))
+		    (map 'list #'expand-helper (cdr stride)))))))
     (loop for x in (expand-helper (nth axis (tensor-stride tensor)))
 	  if x collect x)))
 
@@ -68,14 +70,19 @@
 			    `(*
 			      ,@(unless batch-p (list stride))
 			      ,(wf/iter:range-step range)
-			      ,index))))))))
+			      (+
+			       ,(wf/iter:range-from range)
+			       ,index)))))))))
 
 (defun collect-depends-on (tensors)
   (flet ((depends-on (tensor)
 	   (let ((list `(,@(loop for i upfrom 0 below (dims tensor)
 				 append (lazy-stride-depends-on tensor i))
-			 ,@(shape tensor))))
-	     (loop for l in list
+			 ,@(shape tensor)
+			 ,@(loop for v in (tensor-view tensor)
+				 for r = (subscript-range v)
+				 append (list (wf/iter:range-from r) (wf/iter:range-step r))))))
+	     (loop for l in (alexandria:flatten list)
 		   if (symbolp l)
 		     collect l))))
     (remove-duplicates

@@ -80,13 +80,13 @@ Note that `dilation`, `kernel-size`, `stride`, and `padding` are given in this f
 "
 
   (multiple-value-bind (N C H-in W-in) (apply #'values (shape input))
-    (let* ((H-out (cl-waffe2/nn::conv-out-size H-in (car padding)    (car dilation) (car kernel-size) (car stride)))
-	   (W-out (cl-waffe2/nn::conv-out-size W-in (second padding) (car dilation) (second kernel-size) (second stride)))
-	   (pad-h (mod H-out (car    stride)))
-	   (pad-w (mod W-out (second stride))))
-
+    (let* ((H-out (wf/vm:make-lazyaxis `(conv-out-size ,H-in ,(car padding)    ,(car dilation) ,(car kernel-size) ,(car stride))))
+	   (W-out (wf/vm:make-lazyaxis `(conv-out-size ,W-in ,(second padding) ,(car dilation) ,(second kernel-size) ,(second stride))))
+	   (pad-h (wf/vm:make-lazyaxis `(mod ,H-out ,(car    stride))))
+	   (pad-w (wf/vm:make-lazyaxis `(mod ,W-out ,(second stride)))))
+      
       (call-> input
-	      (asnode #'padding `(t t (,(car padding) ,(+ (car padding) pad-h)) (,(second padding) ,(+ (second padding) pad-w))))
+	      (asnode #'padding `(t t (,(car padding) ,(wf/vm:make-lazyaxis `(+ ,(car padding) ,pad-h))) (,(second padding) ,(wf/vm:make-lazyaxis `(+ ,(second padding) ,pad-w)))))
 	      (asnode #'!im2col
 		      N C (car kernel-size) (second kernel-size)
 		      h-out w-out (car stride) (second stride)

@@ -16,6 +16,8 @@
 	;; More will be added...
 	(member :double
 		:float
+		:uint64
+		:int64
 		:uint32
 		:uint16
 		:uint8
@@ -29,7 +31,9 @@
   (declare (type dtype-t dtype))
   (case dtype
     (:double 'double-float)
-    (:float  'single-float) 
+    (:float  'single-float)
+    (:uint64 '(unsigned-byte 64))
+    (:int64  '(signed-byte 64))
     (:uint32 '(unsigned-byte 32))
     (:uint16 '(unsigned-byte 16))
     (:uint8  '(unsigned-byte 8)) 
@@ -43,7 +47,9 @@
     (single-float :float)
     (double-float :double)
     ;; FIXME
-    (fixnum :int32)))
+    (fixnum :int32)
+    (integer :int64)
+    (T (error "Cannot infer the type of ~a" scalar))))
 
 (defun coerce-into-dtype (scalar)
   (coerce scalar (dtype-of scalar)))

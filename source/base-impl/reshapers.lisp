@@ -23,13 +23,11 @@ For example:
 	(error "broadcast-to: Couldn't broadcast together because ranks does not match. ~a and ~a" tensor object-tensor))
       (loop for shape-tbc    in (shape tensor)
 	    for shape-object in (shape object-tensor)
-	    if (equal shape-tbc shape-object)
-	      collect t
-	    else
+	    if (and (numberp shape-tbc) (= 1 shape-tbc))
 	      collect (progn
-			(unless (= shape-tbc 1)
-			  (error "broadcast-to: Couldn't broadcast two axes, ~a and ~a" (shape tensor) (shape object-tensor)))
-			`(:broadcast ,shape-object)))))
+			`(:broadcast ,shape-object))
+	    else
+	      collect t)))
 
 (defun rev-last-two ()
   "

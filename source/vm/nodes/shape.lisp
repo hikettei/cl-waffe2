@@ -632,7 +632,7 @@ Example:
 							       (and (numberp ,var)
 								    (numberp (nth ,nth-arg ,shape))))
 							      (not
-							       (equal ,var (nth ,nth-arg ,shape))))
+							       (shape-equal ,var (nth ,nth-arg ,shape))))
 						     (push
 						      (build-subscript-note ,nth-arg ,i ',var ,var (nth ,nth-arg ,shape) ',subscript)
 						      ,all-conditions))
@@ -649,7 +649,7 @@ Example:
 								 (and (numberp ,var)
 								      (numberp (nth ,nth-arg ,shape))))
 								(not
-								 (equal ,var (nth ,pos ,shape))))
+								 (shape-equal ,var (nth ,pos ,shape))))
 						       (push
 							(build-subscript-note ,nth-arg ,i ',var ,var (nth ,nth-arg ,shape) ',subscript)
 							,all-conditions))

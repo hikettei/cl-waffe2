@@ -405,6 +405,7 @@ This function is setfable and inlined.
   ;;  (error "(setf tensor-vec) Can't set the ="))
   (write-vec new-value tensor))
 
+(defparameter *subgraph-subject* nil)
 ;; Initializes generic uis of tensors.
 (defmethod initialize-instance :after ((tensor AbstractTensor) &rest initargs &key &allow-other-keys)
   (let ((scalar-p    (getf initargs :scalar-p))
@@ -649,6 +650,8 @@ Inserting `~` allows direct insertion of broadcastable axis at the corresponding
   (declare (type list shape)
 	   (type (or null keyword) named))
 
+  (setf shape (loop for s in shape if (wf/vm::lazyaxis-p s) collect (wf/vm::lazyaxis-symbol s) else collect s))
+  
   (when (null *using-backend*)
     (error "make-input: Can't create AbstractTensor because no devices is registed in *using-backend*."))
 

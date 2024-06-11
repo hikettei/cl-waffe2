@@ -53,6 +53,8 @@
    #:%transform
    #:->contiguous
    #:padding
+   #:!concatenate
+   #:!tile
    #:!sum
    #:!mean
    #:!move
@@ -67,6 +69,9 @@
    #:proceed-backward
    #:proceed-bench
    #:lazy-print
+   #:lazy-values
+   #:lazy-index-components
+   #:lazy-index-components-node
    #:logical-compiler-info)
   (:export
    :node-x

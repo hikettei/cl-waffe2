@@ -216,6 +216,8 @@ Return:
 (defun !system-lazy-cons (a b)
   (call (System-Lazy-Cons a b) a b))
 
+(defun !merge-subgraph (main-node subgraph-node) (!system-lazy-cons main-node subgraph-node))
+
 (defun !system-lazy-values (&rest args)
   (reduce #'!system-lazy-cons args))
 

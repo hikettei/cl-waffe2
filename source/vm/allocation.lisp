@@ -77,8 +77,7 @@ Reading the value of shape-table: (e.g.: A->1, B->2 ...), adjusts the size of st
 If the re-allocation is performed, frees the old one.
 "
   (declare (type VMAllocation allocation)
-	   (type hash-table shape-table)
-	   (optimize (speed 3)))
+	   (type hash-table shape-table))
 
   (flet ((->num (val)
 	   (the number
@@ -94,7 +93,9 @@ If the re-allocation is performed, frees the old one.
 			       (alexandria:hash-table-values shape-table)))))))
     (loop for tensor being the hash-values in (vmalloc-id2pool allocation)
 	  ;; If the tensor is DYNAMYCALLY SHAPED:
-	  if (some #'symbolp (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
+	  if (and
+	      (some #'symbolp (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))
+	      (not (some #'(lambda (x) (= -1 x)) (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor)))))
 	    do (if (>= (the fixnum (apply #'* (map 'list #'->num (cl-waffe2/vm.generic-tensor::original-shape tensor))))
 		       (apply #'*  (map 'list #'->num (cl-waffe2/vm.generic-tensor::tensor-input-shape tensor))))
 		   ;; The storage size is enough, Keep Using a old one:
@@ -122,6 +123,7 @@ If the re-allocation is performed, frees the old one.
   (when (not (vmalloc-allocated-p allocation))
     (loop for tensor being the hash-values in (vmalloc-id2pool allocation) do
       ;; Reading the orig-shape
+      ;; -1 = Dynamic Shape
       (when (not (scalar-p tensor))
 	(setf (slot-value tensor 'cl-waffe2/vm.generic-tensor::orig-shape)
 	      (map 'list #'maybe-observe-axis
@@ -131,14 +133,17 @@ If the re-allocation is performed, frees the old one.
 	(let ((use
 		(if (scalar-p tensor)
 		    (make-tensor 0 :dtype (dtype tensor) :device (class-of tensor) :order (order tensor))
-		    (make-tensor
-		     (cl-waffe2/vm.generic-tensor::original-shape tensor)		       
-		     :dtype (dtype tensor)
-		     :order (order tensor)
-		     :device (class-of tensor)))))
-	  (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use)))))
+		    (if (some #'(lambda (x) (= x -1)) (map 'list #'maybe-observe-axis (wf/t:original-shape tensor)))
+			nil
+			(make-tensor
+			 (cl-waffe2/vm.generic-tensor::original-shape tensor)		       
+			 :dtype (dtype tensor)
+			 :order (order tensor)
+			 :device (class-of tensor))))))
+	  (when use
+	    (setf (tensor-vec tensor) (cl-waffe2/vm.generic-tensor::vec use))))))
     (setf (vmalloc-allocated-p allocation) T)))
- 
+
 (defun copy-allocate (allocation)
   "Makes a copy of given allocation and its storage vec is also copied so no thread-conflicts would happen."
   (declare (type VMAllocation allocation))
@@ -170,6 +175,30 @@ If the re-allocation is performed, frees the old one.
   (declare (type VMAllocation allocation)
 	   (type AbstractTensor tensor))
 
+  ;; If the allocation is dynamic tensor?
+  (when (some #'(lambda (x) (= -1 x)) (map 'list #'wf/t::read-adjustable-symbol (wf/t::tensor-input-shape tensor)))
+    ;; [TODO] is this tensor creation gc reachable?
+    (let* ((size-template
+	     (map 'list #'wf/t::read-adjustable-symbol (wf/t::tensor-input-shape tensor)))
+	   (new-size
+	     (loop for s in size-template
+		   for nth upfrom 0
+		   if (= s -1)
+		     collect (let* ((id (nth nth (wf/t::tensor-input-shape tensor)))
+				    (lazyaxis (symbol-lazyaxis id))
+				    (res (observe-axis lazyaxis)))
+			       (when (= -1 res)
+				 (error "The dynamic shape ~a could not be determined." id))
+			       res)
+		   else
+		     collect s)))
+      (let* ((cache (gethash (tensor-id tensor) (vmalloc-id2pool allocation)))
+	     (mem  (if (and cache (wf/t::vec cache) (= (apply #'* (shape cache)) (apply #'* new-size))) cache (make-tensor new-size :dtype (dtype tensor)))))
+	(setf (gethash (tensor-id tensor) (vmalloc-id2pool allocation)) mem
+	      (tensor-vec tensor) (wf/t::vec mem))
+	(return-from storage-vec-from-memory-pool
+	  (cl-waffe2/vm.generic-tensor::vec tensor)))))
+  
   (when (null (gethash (tensor-id tensor) (vmalloc-id2pool allocation)))
     (if (cl-waffe2/vm.generic-tensor::vec tensor)
 	(return-from storage-vec-from-memory-pool (cl-waffe2/vm.generic-tensor::vec tensor))

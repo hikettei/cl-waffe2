@@ -15,7 +15,16 @@
 ;; In order to implemenet "GENERIC" behaviour, we need to wrap composite->defun by higher-order function.
 
 (defun eliminate-undetermined-size (tensor)
-  (let* ((shape (cl-waffe2/vm.generic-tensor::translate-adjustable-shape (actual-shape tensor)))
+  (let* ((shape (loop for s in (actual-shape tensor)
+		      for i in (wf/t::tensor-input-shape tensor)
+		      if (numberp s)
+			collect (if (= -1 s)
+				    (let ((out (wf/vm::maybe-observe-axis (or (wf/vm::symbol-lazyaxis i) i))))
+				      (assert (not (= -1 out)))
+				      out)
+				    s)
+		      else
+			collect (wf/vm::maybe-observe-axis s)))
 	 (out (make-input  shape nil
 			   :create-from tensor
 			   :dtype (dtype tensor)
