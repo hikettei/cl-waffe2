@@ -1,3 +1,9 @@
+## MOVED!
+
+> Development has shifted to a new project called [Caten](https://github.com/hikettei/Caten)!
+
+> Instead of starting completely from scratch, we carried over the concepts from cl-waffe2 while adding support for LLMs and making it easier to incorporate additional backends. Please take a look at this new project going forward.
+
 <p align="center">
     <a href="https://github.com/hikettei/cl-waffe2">
         <img alt="Logo" src="https://hikettei.github.io/cl-waffe-docs/cl-waffe.png" width="45%">
